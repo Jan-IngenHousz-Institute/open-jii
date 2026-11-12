@@ -14,7 +14,7 @@ export function CompatibleProtocolsCell({
 }) {
   const { t } = useTranslation("macro");
   const [revealed, setRevealed] = useState(false);
-  const { data, isError } = useMacroCompatibleProtocols(
+  const { data, isError, refetch } = useMacroCompatibleProtocols(
     macroId,
     revealed && compatibleProtocolCount > 0,
   );
@@ -37,6 +37,7 @@ export function CompatibleProtocolsCell({
       onClick={(event) => {
         event.stopPropagation();
         setRevealed(true);
+        if (isError) void refetch();
       }}
     >
       {showChips ? (

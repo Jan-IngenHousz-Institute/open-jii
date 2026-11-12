@@ -186,4 +186,26 @@ describe("CompatibleProtocolsCell", () => {
     expect(screen.getByRole("button")).toHaveTextContent("1 protocol");
     expect(screen.queryByText("Compatible protocol")).not.toBeInTheDocument();
   });
+
+  it("retries the names on click after they failed to load", async () => {
+    mountNames({ status: 500 });
+    const onClick = vi.fn();
+    const { queryClient } = renderCell(1, onClick);
+    const button = screen.getByRole("button");
+
+    fireEvent.mouseEnter(button);
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryState(
+          orpc.macros.listCompatibleProtocols.queryKey({ input: { id: "macro-1" } }),
+        )?.status,
+      ).toBe("error"),
+    );
+    const retry = mountNames();
+    fireEvent.click(button);
+
+    expect(await screen.findByText("Compatible protocol")).toBeInTheDocument();
+    expect(retry.callCount).toBe(1);
+    expect(onClick).not.toHaveBeenCalled();
+  });
 });
