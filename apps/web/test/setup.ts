@@ -247,6 +247,14 @@ beforeEach(async () => {
     vi.mocked(authClient.accountInfo).mockResolvedValue({ data: null, error: null });
     vi.mocked(authClient.linkSocial).mockResolvedValue({ data: null, error: null });
     vi.mocked(authClient.unlinkAccount).mockResolvedValue({ data: { status: true }, error: null });
+    vi.mocked(authClient.emailOtp.requestEmailChange).mockResolvedValue({
+      data: { success: true },
+      error: null,
+    });
+    vi.mocked(authClient.emailOtp.changeEmail).mockResolvedValue({
+      data: { success: true },
+      error: null,
+    });
   } catch {
     // Partial override; leave it alone.
   }
@@ -284,7 +292,10 @@ vi.mock("@repo/auth/client", () => ({
     signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
     emailOtp: {
       sendVerificationOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+      requestEmailChange: vi.fn().mockResolvedValue({ data: { success: true }, error: null }),
+      changeEmail: vi.fn().mockResolvedValue({ data: { success: true }, error: null }),
     },
+    $store: { notify: vi.fn() },
     signIn: {
       emailOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
       social: vi.fn().mockResolvedValue({ data: null, error: null }),

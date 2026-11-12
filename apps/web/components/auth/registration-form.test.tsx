@@ -33,11 +33,11 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
 
 const mockSendOtpMutate = vi.fn();
 const mockVerifyOtpMutate = vi.fn();
-vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
-  useSignInEmail: () => ({ mutateAsync: mockSendOtpMutate }),
+vi.mock("~/hooks/auth/useRequestEmailChange/useRequestEmailChange", () => ({
+  useRequestEmailChange: () => ({ mutateAsync: mockSendOtpMutate }),
 }));
-vi.mock("~/hooks/auth/useVerifyEmail/useVerifyEmail", () => ({
-  useVerifyEmail: () => ({ mutateAsync: mockVerifyOtpMutate }),
+vi.mock("~/hooks/auth/useConfirmEmailChange/useConfirmEmailChange", () => ({
+  useConfirmEmailChange: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 
 const createUserProfileMock = vi.fn();
@@ -544,6 +544,81 @@ describe("RegistrationForm", () => {
         expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
         expect(screen.getByLabelText("registration.email")).toBeInTheDocument();
       });
+    });
+
+    async function reachCodeStep(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(screen.getByLabelText("registration.email"), "carol@uni.edu");
+      await user.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+      await waitFor(() => expect(screen.getByText("auth.checkEmail")).toBeInTheDocument());
+    }
+
+    function codeInput() {
+      const input = document.querySelector('input[autocomplete="one-time-code"]');
+      if (!input) throw new Error("code input not found");
+      return input;
+    }
+
+    function submitForm() {
+      const form = document.querySelector("form");
+      if (!form) throw new Error("form not found");
+      fireEvent.submit(form);
+    }
+
+    function enterCode(code: string) {
+      fireEvent.change(codeInput(), {
+        target: { value: code },
+      });
+    }
+
+    it("proves the address with its code, then completes registration", async () => {
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly callbackUrl="/platform" />);
+      await reachCodeStep(user);
+
+      enterCode("123456");
+      submitForm();
+
+      await waitFor(() =>
+        expect(mockVerifyOtpMutate).toHaveBeenCalledWith({
+          newEmail: "carol@uni.edu",
+          otp: "123456",
+        }),
+      );
+      await waitFor(() => expect(mockUpdateUserMutate).toHaveBeenCalledWith({ registered: true }));
+      expect(pushMock).toHaveBeenCalledWith("/platform");
+    });
+
+    it("shows the server's answer to a wrong code and stays on the code step", async () => {
+      mockVerifyOtpMutate.mockResolvedValue({ error: { message: "Invalid OTP" } });
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly />);
+      await reachCodeStep(user);
+
+      enterCode("000000");
+      submitForm();
+
+      expect(await screen.findByText("Invalid OTP")).toBeInTheDocument();
+      expect(mockUpdateUserMutate).not.toHaveBeenCalled();
+    });
+
+    it("shows that the address belongs to another account and sends no code", async () => {
+      mockSendOtpMutate.mockResolvedValue({
+        error: { message: "This email is already associated with another account" },
+      });
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} emailOnly />);
+
+      await user.type(screen.getByLabelText("registration.email"), "taken@uni.edu");
+      await user.click(
+        screen.getByRole("button", { name: "registration.continueWithEmailVerification" }),
+      );
+
+      expect(
+        await screen.findByText("This email is already associated with another account"),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("auth.checkEmail")).not.toBeInTheDocument();
     });
   });
 });
