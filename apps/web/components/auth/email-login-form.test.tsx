@@ -85,6 +85,32 @@ describe("EmailLoginForm", () => {
     });
   });
 
+  it.each([
+    ["https://equipment.openjii.org/login/openjii", "https://equipment.openjii.org/login/openjii"],
+    ["https://example.com", "/platform"],
+  ])("validates the email code return address %s", async (callbackUrl, expected) => {
+    const { router } = render(<EmailLoginForm {...defaultProps} callbackUrl={callbackUrl} />);
+    await submitEmail();
+    await submitOTP();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expected));
+  });
+
+  it("keeps Equipment as the destination when email sign-in needs registration", async () => {
+    vi.mocked(authClient.signIn.emailOtp).mockResolvedValue({
+      error: null,
+      data: { user: { registered: false } },
+    });
+    const callbackUrl = "https://equipment.openjii.org/login/openjii";
+    const { router } = render(<EmailLoginForm {...defaultProps} callbackUrl={callbackUrl} />);
+    await submitEmail();
+    await submitOTP();
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith(
+        `/en-US/register?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+      ),
+    );
+  });
+
   it("renders email input form initially", () => {
     render(<EmailLoginForm {...defaultProps} />);
     expect(screen.getByPlaceholderText("auth.emailPlaceholder")).toBeInTheDocument();

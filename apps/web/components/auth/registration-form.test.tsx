@@ -249,6 +249,19 @@ describe("RegistrationForm", () => {
     });
   });
 
+  it.each([
+    ["https://equipment.openjii.org/login/openjii", "https://equipment.openjii.org/login/openjii"],
+    ["https://example.com", "/platform"],
+  ])("validates the registration return address %s", async (callbackUrl, expected) => {
+    render(<RegistrationForm {...defaultProps} callbackUrl={callbackUrl} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "Test");
+    await user.type(screen.getByLabelText("registration.lastName"), "Researcher");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(expected));
+  });
+
   it("pushes to default '/' when callbackUrl is undefined", async () => {
     // With no callbackUrl the form falls back to `router.push(callbackUrl ?? "/platform")`.
 

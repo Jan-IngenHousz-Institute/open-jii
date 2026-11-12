@@ -8,6 +8,7 @@ import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { RegistrationForm } from "~/components/auth/registration-form";
 import { TermsAndConditionsDialog } from "~/components/auth/terms-and-conditions-dialog";
+import { getAuthCallback } from "~/lib/auth-callback";
 
 import { Toaster } from "@repo/ui/components/toaster";
 
@@ -19,14 +20,17 @@ export default async function UserRegistrationPage(props: {
   const { locale } = await props.params;
   const { callbackUrl } = await props.searchParams;
 
+  const destination = getAuthCallback(getFirstSearchParam(callbackUrl));
+
   if (!session?.user) {
-    redirect(`/${locale}/login?callbackUrl=/${locale}/register`);
+    const registrationUrl = `/${locale}/register?callbackUrl=${encodeURIComponent(destination)}`;
+    redirect(`/${locale}/login?callbackUrl=${encodeURIComponent(registrationUrl)}`);
   }
 
   const hasValidEmail = z.string().email().safeParse(session.user.email).success;
 
   if (session.user.registered && hasValidEmail) {
-    redirect(`/${locale}/platform`);
+    redirect(destination === "/platform" ? `/${locale}/platform` : destination);
   }
 
   // Users with invalid emails that are already registered also have emailVerified = true
@@ -50,7 +54,7 @@ export default async function UserRegistrationPage(props: {
             <div className="flex flex-col md:px-10">
               <div className="w-full md:max-w-md">
                 <RegistrationForm
-                  callbackUrl={getFirstSearchParam(callbackUrl)}
+                  callbackUrl={destination}
                   termsData={termsData}
                   userEmail={session.user.email}
                   emailOnly={emailOnly}

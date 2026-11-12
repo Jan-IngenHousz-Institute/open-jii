@@ -11,6 +11,7 @@ import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
+import { getAuthCallback } from "~/lib/auth-callback";
 import { orpc } from "~/lib/orpc";
 import { parseApiError } from "~/util/apiError";
 
@@ -125,7 +126,7 @@ export function RegistrationForm({
     }
 
     toast({ description: t("registration.successMessage") });
-    router.push(callbackUrl ?? "/platform");
+    router.push(getAuthCallback(callbackUrl));
   };
 
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
