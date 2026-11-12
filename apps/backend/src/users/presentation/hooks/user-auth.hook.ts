@@ -1,12 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { AfterHook, BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
+import { AfterHook, Hook } from "@thallesp/nestjs-better-auth";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
-import { APIError, getSessionFromCtx } from "better-auth/api";
-import z from "zod";
 
 import { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
-import { UserRepository } from "../../core/repositories/user.repository";
 
 @Hook()
 @Injectable()
@@ -15,44 +12,8 @@ export class UserAuthHook {
 
   constructor(
     private readonly acceptInvitationUseCase: AcceptPendingInvitationsUseCase,
-    private readonly userRepository: UserRepository,
     private readonly notifyPendingInvitationsUseCase: NotifyPendingOrganizationInvitationsUseCase,
   ) {}
-
-  @BeforeHook("/sign-in/email-otp")
-  async handleEmailOtpSignInBefore(ctx: AuthHookContext) {
-    const session = await this.getSessionFromCtx(ctx);
-    if (!session?.user) return;
-
-    const currentUser = session.user as { id: string; email?: string; registered?: boolean };
-
-    const hasValidEmail = z.string().email().safeParse(currentUser.email).success;
-    if (currentUser.registered && hasValidEmail) return;
-
-    // The body is not validated until after this hook. Anything that is not an address is left
-    // to that validation: an ORCID iD written here would match an ORCID placeholder at sign-in.
-    // The endpoint looks the address up lowercased, so it is stored that way.
-    const body = ctx.body as { email?: unknown };
-    const parsed = z.string().email().safeParse(body.email);
-    if (!parsed.success) return;
-    const email = parsed.data.toLowerCase();
-    if (email === currentUser.email?.toLowerCase()) return;
-
-    // The verified flag must never carry over to an address nobody has proven; the code that
-    // follows proves it.
-    const result = await this.userRepository.update(currentUser.id, {
-      email,
-      emailVerified: false,
-    });
-    if (result.isFailure()) {
-      if (result.error.code === "REPOSITORY_DUPLICATE") {
-        throw new APIError("BAD_REQUEST", {
-          message: "This email is already associated with another account",
-        });
-      }
-      throw new APIError("INTERNAL_SERVER_ERROR", { message: result.error.message });
-    }
-  }
 
   @AfterHook("/sign-in/email")
   async handleEmailSignIn(ctx: AuthHookContext) {
@@ -84,15 +45,21 @@ export class UserAuthHook {
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
-  @AfterHook("/email-otp/verify-email")
-  async handleOtpVerify(ctx: AuthHookContext) {
+  /**
+   * Registration gives an account with no address, an ORCID sign-up whose email is private,
+   * its address here rather than through a sign-in. The route re-issues the session with the
+   * new address, so the invitations waiting for it are found the same way.
+   */
+  @AfterHook("/email-otp/change-email")
+  async handleEmailChange(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
-  /* v8 ignore next 3 */
-  protected async getSessionFromCtx(ctx: AuthHookContext) {
-    return getSessionFromCtx(ctx);
+  @AfterHook("/email-otp/verify-email")
+  async handleOtpVerify(ctx: AuthHookContext) {
+    await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   private async acceptInvitationsForNewUser(ctx: AuthHookContext) {

@@ -4,7 +4,6 @@ import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import type { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
-import type { UserRepository } from "../../core/repositories/user.repository";
 import { UserAuthHook } from "./user-auth.hook";
 
 function createMockContext(
@@ -30,15 +29,11 @@ function createMockContext(
 describe("UserAuthHook", () => {
   let hook: UserAuthHook;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
-  let mockUserRepository: { update: ReturnType<typeof vi.fn> };
   let mockNotifyUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockUseCase = {
       execute: vi.fn().mockResolvedValue(success(0)),
-    };
-    mockUserRepository = {
-      update: vi.fn().mockResolvedValue(success([])),
     };
     mockNotifyUseCase = {
       execute: vi.fn().mockResolvedValue(success(0)),
@@ -46,117 +41,8 @@ describe("UserAuthHook", () => {
 
     hook = new UserAuthHook(
       mockUseCase as unknown as AcceptPendingInvitationsUseCase,
-      mockUserRepository as unknown as UserRepository,
       mockNotifyUseCase as unknown as NotifyPendingOrganizationInvitationsUseCase,
     );
-  });
-
-  describe("handleEmailOtpSignInBefore", () => {
-    function createBeforeHookContext(email?: string): AuthHookContext {
-      return { body: email !== undefined ? { email } : {} } as unknown as AuthHookContext;
-    }
-
-    beforeEach(() => {
-      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
-        user: { id: "user-123", email: null, registered: false },
-      });
-    });
-
-    it("should return early if no session", async () => {
-      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue(null);
-      const ctx = createBeforeHookContext("new@example.com");
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should return early if user is registered and has a valid email", async () => {
-      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
-        user: { id: "user-123", email: "existing@example.com", registered: true },
-      } as any);
-      const ctx = createBeforeHookContext("new@example.com");
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should return early if no email in body", async () => {
-      const ctx = createBeforeHookContext();
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should update user email, unverified, when user lacks a valid email", async () => {
-      const ctx = createBeforeHookContext("new@example.com");
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).toHaveBeenCalledWith("user-123", {
-        email: "new@example.com",
-        emailVerified: false,
-      });
-    });
-
-    it("should store the address lowercased, as the endpoint looks it up", async () => {
-      const ctx = createBeforeHookContext("New.Person@Example.COM");
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).toHaveBeenCalledWith("user-123", {
-        email: "new.person@example.com",
-        emailVerified: false,
-      });
-    });
-
-    it("should not write an ORCID iD, which would match an ORCID placeholder", async () => {
-      const ctx = createBeforeHookContext("0000-0002-1825-0097");
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should not write anything else that is not an address", async () => {
-      await hook.handleEmailOtpSignInBefore(createBeforeHookContext("not-an-address"));
-      await hook.handleEmailOtpSignInBefore({ body: { email: 42 } } as unknown as AuthHookContext);
-
-      expect(mockUserRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should not write the address the user already has, so a failed code unverifies nothing", async () => {
-      vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue({
-        user: { id: "user-123", email: "Existing@Example.com", registered: false },
-      } as any);
-      const ctx = createBeforeHookContext("existing@example.COM");
-
-      await hook.handleEmailOtpSignInBefore(ctx);
-
-      expect(mockUserRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should throw BAD_REQUEST when email is already taken", async () => {
-      mockUserRepository.update.mockResolvedValue(
-        failure(AppError.badRequest("Duplicate", "REPOSITORY_DUPLICATE")),
-      );
-      const ctx = createBeforeHookContext("taken@example.com");
-
-      await expect(hook.handleEmailOtpSignInBefore(ctx)).rejects.toThrow(
-        "This email is already associated with another account",
-      );
-    });
-
-    it("should throw for other repository errors", async () => {
-      mockUserRepository.update.mockResolvedValue(
-        failure(AppError.internal("DB connection failed")),
-      );
-      const ctx = createBeforeHookContext("new@example.com");
-
-      await expect(hook.handleEmailOtpSignInBefore(ctx)).rejects.toThrow();
-    });
   });
 
   describe("handleEmailSignIn", () => {
@@ -196,6 +82,24 @@ describe("UserAuthHook", () => {
       await hook.handleOtpVerify(ctx);
 
       expect(mockUseCase.execute).toHaveBeenCalledWith("user-123", "test@example.com");
+    });
+  });
+
+  describe("handleEmailChange", () => {
+    it("accepts and announces the invitations waiting for the new address", async () => {
+      const ctx = createMockContext({ email: "carol@uni.edu" });
+
+      await hook.handleEmailChange(ctx);
+
+      expect(mockUseCase.execute).toHaveBeenCalledWith("user-123", "carol@uni.edu");
+      expect(mockNotifyUseCase.execute).toHaveBeenCalledWith("user-123", "carol@uni.edu");
+    });
+
+    it("does nothing when the change was refused and no session was issued", async () => {
+      await hook.handleEmailChange({ context: {} } as unknown as AuthHookContext);
+
+      expect(mockUseCase.execute).not.toHaveBeenCalled();
+      expect(mockNotifyUseCase.execute).not.toHaveBeenCalled();
     });
   });
 

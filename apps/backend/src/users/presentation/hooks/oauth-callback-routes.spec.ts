@@ -1,5 +1,6 @@
 import { AFTER_HOOK_KEY, BEFORE_HOOK_KEY } from "@thallesp/nestjs-better-auth";
 import { callbackOAuth, linkSocialAccount, unlinkAccount } from "better-auth/api";
+import { emailOTP } from "better-auth/plugins/email-otp";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 
 import { SignInMethodsAuthHook } from "./sign-in-methods-auth.hook";
@@ -45,6 +46,14 @@ describe("auth hook route literals", () => {
       expect(hookPath(hook, "handleEmailOtpSignIn")).toBe("/sign-in/email-otp");
       expect(hookPath(hook, "handleSocialSignIn")).toBe("/sign-in/social");
       expect(hookPath(hook, "handleOtpVerify")).toBe("/email-otp/verify-email");
+    });
+
+    it("registers the email-code change registration gives an address through", () => {
+      const { changeEmailEmailOTP } = emailOTP({
+        sendVerificationOTP: () => Promise.resolve(),
+      }).endpoints;
+      expect(changeEmailEmailOTP.path).toBe("/email-otp/change-email");
+      expect(hookPath(hook, "handleEmailChange")).toBe(changeEmailEmailOTP.path);
     });
   });
 });

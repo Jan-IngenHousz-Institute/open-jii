@@ -115,6 +115,14 @@ export const auth = betterAuth({
         window: 60,
         max: 10, // Allow more verification attempts
       },
+      "/email-otp/request-email-change": {
+        window: 60,
+        max: 3,
+      },
+      "/email-otp/change-email": {
+        window: 60,
+        max: 10,
+      },
       // Less restrictive for session checks
       "/get-session": false, // Disable rate limiting for session checks
     },
@@ -132,11 +140,15 @@ export const auth = betterAuth({
       // library refuses to link from an untrusted provider. orcidProvider drops
       // unverified emails itself, so trusting ORCID admits no unverified address.
       // The placeholder iD is safe to trust only while no verified user can hold a
-      // non-address as its email, which the backend's email-code before-hook guarantees.
+      // non-address as its email. The only path that sets a user's email to something
+      // else is the email-code change, which takes only an address and proves it first.
       trustedProviders: ["orcid"],
     },
   },
   user: {
+    // As configured this route cannot change an address: it needs an
+    // emailVerification.sendVerificationEmail sender and none is set. An address
+    // changes only through the email-code change in openJiiEmailOTP.
     changeEmail: {
       enabled: true,
     },
@@ -172,7 +184,7 @@ export const auth = betterAuth({
         email: process.env.AUTH_PLAY_REVIEW_EMAIL,
         otp: process.env.AUTH_PLAY_REVIEW_OTP,
       },
-      async sendEmail({ email, otp }) {
+      async sendEmail({ email, otp, type }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;
 
@@ -184,6 +196,7 @@ export const auth = betterAuth({
             emailFrom,
             senderName: "openJII",
             baseUrl: clientUrl,
+            purpose: type === "change-email" ? "confirm-email" : "sign-in",
           });
         }
       },
