@@ -11,9 +11,13 @@ export const useAddCompatibleMacro = (protocolId: string) => {
   return useMutation(
     orpc.protocols.addCompatibleMacros.mutationOptions({
       onSettled: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: orpc.protocols.listCompatibleMacros.queryKey({ input: { id: protocolId } }),
-        });
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: orpc.protocols.listCompatibleMacros.queryKey({ input: { id: protocolId } }),
+          }),
+          queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() }),
+          queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() }),
+        ]);
       },
     }),
   );

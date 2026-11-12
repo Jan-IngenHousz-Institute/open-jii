@@ -11,7 +11,10 @@ import { ProtocolDto } from "../../../core/models/protocol.model";
 import type { ProtocolListFilter } from "../../../core/repositories/protocol.repository";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 
-type ProtocolWithActivity = ProtocolDto & { activity: ResourceSeries | null };
+type ProtocolWithActivity = ProtocolDto & {
+  activity: ResourceSeries | null;
+  compatibleMacroCount: number;
+};
 
 @Injectable()
 export class ListProtocolsUseCase {

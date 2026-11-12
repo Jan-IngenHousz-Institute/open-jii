@@ -19,6 +19,7 @@ export type MetricArea =
   | "path"
   | "web"
   | "api"
+  | "email"
   | "ingest"
   | "lakehouse"
   | "sandboxes"
