@@ -10,6 +10,7 @@ import type {
 import type { AwsPort as HealthAwsPort } from "../../../health/core/ports/aws.port";
 import type { AwsPort as IotAwsPort } from "../../../iot/core/ports/aws.port";
 import type { LambdaPort } from "../../../macros/core/ports/lambda.port";
+import type { MetricsPort as NotificationMetricsPort } from "../../../notifications/core/ports/metrics.port";
 import { ErrorCodes } from "../../utils/error-codes";
 import type { Result } from "../../utils/fp-utils";
 import { success, failure, AppError } from "../../utils/fp-utils";
@@ -34,7 +35,7 @@ import { AwsS3Service } from "./services/s3/s3.service";
 import type { IotUploadUrl, SignedDownloadUrl } from "./services/s3/s3.types";
 
 @Injectable()
-export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort {
+export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort, NotificationMetricsPort {
   private readonly logger = new Logger(AwsAdapter.name);
 
   constructor(

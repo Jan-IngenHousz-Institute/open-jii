@@ -1,3 +1,5 @@
+import { protocolMacros } from "@repo/database";
+
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { resourceMetricsCacheKey } from "../../../../metrics/application/resource-metrics.service";
@@ -33,6 +35,25 @@ describe("ListMacrosUseCase", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  it("carries the compatible protocol count alongside activity on paginated items", async () => {
+    const linked = await testApp.createMacro({ name: "Linked", createdBy: testUserId });
+    const unlinked = await testApp.createMacro({ name: "Unlinked", createdBy: testUserId });
+    const compatible = await testApp.createProtocol({ name: "Compatible", createdBy: testUserId });
+    await testApp.database.insert(protocolMacros).values({
+      macroId: linked.id,
+      protocolId: compatible.id,
+    });
+
+    const result = await useCase.executePaginated(1, 20, { userId: testUserId });
+
+    assertSuccess(result);
+    expect(result.value.items.every((item) => "activity" in item)).toBe(true);
+    expect(result.value.items).toEqual([
+      expect.objectContaining({ id: linked.id, compatibleProtocolCount: 1 }),
+      expect.objectContaining({ id: unlinked.id, compatibleProtocolCount: 0 }),
+    ]);
   });
 
   it("should list all macros without filter", async () => {

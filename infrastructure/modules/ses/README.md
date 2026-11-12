@@ -41,16 +41,17 @@ graph TD;
 
 ## 🛠 Resources Used
 
-| Resource                             | Description                                          | Documentation                                                                                                                  |
-| ------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `aws_ses_domain_identity`            | Registers and verifies a domain with SES             | [AWS SES Domain Identity](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_identity)     |
-| `aws_ses_domain_dkim`                | Generates DKIM tokens for email authentication       | [AWS SES DKIM](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_dkim)                    |
-| `aws_ses_domain_mail_from`           | Sets up custom MAIL FROM domain for SPF alignment    | [AWS SES MAIL FROM](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_mail_from)          |
-| `aws_route53_record`                 | Creates various DNS records for email authentication | [AWS Route53 Record](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record)               |
-| `aws_s3_bucket`                      | Storage for DMARC reports                            | [AWS S3 Bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket)                         |
-| `aws_ses_receipt_rule_set`           | Rules for processing incoming emails                 | [AWS SES Receipt Rule Set](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_receipt_rule_set)   |
-| `aws_iam_user`, `aws_iam_access_key` | SMTP credentials for sending emails                  | [AWS IAM User](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_user)                           |
-| `aws_ses_configuration_set`          | Tracking and management of email sending             | [AWS SES Configuration Set](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_configuration_set) |
+| Resource                                   | Description                                                       | Documentation                                                                                                                                                |
+| ------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `aws_ses_domain_identity`                  | Registers and verifies a domain with SES                          | [AWS SES Domain Identity](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_identity)                                   |
+| `aws_ses_domain_dkim`                      | Generates DKIM tokens for email authentication                    | [AWS SES DKIM](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_dkim)                                                  |
+| `aws_ses_domain_mail_from`                 | Sets up custom MAIL FROM domain for SPF alignment                 | [AWS SES MAIL FROM](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_domain_mail_from)                                        |
+| `aws_route53_record`                       | Creates various DNS records for email authentication              | [AWS Route53 Record](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record)                                             |
+| `aws_s3_bucket`                            | Storage for DMARC reports                                         | [AWS S3 Bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket)                                                       |
+| `aws_ses_receipt_rule_set`                 | Rules for processing incoming emails                              | [AWS SES Receipt Rule Set](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_receipt_rule_set)                                 |
+| `aws_iam_user`, `aws_iam_access_key`       | SMTP credentials for sending emails                               | [AWS IAM User](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_user)                                                         |
+| `aws_ses_configuration_set`                | Tracking and management of email sending                          | [AWS SES Configuration Set](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ses_configuration_set)                               |
+| `aws_sesv2_account_suppression_attributes` | Account-level suppression of addresses that bounced or complained | [AWS SESv2 Account Suppression Attributes](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sesv2_account_suppression_attributes) |
 
 ## ⚙️ Usage
 

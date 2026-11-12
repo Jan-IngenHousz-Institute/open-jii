@@ -15,7 +15,7 @@
 #   exception or alert is on the daily report; weekly puts an entry on the weekly
 #   report; alert additionally means a Grafana rule carries the entry's id
 # - area: where on its report an entry sits. Daily data path: volume (the how-much chart) |
-#   latency (the how-long chart) | path (the tiles beneath them). Daily rows: web | api |
+#   latency (the how-long chart) | path (the tiles beneath them). Daily rows: web | api | email |
 #   ingest | lakehouse | sandboxes. Weekly: adoption (who is getting started) | usage (people and
 #   data) | platform | cost
 # - name: what the report shows, in the words of whoever reads it
@@ -133,6 +133,11 @@ passes:
   - date: 2026-11-06
     range: [138, 138]
     note: every use of the Google Play review account, since nothing else shows someone signing in with or guessing its fixed code
+  - date: 2026-11-09
+    range: [139, 143]
+    note: >-
+      notification email health: what the outbox sent, failed and has waiting, how long the oldest
+      has waited, and the account's bounce and complaint rates
 
 metrics:
   # Ingest path
@@ -2542,3 +2547,123 @@ metrics:
       (infrastructure/modules/play-review-sign-in). Outside a review, any count means someone else has
       the address or the code. Each backend task refuses the address after ten attempts, counted from
       when the task started and reset each UTC day, so a deployment or a replaced task starts at zero.
+
+  - num: 139
+    id: emails-sent
+    name: Emails sent
+    family: observability
+    source: api
+    phase: P2
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Backend
+      metric: NotificationEmails
+      stat: Sum
+      dimensions: { Environment: "${ENVIRONMENT}", Outcome: sent }
+    notes: >-
+      Notification emails the backend's outbox handed to SES, counted by the worker after each drain
+      that did anything. A volume, not a fault, so it has no runbook and sits on the Platform
+      dashboard's Email chart only. The same metric's other outcomes, retried, deferred and skipped,
+      are readable in CloudWatch by Outcome. Sign-in codes and invitations never enter the outbox and
+      are not counted here.
+
+  - num: 140
+    id: email-failures
+    name: Emails given up on
+    family: observability
+    area: email
+    source: api
+    phase: P2
+    active: true
+    slots: [exception, dashboard]
+    signal:
+      namespace: OpenJII/Backend
+      metric: NotificationEmails
+      stat: Sum
+      dimensions: { Environment: "${ENVIRONMENT}", Outcome: failed }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/email-failures.md
+    notes: >-
+      Notification emails the outbox stopped trying to send. A row gets five attempts, the last about
+      eighty minutes after the first, then turns failed and nobody gets the email. Shown on the daily
+      report as a plain count beside the other levels, with the limit drawn on its chart, and not
+      alerted: an outage shows first as a waiting email (141), and one bad address should not wake
+      anyone.
+
+  - num: 141
+    id: email-outbox-waiting
+    name: Oldest waiting email
+    family: observability
+    area: email
+    source: api
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/Backend
+      metric: NotificationEmailOldestWaitingSeconds
+      stat: Maximum
+      unit: seconds
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 900 }
+    runbook: docs/runbooks/email-outbox-waiting.md
+    notes: >-
+      How long the oldest notification email still pending or sending has waited since it was
+      queued, 0 when none is. Every backend task publishes it every five minutes beside
+      NotificationEmailsWaiting, the number of them. A relay outage holds every row with its attempts
+      unchanged. One email rejected on every attempt also passes 900 seconds, in the wait after its
+      third failure, since the retries wait 1, 5, 15 and 60 minutes, and stays past it until it is
+      sent or given up on.
+
+  - num: 142
+    id: email-bounce-rate
+    name: Bounce rate
+    family: observability
+    area: email
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/SES
+      metric: Reputation.BounceRate
+      stat: Average
+      unit: ratio
+      cadence: 86400
+    baseline: { method: threshold, max: 0.04 }
+    runbook: docs/runbooks/email-bounce-rate.md
+    notes: >-
+      SES's own bounce rate for the account, over what it counts as a representative volume of mail,
+      so it cannot be recomputed from sends and bounces. AWS reviews an account at 5% and may pause
+      its sending at 10%. Absent until the account has sent enough to be judged, so no data is not
+      an outage. SES publishes points only around sends, roughly daily on dev, so the board reads a
+      day at a time and a quiet account shows No data, not red. Covers every email the account
+      sends, sign-in codes included.
+
+  - num: 143
+    id: email-complaint-rate
+    name: Complaint rate
+    family: observability
+    area: email
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/SES
+      metric: Reputation.ComplaintRate
+      stat: Average
+      unit: ratio
+      cadence: 86400
+    baseline: { method: threshold, max: 0.0008 }
+    runbook: docs/runbooks/email-complaint-rate.md
+    notes: >-
+      SES's own complaint rate for the account, over what it counts as a representative volume of
+      mail. AWS reviews an account at 0.1% and may pause its sending at 0.5%. Absent until the
+      account has sent enough to be judged, so no data is not an outage. SES publishes points only
+      around sends, roughly daily on dev, so the board reads a day at a time and a quiet account
+      shows No data, not red. Covers every email the account sends, sign-in codes included.
