@@ -1,5 +1,6 @@
 "use client";
 
+import { AuthClientError } from "@/hooks/organization/auth-organization-result";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDeletePasskey } from "~/hooks/auth/useDeletePasskey/useDeletePasskey";
@@ -22,9 +23,11 @@ import { runMutationWithToast } from "./run-mutation-with-toast";
 export function DeletePasskeyDialog({
   passkeyId,
   passkeyName,
+  disabled = false,
 }: {
   passkeyId: string;
   passkeyName: string;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation("account");
   const [open, setOpen] = useState(false);
@@ -33,7 +36,10 @@ export function DeletePasskeyDialog({
   const handleDelete = async () => {
     await runMutationWithToast(
       () => deletePasskey.mutateAsync({ id: passkeyId }),
-      t("passkeys.deleteError"),
+      (error) =>
+        error instanceof AuthClientError && error.code === "LAST_SIGN_IN_METHOD"
+          ? t("signInMethods.lastSignInMethod")
+          : t("passkeys.deleteError"),
       () => setOpen(false),
     );
   };
@@ -44,6 +50,7 @@ export function DeletePasskeyDialog({
         <Button
           variant="ghost"
           size="icon"
+          disabled={disabled}
           aria-label={t("passkeys.deleteNamed", { name: passkeyName })}
         >
           <Trash2 className="text-destructive h-4 w-4" />

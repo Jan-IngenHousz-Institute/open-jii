@@ -35,6 +35,10 @@ if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
       clientId: process.env.AUTH_ORCID_ID,
       clientSecret: process.env.AUTH_ORCID_SECRET,
       environment: process.env.AUTH_ORCID_ENVIRONMENT === "sandbox" ? "sandbox" : "production",
+      // For a registry that refuses the backend's own callback (the sandbox takes neither
+      // http nor localhost), the address registered there; unset everywhere else.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an empty value must fall back to the library's own callback, which `??` would not.
+      redirectURI: process.env.AUTH_ORCID_REDIRECT_URI || undefined,
     }),
   );
 }
@@ -113,6 +117,23 @@ export const auth = betterAuth({
       },
       // Less restrictive for session checks
       "/get-session": false, // Disable rate limiting for session checks
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      // Applies only to an explicit link from a signed-in account. Linking at
+      // sign-in still needs the same verified address on both sides.
+      allowDifferentEmails: true,
+      // The library refuses to unlink a person's last account row; the backend
+      // replaces that count with its own check that a way to sign in remains.
+      allowUnlinkingAll: true,
+      // A private ORCID email reaches us as the bare iD, unverified, which the
+      // library refuses to link from an untrusted provider. orcidProvider drops
+      // unverified emails itself, so trusting ORCID admits no unverified address.
+      // The placeholder iD is safe to trust only while no verified user can hold a
+      // non-address as its email, which the backend's email-code before-hook guarantees.
+      trustedProviders: ["orcid"],
     },
   },
   user: {

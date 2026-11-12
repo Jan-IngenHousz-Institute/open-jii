@@ -150,7 +150,14 @@ vi.mock("@repo/i18n", () => ({
                 : (key === "unsubscribe.done.body" || key === "unsubscribe.undone.body") &&
                     typeof options?.category === "string"
                   ? `${key}:${options.category}`
-                  : key,
+                  : key.startsWith("signInMethods.") && options
+                    ? [
+                        key,
+                        ...["email", "login", "orcidId", "provider"].flatMap((name) =>
+                          typeof options[name] === "string" ? [options[name]] : [],
+                        ),
+                      ].join(":")
+                    : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",
@@ -234,6 +241,15 @@ beforeEach(async () => {
   } catch {
     // Partial override; leave it alone.
   }
+  try {
+    const { authClient } = await import("@repo/auth/client");
+    vi.mocked(authClient.listAccounts).mockResolvedValue({ data: [], error: null });
+    vi.mocked(authClient.accountInfo).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.linkSocial).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.unlinkAccount).mockResolvedValue({ data: { status: true }, error: null });
+  } catch {
+    // Partial override; leave it alone.
+  }
 });
 
 vi.mock("next/headers", () => ({
@@ -311,6 +327,10 @@ vi.mock("@repo/auth/client", () => ({
       addTeamMember: vi.fn().mockResolvedValue({ data: null, error: null }),
       removeTeamMember: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
+    listAccounts: vi.fn().mockResolvedValue({ data: [], error: null }),
+    accountInfo: vi.fn().mockResolvedValue({ data: null, error: null }),
+    linkSocial: vi.fn().mockResolvedValue({ data: null, error: null }),
+    unlinkAccount: vi.fn().mockResolvedValue({ data: { status: true }, error: null }),
     getLastUsedLoginMethod: vi.fn(() => null),
     isLastUsedLoginMethod: vi.fn(() => false),
     clearLastUsedLoginMethod: vi.fn(),
