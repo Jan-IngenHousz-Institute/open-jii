@@ -1,0 +1,113 @@
+---
+title: "First-party apps reuse the openJII session"
+description: "The cookie and endpoint contract for JII applications that use the openJII session."
+---
+
+## Decision
+
+Accepted on 2026-11-12. First-party JII applications under `openjii.org`, starting
+with Equipment, reuse the existing openJII Better Auth session. openJII does not
+provide an OIDC provider for this integration. A sibling application's server
+checks the openJII session and creates its own application session.
+
+This contract is for trusted first-party applications only. Sharing the parent
+domain also shares the session cookie with those applications. An unrelated or
+third-party application must not use this integration.
+
+## Session cookie
+
+| Environment | Token cookie                              | Domain                   |
+| ----------- | ----------------------------------------- | ------------------------ |
+| Production  | `__Secure-better-auth.prod.session_token` | `.openjii.org`           |
+| Dev         | `__Secure-better-auth.dev.session_token`  | `.dev.openjii.org`       |
+| Local       | `better-auth.dev.session_token`           | Host-only on `localhost` |
+
+Deployed token cookies are Secure, HttpOnly, SameSite=Lax and Path=/, with a
+30-day lifetime renewed by normal openJII activity once per day. Local HTTP
+cookies have the same attributes except Secure and the domain attribute.
+The cookie value includes a signature. Forward it unchanged.
+
+Read the token by its exact environment-specific name and forward only that
+cookie. Never forward `session_data`, the separate signed cookie cache, or the
+browser's other cookies. Do not store the openJII token, log it, or send any
+openJII `Set-Cookie` header back to the browser.
+
+## Check the session
+
+Call this fixed endpoint from the sibling application's server:
+
+```http
+GET https://api.openjii.org/api/v1/auth/get-session?disableCookieCache=true&disableRefresh=true
+```
+
+Dev uses `https://api.dev.openjii.org` and local development uses
+`http://localhost:3020`, with the same path and query. The request carries the
+single token cookie. Use a timeout and refuse redirects.
+
+The endpoint returns HTTP 200 with JSON `null` for an absent, invalid, expired or
+revoked session. Otherwise it returns an object with `user` and `session`:
+
+- `user.id`, `user.name` and `user.email` are strings.
+- `user.emailVerified` and `user.registered` are booleans.
+- `user.image` is an image URL string or `null`.
+- `session.id` and `session.userId` are strings. `session.userId` identifies `user.id`.
+- `session.expiresAt` is an ISO date-time string.
+
+Other fields may be present. In particular, the session contains `token`; never
+log the response. Keep only the user fields the application needs.
+
+`disableCookieCache=true` forces a server-side check even when a still-valid
+cache cookie accompanies a revoked token. `disableRefresh=true` keeps a valid
+check from extending the session, changing its row or setting cookies. Invalid
+sessions can return cookie-clearing headers, which the sibling must ignore.
+
+## Check organization membership
+
+Use the same single token cookie to call:
+
+```http
+GET https://api.openjii.org/api/v1/auth/organization/get-active-member-role?organizationId=<organization-id>
+```
+
+A member receives HTTP 200 and `{ "role": "owner" }`, `{ "role": "admin" }` or
+`{ "role": "member" }`. A signed-in non-member receives HTTP 403 with error code
+`YOU_ARE_NOT_A_MEMBER_OF_THIS_ORGANIZATION`. An unauthenticated request receives
+HTTP 401. Use the organization's stable id, not its editable slug. Do not depend
+on other fields in an error body. Always send `organizationId`; a request without
+an organization id returns HTTP 400 and `NO_ACTIVE_ORGANIZATION` when there is no
+active organization. Treat that as a request error, not a non-member result.
+
+The session check is exempt from Better Auth's rate limiter. The role endpoint
+shares the global limit of 100 requests per 60 seconds for each client IP and
+path, so users behind one sibling server share that allowance. Read membership
+at sign-in and handle HTTP 429, server errors and network failures as no answer,
+using the application's retry or outage policy. They do not establish non-membership.
+
+The application decides what membership permits. This endpoint does not create
+an account, approve access or link identities in the sibling application.
+
+## Return after sign-in and sign-out
+
+An application can send a person to the openJII login page with an approved
+`callbackUrl`. The web return allowlist includes `https://equipment.openjii.org`;
+dev and local also allow `http://localhost:3100`. New users complete registration
+before returning. These are return destinations, not browser origins permitted
+to make auth writes. The sibling makes the session and role requests from its
+server, so browser CORS access is unnecessary.
+
+Each sibling owns its application session and its re-check interval. Signing out
+of openJII takes effect in that application at its next session check. Signing
+out of the sibling ends its own session. It does not end the openJII session.
+Equipment checks during use at least every five minutes. Its outage policy may
+keep an existing application session for up to 60 minutes after its last good
+check when openJII cannot answer; an explicit invalid session ends it immediately.
+
+## Compatibility checks
+
+`packages/auth/src/session-contract.test.ts` drives the real server configuration
+with a memory database in place of Postgres. It pins the cookie names and
+attributes, the session fields, cache bypass, read-only session checks, and the
+membership role and refusal responses. Assertion failures name this page.
+
+A Better Auth upgrade that changes these behaviors must update this contract
+and coordinate the sibling application's release before deployment.

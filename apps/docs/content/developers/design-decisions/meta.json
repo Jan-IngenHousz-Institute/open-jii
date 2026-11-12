@@ -12,6 +12,7 @@
     "mqtt-topic-proposal",
     "data-governance-adr",
     "data-ingestion-adr",
+    "first-party-session-contract-adr",
     "proposal-template",
     "adr-template"
   ]
