@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { sanitizeQuestionLabel } from "../../../transforms/label-sanitization";
-import { RESERVED_EXPERIMENT_COLUMN_NAMES } from "../experiment.schema";
+import { RESERVED_EXPERIMENT_COLUMN_NAMES, zLowercaseId } from "../experiment.schema";
 
 /** Measurement columns custom metadata may match against directly. */
 export const MATCHABLE_MEASUREMENT_COLUMNS = ["device_id"] as const;
@@ -9,6 +9,24 @@ const METADATA_COLUMN_TARGET_PREFIX = "column:";
 
 function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
+}
+
+// Half of a UTF-16 surrogate pair, which Postgres cannot keep in a jsonb document.
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+
+function holdsUnstorableText(value: unknown): boolean {
+  if (typeof value === "string") {
+    return value.includes("\u0000") || LONE_SURROGATE.test(value);
+  }
+  if (Array.isArray(value)) {
+    return value.some(holdsUnstorableText);
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).some(
+      ([key, inner]) => holdsUnstorableText(key) || holdsUnstorableText(inner),
+    );
+  }
+  return false;
 }
 
 const zMetadataColumnName = z
@@ -33,8 +51,9 @@ const zMetadataRow = z
   .catchall(z.unknown());
 
 /**
- * Custom metadata payload as stored on the wire and persisted to
- * `experiment_custom_metadata.metadata` (VARIANT).
+ * Custom metadata payload as stored on the wire and persisted to the lakehouse's
+ * `experiment_custom_metadata.metadata` (VARIANT) and Postgres's `experiment_metadata_sheets.metadata`
+ * (jsonb).
  */
 export const zExperimentCustomMetadataPayload = z
   .object({
@@ -91,6 +110,18 @@ export const zExperimentCustomMetadataPayload = z
         });
       } else {
         seen.set(canonicalName, idx);
+      }
+    });
+
+    // Postgres keeps no NUL character and no half of a character pair in a jsonb document, in a key
+    // or in a value. Reported on the field that holds it, so the form can show it there.
+    Object.entries(blob).forEach(([field, value]) => {
+      if (holdsUnstorableText(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: "A cell holds a character that cannot be saved, such as a hidden null character",
+        });
       }
     });
 
@@ -151,9 +182,13 @@ export const zUpdateExperimentMetadataBody = z.object({
   metadata: zExperimentCustomMetadataPayload,
 });
 
+export const zExperimentMetadataExperimentPathParam = z.object({
+  id: zLowercaseId.describe("ID of the experiment"),
+});
+
 export const zExperimentMetadataPathParam = z.object({
-  id: z.string().guid().describe("ID of the experiment"),
-  metadataId: z.string().guid().describe("ID of the metadata record"),
+  id: zLowercaseId.describe("ID of the experiment"),
+  metadataId: zLowercaseId.describe("ID of the metadata record"),
 });
 
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;

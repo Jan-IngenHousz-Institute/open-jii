@@ -31,7 +31,9 @@ WHERE type NOT IN ('comment', 'flag') OR flag_type NOT IN ('outlier', 'needs_rev
    OR type IS NULL OR user_id IS NULL OR created_at IS NULL OR updated_at IS NULL
    OR NOT lower(id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
    OR NOT lower(experiment_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-   OR NOT lower(user_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+   OR NOT lower(user_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+   OR NOT (table_name RLIKE '^[a-zA-Z0-9_]+$'
+       OR lower(table_name) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
 
 SELECT id, count(*) FROM centrum.experiment_annotations GROUP BY id HAVING count(*) > 1;
 
@@ -40,8 +42,10 @@ SELECT table_name, count(*) FROM centrum.experiment_annotations GROUP BY table_n
 
 Expect no rows from the first two. The API refuses all of the first since the first release, and
 Postgres refuses most of them. The rest, a flag without a kind, a comment without text or text over
-255 characters, fit Postgres but are annotations the API could not have written. Step 4 refuses an
-id held twice. Decide with the team what each one should be and correct it in the lakehouse before
+255 characters, fit Postgres but are annotations the API could not have written. A table name other
+than letters, digits and underscores, or an id, fits Postgres too, but the second release's API
+refuses it, so those annotations could no longer be removed a table at a time. Step 4 refuses an id
+held twice. Decide with the team what each one should be and correct it in the lakehouse before
 going on. The third lists the tables annotated, which should be `raw_data`, macro ids and upload
 table ids only, since the second release finds a row by its table and row id.
 
@@ -64,8 +68,9 @@ SELECT count(*), sum(length(content_text)) FROM centrum.experiment_annotations;
 ```
 
 Note `export_time`, which the first query reads before the export starts, and the two numbers the
-last query gives, then download the export's result as CSV. If the editor cuts the download short of the count, export it in parts with
-a `WHERE experiment_id IN (...)`. `user_name` is not copied; pages look names up at read time.
+last query gives, then download the export's result as CSV. If the editor cuts the download short
+of the count, export it in parts with a `WHERE experiment_id IN (...)`. `user_name` is not copied;
+pages look names up at read time.
 
 Each row goes out as one JSON document because the editor's download writes a NULL as the text
 `null`, which a column of its own could not tell from a comment that reads null. The document
@@ -149,9 +154,9 @@ LEFT JOIN experiments e ON e.id = l.experiment_id WHERE e.id IS NULL;
 ```
 
 The first query is clean when every row it returns was edited in Postgres after the second export's
-`export_time`. The second is clean when every row was created after it. A row created before it is a delete that step 4 undid, or one whose copy to Postgres failed,
-for which the service's log warns "not copied to Postgres". Check it is gone from the lakehouse and
-delete it from Postgres.
+`export_time`. The second is clean when every row was created after it. A row created before it is
+a delete that step 4 undid, or one whose copy to Postgres failed, for which the service's log warns
+"not copied to Postgres". Check it is gone from the lakehouse and delete it from Postgres.
 
 A row of the first query whose `in_postgres` is older, or empty, is a change the lakehouse took
 that Postgres missed, such as an edit to an annotation step 4 had not reached yet. Run step 4
@@ -173,16 +178,22 @@ WHERE a.id = l.id AND a.id IN ('<id>', '<id>')
 ```
 
 The last condition leaves a row edited since the export started: that edit reached both stores,
-and the export is older than it.
+and the export is older than it. A save still reaching the lakehouse when the export began looks the
+same and is copied back over by this UPDATE; the fresh export then shows Postgres older, and step 4
+settles it. So always end on a fresh export whose checks are clean.
 
 ## Before the second release, and after
 
-Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
-is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
-since Postgres is then where annotations are written: a difference is a write the first release's
-tasks took while the second rolled out, whose copy failed. Postgres is what pages read by then, so
-repair it as step 5 says: step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older
-row, a `DELETE` from Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
+Run this in the same session as [metadata-sheets-move](metadata-sheets-move.md). The second release
+goes out only when both are clean.
+
+Run steps 1 to 5 again right before the second release goes out, with a fresh export and in a new
+psql session, since step 3 creates its tables; a clean check is what lets it go. Once it is out,
+run steps 2 and 3 and step 5's checks once more without step 4, since Postgres is then where
+annotations are written: a difference is a write the first release's tasks took while the second
+rolled out, whose copy failed. Postgres is what pages read by then, so repair it as step 5 says:
+step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older row, a `DELETE` from
+Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
 
 Delete `annotations.csv`, `annotations-2.csv` and any parts once the checks are clean. They hold
 researchers' data.

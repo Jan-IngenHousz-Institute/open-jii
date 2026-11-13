@@ -551,9 +551,10 @@ describe("MetadataUploadStep", () => {
       options: {
         onClose?: () => void;
         mutateError?: Error | string;
+        data?: typeof sampleData;
       } = {},
     ): Promise<{ onClose: () => void }> => {
-      mockParseClipboard.mockResolvedValue(sampleData);
+      mockParseClipboard.mockResolvedValue(options.data ?? sampleData);
       if (options.mutateError) {
         mockMutateAsync.mockRejectedValue(options.mutateError);
       } else {
@@ -600,6 +601,24 @@ describe("MetadataUploadStep", () => {
           },
         });
       });
+    });
+
+    it("shows why a sheet Postgres cannot keep is refused, and sends nothing", async () => {
+      await loadDataAndSave({
+        data: {
+          ...sampleData,
+          rows: [{ _id: "row_0", col_0: 1, col_1: "Te\u0000st" }],
+        },
+      });
+
+      fireEvent.click(getSaveButton());
+
+      expect(
+        await screen.findByText(
+          "A cell holds a character that cannot be saved, such as a hidden null character",
+        ),
+      ).toBeInTheDocument();
+      expect(mockMutateAsync).not.toHaveBeenCalled();
     });
 
     it("shows error when save fails with Error", async () => {

@@ -7,14 +7,14 @@ import {
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
-import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
+import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
 import { GetExperimentMetadataUseCase } from "./get-experiment-metadata";
 
 describe("GetExperimentMetadataUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: GetExperimentMetadataUseCase;
-  let metadataRepository: ExperimentMetadataRepository;
+  let metadataWarehouseRepository: ExperimentMetadataWarehouseRepository;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -24,7 +24,7 @@ describe("GetExperimentMetadataUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(GetExperimentMetadataUseCase);
-    metadataRepository = testApp.module.get(ExperimentMetadataRepository);
+    metadataWarehouseRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
   });
 
   afterEach(() => {
@@ -50,7 +50,7 @@ describe("GetExperimentMetadataUseCase", () => {
       updatedAt: new Date("2025-01-02"),
     };
 
-    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
+    vi.spyOn(metadataWarehouseRepository, "findAllByExperimentId").mockResolvedValue(
       success([mockMetadata]),
     );
 
@@ -60,7 +60,7 @@ describe("GetExperimentMetadataUseCase", () => {
     assertSuccess(result);
     expect(result.value).toEqual([mockMetadata]);
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(metadataRepository.findAllByExperimentId).toHaveBeenCalledWith(experiment.id);
+    expect(metadataWarehouseRepository.findAllByExperimentId).toHaveBeenCalledWith(experiment.id);
   });
 
   it("should return empty array when no metadata exists", async () => {
@@ -69,7 +69,7 @@ describe("GetExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(success([]));
+    vi.spyOn(metadataWarehouseRepository, "findAllByExperimentId").mockResolvedValue(success([]));
 
     const result = await useCase.execute(experiment.id, testUserId);
 
@@ -94,7 +94,7 @@ describe("GetExperimentMetadataUseCase", () => {
       updatedAt: new Date("2025-01-02"),
     };
 
-    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
+    vi.spyOn(metadataWarehouseRepository, "findAllByExperimentId").mockResolvedValue(
       success([mockMetadata]),
     );
 
@@ -112,7 +112,7 @@ describe("GetExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
+    vi.spyOn(metadataWarehouseRepository, "findAllByExperimentId").mockResolvedValue(
       failure(AppError.internal("Databricks unavailable")),
     );
 
