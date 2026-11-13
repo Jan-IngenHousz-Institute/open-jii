@@ -11,7 +11,7 @@ In particular, the accepted 2025 data ADRs describe per-experiment schemas and d
 
 ## Current ADRs
 
-- [First-party apps reuse the openJII session](/developers/design-decisions/first-party-session-contract-adr) records the session cookie and endpoint contract for sibling JII applications.
+- [First-party apps reuse the openJII session](/developers/design-decisions/first-party-session-contract-adr) records why Equipment signs in with the openJII session rather than an OIDC provider, and what that asks of every application under `openjii.org`.
 - [Consolidate experiment data in centrum](/developers/design-decisions/centrum-data-architecture-adr) — replaces per-experiment schemas, pipelines, and provisioning with central experiment-keyed tables and views.
 - [Replace ts-rest with oRPC](/developers/design-decisions/orpc-migration-adr) — current contract, runtime validation, client, OpenAPI, and REST-compatibility boundary.
 - [Pin experiments to workbook snapshots](/developers/design-decisions/workbook-versioning-adr) — separates mutable authoring from immutable published execution, upgrade, and rollback.
