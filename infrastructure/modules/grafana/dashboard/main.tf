@@ -671,9 +671,9 @@ EOT
 }
 
 # Notification email. The backend publishes the outbox's gauges every five minutes from each
-# task, and SES publishes the account's reputation once it has sent enough mail to judge, so
-# no data on any of the three is quiet, not broken; dependency-health watches the backend going
-# silent.
+# task, 0 when nothing waits, so no data there means the reporting has stopped and its rule fires.
+# SES publishes the account's reputation only once it has sent enough mail to judge, so no data
+# on those two is quiet, not broken.
 resource "grafana_rule_group" "email_health" {
   provider         = grafana.amg
   name             = "Notification Email Health"
@@ -681,7 +681,9 @@ resource "grafana_rule_group" "email_health" {
   interval_seconds = 60
 
   # Catalog entry 141. Every task publishes the same age, so the highest reads right however many
-  # run. A relay outage holds every row; one email failing on every attempt crosses it too.
+  # run. A relay outage holds every row; one email failing on every attempt crosses it too. No
+  # point at all for the query's 15 minutes and the 5 to hold means the job reporting the outbox
+  # has stopped, while email may be stuck, so no data fires as well.
   rule {
     name      = "Notification Emails Waiting"
     condition = "C"
@@ -748,12 +750,12 @@ resource "grafana_rule_group" "email_health" {
       }
     }
 
-    no_data_state  = "OK"
+    no_data_state  = "Alerting"
     exec_err_state = "OK"
     for            = "5m"
 
     annotations = {
-      description      = "An email has waited in the outbox for over 15 minutes. Either the mail relay is unreachable and the whole outbox is waiting, or one email is failing on every attempt."
+      description      = "An email has waited in the outbox for over 15 minutes. Either the mail relay is unreachable and the whole outbox is waiting, or one email is failing on every attempt. It also fires when the backend has stopped reporting the outbox."
       summary          = "Notification emails are not leaving"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid
