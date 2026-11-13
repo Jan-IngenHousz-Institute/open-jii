@@ -1,0 +1,59 @@
+---
+title: "ADR: First-party apps reuse the openJII session"
+description: "Why Equipment signs in with the openJII session instead of an OIDC provider, and what that asks of every application under openjii.org."
+---
+
+{/* verified: code@1c07c0b09b56 2026-11-13 */}
+
+# ADR: First-party apps reuse the openJII session
+
+**Date:** 2026-11-12  
+**Status:** Accepted
+
+## Context
+
+Equipment, JII's instrument register, needs openJII sign-in. It is served at
+`equipment.openjii.org` from its own AWS account, not the openJII platform's.
+
+openJII sets its session cookie on `.openjii.org` (`.dev.openjii.org` on dev). So
+whenever a signed-in person opens Equipment, their browser already sends Equipment
+their full openJII session, whichever sign-in protocol Equipment uses. An OIDC
+provider would not change that. Only a domain outside `openjii.org` would. The
+decision is therefore about who sits inside openJII's trust boundary, not about
+which protocol to use.
+
+## Decision
+
+Equipment reuses the openJII session, and openJII runs no OIDC provider for it.
+Equipment's server checks the session cookie with openJII's session and
+organization membership endpoints, then creates its own application session.
+After sign-in, openJII sends people back to Equipment only through an allowlist of
+return addresses. Equipment does not join Better Auth's trusted browser origins.
+
+## Consequences
+
+- Every application under `openjii.org` sees openJII sessions, so each one has to
+  meet openJII's bar: the token is never stored or logged, changes are reviewed,
+  and its AWS account runs under the same guardrails as openJII's.
+- Return addresses are approved by origin, so any path on Equipment passes.
+  Equipment accepts only same-origin relative paths in its own `redirect`
+  parameter, so an approved return cannot chain on to another site.
+- Better Auth's cookie names, session fields and membership answers become an
+  interface. `packages/auth/src/session-contract.test.ts` pins them against the
+  real server configuration, and its failure messages say what Equipment relies
+  on. A Better Auth upgrade that fails that test needs a coordinated Equipment
+  release.
+- Equipment owns its re-check interval and its policy for openJII outages, and
+  documents them in its own repository.
+
+## Alternatives considered
+
+- **An OIDC provider in openJII.** Equipment would receive tokens scoped to it,
+  but while it stays under `openjii.org` the browser still sends it the session
+  cookie. The provider would remove no exposure and add client registration and
+  key rotation to run. It becomes worth it when an application outside JII needs
+  openJII sign-in.
+- **Serving Equipment from a domain outside `openjii.org`.** This takes Equipment
+  out of openJII's trust boundary, but it then needs a provider such as OIDC to
+  sign in at all. Not now: Equipment is a JII application that can meet openJII's
+  bar, and sharing the session lets it ship without a provider.
