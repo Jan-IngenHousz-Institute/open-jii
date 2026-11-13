@@ -1,3 +1,5 @@
+import { isNumericType } from "@repo/api/transforms/column-type-utils";
+
 import { buildAggregateExpression } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
 import { buildFilterCondition } from "./expressions/filter";
@@ -122,13 +124,18 @@ export abstract class BaseQueryBuilder {
     if (mode?.kind === "numericString") {
       return numericStringOrder(target, direction, this.rowIdFor(mode));
     }
+    if (mode?.kind === "number") {
+      const rowId = this.rowIdFor(mode);
+      return `${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
+    }
     const value =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
     return `${value} ${direction}`;
   }
 
   protected rowIdFor(mode: QueryOrdering["mode"]): string | undefined {
-    return !this.isDistinct && mode?.kind === "numericString" && mode.rowId
+    const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
+    return !this.isDistinct && isRowOrdered && mode.rowId
       ? this.escapeIdentifier(mode.rowId)
       : undefined;
   }
@@ -373,6 +380,15 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
 
   columnExpression(column: string): string {
     return this.fieldExpressions().get(column) ?? super.columnExpression(column);
+  }
+
+  /** Text compared with a numeric field casts to a number, so text that is not one matches no row
+   *  instead of failing the statement. */
+  filterLiteral(column: string, value: Exclude<FilterValue, (string | number)[]>): string {
+    const literal = super.filterLiteral(column, value);
+    const type = this.flattenedFields().find(({ key }) => key === column)?.field.type;
+    const isTextAgainstNumber = typeof value === "string" && isNumericType(type?.toUpperCase());
+    return isTextAgainstNumber ? `try_cast(${literal} AS DOUBLE)` : literal;
   }
 
   where(condition: string): this {

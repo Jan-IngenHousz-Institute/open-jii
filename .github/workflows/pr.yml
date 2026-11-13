@@ -18,7 +18,7 @@ jobs:
     name: Validate PR title
     runs-on: ubuntu-latest
     steps:
-      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -348,6 +348,15 @@ jobs:
           # Only apps/data uses uv. Without this, the cache key scan walks the
           # whole repo (incl. node_modules) and costs minutes.
           cache-dependency-glob: "apps/data/uv.lock"
+
+      # PySpark 4.0 runs on Java 17 or 21. The runner's default JDK is newer and lacks
+      # Subject.getSubject, so Spark cannot start without a pinned one.
+      - name: Setup Java
+        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
 
       - name: Build Packages
         uses: ./.github/actions/build-packages

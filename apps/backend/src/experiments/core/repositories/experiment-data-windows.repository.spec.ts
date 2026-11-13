@@ -19,6 +19,7 @@ import type { ExperimentDto } from "../models/experiment.model";
 import type { CachePort } from "../ports/cache.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { ExperimentDataRepository } from "./experiment-data.repository";
+import type { FlowRepository } from "./flow.repository";
 
 const column = (name: string, type_text: string): SchemaData["columns"][number] => ({
   name,
@@ -66,7 +67,12 @@ function setup(
     cache,
     cache,
     new ContributorAnonymizerService(),
-    new ExperimentWarehouseReadsService(port),
+    new ExperimentWarehouseReadsService(
+      port,
+      fromPartial<FlowRepository>({
+        getByExperimentId: vi.fn().mockResolvedValue(success(null)),
+      }),
+    ),
     fromPartial<ExperimentStoreReadsService>({}),
   );
   const experiment = fromPartial<ExperimentDto>({

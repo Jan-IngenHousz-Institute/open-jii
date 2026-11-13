@@ -165,12 +165,12 @@ for (const screen of screens) {
       await page.getByRole("button", { name: "Upload Data" }).click();
 
       const dialog = page.getByRole("dialog", { name: "Upload data" });
-      await expect(dialog.getByText("Upload #1")).toBeAttached();
+      await expect(dialog.getByText("gas_exchange_1")).toBeAttached();
       await expectReachable(dialog.getByRole("heading", { name: "Upload data" }));
       await expectReachable(dialog.getByRole("button", { name: "Close" }).first());
       await expectReachable(dialog.getByRole("button", { name: "New upload" }));
 
-      const oldestUpload = dialog.getByText("Upload #1");
+      const oldestUpload = dialog.getByText("gas_exchange_1");
       await oldestUpload.scrollIntoViewIfNeeded();
       await expectReachable(oldestUpload);
 

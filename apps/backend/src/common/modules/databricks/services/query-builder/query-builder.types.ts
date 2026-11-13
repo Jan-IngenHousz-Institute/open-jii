@@ -95,7 +95,10 @@ export interface AggregationSpec {
 export interface QueryOrdering {
   column: string;
   direction?: "ASC" | "DESC";
-  mode?: { kind: "pseudonym"; salt: string } | { kind: "numericString"; rowId?: string };
+  mode?:
+    | { kind: "pseudonym"; salt: string }
+    | { kind: "numericString"; rowId?: string }
+    | { kind: "number"; rowId?: string };
 }
 
 export interface AsOfJoin {
