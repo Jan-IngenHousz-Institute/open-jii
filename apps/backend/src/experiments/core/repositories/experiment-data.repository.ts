@@ -1347,7 +1347,9 @@ export class ExperimentDataRepository {
     if (phone === undefined || columns === undefined || shape.join !== undefined) {
       return columns;
     }
-    const missesPhoneColumn = columns.includes(ANNOTATIONS) && !columns.includes(phone);
+    // A view the infrastructure run has not given the column yet keeps the warehouse's merged cell.
+    const isInView = shape.baseColumns?.includes(phone) ?? true;
+    const missesPhoneColumn = isInView && columns.includes(ANNOTATIONS) && !columns.includes(phone);
     return missesPhoneColumn ? [...columns, phone] : columns;
   }
 

@@ -111,7 +111,16 @@ export class ContributorAnonymizerService {
     columnType: string | undefined,
     experiment: { id: string; anonymizeContributors: boolean },
   ): (string | number)[] {
-    if (!experiment.anonymizeContributors || columnType !== WellKnownColumnTypes.CONTRIBUTOR) {
+    if (!experiment.anonymizeContributors) {
+      return values;
+    }
+    // A distinct annotations cell names its platform authors as a row's cell does.
+    if (columnType === WellKnownColumnTypes.ANNOTATIONS) {
+      return values.map((v) =>
+        typeof v === "string" ? this.anonymizeAuthors(v, experiment.id) : v,
+      );
+    }
+    if (columnType !== WellKnownColumnTypes.CONTRIBUTOR) {
       return values;
     }
 

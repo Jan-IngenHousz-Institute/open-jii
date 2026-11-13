@@ -195,5 +195,22 @@ describe("ContributorAnonymizerService", () => {
       });
       expect(out).toEqual([42]);
     });
+
+    it("pseudonymises the platform authors in a distinct annotations cell, as a row's", () => {
+      const platform = { id: "a1", type: "comment", createdBy: "user-1", createdByName: "Ada" };
+      const phone = { id: "p1", type: "comment", content: { text: "From the phone" } };
+
+      const [out] = service.anonymizeDistinctValues(
+        [JSON.stringify([phone, platform])],
+        WellKnownColumnTypes.ANNOTATIONS,
+        { id: "exp-1", anonymizeContributors: true },
+      );
+
+      const pseudo = service.pseudonymFor("exp-1", "user-1");
+      expect(typeof out === "string" ? JSON.parse(out) : out).toEqual([
+        phone,
+        { ...platform, createdBy: pseudo, createdByName: pseudo },
+      ]);
+    });
   });
 });

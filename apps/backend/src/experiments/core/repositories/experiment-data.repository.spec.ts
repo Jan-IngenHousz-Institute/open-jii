@@ -3308,6 +3308,9 @@ describe("ExperimentDataRepository", () => {
 
     it("reads the phone's from the warehouse's own column and the platform's from Postgres", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success(["id", "annotations", "payload_annotations"]),
+      );
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success({
@@ -3430,6 +3433,145 @@ describe("ExperimentDataRepository", () => {
         page: 1,
         pageSize: 10,
         source: "store",
+      });
+
+      assertSuccess(result);
+      const pseudonym = testApp.module
+        .get(ContributorAnonymizerService)
+        .pseudonymFor(experiment.id, flag.createdBy);
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [expect.objectContaining({ createdBy: pseudonym, createdByName: pseudonym })],
+      ]);
+    });
+
+    /** The warehouse answering every statement of a read with these columns and rows. */
+    function warehouseAnswers(columns: string[], rows: (string | null)[][], tables = [table]) {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(tables));
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(success(columns));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: columns.map((name, position) => column(name, position)),
+          rows,
+          totalRows: rows.length,
+          truncated: false,
+        }),
+      );
+    }
+
+    async function annotate(tableName: string): Promise<AnnotationRecord> {
+      const record = { ...flag, id: faker.string.uuid(), tableName };
+      const annotations = testApp.module.get(ExperimentAnnotationsRepository);
+      assertSuccess(await annotations.transaction((tx) => annotations.insert(tx, [record])));
+      return record;
+    }
+
+    it("keeps the warehouse's merged cell while the view has no phone column yet", async () => {
+      const merged = [phoneComment, { id: "lakehouse copy" }];
+      warehouseAnswers(["id", "annotations"], [["1", JSON.stringify(merged)]]);
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "raw_data",
+        columns: ["id", "annotations"],
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ columns: ["id", "annotations"] }),
+      );
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([merged]);
+    });
+
+    it("fills a macro table's rows from Postgres too", async () => {
+      const macroTable = { ...table, identifier: "macro_123", tableType: "macro" as const };
+      const onMacro = await annotate("macro_123");
+      warehouseAnswers(
+        ["id", "annotations", "payload_annotations"],
+        [["1", JSON.stringify([phoneComment, { id: "stale" }]), JSON.stringify([phoneComment])]],
+        [macroTable],
+      );
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "macro_123",
+        columns: ["id", "annotations"],
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [phoneComment, expect.objectContaining({ id: onMacro.id })],
+      ]);
+    });
+
+    it("gives an upload table's rows the platform's annotations, with no phone column to ask for", async () => {
+      const uploadId = faker.string.uuid();
+      const uploadTable = { ...table, identifier: uploadId, tableType: "upload" as const };
+      const onUpload = await annotate(uploadId);
+      warehouseAnswers(["id", "annotations"], [["1", "[]"]], [uploadTable]);
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: uploadId,
+        columns: ["id", "annotations"],
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ columns: ["id", "annotations"] }),
+      );
+      expect(annotationsOf(result.value[0].data?.rows)).toEqual([
+        [expect.objectContaining({ id: onUpload.id })],
+      ]);
+    });
+
+    it("asks Postgres nothing for an aggregate", async () => {
+      const lookup = vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findOnRows");
+      warehouseAnswers(["n"], [["1"]]);
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "raw_data",
+        aggregation: { functions: [{ column: "id", function: "count" }] },
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(lookup).not.toHaveBeenCalled();
+    });
+
+    it("shows a pseudonym for the platform's authors on a warehouse read of an anonymised experiment", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success(["id", "annotations", "payload_annotations"]),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            column("id", 0),
+            { ...column("annotations", 1), type_text: WellKnownColumnTypes.ANNOTATIONS },
+            column("payload_annotations", 2),
+          ],
+          rows: [["1", "[]", "[]"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment: { ...experiment, anonymizeContributors: true },
+        tableName: "raw_data",
+        columns: ["id", "annotations"],
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
