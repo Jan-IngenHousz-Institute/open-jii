@@ -373,6 +373,7 @@
           "title": "Overzicht",
           "description": "Wat dit apparaat is en hoe ver de installatie is."
         },
+        "equipmentLink": "Openen in Equipment",
         "about": {
           "title": "Over"
         }

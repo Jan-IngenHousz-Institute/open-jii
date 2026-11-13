@@ -40,10 +40,16 @@ runs:
         if [[ "$ENVIRONMENT" == "prod" ]]; then
           echo "NEXT_PUBLIC_API_URL=https://api.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DOCS_URL=https://docs.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_EQUIPMENT_URL=https://equipment.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_JII_ORGANIZATION_ID=1beb5413-3b39-4d16-81b9-87ea686dfb45" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_BASE_URL=https://${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
         else
           echo "NEXT_PUBLIC_API_URL=https://api.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DOCS_URL=https://docs.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          # Equipment has no dev deployment; dev links the local one auth already returns to.
+          echo "NEXT_PUBLIC_EQUIPMENT_URL=http://localhost:3100" >> $GITHUB_ENV
+          # JII-testing, dev's stand-in for the JII organization.
+          echo "NEXT_PUBLIC_JII_ORGANIZATION_ID=2ec3531a-d938-408b-ab77-6cd47ad86e59" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_BASE_URL=https://dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
         fi
         echo "NEXT_PUBLIC_POSTHOG_KEY=${POSTHOG_KEY}" >> $GITHUB_ENV
