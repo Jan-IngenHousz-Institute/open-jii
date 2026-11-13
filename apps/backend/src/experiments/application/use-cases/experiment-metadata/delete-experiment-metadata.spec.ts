@@ -46,7 +46,7 @@ describe("DeleteExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    const metadataId = "metadata-uuid-1";
+    const metadataId = "5b0f8c1e-2d3a-4e5f-9a6b-7c8d9e0f1a2b";
     vi.spyOn(metadataWarehouseRepository, "deleteByMetadataId").mockResolvedValue(success(true));
 
     const result = await useCase.execute(experiment.id, metadataId, testUserId);
@@ -61,7 +61,7 @@ describe("DeleteExperimentMetadataUseCase", () => {
 
   it("should return NOT_FOUND if experiment does not exist", async () => {
     const nonExistentId = "00000000-0000-0000-0000-000000000000";
-    const metadataId = "metadata-uuid-1";
+    const metadataId = "5b0f8c1e-2d3a-4e5f-9a6b-7c8d9e0f1a2b";
 
     const result = await useCase.execute(nonExistentId, metadataId, testUserId);
 
@@ -76,7 +76,7 @@ describe("DeleteExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    const metadataId = "metadata-uuid-1";
+    const metadataId = "5b0f8c1e-2d3a-4e5f-9a6b-7c8d9e0f1a2b";
     vi.spyOn(metadataWarehouseRepository, "deleteByMetadataId").mockResolvedValue(
       failure(AppError.internal("Databricks connection failed")),
     );

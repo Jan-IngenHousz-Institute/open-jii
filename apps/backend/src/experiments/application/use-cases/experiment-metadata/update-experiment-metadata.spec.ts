@@ -44,7 +44,7 @@ describe("UpdateExperimentMetadataUseCase", () => {
     await testApp.teardown();
   });
 
-  const metadataId = "metadata-uuid-1";
+  const metadataId = "5b0f8c1e-2d3a-4e5f-9a6b-7c8d9e0f1a2b";
 
   const sampleUpdate: UpdateExperimentMetadataDto = {
     metadata: { location: "GH 8.3 Updated", sampleCount: 20 },

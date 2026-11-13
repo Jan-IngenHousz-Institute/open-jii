@@ -614,7 +614,9 @@ describe("MetadataUploadStep", () => {
       fireEvent.click(getSaveButton());
 
       expect(
-        await screen.findByText("Metadata cannot hold a NUL character or a broken character"),
+        await screen.findByText(
+          "A cell holds a character that cannot be saved, such as a hidden null character",
+        ),
       ).toBeInTheDocument();
       expect(mockMutateAsync).not.toHaveBeenCalled();
     });

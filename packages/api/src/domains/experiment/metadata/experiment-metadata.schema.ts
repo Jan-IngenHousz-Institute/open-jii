@@ -11,7 +11,7 @@ function isAllowedMetadataColumnChar(c: string): boolean {
   return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c === "_";
 }
 
-// Half of a UTF-16 surrogate pair, which neither Postgres nor the lakehouse parses as JSON.
+// Half of a UTF-16 surrogate pair, which Postgres cannot keep in a jsonb document.
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
 function holdsUnstorableText(value: unknown): boolean {
@@ -120,7 +120,7 @@ export const zExperimentCustomMetadataPayload = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: [field],
-          message: "Metadata cannot hold a NUL character or a broken character",
+          message: "A cell holds a character that cannot be saved, such as a hidden null character",
         });
       }
     });
