@@ -8,8 +8,8 @@ import type { DatabricksPort } from "../ports/databricks.port";
 
 /**
  * The lakehouse's copy of annotations, `centrum.experiment_annotations`, which the warehouse views,
- * charts and exports read until they leave Databricks. Postgres holds the annotations; the
- * experiment data outbox keeps this copy to its state.
+ * charts and exports read. Postgres holds the annotations; the experiment data outbox keeps this
+ * copy to its state.
  */
 @Injectable()
 export class ExperimentAnnotationsWarehouseRepository {

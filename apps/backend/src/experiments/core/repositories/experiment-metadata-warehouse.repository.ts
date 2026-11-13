@@ -1,12 +1,8 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
-import { z } from "zod";
+import { Injectable, Inject } from "@nestjs/common";
 
 import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, failure, success, AppError } from "../../../common/utils/fp-utils";
-import type {
-  ExperimentMetadataDto,
-  MetadataSheetRecord,
-} from "../models/experiment-metadata.model";
+import type { MetadataSheetRecord } from "../models/experiment-metadata.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
@@ -22,9 +18,9 @@ interface SheetDocument {
 }
 
 /**
- * The lakehouse's copy of metadata sheets, which the warehouse views and exports read until they
- * leave Databricks. Postgres holds the sheets; the experiment data outbox keeps this copy to their
- * state. Values are bound as statement parameters, never written into the SQL text.
+ * The lakehouse's copy of metadata sheets, which the warehouse views and exports read. Postgres
+ * holds the sheets; the experiment data outbox keeps this copy to their state. Values are bound as
+ * statement parameters, never written into the SQL text.
  *
  * Databricks table schema:
  *   metadata_id   STRING   (PK, UUID)
@@ -36,58 +32,37 @@ interface SheetDocument {
  */
 @Injectable()
 export class ExperimentMetadataWarehouseRepository {
-  private readonly logger = new Logger(ExperimentMetadataWarehouseRepository.name);
-
   constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
 
   private get metadataTable(): string {
     return `${this.databricksPort.CATALOG_NAME}.${this.databricksPort.CENTRUM_SCHEMA_NAME}.experiment_custom_metadata`;
   }
 
-  // --- Validation ---
+  /**
+   * The ids of the sheets each MERGE should carry, from their sizes, so a copy can read and send
+   * one statement's documents at a time.
+   */
+  statementGroups(sizes: { id: string; bytes: number }[]): string[][] {
+    const groups: string[][] = [];
+    let current: string[] = [];
+    let bytes = 0;
 
-  private readonly schemas = {
-    uuid: z.string().guid(),
-  };
-
-  private validate = {
-    uuid: (value: string) => this.schemas.uuid.safeParse(value),
-  };
-
-  // --- Repository methods ---
-
-  async findAllByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto[]>> {
-    this.logger.log({
-      msg: "Finding all metadata by experiment ID",
-      operation: "findAllByExperimentId",
-      experimentId,
-    });
-
-    if (!this.validate.uuid(experimentId).success) {
-      return failure(AppError.validationError("Invalid experiment ID format"));
+    for (const sheet of sizes) {
+      if (current.length > 0 && bytes + sheet.bytes > MERGE_BYTES) {
+        groups.push(current);
+        current = [];
+        bytes = 0;
+      }
+      current.push(sheet.id);
+      bytes += sheet.bytes;
     }
 
-    const query = `
-      SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
-      FROM ${this.metadataTable}
-      WHERE experiment_id = :experiment_id
-      ORDER BY created_at DESC
-    `;
-
-    const result = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-      [{ name: "experiment_id", value: experimentId }],
-    );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(`Failed to find metadata: ${result.error.message}`));
+    if (current.length > 0) {
+      groups.push(current);
     }
-
-    return success(result.value.rows.map((row) => this.mapRowToDto(result.value.columns, row)));
+    return groups;
   }
 
-  /** Writes each sheet as Postgres holds it, inserting the ones the copy lacks. */
   /** Writes each sheet's current state, in statements of at most `MERGE_BYTES` of documents. */
   async merge(sheets: MetadataSheetRecord[]): Promise<Result<void>> {
     for (const documents of this.bySize(sheets)) {
@@ -186,37 +161,5 @@ export class ExperimentMetadataWarehouseRepository {
     }
 
     return success(undefined);
-  }
-
-  /** Map a raw Databricks row to ExperimentMetadataDto */
-  private mapRowToDto(columns: { name: string }[], row: (string | null)[]): ExperimentMetadataDto {
-    const colIndex = (name: string) => columns.findIndex((c) => c.name === name);
-
-    const rawMetadata = row[colIndex("metadata")];
-    let metadata: Record<string, unknown> = {};
-    if (rawMetadata) {
-      try {
-        metadata = JSON.parse(rawMetadata) as Record<string, unknown>;
-      } catch {
-        // The sheet's contents stay out of the log, as every other sheet read keeps them.
-        this.logger.warn({
-          msg: "Failed to parse metadata JSON",
-          metadataId: row[colIndex("metadata_id")],
-          length: rawMetadata.length,
-        });
-      }
-    }
-
-    const createdAtRaw = row[colIndex("created_at")];
-    const updatedAtRaw = row[colIndex("updated_at")];
-
-    return {
-      metadataId: row[colIndex("metadata_id")] ?? "",
-      experimentId: row[colIndex("experiment_id")] ?? "",
-      metadata,
-      createdBy: row[colIndex("created_by")] ?? "",
-      createdAt: createdAtRaw ? new Date(createdAtRaw) : new Date(0),
-      updatedAt: updatedAtRaw ? new Date(updatedAtRaw) : new Date(0),
-    };
   }
 }

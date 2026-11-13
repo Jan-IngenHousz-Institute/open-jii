@@ -40,8 +40,10 @@ export class ExperimentAnnotationsRepository {
     }
   }
 
-  /** Whether the annotation was there to update. */
-  /** Updates an annotation of the given type; one of the other type stays as it is. */
+  /**
+   * Updates an annotation of the given type, and says whether it was there; one of the other type
+   * stays as it is.
+   */
   async update(
     tx: DbOrTx,
     experimentId: string,

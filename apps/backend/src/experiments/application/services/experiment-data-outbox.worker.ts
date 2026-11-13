@@ -3,7 +3,7 @@ import type { OnApplicationShutdown } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
-import { AppError, failure, Result } from "../../../common/utils/fp-utils";
+import { Result, success } from "../../../common/utils/fp-utils";
 import type {
   ClaimedOutboxRow,
   ExperimentDataRecordType,
@@ -17,12 +17,16 @@ import { ExperimentMetadataRepository } from "../../core/repositories/experiment
 /** A claim older than this was abandoned by a task that died, and is taken back. */
 export const LEASE_MS = 5 * 60_000;
 
-/** How long one batch may take, well inside the lease, so no batch is in flight when it is handed on. */
-export const ATTEMPT_DEADLINE_MS = 3 * 60_000;
+/**
+ * No statement of a claim starts after this. The SQL service cancels a statement at 50 s and gives
+ * up on the request at 60 s, so the one in flight ends a minute and a half later at most, and a
+ * claim ends well inside its lease: no copy of a record is still running when another task takes it.
+ */
+export const ATTEMPT_DEADLINE_MS = 2 * 60_000;
 
 /**
- * Rows claimed and copied together. A batch is one MERGE of about ten parameters a record, and dev's
- * warehouse took 10,000 parameters in one statement.
+ * Rows claimed together. Annotations go in one MERGE of about ten parameters a record, and dev's
+ * warehouse took 10,000 parameters in one statement; sheets go a statement's worth at a time.
  */
 const BATCH_SIZE = 200;
 
@@ -37,7 +41,12 @@ export const EXPERIMENT_DATA_OUTBOX_INTERVAL = "experiment-data-outbox";
 export interface OutboxDrainCounts {
   applied: number;
   retried: number;
+  /** Rows a claim stopped before reaching, put back without counting an attempt. */
+  released: number;
 }
+
+/** What one group of a claim came to. */
+type GroupOutcome = "copied" | "stopped" | { failed: string };
 
 /**
  * Copies annotations and metadata sheets from Postgres to the lakehouse. Each row names a record,
@@ -53,7 +62,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   /** A nudge that arrived mid-drain; the running drain owes it one more look. */
   private nudged = false;
   private inFlight: Promise<unknown> | null = null;
-  /** Overridden only by a spec that cannot wait three minutes for the real one. */
+  /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
 
   constructor(
@@ -79,7 +88,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     void this.drain();
   }
 
-  /** Nothing new is claimed, and the batch in flight gets the time it has left. */
+  /** Nothing new is claimed or started, and the claim in hand finishes its statement in flight. */
   async onApplicationShutdown(): Promise<void> {
     this.stopping = true;
     await this.inFlight;
@@ -87,7 +96,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
 
   /** Claims and copies batches until nothing is due. A second call while one runs returns at once. */
   async drain(): Promise<OutboxDrainCounts> {
-    const counts: OutboxDrainCounts = { applied: 0, retried: 0 };
+    const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
 
     if (this.draining) {
       return counts;
@@ -118,13 +127,13 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
           break;
         }
 
-        for (const [recordType, rows] of this.byRecordType(claimed.value)) {
-          const attempt = this.apply(recordType, rows);
-          this.inFlight = attempt;
-          const applied = await attempt;
-          this.inFlight = null;
-          counts[applied ? "applied" : "retried"] += rows.length;
-        }
+        const attempt = this.applyClaim(claimed.value, Date.now() + this.attemptDeadlineMs);
+        this.inFlight = attempt;
+        const outcome = await attempt;
+        this.inFlight = null;
+        counts.applied += outcome.applied;
+        counts.retried += outcome.retried;
+        counts.released += outcome.released;
       }
     } catch (error) {
       this.logger.error({
@@ -139,7 +148,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
       this.inFlight = null;
     }
 
-    if (counts.applied > 0 || counts.retried > 0) {
+    if (counts.applied > 0 || counts.retried > 0 || counts.released > 0) {
       this.logger.log({
         msg: "Drained the experiment data outbox",
         operation: "experiment-data-outbox",
@@ -150,36 +159,175 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     return counts;
   }
 
-  /** Copies one kind of record under a deadline, then deletes its rows or puts them back. */
+  private async applyClaim(
+    claimed: ClaimedOutboxRow[],
+    deadlineAt: number,
+  ): Promise<OutboxDrainCounts> {
+    const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
+    for (const [recordType, rows] of this.byRecordType(claimed)) {
+      const outcome = await this.apply(recordType, rows, deadlineAt);
+      counts.applied += outcome.applied;
+      counts.retried += outcome.retried;
+      counts.released += outcome.released;
+    }
+    return counts;
+  }
+
+  /**
+   * Copies one kind of record a statement's worth at a time, clearing each group's rows once it
+   * landed. A failed group sends what is left back to wait; a claim past its deadline, or a task
+   * shutting down, puts what is left back as it was.
+   */
   private async apply(
     recordType: ExperimentDataRecordType,
     rows: ClaimedOutboxRow[],
-  ): Promise<boolean> {
-    const ids = [...new Set(rows.map((row) => row.recordId))];
-    const copied = await this.withinDeadline(this.copyToLakehouse(recordType, ids));
-
-    if (copied.isSuccess()) {
-      const deleted = await this.outbox.markApplied(rows);
-      if (deleted.isFailure()) {
-        this.logger.error({
-          msg: "Copied experiment data but could not clear its outbox rows; the lease will copy them again",
-          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-          operation: "experiment-data-outbox",
-          recordType,
-          rows: rows.length,
-          error: deleted.error.message,
-        });
-      } else if (deleted.value < rows.length) {
-        this.logger.warn({
-          msg: "Lost the claim on copied experiment data before clearing it; another task has those rows",
-          operation: "experiment-data-outbox",
-          recordType,
-          rows: rows.length - deleted.value,
-        });
-      }
-      return true;
+    deadlineAt: number,
+  ): Promise<OutboxDrainCounts> {
+    const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
+    const groups = await this.groupsOf(
+      recordType,
+      rows.map((row) => row.recordId),
+    );
+    if (groups.isFailure()) {
+      await this.retry(recordType, rows, groups.error.message);
+      counts.retried = rows.length;
+      return counts;
     }
 
+    const canContinue = () => Date.now() < deadlineAt && !this.stopping;
+    let left = rows;
+    for (const ids of groups.value) {
+      const outcome = await this.copyGroup(recordType, ids, canContinue).catch(
+        (error: unknown): GroupOutcome => ({
+          failed: error instanceof Error ? error.message : String(error),
+        }),
+      );
+      if (outcome === "stopped") {
+        await this.release(recordType, left);
+        counts.released = left.length;
+        return counts;
+      }
+      if (outcome !== "copied") {
+        await this.retry(recordType, left, outcome.failed);
+        counts.retried = left.length;
+        return counts;
+      }
+
+      const done = new Set(ids);
+      await this.clear(
+        recordType,
+        left.filter((row) => done.has(row.recordId)),
+      );
+      counts.applied += done.size;
+      left = left.filter((row) => !done.has(row.recordId));
+    }
+    return counts;
+  }
+
+  /**
+   * The records each statement-sized group copies. Annotations are one group. Sheets are grouped
+   * by their size, so only one statement's documents are read at once, and the ids of sheets that
+   * are gone make a group of their own.
+   */
+  private async groupsOf(
+    recordType: ExperimentDataRecordType,
+    ids: string[],
+  ): Promise<Result<string[][]>> {
+    if (recordType === "annotation") {
+      return success([ids]);
+    }
+
+    const sizes = await this.sheets.findSizes(ids);
+    if (sizes.isFailure()) {
+      return sizes;
+    }
+
+    const groups = this.sheetsWarehouse.statementGroups(sizes.value);
+    const gone = this.gone(ids, sizes.value);
+    return success(gone.length > 0 ? [...groups, gone] : groups);
+  }
+
+  /** Writes a group's records that still exist and deletes the copies of those that are gone. */
+  private async copyGroup(
+    recordType: ExperimentDataRecordType,
+    ids: string[],
+    canContinue: () => boolean,
+  ): Promise<GroupOutcome> {
+    if (!canContinue()) {
+      return "stopped";
+    }
+
+    if (recordType === "annotation") {
+      return this.copyWith(ids, await this.annotations.findCopies(ids), canContinue, {
+        merge: (found) => this.annotationsWarehouse.merge(found),
+        remove: (gone) => this.annotationsWarehouse.delete(gone),
+      });
+    }
+    return this.copyWith(ids, await this.sheets.findByIds(ids), canContinue, {
+      merge: (found) => this.sheetsWarehouse.merge(found),
+      remove: (gone) => this.sheetsWarehouse.delete(gone),
+    });
+  }
+
+  private async copyWith<T extends { id: string }>(
+    ids: string[],
+    found: Result<T[]>,
+    canContinue: () => boolean,
+    lakehouse: {
+      merge: (records: T[]) => Promise<Result<void>>;
+      remove: (gone: string[]) => Promise<Result<void>>;
+    },
+  ): Promise<GroupOutcome> {
+    if (found.isFailure()) {
+      return { failed: found.error.message };
+    }
+
+    if (found.value.length > 0) {
+      const merged = await lakehouse.merge(found.value);
+      if (merged.isFailure()) {
+        return { failed: merged.error.message };
+      }
+    }
+
+    const gone = this.gone(ids, found.value);
+    if (gone.length === 0) {
+      return "copied";
+    }
+    if (!canContinue()) {
+      return "stopped";
+    }
+
+    const deleted = await lakehouse.remove(gone);
+    return deleted.isFailure() ? { failed: deleted.error.message } : "copied";
+  }
+
+  /** Deletes the rows whose copies landed, as long as this task still holds them. */
+  private async clear(recordType: ExperimentDataRecordType, rows: ClaimedOutboxRow[]) {
+    const deleted = await this.outbox.markApplied(rows);
+    if (deleted.isFailure()) {
+      this.logger.error({
+        msg: "Copied experiment data but could not clear its outbox rows; the lease will copy them again",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "experiment-data-outbox",
+        recordType,
+        rows: rows.length,
+        error: deleted.error.message,
+      });
+    } else if (deleted.value < rows.length) {
+      this.logger.warn({
+        msg: "Lost the claim on copied experiment data before clearing it; another task has those rows",
+        operation: "experiment-data-outbox",
+        recordType,
+        rows: rows.length - deleted.value,
+      });
+    }
+  }
+
+  private async retry(
+    recordType: ExperimentDataRecordType,
+    rows: ClaimedOutboxRow[],
+    error: string,
+  ) {
     const attempts = Math.max(...rows.map((row) => row.attempts)) + 1;
     const failed = {
       msg: "Could not copy experiment data to the lakehouse; will retry",
@@ -187,7 +335,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
       recordType,
       rows: rows.length,
       attempts,
-      error: copied.error.message,
+      error,
     };
     // Past the last step of the ladder the copy is stuck rather than waiting out a cold warehouse,
     // and error tracking reads errors.
@@ -197,7 +345,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
       this.logger.warn(failed);
     }
 
-    const retried = await this.outbox.markRetry(rows, RETRY_WAITS_S, copied.error.message);
+    const retried = await this.outbox.markRetry(rows, RETRY_WAITS_S, error);
     if (retried.isFailure()) {
       this.logger.error({
         msg: "Could not put experiment data copies back to wait; the lease will offer them again",
@@ -207,39 +355,26 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
         error: retried.error.message,
       });
     }
-    return false;
   }
 
-  /** Writes the records that still exist and deletes the copies of those that are gone. */
-  private async copyToLakehouse(
-    recordType: ExperimentDataRecordType,
-    ids: string[],
-  ): Promise<Result<void>> {
-    if (recordType === "annotation") {
-      const found = await this.annotations.findCopies(ids);
-      if (found.isFailure()) {
-        return found;
-      }
+  private async release(recordType: ExperimentDataRecordType, rows: ClaimedOutboxRow[]) {
+    this.logger.warn({
+      msg: "Stopped a copy of experiment data before it finished; the rest waits for the next drain",
+      operation: "experiment-data-outbox",
+      recordType,
+      rows: rows.length,
+    });
 
-      const merged = await this.annotationsWarehouse.merge(found.value);
-      if (merged.isFailure()) {
-        return merged;
-      }
-
-      return this.annotationsWarehouse.delete(this.gone(ids, found.value));
+    const released = await this.outbox.release(rows);
+    if (released.isFailure()) {
+      this.logger.error({
+        msg: "Could not put unfinished experiment data copies back; the lease will offer them again",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "experiment-data-outbox",
+        recordType,
+        error: released.error.message,
+      });
     }
-
-    const found = await this.sheets.findByIds(ids);
-    if (found.isFailure()) {
-      return found;
-    }
-
-    const merged = await this.sheetsWarehouse.merge(found.value);
-    if (merged.isFailure()) {
-      return merged;
-    }
-
-    return this.sheetsWarehouse.delete(this.gone(ids, found.value));
   }
 
   private gone(ids: string[], found: { id: string }[]): string[] {
@@ -260,31 +395,5 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
       }
     }
     return groups;
-  }
-
-  /**
-   * A copy that outlasts the deadline counts as failed and its rows go back to wait; the copy
-   * itself is let go, and since it writes a record's current state, finishing late does no harm.
-   */
-  private async withinDeadline(copy: Promise<Result<void>>): Promise<Result<void>> {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<Result<void>>((resolve) => {
-      timer = setTimeout(
-        () =>
-          resolve(failure(AppError.internal(`Copy exceeded ${this.attemptDeadlineMs / 1000} s`))),
-        this.attemptDeadlineMs,
-      );
-    });
-
-    try {
-      return await Promise.race([
-        copy.catch((error: unknown) =>
-          failure(AppError.internal(error instanceof Error ? error.message : String(error))),
-        ),
-        deadline,
-      ]);
-    } finally {
-      clearTimeout(timer);
-    }
   }
 }

@@ -126,7 +126,7 @@ describe("ExperimentDataOutboxWorker", () => {
 
     const counts = await worker.drain();
 
-    expect(counts).toEqual({ applied: 2, retried: 0 });
+    expect(counts).toEqual({ applied: 2, retried: 0, released: 0 });
     expect(merge).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
     expect(remove).toHaveBeenCalledWith([gone]);
     expect(await outboxRows()).toEqual([]);
@@ -154,7 +154,7 @@ describe("ExperimentDataOutboxWorker", () => {
     );
     const gone = await oweGone("metadata_sheet");
 
-    expect(await worker.drain()).toEqual({ applied: 2, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 2, retried: 0, released: 0 });
 
     expect(merge).toHaveBeenCalledWith([sheet]);
     expect(remove).toHaveBeenCalledWith([gone]);
@@ -167,7 +167,7 @@ describe("ExperimentDataOutboxWorker", () => {
     vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
     await annotate(...Array.from({ length: 150 }, (_, index) => String(index)));
 
-    expect(await worker.drain()).toEqual({ applied: 150, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 150, retried: 0, released: 0 });
 
     expect(merge).toHaveBeenCalledTimes(1);
     expect(merge.mock.calls[0][0]).toHaveLength(150);
@@ -180,8 +180,8 @@ describe("ExperimentDataOutboxWorker", () => {
     ).mockResolvedValue(failure(AppError.internal("Failed to merge annotations: Warehouse down")));
     await annotate("1");
 
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 1 });
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 1, released: 0 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 0, released: 0 });
 
     expect(await outboxRows()).toEqual([
       expect.objectContaining({
@@ -192,26 +192,133 @@ describe("ExperimentDataOutboxWorker", () => {
     ]);
   });
 
-  it("puts a copy back to wait when it outlasts its deadline", async () => {
+  /** A worker whose claims run out of time after `deadlineMs`. */
+  function workerWithDeadline(deadlineMs: number): ExperimentDataOutboxWorker {
     class HastyWorker extends ExperimentDataOutboxWorker {
-      protected override readonly attemptDeadlineMs = 20;
+      protected override readonly attemptDeadlineMs = deadlineMs;
     }
-    const hasty = new HastyWorker(
+    return new HastyWorker(
       testApp.module.get(ExperimentDataOutboxRepository),
       testApp.module.get(ExperimentAnnotationsRepository),
       testApp.module.get(ExperimentAnnotationsWarehouseRepository),
       testApp.module.get(ExperimentMetadataRepository),
       testApp.module.get(ExperimentMetadataWarehouseRepository),
     );
-    vi.spyOn(testApp.module.get(ExperimentAnnotationsWarehouseRepository), "merge").mockReturnValue(
-      new Promise(() => undefined),
+  }
+
+  /** Sheets of about `bytes` each, saved with the copies they owe. */
+  async function saveSheets(count: number, bytes: number): Promise<MetadataSheetRecord[]> {
+    const records = Array.from(
+      { length: count },
+      (_, index): MetadataSheetRecord => ({
+        id: faker.string.uuid(),
+        experimentId,
+        metadata: { name: `Plots ${index}`, notes: "x".repeat(bytes) },
+        createdBy: userId,
+        createdAt: created,
+        updatedAt: created,
+      }),
     );
+    const sheets = testApp.module.get(ExperimentMetadataRepository);
+    const outbox = testApp.module.get(ExperimentDataOutboxRepository);
+    assertSuccess(
+      await sheets.transaction(async (tx) => {
+        for (const record of records) {
+          await sheets.insert(tx, record);
+        }
+        await outbox.owe(
+          tx,
+          records.map((record) => ({
+            recordType: "metadata_sheet",
+            recordId: record.id,
+            experimentId,
+          })),
+        );
+      }),
+    );
+    return records;
+  }
+
+  it("reads and sends large sheets a statement at a time, clearing each statement's rows as it lands", async () => {
+    const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
+    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+    const read = vi.spyOn(testApp.module.get(ExperimentMetadataRepository), "findByIds");
+    await saveSheets(3, 3 * 1024 * 1024);
+
+    expect(await worker.drain()).toEqual({ applied: 3, retried: 0, released: 0 });
+
+    expect(merge.mock.calls.map(([sheets]) => sheets.length)).toEqual([1, 1, 1]);
+    expect(read.mock.calls.map(([ids]) => ids.length)).toEqual([1, 1, 1]);
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it("starts no statement once a claim's deadline passed, putting the rest back for a fresh claim", async () => {
+    const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
+    const merge = vi.spyOn(warehouse, "merge").mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return success(undefined);
+    });
+    const release = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "release");
+    const retry = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "markRetry");
+    const sheets = await saveSheets(3, 3 * 1024 * 1024);
+
+    // Each claim copies one sheet, then runs out of time; the next claim takes the rest.
+    expect(await workerWithDeadline(200).drain()).toEqual({ applied: 3, retried: 0, released: 3 });
+
+    expect(release.mock.calls.map(([rows]) => rows.length)).toEqual([2, 1]);
+    expect(retry).not.toHaveBeenCalled();
+    const copied = merge.mock.calls.flatMap(([batch]) => batch.map(({ id }) => id));
+    expect(copied.sort()).toEqual(sheets.map(({ id }) => id).sort());
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it("waits for a slow statement rather than letting it run on after its rows go back", async () => {
+    let finished = false;
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsWarehouseRepository),
+      "merge",
+    ).mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      finished = true;
+      return success(undefined);
+    });
     await annotate("1");
 
-    expect(await hasty.drain()).toEqual({ applied: 0, retried: 1 });
+    expect(await workerWithDeadline(200).drain()).toEqual({ applied: 1, retried: 0, released: 0 });
+
+    expect(finished).toBe(true);
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it("puts back the sheets a task shutting down had not started", async () => {
+    const stopping = realWorker();
+    vi.spyOn(testApp.module.get(ExperimentMetadataWarehouseRepository), "merge").mockImplementation(
+      () => {
+        void stopping.onApplicationShutdown();
+        return Promise.resolve(success(undefined));
+      },
+    );
+    await saveSheets(3, 3 * 1024 * 1024);
+
+    expect(await stopping.drain()).toEqual({ applied: 1, retried: 0, released: 2 });
+
+    expect(await outboxRows()).toHaveLength(2);
+  });
+
+  it("sends what is left back to wait when a later statement fails", async () => {
+    const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
+    vi.spyOn(warehouse, "merge")
+      .mockResolvedValueOnce(success(undefined))
+      .mockResolvedValue(
+        failure(AppError.internal("Failed to merge metadata sheets: Warehouse down")),
+      );
+    await saveSheets(3, 3 * 1024 * 1024);
+
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 2, released: 0 });
 
     expect(await outboxRows()).toEqual([
-      expect.objectContaining({ attempts: 1, lastError: "Copy exceeded 0.02 s" }),
+      expect.objectContaining({ attempts: 1, claimedAt: null }),
+      expect.objectContaining({ attempts: 1, claimedAt: null }),
     ]);
   });
 
@@ -246,16 +353,18 @@ describe("ExperimentDataOutboxWorker", () => {
       return success(undefined);
     });
 
-    expect(await worker.drain()).toEqual({ applied: 1, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0, released: 0 });
 
-    expect(reentrant.counts).toEqual({ applied: 0, retried: 0 });
+    expect(reentrant.counts).toEqual({ applied: 0, retried: 0, released: 0 });
     // One claim that found the row, one that found nothing, none from the second call.
     expect(claim).toHaveBeenCalledTimes(2);
   });
 
   it("drains on the interval and on a nudge", async () => {
     const real = realWorker();
-    const drain = vi.spyOn(real, "drain").mockResolvedValue({ applied: 0, retried: 0 });
+    const drain = vi
+      .spyOn(real, "drain")
+      .mockResolvedValue({ applied: 0, retried: 0, released: 0 });
 
     await real.drainOnSchedule();
     expect(drain).toHaveBeenCalledTimes(1);
@@ -273,7 +382,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const drained = real.drain();
     real.nudge();
 
-    expect(await drained).toEqual({ applied: 0, retried: 0 });
+    expect(await drained).toEqual({ applied: 0, retried: 0, released: 0 });
     expect(claim.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -284,7 +393,7 @@ describe("ExperimentDataOutboxWorker", () => {
       failure(AppError.internal("Database unavailable")),
     );
 
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 0, released: 0 });
     expect(merge).not.toHaveBeenCalled();
   });
 
@@ -295,8 +404,8 @@ describe("ExperimentDataOutboxWorker", () => {
       new Error("connection terminated"),
     );
 
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 0 });
-    expect(await worker.drain()).toEqual({ applied: 1, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 0, released: 0 });
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0, released: 0 });
   });
 
   it("treats a thrown copy as that attempt failing, not as the drain failing", async () => {
@@ -306,7 +415,7 @@ describe("ExperimentDataOutboxWorker", () => {
     ).mockRejectedValue(new Error("socket hang up"));
     await annotate("1");
 
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 1 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 1, released: 0 });
     expect(await outboxRows()).toEqual([
       expect.objectContaining({ attempts: 1, lastError: "socket hang up" }),
     ]);
@@ -324,7 +433,7 @@ describe("ExperimentDataOutboxWorker", () => {
       return success(undefined);
     });
 
-    expect(await stopping.drain()).toEqual({ applied: 1, retried: 0 });
+    expect(await stopping.drain()).toEqual({ applied: 1, retried: 0, released: 0 });
     await stopped.promise;
 
     expect(merge).toHaveBeenCalledTimes(1);
@@ -341,7 +450,7 @@ describe("ExperimentDataOutboxWorker", () => {
       failure(AppError.internal("Database unavailable")),
     );
 
-    expect(await worker.drain()).toEqual({ applied: 1, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0, released: 0 });
     const [row] = await outboxRows();
     expect(row.claimedAt).not.toBeNull();
   });
@@ -373,7 +482,7 @@ describe("ExperimentDataOutboxWorker", () => {
     await testApp.database.update(experimentDataOutbox).set({ attempts: 4 });
     const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
 
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 1 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 1, released: 0 });
 
     expect(error).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -402,7 +511,7 @@ describe("ExperimentDataOutboxWorker", () => {
   it("does nothing when nothing is owed", async () => {
     const merge = vi.spyOn(testApp.module.get(ExperimentAnnotationsWarehouseRepository), "merge");
 
-    expect(await worker.drain()).toEqual({ applied: 0, retried: 0 });
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 0, released: 0 });
 
     expect(merge).not.toHaveBeenCalled();
   });

@@ -14,7 +14,7 @@ import {
   or,
   sql,
 } from "@repo/database";
-import type { DatabaseInstance, DbOrTx } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -52,6 +52,13 @@ const CLAIM_STAMP = sql`date_trunc('milliseconds', now() AT TIME ZONE 'UTC')`;
  * The copies of annotations and metadata sheets still owed. A write to a record owes its current
  * state to each copy in the same transaction; the worker applies it and deletes the row.
  */
+/** What putting a row back changes besides its claim. */
+interface RetryChanges {
+  attempts?: SQL;
+  nextAttemptAt?: SQL;
+  lastError?: string;
+}
+
 @Injectable()
 export class ExperimentDataOutboxRepository {
   constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
@@ -185,11 +192,7 @@ export class ExperimentDataOutboxRepository {
     });
   }
 
-  /**
-   * Puts the rows back to wait, each `waitsSeconds[attempts]` from now, the last wait repeating.
-   * A row whose record changed again while it was claimed already has a waiting twin that will
-   * apply the newer state, so it is deleted instead, which also keeps the waiting index unique.
-   */
+  /** Puts the rows back to wait, each `waitsSeconds[attempts]` from now, the last wait repeating. */
   async markRetry(
     claims: OutboxClaim[],
     waitsSeconds: readonly number[],
@@ -197,53 +200,86 @@ export class ExperimentDataOutboxRepository {
   ): Promise<Result<number>> {
     const waits = sql.raw(`ARRAY[${waitsSeconds.map((wait) => Math.trunc(wait)).join(",")}]`);
 
-    return tryCatch(() =>
-      this.database.transaction(async (tx) => {
-        let retried = 0;
+    return this.putBack(claims, {
+      attempts: sql`${experimentDataOutbox.attempts} + 1`,
+      nextAttemptAt: sql`(now() AT TIME ZONE 'UTC') + make_interval(secs => (${waits})[least(${experimentDataOutbox.attempts} + 1, ${waitsSeconds.length})])`,
+      lastError,
+    });
+  }
 
-        for (const [claimedAt, ids] of this.byClaim(claims)) {
-          const waiting = alias(experimentDataOutbox, "waiting");
-          await tx.delete(experimentDataOutbox).where(
+  /** Puts rows a stopped copy never reached back as they were, due at once, no attempt counted. */
+  async release(claims: OutboxClaim[]): Promise<Result<number>> {
+    return this.putBack(claims, {});
+  }
+
+  /**
+   * Unclaims the rows with `changes` applied. A row whose record changed again while it was claimed
+   * already has a waiting twin that will apply the newer state, so it is deleted instead, which also
+   * keeps the waiting index unique. A twin committed between the two statements still breaks that
+   * index; the transaction then runs once more, and finds the twin.
+   */
+  private async putBack(claims: OutboxClaim[], changes: RetryChanges): Promise<Result<number>> {
+    const run = () => this.unclaim(claims, changes);
+
+    return tryCatch(async () => {
+      try {
+        return await run();
+      } catch (error) {
+        if (!this.isUniqueViolation(error)) {
+          throw error;
+        }
+        return run();
+      }
+    });
+  }
+
+  private unclaim(claims: OutboxClaim[], changes: RetryChanges): Promise<number> {
+    return this.database.transaction(async (tx) => {
+      let retried = 0;
+
+      for (const [claimedAt, ids] of this.byClaim(claims)) {
+        const waiting = alias(experimentDataOutbox, "waiting");
+        await tx.delete(experimentDataOutbox).where(
+          and(
+            inArray(experimentDataOutbox.id, ids),
+            eq(experimentDataOutbox.claimedAt, claimedAt),
+            exists(
+              tx
+                .select({ id: waiting.id })
+                .from(waiting)
+                .where(
+                  and(
+                    isNull(waiting.claimedAt),
+                    eq(waiting.recordType, experimentDataOutbox.recordType),
+                    eq(waiting.recordId, experimentDataOutbox.recordId),
+                    eq(waiting.destination, experimentDataOutbox.destination),
+                  ),
+                ),
+            ),
+          ),
+        );
+
+        const rows = await tx
+          .update(experimentDataOutbox)
+          .set({ claimedAt: null, ...changes })
+          .where(
             and(
               inArray(experimentDataOutbox.id, ids),
               eq(experimentDataOutbox.claimedAt, claimedAt),
-              exists(
-                tx
-                  .select({ id: waiting.id })
-                  .from(waiting)
-                  .where(
-                    and(
-                      isNull(waiting.claimedAt),
-                      eq(waiting.recordType, experimentDataOutbox.recordType),
-                      eq(waiting.recordId, experimentDataOutbox.recordId),
-                      eq(waiting.destination, experimentDataOutbox.destination),
-                    ),
-                  ),
-              ),
             ),
-          );
+          )
+          .returning({ id: experimentDataOutbox.id });
+        retried += rows.length;
+      }
 
-          const rows = await tx
-            .update(experimentDataOutbox)
-            .set({
-              claimedAt: null,
-              attempts: sql`${experimentDataOutbox.attempts} + 1`,
-              nextAttemptAt: sql`(now() AT TIME ZONE 'UTC') + make_interval(secs => (${waits})[least(${experimentDataOutbox.attempts} + 1, ${waitsSeconds.length})])`,
-              lastError,
-            })
-            .where(
-              and(
-                inArray(experimentDataOutbox.id, ids),
-                eq(experimentDataOutbox.claimedAt, claimedAt),
-              ),
-            )
-            .returning({ id: experimentDataOutbox.id });
-          retried += rows.length;
-        }
+      return retried;
+    });
+  }
 
-        return retried;
-      }),
-    );
+  /** Postgres's SQLSTATE 23505, which drizzle passes on as the error's cause. */
+  private isUniqueViolation(error: unknown): boolean {
+    const cause = error instanceof Error ? error.cause : undefined;
+    return typeof cause === "object" && cause !== null && "code" in cause && cause.code === "23505";
   }
 
   /** Claims made in one statement share their stamp; fencing groups the ids by it. */
