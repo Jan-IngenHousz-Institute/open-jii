@@ -84,6 +84,8 @@ jobs:
       - name: Plan bundle deployment
         working-directory: apps/data
         run: |
+          # Without pipefail a failed name lookup reads as no duplicate.
+          set -euo pipefail
           PLAN="$RUNNER_TEMP/bundle-plan.json"
           databricks bundle plan -t "$TARGET_ENV" -o json > "$PLAN"
           # An empty or malformed file would pass every check below.
@@ -116,7 +118,7 @@ jobs:
               exit 1
             fi
             case "$KEY" in
-              resources.pipelines.*) FOUND=$(databricks pipelines list-pipelines --filter "name LIKE '$NAME'" -o json | jq length) ;;
+              resources.pipelines.*) FOUND=$(databricks pipelines list-pipelines -o json | jq --arg n "$NAME" '[.[] | select(.name == $n)] | length') ;;
               resources.jobs.*) FOUND=$(databricks jobs list --name "$NAME" -o json | jq length) ;;
             esac
             if [ "$FOUND" -gt 0 ]; then

@@ -921,8 +921,7 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-    # Moves the pipeline off legacy publishing mode on its next update
-    # (docs/runbooks/releases/bundle-move-prep.md).
+    # Opts the pipeline into the default publishing mode, which cannot be undone.
     "pipelines.enableDPMForExistingPipeline" = "true"
   }, local.serving_store_feed_settings)
 
@@ -1009,8 +1008,7 @@ module "macro_execution_pipeline" {
     # Lets the macro results id widen from INT to BIGINT in place. Set on one table only, the
     # tables that stream from it refuse the new type and the update stops.
     "pipelines.enableTypeWidening" = "true"
-    # Moves the pipeline off legacy publishing mode on its next update
-    # (docs/runbooks/releases/bundle-move-prep.md).
+    # Opts the pipeline into the default publishing mode, which cannot be undone.
     "pipelines.enableDPMForExistingPipeline" = "true"
   }, local.serving_store_feed_settings)
 
@@ -1095,8 +1093,7 @@ module "metrics_pipeline" {
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "SILVER_TABLE"        = "clean_data"
     "BRONZE_TABLE"        = "raw_data"
-    # Moves the pipeline off legacy publishing mode on its next update
-    # (docs/runbooks/releases/bundle-move-prep.md).
+    # Opts the pipeline into the default publishing mode, which cannot be undone.
     "pipelines.enableDPMForExistingPipeline" = "true"
   }
 

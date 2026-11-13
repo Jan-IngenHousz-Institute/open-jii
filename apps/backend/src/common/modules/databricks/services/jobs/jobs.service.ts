@@ -32,6 +32,10 @@ export class DatabricksJobsService {
     private readonly configService: DatabricksConfigService,
   ) {}
 
+  public clearJobIdCache(): void {
+    this.jobIdsByName.clear();
+  }
+
   // A job keeps its id for life, so a resolved name is cached for the process lifetime;
   // failures are never cached.
   async getJobIdByName(name: string): Promise<Result<number>> {

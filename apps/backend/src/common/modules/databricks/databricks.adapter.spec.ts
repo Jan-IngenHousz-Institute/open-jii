@@ -30,6 +30,7 @@ describe("DatabricksAdapter", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    testApp.module.get(DatabricksJobsService).clearJobIdCache();
 
     nock.cleanAll();
   });

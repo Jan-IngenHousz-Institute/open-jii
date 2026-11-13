@@ -23,6 +23,7 @@ describe("DatabricksJobsService", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     jobsService = testApp.module.get(DatabricksJobsService);
+    jobsService.clearJobIdCache();
 
     authService = testApp.module.get(DatabricksAuthService);
     authService.clearTokenCache();
@@ -107,7 +108,6 @@ describe("DatabricksJobsService", () => {
     });
   });
 
-  // The service caches resolved names for the process lifetime, so each case uses its own name.
   describe("getJobIdByName", () => {
     const mockToken = () =>
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {

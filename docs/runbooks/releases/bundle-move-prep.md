@@ -12,13 +12,13 @@ The release that prepares the Databricks bundle to own the pipelines and jobs do
    databricks api get "/api/2.0/preview/accounts/access-control/rule-sets?name=accounts/<account-id>/servicePrincipals/<node-app-id>/ruleSets/default&etag="
    ```
 
-   The release replaces it with three grants: Manager for the OpenTofu principal, and User for the OpenTofu principal and `github-cicd-service-principal-<env>`. Add any other grant it holds to `databricks_access_control_rule_set.node_service_principal` before releasing.
+   The release replaces it with three grants: Manager for the OpenTofu principal, and User for the OpenTofu principal and `github-cicd-service-principal-<env>`. Before releasing, add to `databricks_access_control_rule_set.node_service_principal` any other principal that still relies on its grant. A person's User grant can go, because it is only needed to save a pipeline or job that runs as the node principal by hand.
 
 4. Confirm that each of the three pipelines has run an update in the last 60 days, which the migration requires.
 
 ## During the release
 
-1. Stop Centrum and the macro pipeline before approving the OpenTofu apply, and wait until both are `IDLE`. The migration expects the pipeline to be stopped when the flag lands ([migrate to the default publishing mode](https://docs.databricks.com/aws/en/ldp/migrate-to-dpm)).
+1. Stop Centrum and the macro pipeline before approving the OpenTofu apply, and wait until both are `IDLE`. The migration expects the pipeline to be stopped when the flag lands ([migrate to the default publishing mode](https://docs.databricks.com/aws/en/ldp/migrate-to-dpm)). The metrics pipeline gets the flag too, and its scheduler starts it every hour, so approve once that hour's update has finished and it is `IDLE` as well.
 2. Approve the OpenTofu apply. It adds `pipelines.enableDPMForExistingPipeline` to the three pipelines, moves the wheels into the pipelines' environment and the store reload's task, makes the node principal the owner of every pipeline and job, and adds the rule set.
 3. The first update of each pipeline after the apply runs the migration. If Centrum or macro is still `IDLE` a few minutes after the apply, start it with `databricks pipelines start-update <pipeline-id>`. Run `Metrics-Pipeline-Scheduler-<ENV>` once instead of waiting for the hour.
 4. Nothing under `apps/data` changes, so change detection skips the Databricks deploy, and the new CLI and its plan check would first run on an unrelated change. On dev, run `DEV Release Workflow` with `deploy_app=databricks` once the merge's run has finished. On prod, start the release with `deploy_app=backend,databricks`, plus any other app the release carries.
