@@ -639,6 +639,9 @@ locals {
         "ses:GetSendQuota",
         # Active receipt rule set (Terraform provider reads)
         "ses:DescribeActiveReceiptRuleSet",
+        # Account suppression list (aws_sesv2_account_suppression_attributes)
+        "ses:PutAccountSuppressionAttributes",
+        "ses:GetAccount",
       ]
       resource = "*"
     }

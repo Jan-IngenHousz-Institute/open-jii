@@ -19,6 +19,7 @@ import {
   or,
   protocolMacros,
   protocols,
+  macros,
   resourceVisits,
   users,
   sql,
@@ -59,14 +60,10 @@ import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/pro
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _protocolSearchVector, ...protocolColumns } = getTableColumns(protocols);
 
-// Number of macros compatible with a protocol. The list chips load lazily,
-// so sorting by the count needs it computed in SQL.
-function macroCountSql() {
-  return sql<number>`(select count(*)::int from ${protocolMacros} where ${protocolMacros.protocolId} = ${protocols.id})`;
-}
-
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type ProtocolSearchRow = ProtocolDto & { score: number };
+
+export type PaginatedProtocolRow = ProtocolSearchRow & { compatibleMacroCount: number };
 
 export type RecentlyOpenedProtocolRow = Pick<
   typeof protocols.$inferSelect,
@@ -125,6 +122,20 @@ export class ProtocolRepository {
         return results as ProtocolDto[];
       });
     });
+  }
+
+  private macroCountSql(userId?: string) {
+    const accessScope = accessibleResourceCondition({
+      database: this.database,
+      resourceType: "macro",
+      resourceIdColumn: macros.id,
+      organizationIdColumn: macros.organizationId,
+      visibilityColumn: macros.visibility,
+      userId,
+    });
+    return sql<number>`(select count(*)::int from ${protocolMacros}
+      inner join ${macros} on ${protocolMacros.macroId} = ${macros.id}
+      where ${protocolMacros.protocolId} = ${protocols.id} and ${accessScope})`;
   }
 
   /**
@@ -212,10 +223,11 @@ export class ProtocolRepository {
           )
         : sql<number>`0::int`;
 
+      const compatibleMacroCount = this.macroCountSql(userId);
       const sortFields = {
         name: protocols.name,
         family: familyText,
-        macros: macroCountSql(),
+        macros: compatibleMacroCount,
         updated: protocols.updatedAt,
         activity: activityTotalSql,
       };
@@ -246,6 +258,7 @@ export class ProtocolRepository {
         where,
         orderBy,
         score,
+        compatibleMacroCount,
         activitySource: sortsByActivity(sort)
           ? activityTotalsSource(activityTotals ?? new Map())
           : null,
@@ -253,13 +266,17 @@ export class ProtocolRepository {
     }
   }
 
-  private baseQuery(score: SQL<number>) {
+  private baseQuery<T extends Record<string, SQL> = Record<never, never>>(
+    score: SQL<number>,
+    extra: T = {} as T,
+  ) {
     return this.database
       .select({
         protocols: protocolColumns,
         firstName: getAnonymizedFirstName(),
         lastName: getAnonymizedLastName(),
         score,
+        ...extra,
       })
       .from(protocols)
       .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
@@ -363,9 +380,9 @@ export class ProtocolRepository {
     sort?: ProtocolSort,
     filter?: ProtocolListFilter,
     activityTotals?: ReadonlyMap<string, number>,
-  ): Promise<Result<{ items: ProtocolSearchRow[]; totalCount: number }>> {
+  ): Promise<Result<{ items: PaginatedProtocolRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, score, activitySource } = this.buildListing(
+      const { where, orderBy, score, activitySource, compatibleMacroCount } = this.buildListing(
         search,
         scope,
         userId,
@@ -375,7 +392,7 @@ export class ProtocolRepository {
         activityTotals,
       );
 
-      let rows = this.baseQuery(score);
+      let rows = this.baseQuery(score, { compatibleMacroCount });
       if (activitySource) {
         rows = rows.leftJoin(activitySource, sql`${protocols.id} = activity_totals.id`);
       }
@@ -398,7 +415,13 @@ export class ProtocolRepository {
         total,
       ]);
 
-      return { items: items.map(toProtocolRow), totalCount: count };
+      return {
+        items: items.map((item) => ({
+          ...toProtocolRow(item),
+          compatibleMacroCount: item.compatibleMacroCount,
+        })),
+        totalCount: count,
+      };
     });
   }
 

@@ -77,6 +77,8 @@ const zProtocolListEntry = zProtocol.extend({
   code: z.unknown(),
   /** Present on the paginated list, which reads it for the rows it returns. */
   activity: zResourceSeries.nullable().optional(),
+  /** Compatible macros the caller can open. Present on the paginated list only. */
+  compatibleMacroCount: z.number().int().nonnegative().optional(),
 });
 
 export const zProtocolList = z.array(zProtocolListEntry);

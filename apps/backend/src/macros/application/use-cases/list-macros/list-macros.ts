@@ -8,7 +8,10 @@ import { ResourceMetricsService } from "../../../../metrics/application/resource
 import { MacroDto } from "../../../core/models/macro.model";
 import { MacroRepository, MacroFilter } from "../../../core/repositories/macro.repository";
 
-type MacroWithActivity = MacroDto & { activity: ResourceSeries | null };
+type MacroWithActivity = MacroDto & {
+  activity: ResourceSeries | null;
+  compatibleProtocolCount: number;
+};
 
 @Injectable()
 export class ListMacrosUseCase {
