@@ -202,6 +202,62 @@ resource "aws_iot_policy" "jobs" {
   })
 }
 
+# ------------------------------------------------------------------
+# AWS IoT Device Location (position estimates over MQTT)
+# ------------------------------------------------------------------
+# Hand-written like the Jobs policy, and never an asyncapi channel: ingest
+# channels get topic rules into Kinesis, and these replies must not be ingested.
+# AWS documents the id segment as letters, digits and dashes only, and in dev a
+# request under an id containing "_" got no reply at all, so the id cannot be
+# the thing name. The backend sets the deviceLocationId attribute to a
+# reversible encoding of it (apps/backend/.../iot/device-location-id.ts), so no
+# two things share these grants. A thing without the attribute should be
+# denied, since an unresolved policy variable matches no topic; untested.
+# https://docs.aws.amazon.com/iot/latest/developerguide/device-location-reserved-topics.html
+locals {
+  device_location_topic = "$aws/device_location/$${iot:Connection.Thing.Attributes[deviceLocationId]}/get_position_estimate"
+  device_location_reply_topics = [
+    "${local.device_location_topic}/accepted",
+    "${local.device_location_topic}/rejected",
+  ]
+}
+
+resource "aws_iot_policy" "device_location" {
+  name = "open_jii_${var.environment}_iot_policy_device_location"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = "iot:Connect",
+        Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:client/$${iot:Connection.Thing.ThingName}"
+      },
+      {
+        Effect   = "Allow",
+        Action   = "iot:Publish",
+        Resource = "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${local.device_location_topic}"
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Subscribe",
+        Resource = [
+          for topic in local.device_location_reply_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topicfilter/${topic}"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = "iot:Receive",
+        Resource = [
+          for topic in local.device_location_reply_topics :
+          "arn:aws:iot:${var.aws_region}:${data.aws_caller_identity.current.account_id}:topic/${topic}"
+        ]
+      }
+    ]
+  })
+}
+
 # Lets AWS IoT presign the firmware object when it substitutes the job
 # document's `${aws:iot:s3-presigned-url:...}` placeholder at delivery time.
 # https://docs.aws.amazon.com/iot/latest/apireference/API_PresignedUrlConfig.html
