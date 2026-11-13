@@ -33,7 +33,11 @@ export const useRemoveCompatibleMacro = (protocolId: string) => {
         }
       },
       onSettled: async () => {
-        await queryClient.invalidateQueries({ queryKey: listKey });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: listKey }),
+          queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() }),
+          queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() }),
+        ]);
       },
     }),
   );

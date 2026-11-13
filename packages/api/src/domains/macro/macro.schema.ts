@@ -58,6 +58,8 @@ const zMacroListEntry = zMacro.extend({
   code: z.string().optional(),
   /** Present on the paginated list, which reads it for the rows it returns. */
   activity: zResourceSeries.nullable().optional(),
+  /** Compatible protocols the caller can open. Present on the paginated list only. */
+  compatibleProtocolCount: z.number().int().nonnegative().optional(),
 });
 
 export const zMacroList = z.array(zMacroListEntry);

@@ -1300,6 +1300,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "columns": {
+      "macroCount_one": "{{count}} Makro",
+      "macroCount_other": "{{count}} Makros",
+      "macroCountLabel_one": "{{count}} kompatibles Makro, Namen anzeigen",
+      "macroCountLabel_other": "{{count}} kompatible Makros, Namen anzeigen",
       "name": "Name",
       "family": "Familie",
       "macros": "Makros",
