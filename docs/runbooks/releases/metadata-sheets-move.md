@@ -194,5 +194,21 @@ metadata list reads by then, so repair it as step 5 says: step 4 with `AND l.id 
 added for a missing or older sheet, a `DELETE` from Postgres for one the lakehouse no longer holds.
 Note the ids in OJD-2153.
 
+Step 5's UPDATE from the lakehouse is for the first release only. By now a row whose `in_postgres`
+is newer than the lakehouse's time is a copy that has not landed, and Postgres is right: owe the
+sheet again, naming the ids, and the backend copies it within 15 seconds:
+
+```sql
+INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
+SELECT 'metadata_sheet', id, experiment_id, 'lakehouse' FROM experiment_metadata_sheets
+WHERE id IN ('<id>', '<id>')
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+To roll the second release back, first wait until the outbox owes nothing, as above. The first
+release has no worker, so a copy still owed after the rollback waits in `experiment_data_outbox`
+until the second release returns, and pages read the lakehouse without it meanwhile. Note any such
+ids in OJD-2153.
+
 Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
 researchers' data.
