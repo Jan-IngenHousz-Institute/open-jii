@@ -28,17 +28,19 @@ WHERE metadata_id IS NULL OR experiment_id IS NULL OR metadata IS NULL OR create
    OR NOT lower(metadata_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
    OR NOT lower(experiment_id) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
    OR NOT lower(created_by) RLIKE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-   OR instr(to_json(metadata), '\\u0000') > 0;
+   OR instr(to_json(metadata), '\\u0000') > 0
+   OR length(to_json(metadata)) > 5000000;
 
 SELECT metadata_id, count(*) FROM centrum.experiment_custom_metadata
 GROUP BY metadata_id HAVING count(*) > 1;
 ```
 
-Expect no rows from either. Postgres refuses any of the first, and the API refuses them since the
-first release; step 4 refuses an id held twice. The last condition also catches a sheet whose text
-holds the six characters `\u0000` rather than a NUL character, which Postgres keeps: look at any
-such sheet before correcting it. Decide with the team what each one should be and correct it in the
-lakehouse before going on.
+Expect no rows from either. Postgres refuses most of the first, and the API refuses them since the
+first release; step 4 refuses an id held twice. A sheet over 5,000,000 characters fits Postgres,
+but the second release's API refuses to save it, so it could no longer be edited. The NUL condition
+also catches a sheet whose text holds the six characters `\u0000` rather than a NUL character,
+which Postgres keeps: look at any such sheet before correcting it. Decide with the team what each
+one should be and correct it in the lakehouse before going on.
 
 ## 2. Export the lakehouse's sheets
 
@@ -57,9 +59,10 @@ SELECT count(*), sum(length(to_json(metadata))) FROM centrum.experiment_custom_m
 ```
 
 Note `export_time`, which the first query reads before the export starts, and the two numbers the
-last query gives, then download the export's result as CSV, `sheets.csv`. If the editor cuts the download short of the count, export it
-in parts with a `WHERE experiment_id IN (...)`. The editor's download writes a NULL as the text
-`null`, and step 1 leaves no NULL in any column this exports, so a column per field is safe here.
+last query gives, then download the export's result as CSV, `sheets.csv`. If the editor cuts the
+download short of the count, export it in parts with a `WHERE experiment_id IN (...)`. The editor's
+download writes a NULL as the text `null`, and step 1 leaves no NULL in any column this exports, so
+a column per field is safe here.
 
 ## 3. Load it beside Postgres's sheets
 
@@ -72,17 +75,22 @@ CREATE TEMP TABLE lakehouse_sheets (
 );
 \copy lakehouse_sheets FROM 'sheets.csv' WITH (FORMAT csv, HEADER)
 SELECT count(*), sum(length(metadata)) FROM lakehouse_sheets;
+SELECT id FROM lakehouse_sheets WHERE NOT pg_input_is_valid(metadata, 'jsonb');
 ```
 
-Both numbers must match the export's. When they do not, or `\copy` stops on a row, the download was
-cut short or mangled. Export again in parts as step 2 says, empty the table with
-`TRUNCATE lakehouse_sheets;` and `\copy` each part into it. The document stays text here so its
-length can be compared with the export's; Postgres reorders a document's keys once it is `jsonb`.
+Both numbers must match the export's, and the last query must return no rows. When the numbers do
+not match, or `\copy` stops on a row, the download was cut short or mangled. Export again in parts
+as step 2 says, empty the table with `TRUNCATE lakehouse_sheets;` and `\copy` each part into it. A
+sheet the last query lists holds text Postgres cannot keep as a document, such as a lone half of a
+surrogate pair, and would stop step 4 without naming itself; correct it in the lakehouse and export
+again. The document stays text here so its length can be compared with the export's; Postgres
+reorders a document's keys once it is `jsonb`.
 
 ## 4. Copy what Postgres lacks or holds older
 
 ```sql
 INSERT INTO experiment_metadata_sheets
+  (id, experiment_id, metadata, created_by, created_at, updated_at)
 SELECT l.id, l.experiment_id, l.metadata::jsonb, l.created_by, l.created_at, l.updated_at
 FROM lakehouse_sheets l JOIN experiments e ON e.id = l.experiment_id
 ON CONFLICT (id) DO UPDATE SET
@@ -133,9 +141,10 @@ LEFT JOIN experiments e ON e.id = l.experiment_id WHERE e.id IS NULL;
 
 `jsonb` compares documents by their values, so key order and number spelling (`1.0` against `1`)
 do not count. The first query is clean when every row it returns was edited in Postgres after the
-second export's `export_time`. The second is clean when every row was created after it. A row created before it is a delete that step 4 undid, or one whose copy
-to Postgres failed, for which the service's log warns "not copied to Postgres". Check it is gone
-from the lakehouse and delete it from Postgres.
+second export's `export_time`. The second is clean when every row was created after it. A row
+created before it is a delete that step 4 undid, or one whose copy to Postgres failed, for which
+the service's log warns "not copied to Postgres". Check it is gone from the lakehouse and delete it
+from Postgres.
 
 A row of the first query whose `in_postgres` is older, or empty, is a change the lakehouse took
 that Postgres missed, such as an edit to a sheet step 4 had not reached yet. Run step 4
@@ -156,20 +165,22 @@ WHERE s.id = l.id AND s.id IN ('<id>', '<id>')
 ```
 
 The last condition leaves a row edited since the export started: that edit reached both stores,
-and the export is older than it.
+and the export is older than it. A save still reaching the lakehouse when the export began looks the
+same and is copied back over by this UPDATE; the fresh export then shows Postgres older, and step 4
+settles it. So always end on a fresh export whose checks are clean.
 
 ## Before the second release, and after
 
 Run this in the same session as [annotations-move](annotations-move.md). The second release goes out
 only when both are clean.
 
-Run steps 1 to 5 again right before the second release goes out, with a fresh export; a clean check
-is what lets it go. Once it is out, run steps 2 and 3 and step 5's checks once more without step 4,
-since Postgres is then where sheets are written: a difference is a write the first release's tasks
-took while the second rolled out, whose copy failed. Postgres is what the metadata list reads by
-then, so repair it as step 5 says: step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or
-older sheet, a `DELETE` from Postgres for one the lakehouse no longer holds. Note the ids in
-OJD-2153.
+Run steps 1 to 5 again right before the second release goes out, with a fresh export and in a new
+psql session, since step 3 creates its tables; a clean check is what lets it go. Once it is out,
+run steps 2 and 3 and step 5's checks once more without step 4, since Postgres is then where sheets
+are written: a difference is a write the first release's tasks took while the second rolled out,
+whose copy failed. Postgres is what the metadata list reads by then, so repair it as step 5 says:
+step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older sheet, a `DELETE` from
+Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
 
 Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
 researchers' data.
