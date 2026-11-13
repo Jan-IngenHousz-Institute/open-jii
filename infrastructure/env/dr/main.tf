@@ -200,11 +200,10 @@ module "iot_core" {
 }
 
 module "cognito" {
-  source                           = "../../modules/cognito"
-  region                           = var.aws_region
-  environment                      = var.environment
-  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = true
+  source             = "../../modules/cognito"
+  region             = var.aws_region
+  environment        = var.environment
+  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
 }
 
 module "vpc" {

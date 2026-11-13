@@ -8,3 +8,9 @@ variable "cross_account_role_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "noncurrent_version_retention_days" {
+  description = "Days a previous version of a lakehouse object is kept before it expires"
+  type        = number
+  default     = 30
+}

@@ -294,11 +294,10 @@ module "firmware_rollout_role" {
 }
 
 module "cognito" {
-  source                           = "../../modules/cognito"
-  region                           = var.aws_region
-  environment                      = var.environment
-  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = true # change after mobile app is ready and we want to disable unauthenticated access
+  source             = "../../modules/cognito"
+  region             = var.aws_region
+  environment        = var.environment
+  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
 }
 
 module "vpc" {
@@ -659,6 +658,9 @@ module "storage_credential" {
     module.metrics_forwarder.databricks_write_policy_arn,
     module.data_exports.databricks_write_policy_arn,
   ]
+  additional_bucket_access = {
+    lakehouse-backups = { bucket_name = module.lakehouse_backup_s3.bucket_id }
+  }
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -1282,6 +1284,59 @@ resource "databricks_grant" "node_system_billing" {
   privileges = ["USE_SCHEMA", "SELECT"]
 }
 
+# Backups are kept apart from the metastore bucket that holds the data they copy.
+module "lakehouse_backup_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-lakehouse-backups-${var.environment}"
+
+  lifecycle_rules = [
+    {
+      id                                     = "expire-old-backup-versions"
+      status                                 = "Enabled"
+      transitions                            = []
+      noncurrent_version_expiration_days     = 30
+      abort_incomplete_multipart_upload_days = 7
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "lakehouse-backups"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "lakehouse_backup_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "lakehouse-backups-${var.environment}"
+  bucket_name             = module.lakehouse_backup_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for the lakehouse backups"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES", "WRITE_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
 module "centrum_backup_job" {
   source = "../../modules/databricks/job"
 
@@ -1319,7 +1374,7 @@ module "centrum_backup_job" {
         "CATALOG_NAME"    = module.databricks_catalog.catalog_name
         "CENTRAL_SCHEMA"  = "centrum"
         "SOURCE_TABLE"    = "raw_data"
-        "BACKUP_LOCATION" = "s3://${var.centralized_metastore_bucket_name}/external/${var.environment}/openjii_data_backups/centrum_raw_data"
+        "BACKUP_LOCATION" = "s3://${module.lakehouse_backup_s3.bucket_id}/centrum_raw_data"
         "ENVIRONMENT"     = upper(var.environment)
       }
     }

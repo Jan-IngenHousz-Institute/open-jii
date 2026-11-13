@@ -22,18 +22,43 @@ locals {
 resource "aws_s3_bucket" "external" {
   bucket = var.bucket_name
 
-  # lifecycle {
-  #   prevent_destroy = true
-  # }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
-# Configure S3 bucket versioning
+# Versions let a deleted or overwritten lakehouse object be restored
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.external.id
 
   versioning_configuration {
-    status = "Disabled"
+    status = "Enabled"
   }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
+  bucket = aws_s3_bucket.external.id
+
+  rule {
+    id     = "expire-old-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = var.noncurrent_version_retention_days
+    }
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+
+  depends_on = [aws_s3_bucket_versioning.versioning]
 }
 
 # Block public access to the S3 bucket
