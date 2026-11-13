@@ -1,5 +1,11 @@
 import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
-import { createExperiment, createMacro, createProtocol } from "@/test/factories";
+import {
+  createExperiment,
+  createMacro,
+  createProtocol,
+  createProtocolMacroEntry,
+  createMacroProtocolEntry,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
@@ -425,6 +431,52 @@ describe("macro overview columns", () => {
     expect(screen.getByRole("columnheader", { name: "macros.columns.updated" })).toHaveClass(
       "lg:table-cell",
     );
+  });
+});
+
+describe("compatible counts in overview rows", () => {
+  it("reveals a protocol's macros on tap without opening the protocol", async () => {
+    server.mount(contract.protocols.listCompatibleMacros, {
+      body: [createProtocolMacroEntry({ macro: createMacro({ name: "Linked macro" }) })],
+    });
+    const { router } = render(
+      <OverviewTable
+        columns={getProtocolColumns(t, "en-US")}
+        items={[{ ...createProtocol({ id: "protocol-1" }), compatibleMacroCount: 1 }]}
+        getRowKey={(protocol) => protocol.id}
+        getRowHref={(protocol) => `/platform/protocols/${protocol.id}`}
+        emptyMessage="empty"
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "protocols.columns.macroCountLabel" });
+    expect(button).toHaveTextContent("protocols.columns.macroCount");
+    fireEvent.click(button);
+    const chip = await screen.findByText("Linked macro");
+    fireEvent.click(chip);
+    expect(router.push).not.toHaveBeenCalled();
+  });
+
+  it("reveals a macro's protocols on tap without opening the macro", async () => {
+    server.mount(contract.macros.listCompatibleProtocols, {
+      body: [createMacroProtocolEntry({ protocol: createProtocol({ name: "Linked protocol" }) })],
+    });
+    const { router } = render(
+      <OverviewTable
+        columns={getMacroColumns(t, "en-US")}
+        items={[{ ...createMacro({ id: "macro-1" }), compatibleProtocolCount: 1 }]}
+        getRowKey={(macro) => macro.id}
+        getRowHref={(macro) => `/platform/macros/${macro.id}`}
+        emptyMessage="empty"
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "macros.columns.protocolCountLabel" });
+    expect(button).toHaveTextContent("macros.columns.protocolCount");
+    fireEvent.click(button);
+    const chip = await screen.findByText("Linked protocol");
+    fireEvent.click(chip);
+    expect(router.push).not.toHaveBeenCalled();
   });
 });
 

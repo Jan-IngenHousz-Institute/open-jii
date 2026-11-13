@@ -649,11 +649,11 @@
     },
     {
       "asset": "protocols-list.webp",
-      "sha256": "8f8dafcb4c915228e3f03f58fae7467959b24b646840fb5c542ff9b7d2370efd",
+      "sha256": "cd77c134ebc5efb3ae2576d73551bf16e9dfcb4c29dbc4fec6318970f4897f12",
       "script": "apps/e2e/docs-media/shots.ts",
       "environment": "localhost (seeded local stack)",
       "route": "/platform/protocols",
-      "captured_at": "2026-11-02T17:40:36+01:00",
+      "captured_at": "2026-11-11T17:00:00+01:00",
       "viewport": {
         "width": 1920,
         "height": 1200
@@ -661,22 +661,23 @@
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewed_at": "2026-11-11T17:00:00+01:00",
       "reviewer": "User",
-      "review_notes": "Protocols overview with Name sorted ascending and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "review_notes": "Protocols overview with Name sorted ascending, the Macros column showing each row's compatible count, and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
       "redactions": [],
       "live_checks_observed": [
         "Name sorted ascending; Filter menu closed with no chips.",
+        "Macros column shows a count on every row.",
         "Only [Seed] names and the seeded account are visible."
       ]
     },
     {
       "asset": "macros-list.webp",
-      "sha256": "57c5a061aad5fde298cb6d4f4dab4bde953826378bb184631e50042bc1182a13",
+      "sha256": "39606e3f85c2749474a722a210aa742bdabad8f54d39079fc6b3a0e201e87b25",
       "script": "apps/e2e/docs-media/shots.ts",
       "environment": "localhost (seeded local stack)",
       "route": "/platform/macros",
-      "captured_at": "2026-11-02T17:40:36+01:00",
+      "captured_at": "2026-11-11T17:00:00+01:00",
       "viewport": {
         "width": 1920,
         "height": 1200
@@ -684,12 +685,13 @@
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-11-02T17:40:36+01:00",
+      "reviewed_at": "2026-11-11T17:00:00+01:00",
       "reviewer": "User",
-      "review_notes": "Macros overview with Name sorted ascending and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
+      "review_notes": "Macros overview with Name sorted ascending, the Protocols column showing each row's compatible count, and the unified Filter menu idle. Full-size review confirmed only seeded content and no real names, emails, credentials or dev overlays. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
       "redactions": [],
       "live_checks_observed": [
         "Name sorted ascending; Filter menu closed with no chips.",
+        "Protocols column shows a count on every row.",
         "Only [Seed] names and the seeded account are visible."
       ]
     },

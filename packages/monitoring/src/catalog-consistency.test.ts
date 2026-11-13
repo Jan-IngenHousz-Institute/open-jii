@@ -46,6 +46,7 @@ const KNOWN_AREAS = [
   "path",
   "web",
   "api",
+  "email",
   "ingest",
   "lakehouse",
   "sandboxes",

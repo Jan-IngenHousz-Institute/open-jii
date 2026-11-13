@@ -68,6 +68,12 @@ Automated alerts notify your team when issues are detected:
 - **Database High CPU**: Fires when RDS CPU usage exceeds 80% for 5 minutes
 - **Database High Connections**: Fires when connection count exceeds 80 for 5 minutes
 
+#### Notification Email Alerts
+
+- **Notification Emails Waiting**: Fires when the oldest email in the outbox has waited over 15 minutes, for 5 minutes
+- **Email Bounce Rate**: Fires when the account's SES bounce rate exceeds 4% for 15 minutes; AWS reviews an account at 5%
+- **Email Complaint Rate**: Fires when the account's SES complaint rate exceeds 0.08% for 15 minutes; AWS reviews an account at 0.1%
+
 #### Notification Configuration
 
 Alerts are routed to Slack via webhook with severity-based policies:
