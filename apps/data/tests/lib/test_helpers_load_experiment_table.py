@@ -59,23 +59,30 @@ _TABLES = {
     "enriched_experiment_macro_data": """
         SELECT * FROM VALUES
           (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}'),
-           TIMESTAMP'2026-10-01 10:01:00'),
+           TIMESTAMP'2026-10-01 10:01:00', array('from the phone', 'from the platform'), array('from the phone')),
           (2L, 'e1', 'upload-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.1}'),
-           TIMESTAMP'2026-10-01 10:01:00'),
+           TIMESTAMP'2026-10-01 10:01:00', array('from the phone'), array('from the phone')),
           (1L, 'e1', 'macro-1', 10L, 'device-a', TIMESTAMP'2026-10-01 10:00:00', parse_json('{"phi2": 0.7}'),
-           TIMESTAMP'2026-10-01 10:31:00')
-        AS t(id, experiment_id, macro_id, raw_id, device_id, timestamp, macro_output, processed_timestamp)
+           TIMESTAMP'2026-10-01 10:31:00', array('from the phone', 'from the platform'), array('from the phone'))
+        AS t(id, experiment_id, macro_id, raw_id, device_id, timestamp, macro_output, processed_timestamp,
+             annotations, payload_annotations)
     """,
     # Capture 10 arrived twice, so it is stored twice under one id; the later copy carries a comment
     # added before the phone sent it again. Id 12 is an old 32-bit id two different captures share.
     "enriched_experiment_raw_data": """
         SELECT * FROM VALUES
-          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a', TIMESTAMP'2026-10-01 10:01:00', 0),
-          (11L, 'e1', TIMESTAMP'2026-10-01 11:00:00', 'device-a', TIMESTAMP'2026-10-01 11:01:00', 0),
-          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a', TIMESTAMP'2026-10-01 10:31:00', 1),
-          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-a', TIMESTAMP'2026-10-01 12:01:00', 0),
-          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-b', TIMESTAMP'2026-10-01 12:01:00', 0)
-        AS t(id, experiment_id, timestamp, device_id, processed_timestamp, comments)
+          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a', TIMESTAMP'2026-10-01 10:01:00', 0,
+           array('from the phone', 'from the platform'), array('from the phone')),
+          (11L, 'e1', TIMESTAMP'2026-10-01 11:00:00', 'device-a', TIMESTAMP'2026-10-01 11:01:00', 0,
+           array('from the phone', 'from the platform'), array('from the phone')),
+          (10L, 'e1', TIMESTAMP'2026-10-01 10:00:00', 'device-a', TIMESTAMP'2026-10-01 10:31:00', 1,
+           array('from the phone', 'from the platform'), array('from the phone')),
+          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-a', TIMESTAMP'2026-10-01 12:01:00', 0,
+           array('from the phone', 'from the platform'), array('from the phone')),
+          (12L, 'e1', TIMESTAMP'2026-10-01 12:00:00', 'device-b', TIMESTAMP'2026-10-01 12:01:00', 0,
+           array('from the phone', 'from the platform'), array('from the phone'))
+        AS t(id, experiment_id, timestamp, device_id, processed_timestamp, comments, annotations,
+             payload_annotations)
     """,
 }
 
@@ -164,6 +171,14 @@ def test_different_captures_that_share_an_old_id_both_export(schema: str) -> Non
     rows = _load("raw_data", schema).collect()
 
     assert sorted(row.device_id for row in rows if row.id == 12) == ["device-a", "device-b"]
+
+
+@pytest.mark.parametrize("table_name", ["raw_data", "macro-1"])
+def test_exports_keep_every_annotation_and_leave_the_phones_share_out(schema: str, table_name: str) -> None:
+    table = _load(table_name, schema)
+
+    assert "payload_annotations" not in table.columns
+    assert {tuple(row.annotations) for row in table.collect()} == {("from the phone", "from the platform")}
 
 
 def test_static_identifier_without_a_source_is_refused(schema: str) -> None:

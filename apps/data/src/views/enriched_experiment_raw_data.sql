@@ -128,6 +128,8 @@ SELECT
     THEN date_format(from_utc_timestamp(m.measurement_time_utc, m.timezone), 'HH:mm')
   END AS local_time,
   concat(coalesce(m.payload_annotations, array()), coalesce(a.annotations, array())) AS annotations,
+  -- The phone's annotations alone, without the platform's that `annotations` merges in.
+  coalesce(m.payload_annotations, array()) AS payload_annotations,
   -- Each upload matches a row by a question answer, or by a measurement column
   -- when experimentQuestionId is "column:<name>". The matched metadata row
   -- loses its _id and identifier keys, and later uploads win on repeated keys.
