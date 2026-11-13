@@ -88,6 +88,14 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "apps/data/uv.lock"
 
+      # PySpark 4.0 runs on Java 17 or 21, not on the runner's newer default JDK.
+      - name: Setup Java (only if regenerating coverage)
+        if: steps.download.outcome != 'success'
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Regenerate coverage if artifacts not found
         if: steps.download.outcome != 'success'
         run: |
