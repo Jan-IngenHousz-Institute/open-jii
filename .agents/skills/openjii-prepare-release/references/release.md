@@ -83,8 +83,11 @@ Print a concrete dispatch command with the chosen branch, title and explicit dep
 current workflow. Do not run it during preparation, including its `dry_run` variant.
 
 ```sh
-gh workflow run production-release.yml --ref release/<DDMMYYYY> -f ref=release/<DDMMYYYY> -f title='<reviewed-title>' -f environment=prod -f deploy_infrastructure=<true-or-false> -f deploy_all=<true-or-false> -f deploy_app='<selected-apps>' -f dry_run=false
+gh workflow run production-release.yml --ref release/<DDMMYYYY> -f ref=release/<DDMMYYYY> -f title='<reviewed-title>' -f environment=prod -f deploy_infrastructure=<true-or-false> -f dry_run=false
 ```
+
+A release deploys every app, so the command names no apps. `deploy_app` is only for a runbook
+that deploys named apps alone.
 
 The branch must still point at the reviewed SHA when an operator dispatches. Using a SHA as `ref`
 changes the workflow's date-based Linear/label logic, so do not silently replace the branch input

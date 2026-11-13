@@ -42,6 +42,9 @@ jobs:
   detect:
     name: Detect Changes
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       deploy_sha: ${{ steps.pin.outputs.sha }}
       infra_changed: ${{ steps.infra.outputs.changed }}
@@ -101,19 +104,39 @@ jobs:
           echo "Deploying ${SHA:0:7}"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
+      # Changes count from the last commit this environment deployed in full, not from the
+      # previous push, so the changes of a deploy that failed go out with the next one. Dev
+      # takes that from its last successful push run on main. Prod releases deploy everything,
+      # and so does a run that finds no earlier deploy.
+      - name: Find the last deployed commit
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_ENV: ${{ inputs.environment }}
+          HEAD: ${{ steps.pin.outputs.sha }}
+        run: |
+          BASE=""
+          if [ "$TARGET_ENV" = "dev" ]; then
+            BASE=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/dev-release.yml/runs?branch=main&event=push&status=success&per_page=1" \
+              --jq '.workflow_runs[0].head_sha // empty') || BASE=""
+          fi
+          if [ -n "$BASE" ] && git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            # Equal to BASE on main. A branch counts its own changes since it left main.
+            BASE=$(git merge-base "$BASE" "$HEAD")
+            echo "Comparing with ${BASE:0:7}, the last full deploy to $TARGET_ENV."
+          else
+            BASE=$(git rev-list --max-parents=0 "$HEAD" | tail -n 1)
+            echo "No earlier deploy to compare with, so everything counts as changed."
+          fi
+          echo "sha=$BASE" >> "$GITHUB_OUTPUT"
+
       - name: Detect Infra Changes
         id: infra
         env:
-          BASE: ${{ github.event.before }}
+          BASE: ${{ steps.base.outputs.sha }}
           HEAD: ${{ steps.pin.outputs.sha }}
         run: |
-          # Did this push change infrastructure/ or the SQL views OpenTofu reads from apps/data?
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            echo "No previous push to compare with (manual run or new branch), so infrastructure counts as changed."
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
+          # Did infrastructure/ or the SQL views OpenTofu reads from apps/data change?
           echo "Comparing ${BASE:0:7}..${HEAD:0:7}"
           CHANGED=$(git diff --name-only "$BASE" "$HEAD" | grep -E '^(infrastructure/|apps/data/src/views/)' || true)
           if [ -n "$CHANGED" ]; then
@@ -133,6 +156,8 @@ jobs:
       - name: Detect Affected Packages
         id: apps
         uses: ./.github/actions/detect-affected-packages
+        with:
+          base: ${{ steps.base.outputs.sha }}
 
   # The one approval a prod deploy waits for, before anything is applied or
   # deployed. Runs on every deploy that would change something, even when no
@@ -174,7 +199,6 @@ jobs:
     with:
       environment: ${{ inputs.environment }}
       ref: ${{ needs.detect.outputs.deploy_sha }}
-      tofu_version: "1.12.9"
     secrets: inherit
 
   # Each job below runs only if every deploy job it needs either succeeded or

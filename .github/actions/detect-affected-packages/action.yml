@@ -1,6 +1,12 @@
 name: "Detect Affected Packages"
 description: "Identifies affected projects based on changes"
 
+inputs:
+  base:
+    description: "Commit to compare with. Defaults to the pull request's base, then the commit before the push."
+    required: false
+    default: ""
+
 outputs:
   affected_apps:
     description: "JSON array of affected app names"
@@ -19,7 +25,7 @@ runs:
       id: check
       shell: bash
       env:
-        TURBO_REF_FILTER: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || github.event.before || 'HEAD~1' }}
+        TURBO_REF_FILTER: ${{ inputs.base || (github.event_name == 'pull_request' && github.event.pull_request.base.sha) || github.event.before || 'HEAD~1' }}
 
       run: |
         echo "Using base for change detection: $TURBO_REF_FILTER"

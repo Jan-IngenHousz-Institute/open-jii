@@ -13,11 +13,6 @@ on:
         options:
           - dev
           - prod
-      tofu_version:
-        description: "OpenTofu version to use"
-        required: false
-        type: string
-        default: "1.12.9"
       ref:
         description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
         required: false
@@ -35,11 +30,6 @@ on:
         required: false
         type: string
         default: ""
-      tofu_version:
-        description: "OpenTofu version to use"
-        required: false
-        type: string
-        default: "1.12.9"
 
 concurrency:
   group: opentofu-${{ inputs.environment }}
@@ -107,7 +97,6 @@ jobs:
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
-          tofu_version: ${{ inputs.tofu_version }}
 
       - name: OpenTofu Format Check
         uses: ./.github/actions/tofu/tofu-fmt-check
@@ -133,10 +122,9 @@ jobs:
           out: ${{ runner.temp }}/tfplan
 
       # The saved plan holds the configuration's secret values, as the state does, so it is kept
-      # beside the state and never as a workflow artifact. The lock file goes with it, because the
-      # apply must install the providers the plan was made with. Both jobs derive the key from the
-      # run ID: GitHub drops a job output that contains any secret's value, and a one-character
-      # secret matches most run IDs.
+      # beside the state and never as a workflow artifact. Both jobs derive the key from the run
+      # ID: GitHub drops a job output that contains any secret's value, and a one-character secret
+      # matches most run IDs.
       - name: Save the plan for the apply
         env:
           TARGET_ENV: ${{ inputs.environment }}
@@ -144,7 +132,6 @@ jobs:
           KEY="plans/${GITHUB_RUN_ID}"
           BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
           aws s3 cp "$RUNNER_TEMP/tfplan" "${BUCKET}/${KEY}.tfplan" --only-show-errors
-          aws s3 cp "infrastructure/env/${TARGET_ENV}/.terraform.lock.hcl" "${BUCKET}/${KEY}.lock.hcl" --only-show-errors
 
       - name: Delete the Grafana token
         if: always() && steps.grafana.outputs.token_id != ''
@@ -223,9 +210,7 @@ jobs:
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
-          tofu_version: ${{ inputs.tofu_version }}
 
-      # Before init, so init installs the providers the plan was made with.
       - name: Fetch the approved plan
         env:
           TARGET_ENV: ${{ inputs.environment }}
@@ -233,7 +218,6 @@ jobs:
           KEY="plans/${GITHUB_RUN_ID}"
           BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
           aws s3 cp "${BUCKET}/${KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
-          aws s3 cp "${BUCKET}/${KEY}.lock.hcl" "infrastructure/env/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate

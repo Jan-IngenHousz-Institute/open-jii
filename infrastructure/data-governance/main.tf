@@ -1,6 +1,11 @@
 module "terraform_state_s3" {
   source      = "../modules/s3"
   bucket_name = "open-jii-terraform-state-data-governance"
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
 }
 
 module "terraform_state_lock" {
