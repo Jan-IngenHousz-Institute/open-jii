@@ -774,16 +774,6 @@ export class ExperimentRepository {
     );
   }
 
-  /** Locations and the flow live in their own tables, so editing them bumps `updated_at` here. */
-  async touch(id: string): Promise<Result<void>> {
-    return tryCatch(async () => {
-      await this.database
-        .update(experiments)
-        .set({ updatedAt: sql`(now() AT TIME ZONE 'UTC')` })
-        .where(eq(experiments.id, id));
-    });
-  }
-
   async delete(id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       // Both side tables need cleaning by hand (grants are polymorphic; the roster
