@@ -281,7 +281,7 @@ The encoding is reversible, so two things never share an id. The platform stores
 | `$aws/device_location/{locationId}/get_position_estimate/accepted` | subscribe | the estimate      |
 | `$aws/device_location/{locationId}/get_position_estimate/rejected` | subscribe | why there is none |
 
-Never publish a request unless the broker granted **both** subscriptions on the current connection. A certificate without the device-location policy is refused, and so is one whose thing lacks the attribute. On MQTT 5 a refused subscription comes back as reason code `0x87` in the SUBACK, and a refused publish as `0x87` in the PUBACK. On MQTT 3.1.1 AWS closes the connection instead, which takes the device's measurement uploads down with it. Subscribing first and checking the SUBACK keeps a device without the policy quiet instead of reconnecting in a loop.
+Never publish a request unless the broker granted **both** subscriptions on the current connection. A certificate without the device-location policy is refused, and so is one whose thing lacks the attribute. For MQTT 5, AWS documents reason code `0x87` (not authorized) for a refused subscription in the SUBACK and for a refused publish in the PUBACK. AWS does not document what an MQTT 3.1.1 client gets. In our test, an MQTT 3.1.1 client whose subscription was refused had its connection closed, which would also take the device's measurement uploads down. Subscribing first and checking both SUBACKs keeps a device without the policy quiet instead of reconnecting in a loop.
 
 In our tests replies arrived in under half a second. Treat no reply within a few seconds as "no location".
 
@@ -291,8 +291,8 @@ In our tests replies arrived in under half a second. Treat no reply within a few
 {
   "MessageId": "boot7-1",
   "WiFiAccessPoints": [
-    { "MacAddress": "A0:EC:F9:1E:32:C1", "Rss": -61 },
-    { "MacAddress": "A0:EC:F9:15:72:5E", "Rss": -62 }
+    { "MacAddress": "00:00:5E:00:53:01", "Rss": -61 },
+    { "MacAddress": "00:00:5E:00:53:02", "Rss": -62 }
   ]
 }
 ```
@@ -317,13 +317,13 @@ In our tests replies arrived in under half a second. Treat no reply within a few
 }
 ```
 
-The shape is from a Wi-Fi request on the JII dev account; the coordinates are changed. `coordinates` is longitude first. `horizontalAccuracy` is in metres. An IP estimate also carries `country`, `state`, `city` and `postalCode`. A rejection is `{"errorCode": 404, "errorMessage": "...", "messageId": "boot7-1"}`: `400` for a malformed request, `404` when no position could be solved.
+Both examples are illustrative: the access point addresses are documentation addresses (RFC 7042), and the reply has the shape of a real Wi-Fi reply from the JII dev account with made-up values. `coordinates` is longitude first. `horizontalAccuracy` is in metres. An IP estimate also carries `country`, `state`, `city` and `postalCode`. A rejection is `{"errorCode": 404, "errorMessage": "...", "messageId": "boot7-1"}`: `400` for a malformed request, `404` when no position could be solved.
 
 Ask once after connecting and then every few hours at most, with jitter: the account's estimate rate is shared by the whole fleet and every request is billed.
 
 ### What leaves the device
 
-A request carries the MAC addresses (BSSIDs) and signal strengths of the Wi-Fi access points the device can see, or the device's public IP address. Nothing else is sent. AWS states that it may pass these measurements to a third-party solver provider outside the AWS region, so they may be processed outside the EU. JII accepts this: access point addresses and an IP address are low-sensitivity data, and they are the only way a device without GNSS can find where it is and set its timezone. A device whose certificate lacks the device-location policy sends no request at all.
+The only measurement data a request carries is the MAC addresses (BSSIDs) and signal strengths of the Wi-Fi access points the device can see, or the device's public IP address. Besides that, the request holds an optional `MessageId` and `Timestamp`, and its topic carries the location id, which decodes back to the thing name. AWS states that it may pass these measurements to a third-party solver provider outside the AWS region, so they may be processed outside the EU. JII accepts this: access point addresses and an IP address are low-sensitivity data, and they are the only way a device without GNSS can find where it is and set its timezone. A device whose certificate lacks the device-location policy sends no request at all.
 
 <Callout type="warn">
   A certificate issued before device location was added can use it only after the policy is attached
