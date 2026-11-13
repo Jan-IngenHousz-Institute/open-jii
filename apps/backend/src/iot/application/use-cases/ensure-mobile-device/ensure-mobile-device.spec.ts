@@ -1,4 +1,17 @@
+import {
+  AddThingToThingGroupCommand,
+  CreateThingCommand,
+  DeleteThingCommand,
+  DescribeThingCommand,
+  IoTClient,
+  ListThingPrincipalsCommand,
+  ResourceAlreadyExistsException,
+  UpdateThingCommand,
+} from "@aws-sdk/client-iot";
+import { mockClient } from "aws-sdk-client-mock";
+
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
+import { AwsConfigService } from "../../../../common/modules/aws/services/config/config.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import {
   AppError,
@@ -16,6 +29,7 @@ const THING_NAME = `mobile_${INSTALL_ID}`;
 const RETURNED_THING = {
   thingName: THING_NAME,
   thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${THING_NAME}`,
+  adopted: false,
 };
 const IDENTITY_ID = "eu-central-1:cognito-identity-1";
 
@@ -203,5 +217,62 @@ describe("EnsureMobileDeviceUseCase", () => {
     assertSuccess(result);
     expect(result.value.id).toBe(winner.value.id);
     expect(deleteThing).not.toHaveBeenCalled();
+  });
+
+  // Runs the real adapter and IoT service against a mocked SDK, so the
+  // adoption decision and the rollback are exercised together.
+  describe("when the thing already existed in AWS", () => {
+    const iotMock = mockClient(IoTClient);
+    const thingName = THING_NAME;
+    const thingArn = `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`;
+
+    beforeEach(() => {
+      iotMock.reset();
+      const awsConfig = testApp.module.get(AwsConfigService);
+      iotMock.on(AddThingToThingGroupCommand).resolves({});
+      iotMock.on(UpdateThingCommand).resolves({});
+      iotMock.on(DeleteThingCommand).resolves({});
+      iotMock.on(DescribeThingCommand).resolves({
+        thingName,
+        thingArn,
+        thingTypeName: awsConfig.deviceThingTypeName,
+        attributes: { deviceType: "mobile", serialNumber: INSTALL_ID },
+        version: 1,
+      });
+      iotMock.on(ListThingPrincipalsCommand).resolves({ principals: [] });
+    });
+
+    afterAll(() => {
+      iotMock.restore();
+    });
+
+    it("keeps an adopted thing when the device row cannot be stored", async () => {
+      iotMock.on(CreateThingCommand).rejects(
+        new ResourceAlreadyExistsException({
+          message: "different configuration",
+          $metadata: {},
+          resourceId: thingName,
+        }),
+      );
+      vi.spyOn(awsAdapter, "createThing").mockRestore();
+      vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
+
+      const result = await useCase.execute(body, userId);
+
+      assertFailure(result);
+      expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(1);
+      expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(0);
+    });
+
+    it("still deletes a thing it created itself when the row cannot be stored", async () => {
+      iotMock.on(CreateThingCommand).resolves({ thingName, thingArn });
+      vi.spyOn(awsAdapter, "createThing").mockRestore();
+      vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
+
+      const result = await useCase.execute(body, userId);
+
+      assertFailure(result);
+      expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(1);
+    });
   });
 });

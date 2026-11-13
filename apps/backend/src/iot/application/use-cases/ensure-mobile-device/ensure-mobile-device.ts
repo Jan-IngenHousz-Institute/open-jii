@@ -79,7 +79,8 @@ export class EnsureMobileDeviceUseCase {
         return this.resolveExisting(raced.value, userId, body.name);
       }
 
-      await this.awsPort.deleteThing(thing.thingName);
+      // An adopted Thing predates this call, so it stays.
+      if (!thing.adopted) await this.awsPort.deleteThing(thing.thingName);
       return createResult.isFailure()
         ? failure(createResult.error)
         : failure(

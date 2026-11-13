@@ -22,7 +22,11 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AppError, Result, success, tryCatch } from "../../../../utils/fp-utils";
 import { AwsConfigService } from "../config/config.service";
-import { DEVICE_LOCATION_ID_ATTRIBUTE, toDeviceLocationId } from "./device-location-id";
+import {
+  DEVICE_LOCATION_ID_ATTRIBUTE,
+  fromDeviceLocationId,
+  toDeviceLocationId,
+} from "./device-location-id";
 import type {
   CreateThingInput,
   CreatedThing,
@@ -75,7 +79,11 @@ export class AwsIotService {
               ErrorCodes.AWS_IOT_CREATE_THING_FAILED,
             );
           }
-          created = { thingName: response.thingName, thingArn: response.thingArn };
+          created = {
+            thingName: response.thingName,
+            thingArn: response.thingArn,
+            adopted: false,
+          };
         } catch (error) {
           if (!(error instanceof ResourceAlreadyExistsException)) throw error;
           created = await this.adoptExistingThing(input, error);
@@ -96,8 +104,9 @@ export class AwsIotService {
 
   // CreateThing is idempotent only for an identical configuration, so a thing
   // made before the deviceLocationId attribute existed now conflicts. It is the
-  // same thing when type and every other attribute match; anything else is a
-  // genuine name clash and keeps the original error.
+  // same thing when type and every other attribute match and no principal is
+  // attached, so a thing with live credentials is never taken over; anything
+  // else is a genuine name clash and keeps the original error.
   private async adoptExistingThing(
     input: CreateThingInput,
     conflict: ResourceAlreadyExistsException,
@@ -114,6 +123,11 @@ export class AwsIotService {
       requested.every(([key, value]) => otherAttributes[key] === value);
     if (!sameThing || !existing.thingName || !existing.thingArn) throw conflict;
 
+    const principals = await this.iotClient.send(
+      new ListThingPrincipalsCommand({ thingName: input.thingName, maxResults: 1 }),
+    );
+    if ((principals.principals ?? []).length > 0) throw conflict;
+
     const ensured = await this.ensureDeviceLocationId(input.thingName);
     if (ensured.isFailure()) {
       this.logger.warn({
@@ -122,7 +136,7 @@ export class AwsIotService {
         error: ensured.error.message,
       });
     }
-    return { thingName: existing.thingName, thingArn: existing.thingArn };
+    return { thingName: existing.thingName, thingArn: existing.thingArn, adopted: true };
   }
 
   async deleteThing(thingName: string): Promise<Result<void>> {
@@ -159,8 +173,10 @@ export class AwsIotService {
   }
 
   // Things created before the device-location policy lack the attribute it
-  // binds. A differing value is left alone, never overwritten from here. A
-  // concurrent edit gets one retry against a fresh read.
+  // binds. A value in another encoding (such as the lossy one dev used first)
+  // is legacy and replaced; a valid id of another thing name is left alone,
+  // never overwritten from here. A concurrent edit gets one retry against a
+  // fresh read.
   async ensureDeviceLocationId(thingName: string): Promise<Result<DeviceLocationIdOutcome>> {
     return tryCatch(
       async () => {
@@ -171,7 +187,7 @@ export class AwsIotService {
           const thing = await this.iotClient.send(new DescribeThingCommand({ thingName }));
           const current = thing.attributes?.[DEVICE_LOCATION_ID_ATTRIBUTE];
           if (current === id) return "unchanged";
-          if (current !== undefined) return "conflict";
+          if (current !== undefined && fromDeviceLocationId(current) !== null) return "conflict";
 
           try {
             await this.iotClient.send(

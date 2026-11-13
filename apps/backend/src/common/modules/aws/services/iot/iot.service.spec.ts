@@ -87,8 +87,29 @@ describe("AwsIotService", () => {
       expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(0);
     });
 
-    it("keeps a differing attribute and reports the conflict", async () => {
-      iotMock.on(DescribeThingCommand).resolves({ attributes: { deviceLocationId: "hand-set" } });
+    it("replaces a legacy value that no thing name encodes to", async () => {
+      iotMock.on(DescribeThingCommand).resolves({
+        attributes: { deviceLocationId: "ambyte-28-37-2F-FF-E7-04" },
+        version: 2,
+      });
+      iotMock.on(UpdateThingCommand).resolves({});
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertSuccess(result);
+      expect(result.value).toBe("set");
+      expect(iotMock.commandCalls(UpdateThingCommand)[0].args[0].input).toMatchObject({
+        expectedVersion: 2,
+        attributePayload: {
+          attributes: { deviceLocationId: "ambyte-5F28-3A37-3A2F-3AFF-3AE7-3A04" },
+        },
+      });
+    });
+
+    it("keeps another thing's valid id and reports the conflict", async () => {
+      iotMock
+        .on(DescribeThingCommand)
+        .resolves({ attributes: { deviceLocationId: "ambyte-5F28-3A37-3A2F-3AFF-3AE7-3A05" } });
 
       const result = await service.ensureDeviceLocationId(thingName);
 
@@ -166,6 +187,7 @@ describe("AwsIotService", () => {
       expect(result.value).toEqual({
         thingName: input.thingName,
         thingArn: "arn:aws:iot:eu-central-1:123456789012:thing/AMBYTE_E8:F6:0A:B1:1D:D4",
+        adopted: false,
       });
 
       const createCall = iotMock.commandCalls(CreateThingCommand)[0].args[0].input;
@@ -214,13 +236,18 @@ describe("AwsIotService", () => {
           attributes: input.attributes,
           version: 3,
         });
+        iotMock.on(ListThingPrincipalsCommand).resolves({ principals: [] });
         iotMock.on(UpdateThingCommand).resolves({});
         iotMock.on(AddThingToThingGroupCommand).resolves({});
 
         const result = await service.createThing(input);
 
         assertSuccess(result);
-        expect(result.value).toEqual({ thingName: input.thingName, thingArn: existingArn });
+        expect(result.value).toEqual({
+          thingName: input.thingName,
+          thingArn: existingArn,
+          adopted: true,
+        });
         expect(iotMock.commandCalls(UpdateThingCommand)[0].args[0].input).toMatchObject({
           thingName: input.thingName,
           attributePayload: {
@@ -243,6 +270,26 @@ describe("AwsIotService", () => {
 
         assertFailure(result);
         expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
+        expect(result.error.message).toContain("different configuration");
+        expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(0);
+        expect(iotMock.commandCalls(AddThingToThingGroupCommand)).toHaveLength(0);
+      });
+
+      it("refuses to adopt a thing that already has a principal attached", async () => {
+        iotMock.on(CreateThingCommand).rejects(conflict);
+        iotMock.on(DescribeThingCommand).resolves({
+          thingName: input.thingName,
+          thingArn: existingArn,
+          thingTypeName: awsConfig.deviceThingTypeName,
+          attributes: input.attributes,
+        });
+        iotMock
+          .on(ListThingPrincipalsCommand)
+          .resolves({ principals: ["arn:aws:iot:eu-central-1:123456789012:cert/live"] });
+
+        const result = await service.createThing(input);
+
+        assertFailure(result);
         expect(result.error.message).toContain("different configuration");
         expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(0);
         expect(iotMock.commandCalls(AddThingToThingGroupCommand)).toHaveLength(0);

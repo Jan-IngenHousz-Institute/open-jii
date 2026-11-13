@@ -36,6 +36,7 @@ describe("BulkRegisterIotDevicesUseCase", () => {
         success({
           thingName: input.thingName,
           thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${input.thingName}`,
+          adopted: false,
         }),
       ),
     );
