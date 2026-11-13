@@ -212,6 +212,30 @@ describe("RegistrationForm", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(callbackUrl));
   });
 
+  it("stops waiting for a hung newsletter subscription after 5 s", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockSubscribeNewsletter.mockReturnValueOnce(new Promise(() => undefined));
+      const callbackUrl = "http://localhost:3100/login/openjii";
+      render(<RegistrationForm {...defaultProps} callbackUrl={callbackUrl} />);
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.type(screen.getByLabelText("registration.firstName"), "News");
+      await user.type(screen.getByLabelText("registration.lastName"), "Reader");
+      await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+      await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+      await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+      await waitFor(() => expect(mockSubscribeNewsletter).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(pushMock).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1_500);
+      await waitFor(() => expect(pushMock).toHaveBeenCalledWith(callbackUrl));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not hold a same-origin destination for the newsletter subscription", async () => {
     mockSubscribeNewsletter.mockReturnValueOnce(new Promise(() => undefined));
     render(<RegistrationForm {...defaultProps} />);

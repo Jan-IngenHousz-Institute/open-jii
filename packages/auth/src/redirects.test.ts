@@ -38,6 +38,7 @@ describe("auth return addresses", () => {
     "/\n/example.com",
     " https://equipment.openjii.org",
     "http://localhost:3100/login/openjii",
+    "https://[",
   ])("falls back to the platform for %s", (url) => {
     expect(resolveAuthCallback(url, settings)).toBe("/platform");
   });
