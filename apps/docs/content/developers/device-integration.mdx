@@ -252,6 +252,87 @@ Certificates issued or rotated from the Credentials tab carry a policy granting 
 
 Rollouts are paced and will stop automatically if too many devices report `FAILED`, so an honest failure report protects the rest of the fleet.
 
+## Device location
+
+A device without GNSS can ask
+[AWS IoT Core Device Location](https://docs.aws.amazon.com/iot/latest/developerguide/device-location-reserved-topics.html)
+for an estimate of where it is, from a Wi-Fi scan or its public IP address, over the MQTT connection it already holds. The Ambyte uses this to set its timezone; configured coordinates are only the fallback.
+
+A location estimate affects only what a device records from then on, such as the timezone of new measurements. Data already recorded is never changed.
+
+### The location id
+
+The topics carry an id that AWS documents as letters, digits and dashes only; in our tests a request under an id containing `_` got no reply at all. Thing names contain `_` and `:`, so the id is an encoding of the thing name: every UTF-8 byte outside `[A-Za-z0-9]`, the dash included, becomes `-` followed by the byte as two uppercase hex digits. Letters and digits are kept as they are.
+
+| Thing name                 | Location id                            |
+| -------------------------- | -------------------------------------- |
+| `ambyte_28:37:2F:FF:E7:04` | `ambyte-5F28-3A37-3A2F-3AFF-3AE7-3A04` |
+| `a-b`                      | `a-2Db`                                |
+| `a_b`                      | `a-5Fb`                                |
+| `café`                     | `caf-C3-A9`                            |
+
+The encoding is reversible, so two things never share an id. The platform stores the id on the thing as the `deviceLocationId` attribute, and the policy grants only the topics under it, so a device cannot ask or listen under another device's id. An empty thing name, or one whose id would be longer than 128 characters, gets no id and cannot use device location.
+
+### Topics
+
+| Topic                                                              | Direction | Purpose           |
+| ------------------------------------------------------------------ | --------- | ----------------- |
+| `$aws/device_location/{locationId}/get_position_estimate`          | publish   | ask for a fix     |
+| `$aws/device_location/{locationId}/get_position_estimate/accepted` | subscribe | the estimate      |
+| `$aws/device_location/{locationId}/get_position_estimate/rejected` | subscribe | why there is none |
+
+Never publish a request unless the broker granted **both** subscriptions on the current connection. A certificate without the device-location policy is refused, and so is one whose thing lacks the attribute. On MQTT 5 a refused subscription comes back as reason code `0x87` in the SUBACK, and a refused publish as `0x87` in the PUBACK. On MQTT 3.1.1 AWS closes the connection instead, which takes the device's measurement uploads down with it. Subscribing first and checking the SUBACK keeps a device without the policy quiet instead of reconnecting in a loop.
+
+In our tests replies arrived in under half a second. Treat no reply within a few seconds as "no location".
+
+### The request
+
+```json
+{
+  "MessageId": "boot7-1",
+  "WiFiAccessPoints": [
+    { "MacAddress": "A0:EC:F9:1E:32:C1", "Rss": -61 },
+    { "MacAddress": "A0:EC:F9:15:72:5E", "Rss": -62 }
+  ]
+}
+```
+
+- Send `WiFiAccessPoints` or `Ip` (`{"Ip": {"IpAddress": "<public IPv4 or IPv6>"}}`). In our tests AWS did not fall back to the connection's address: an empty request was rejected, so a device behind NAT must learn its public address first.
+- Prefer Wi-Fi: in our tests two or more access points placed a device within tens of metres, an IP address within kilometres. Leave out locally administered (randomised) MAC addresses.
+- Do not send both in one request. In our tests unknown access points plus a valid IP address gave `404` without trying the IP address; retry with `Ip` alone instead.
+- `MessageId` is optional and comes back in the reply. AWS documents `Timestamp` as a string of up to 10 characters, and a JSON number was rejected with `400`; leaving it out is simplest. Any other field was rejected with `400`.
+
+### The reply
+
+```json
+{
+  "type": "Point",
+  "coordinates": [4.9, 52.37],
+  "properties": {
+    "horizontalAccuracy": 68,
+    "horizontalConfidenceLevel": 0.68,
+    "messageId": "boot7-1",
+    "timestamp": "2026-11-13T08:51:08.247902632Z"
+  }
+}
+```
+
+The shape is from a Wi-Fi request on the JII dev account; the coordinates are changed. `coordinates` is longitude first. `horizontalAccuracy` is in metres. An IP estimate also carries `country`, `state`, `city` and `postalCode`. A rejection is `{"errorCode": 404, "errorMessage": "...", "messageId": "boot7-1"}`: `400` for a malformed request, `404` when no position could be solved.
+
+Ask once after connecting and then every few hours at most, with jitter: the account's estimate rate is shared by the whole fleet and every request is billed.
+
+### What leaves the device
+
+A request carries the MAC addresses (BSSIDs) and signal strengths of the Wi-Fi access points the device can see, or the device's public IP address. Nothing else is sent. AWS states that it may pass these measurements to a third-party solver provider outside the AWS region, so they may be processed outside the EU. JII accepts this: access point addresses and an IP address are low-sensitivity data, and they are the only way a device without GNSS can find where it is and set its timezone. A device whose certificate lacks the device-location policy sends no request at all.
+
+<Callout type="warn">
+  A certificate issued before device location was added can use it only after the policy is attached
+  to the certificate in AWS and the thing's `deviceLocationId` attribute is set to the location id
+  above. Issuing or rotating credentials from the Credentials tab normally does both; if a device
+  gets no replies afterwards, check the thing's attribute. Until then AWS refuses the subscriptions,
+  so the device keeps its configured coordinates.
+</Callout>
+
 ## Lifecycle notes
 
 - **Re-issue over patch**: whenever bindings or workbooks change, re-issue the file from the Onboarding tab and replace the device's stored copy wholesale.
