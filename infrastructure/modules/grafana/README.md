@@ -70,7 +70,7 @@ Automated alerts notify your team when issues are detected:
 
 #### Notification Email Alerts
 
-- **Notification Emails Waiting**: Fires when the oldest email in the outbox has waited over 15 minutes, for 5 minutes
+- **Notification Emails Waiting**: Fires when the oldest email in the outbox has waited over 15 minutes, for 5 minutes, or when the backend has stopped reporting the outbox for about 20 minutes
 - **Email Bounce Rate**: Fires when the account's SES bounce rate exceeds 4% for 15 minutes; AWS reviews an account at 5%
 - **Email Complaint Rate**: Fires when the account's SES complaint rate exceeds 0.08% for 15 minutes; AWS reviews an account at 0.1%
 

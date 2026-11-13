@@ -138,6 +138,9 @@ passes:
     note: >-
       notification email health: what the outbox sent, failed and has waiting, how long the oldest
       has waited, and the account's bounce and complaint rates
+  - date: 2026-11-13
+    range: [144, 144]
+    note: how many notification emails are waiting, for the Platform dashboard's Email chart
 
 metrics:
   # Ingest path
@@ -2611,11 +2614,12 @@ metrics:
     runbook: docs/runbooks/email-outbox-waiting.md
     notes: >-
       How long the oldest notification email still pending or sending has waited since it was
-      queued, 0 when none is. Every backend task publishes it every five minutes beside
-      NotificationEmailsWaiting, the number of them. A relay outage holds every row with its attempts
-      unchanged. One email rejected on every attempt also passes 900 seconds, in the wait after its
-      third failure, since the retries wait 1, 5, 15 and 60 minutes, and stays past it until it is
-      sent or given up on.
+      queued, 0 when none is. Every backend task publishes it every five minutes, with the number of
+      them (144). A relay outage holds every row with its attempts unchanged. One email rejected on
+      every attempt also passes 900 seconds, in the wait after its third failure, since the retries
+      wait 1, 5, 15 and 60 minutes, and stays past it until it is sent or given up on. Since a quiet
+      outbox still reads 0, the rule treats no data as firing too: about twenty minutes after the
+      last point, it says the job that reports the outbox has stopped, whatever email is doing.
 
   - num: 142
     id: email-bounce-rate
@@ -2667,3 +2671,21 @@ metrics:
       account has sent enough to be judged, so no data is not an outage. SES publishes points only
       around sends, roughly daily on dev, so the board reads a day at a time and a quiet account
       shows No data, not red. Covers every email the account sends, sign-in codes included.
+
+  - num: 144
+    id: emails-waiting
+    name: Emails waiting
+    family: observability
+    source: api
+    phase: P2
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Backend
+      metric: NotificationEmailsWaiting
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      How many notification emails are pending or sending, 0 when none is. Every backend task
+      publishes it every five minutes with the age of the oldest of them (141). A count for the
+      Platform dashboard's Email chart, with no limit of its own: the age is what the rule watches.
