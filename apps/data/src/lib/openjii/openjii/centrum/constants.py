@@ -15,7 +15,8 @@ SILVER_TABLE_DEFAULT = "clean_data"
 # once its own updates are shown to finish inside it.
 MEASUREMENT_PATH_TRIGGER_INTERVAL = "2 seconds"
 
-# Captures the experiment id from an ingest topic.
+# Captures the experiment id from an ingest topic. tooling/devkit/src/commands/ingest-replay.ts
+# copies it, with the health check's segment below.
 INGEST_TOPIC_EXPERIMENT_PATTERN = r"experiment/data_ingest/v1/([^/]+)/"
 
 # The experiment segment of the ingest health check's topic. Bronze keeps messages with it out of

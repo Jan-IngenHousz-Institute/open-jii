@@ -15,6 +15,7 @@
     "env:generate": "tsx src/generate-env.ts",
     "grafana:auth": "tsx src/commands/grafana-auth.ts",
     "grafana:get": "tsx src/commands/grafana-get.ts",
+    "ingest:replay": "tsx src/commands/ingest-replay.ts",
     "linear:apply": "tsx src/commands/linear-apply.ts",
     "linear:auth": "tsx src/commands/linear-auth.ts",
     "linear:check": "tsx src/commands/linear-check.ts",
@@ -38,6 +39,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-kinesis": "catalog:aws-sdk",
+    "@aws-sdk/client-s3": "catalog:aws-sdk",
     "@repo/monitoring": "workspace:*",
     "better-auth": "1.7.14",
     "dotenv": "^16.6.1",
@@ -51,6 +54,7 @@
     "@repo/vitest-config": "workspace:*",
     "@types/jsdom": "^21.1.7",
     "@types/node": "catalog:",
+    "aws-sdk-client-mock": "^4.1.0",
     "eslint": "catalog:",
     "tsx": "^4.21.0",
     "typescript": "catalog:",

@@ -97,11 +97,12 @@ accepted that is missing here was dropped by the archive's half of the rule only
 
 ## 4. The stream
 
-Kinesis keeps records for 24 hours and cannot be searched by content, so ask it one question: was
-the consumer reading during the window? Read `GetRecords.Success` and
+Kinesis keeps records for 24 hours on dev and 72 on prod, and cannot be searched by content, so ask
+it one question: was the consumer reading during the window? Read `GetRecords.Success` and
 `GetRecords.IteratorAgeMilliseconds` on `open-jii-<env>-data-ingest-stream`. Both have no datapoints
 while the consumer is stopped, as on prod from 12:15 to 16:15 UTC on 16 October 2026, when
-`ingest-idle.md` fired. Records under 24 hours old are delayed, not lost.
+`ingest-idle.md` fired. Records younger than the stream's retention are delayed, not lost. Older
+ones are replayed from the raw archive, as `ingest-forwarding-failures.md` describes.
 
 ## 5. The lakehouse
 
@@ -182,8 +183,8 @@ URL, which the backend logs as `getIotUploadUrl` with the experiment id.
   32-bit id hashed from their arrival, or from their content for a large upload, so from bronze on
   they are found by their phone or device and their time, not by their own id. A device on its own
   certificate sends no `_client_id`; its newer rows' ids come from what the capture holds.
-- **The stream after 24 hours**, and the archive's newest quarter of an hour before Firehose
-  writes it.
+- **The stream after 24 hours on dev or 72 on prod**, and the archive's newest quarter of an hour
+  before Firehose writes it.
 
 ## Reporting back
 

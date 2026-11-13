@@ -374,6 +374,20 @@ Pass `--email` for a different seeded account, or `--print` to put the cookie on
 Reading sign-in codes only works against a local database; the command refuses any host that is not
 loopback, which is the same guard the end-to-end fixtures use.
 
+## Replaying lost ingest, for maintainers
+
+```bash
+pnpm ingest:replay <dev|prod> --from <UTC time> --to <UTC time> --warehouse <warehouse id>
+```
+
+Reads the messages the broker accepted in a window from the raw archive, or with `--source errors`
+those a rule action failed to deliver, asks bronze which already landed, and with `--apply` sends the
+rest back to the ingest stream. Without `--apply` it only reads. It uses your `openjii-<env>` AWS
+profile and the Databricks profile named after the environment; `--aws-profile` and
+`--databricks-profile` pick others, and sending needs a role that may write to the stream. Every
+decision goes to a manifest under `.claude/ingest-replays/`. When to run it and how to read the result
+is in `docs/runbooks/ingest-forwarding-failures.md`.
+
 ## Label taxonomy, for maintainers
 
 `pnpm linear:taxonomy` prints the difference between the live `OJD` labels and the spec in
