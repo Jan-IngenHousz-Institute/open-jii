@@ -175,12 +175,40 @@ Run this in the same session as [annotations-move](annotations-move.md). The sec
 only when both are clean.
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export and in a new
-psql session, since step 3 creates its tables; a clean check is what lets it go. Once it is out,
-run steps 2 and 3 and step 5's checks once more without step 4, since Postgres is then where sheets
-are written: a difference is a write the first release's tasks took while the second rolled out,
-whose copy failed. Postgres is what the metadata list reads by then, so repair it as step 5 says:
-step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older sheet, a `DELETE` from
-Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
+psql session, since step 3 creates its tables; a clean check is what lets it go.
+
+Once it is out, Postgres is where sheets are written, and the lakehouse holds a copy the backend
+keeps through the `experiment_data_outbox` table. First wait until no copy is owed, in psql:
+
+```sql
+SELECT count(*), max(attempts), max(last_error)
+FROM experiment_data_outbox WHERE record_type = 'metadata_sheet';
+```
+
+The backend copies each change as it is written and looks again every 15 seconds, so the count
+falls to 0 soon after the last edit. A row whose attempts keep climbing names the lakehouse's
+refusal in `last_error`, and the backend logs it as an error from the fifth attempt.
+Then run steps 2 and 3 and step 5's checks once more without step 4: a difference left is a write
+the first release's tasks took while the second rolled out, whose copy failed. Postgres is what the
+metadata list reads by then, so repair it as step 5 says: step 4 with `AND l.id IN ('<id>', '<id>')`
+added for a missing or older sheet, a `DELETE` from Postgres for one the lakehouse no longer holds.
+Note the ids in OJD-2153.
+
+Step 5's UPDATE from the lakehouse is for the first release only. By now a row whose `in_postgres`
+is newer than the lakehouse's time is a copy that has not landed, and Postgres is right: owe the
+sheet again, naming the ids, and the backend copies it within 15 seconds:
+
+```sql
+INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
+SELECT 'metadata_sheet', id, experiment_id, 'lakehouse' FROM experiment_metadata_sheets
+WHERE id IN ('<id>', '<id>')
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+To roll the second release back, first wait until the outbox owes nothing, as above. The first
+release has no worker, so a copy still owed after the rollback waits in `experiment_data_outbox`
+until the second release returns, and pages read the lakehouse without it meanwhile. Note any such
+ids in OJD-2153.
 
 Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
 researchers' data.

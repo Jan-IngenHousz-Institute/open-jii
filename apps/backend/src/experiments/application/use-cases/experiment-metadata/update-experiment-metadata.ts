@@ -1,15 +1,16 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type {
   ExperimentMetadataDto,
   UpdateExperimentMetadataDto,
 } from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
-import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class UpdateExperimentMetadataUseCase {
@@ -17,8 +18,9 @@ export class UpdateExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
     private readonly metadataRepository: ExperimentMetadataRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -58,42 +60,23 @@ export class UpdateExperimentMetadataUseCase {
       }
 
       const now = new Date();
-      const result = await this.metadataWarehouseRepository.update(
-        metadataId,
-        data,
-        userId,
-        experimentId,
-        now,
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Experiment metadata updated successfully",
-          operation: "updateExperimentMetadata",
-          experimentId,
-          metadataId,
-          userId,
-          status: "success",
-        });
-
-        // Postgres follows the lakehouse until pages read it, and the metadata-sheets-move runbook
-        // fills in what a failed copy missed.
-        const copied = await this.metadataRepository.update(
+      const written = await this.metadataRepository.transaction(async (tx) => {
+        const updated = await this.metadataRepository.update(
+          tx,
           experimentId,
           metadataId,
           data.metadata,
           now,
         );
-        if (copied.isFailure()) {
-          this.logger.warn({
-            msg: "Experiment metadata update not copied to Postgres",
-            operation: "updateExperimentMetadata",
-            experimentId,
-            metadataId,
-            error: copied.error.message,
-          });
+        if (updated) {
+          await this.outboxRepository.owe(tx, [
+            { recordType: "metadata_sheet", recordId: metadataId, experimentId },
+          ]);
         }
-      } else {
+        return updated;
+      });
+
+      if (written.isFailure()) {
         this.logger.error({
           msg: "Failed to update experiment metadata",
           errorCode: ErrorCodes.EXPERIMENT_METADATA_UPDATE_FAILED,
@@ -101,11 +84,27 @@ export class UpdateExperimentMetadataUseCase {
           experimentId,
           metadataId,
           userId,
-          error: result.error.message,
+          error: written.error.message,
         });
+        return failure(written.error);
       }
 
-      return result;
+      if (written.value === null) {
+        return failure(AppError.notFound(`Metadata with ID ${metadataId} not found`));
+      }
+
+      this.logger.log({
+        msg: "Experiment metadata updated successfully",
+        operation: "updateExperimentMetadata",
+        experimentId,
+        metadataId,
+        userId,
+        status: "success",
+      });
+      this.outboxWorker.nudge();
+
+      const { id, ...updated } = written.value;
+      return success({ ...updated, metadataId: id });
     });
   }
 }

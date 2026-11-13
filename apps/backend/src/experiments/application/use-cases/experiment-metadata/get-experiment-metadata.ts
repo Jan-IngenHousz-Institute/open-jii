@@ -1,9 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
-import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
+import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -12,7 +12,7 @@ export class GetExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
+    private readonly metadataRepository: ExperimentMetadataRepository,
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentMetadataDto[]>> {
@@ -38,7 +38,8 @@ export class GetExperimentMetadataUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    const result = await this.metadataWarehouseRepository.findAllByExperimentId(experimentId);
+    // Postgres takes every write first, so the list shows a save as soon as it returns.
+    const result = await this.metadataRepository.findByExperimentId(experimentId);
 
     if (result.isFailure()) {
       this.logger.error({
@@ -49,8 +50,9 @@ export class GetExperimentMetadataUseCase {
         userId,
         error: result.error.message,
       });
+      return result;
     }
 
-    return result;
+    return success(result.value.map(({ id, ...sheet }) => ({ ...sheet, metadataId: id })));
   }
 }

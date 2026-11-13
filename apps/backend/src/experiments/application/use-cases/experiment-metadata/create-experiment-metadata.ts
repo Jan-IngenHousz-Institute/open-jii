@@ -2,15 +2,17 @@ import { Injectable, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type {
   ExperimentMetadataDto,
   CreateExperimentMetadataDto,
+  MetadataSheetRecord,
 } from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
-import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class CreateExperimentMetadataUseCase {
@@ -18,8 +20,9 @@ export class CreateExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
     private readonly metadataRepository: ExperimentMetadataRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -55,57 +58,46 @@ export class CreateExperimentMetadataUseCase {
         return failure(AppError.forbidden("Cannot modify an archived experiment"));
       }
 
-      const metadataId = randomUUID();
       const now = new Date();
-      const result = await this.metadataWarehouseRepository.create(
+      const sheet: MetadataSheetRecord = {
+        id: randomUUID(),
         experimentId,
-        metadataId,
-        data,
-        userId,
-        now,
-      );
+        metadata: data.metadata,
+        createdBy: userId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const written = await this.metadataRepository.transaction(async (tx) => {
+        await this.metadataRepository.insert(tx, sheet);
+        await this.outboxRepository.owe(tx, [
+          { recordType: "metadata_sheet", recordId: sheet.id, experimentId },
+        ]);
+      });
 
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Experiment metadata created successfully",
-          operation: "createExperimentMetadata",
-          experimentId,
-          metadataId,
-          userId,
-          status: "success",
-        });
-
-        // Postgres follows the lakehouse until pages read it, and the metadata-sheets-move runbook
-        // fills in what a failed copy missed.
-        const copied = await this.metadataRepository.insert({
-          id: metadataId,
-          experimentId,
-          metadata: data.metadata,
-          createdBy: userId,
-          createdAt: now,
-          updatedAt: now,
-        });
-        if (copied.isFailure()) {
-          this.logger.warn({
-            msg: "Experiment metadata not copied to Postgres",
-            operation: "createExperimentMetadata",
-            experimentId,
-            metadataId,
-            error: copied.error.message,
-          });
-        }
-      } else {
+      if (written.isFailure()) {
         this.logger.error({
           msg: "Failed to create experiment metadata",
           errorCode: ErrorCodes.EXPERIMENT_METADATA_CREATE_FAILED,
           operation: "createExperimentMetadata",
           experimentId,
           userId,
-          error: result.error.message,
+          error: written.error.message,
         });
+        return failure(written.error);
       }
 
-      return result;
+      this.logger.log({
+        msg: "Experiment metadata created successfully",
+        operation: "createExperimentMetadata",
+        experimentId,
+        metadataId: sheet.id,
+        userId,
+        status: "success",
+      });
+      this.outboxWorker.nudge();
+
+      const { id, ...created } = sheet;
+      return success({ ...created, metadataId: id });
     });
   }
 }

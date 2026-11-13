@@ -1,29 +1,29 @@
-import { Logger } from "@nestjs/common";
+import { experimentDataOutbox, experimentMetadataSheets } from "@repo/database";
 
-import { experimentMetadataSheets } from "@repo/database";
-
-import {
-  assertSuccess,
-  assertFailure,
-  success,
-  failure,
-  AppError,
-} from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type {
-  ExperimentMetadataDto,
-  CreateExperimentMetadataDto,
-  MetadataSheetRecord,
-} from "../../../core/models/experiment-metadata.model";
-import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
+import type { CreateExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
+import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 import { CreateExperimentMetadataUseCase } from "./create-experiment-metadata";
 
 describe("CreateExperimentMetadataUseCase", () => {
   const testApp = TestHarness.App;
   let testUserId: string;
   let useCase: CreateExperimentMetadataUseCase;
-  let metadataWarehouseRepository: ExperimentMetadataWarehouseRepository;
+
+  const sampleMetadata: CreateExperimentMetadataDto = {
+    metadata: { location: "GH 8.3", sampleCount: 10 },
+  };
+
+  function sheets() {
+    return testApp.database.select().from(experimentMetadataSheets);
+  }
+
+  function outbox() {
+    return testApp.database.select().from(experimentDataOutbox);
+  }
 
   beforeAll(async () => {
     await testApp.setup();
@@ -33,7 +33,6 @@ describe("CreateExperimentMetadataUseCase", () => {
     await testApp.beforeEach();
     testUserId = await testApp.createTestUser({});
     useCase = testApp.module.get(CreateExperimentMetadataUseCase);
-    metadataWarehouseRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
   });
 
   afterEach(() => {
@@ -44,183 +43,104 @@ describe("CreateExperimentMetadataUseCase", () => {
     await testApp.teardown();
   });
 
-  const sampleMetadata: CreateExperimentMetadataDto = {
-    metadata: { location: "GH 8.3", sampleCount: 10 },
-  };
-
-  it("should create experiment metadata successfully", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Metadata Create Test",
-      userId: testUserId,
-    });
-
-    const mockResult: ExperimentMetadataDto = {
-      metadataId: "metadata-uuid-1",
-      experimentId: experiment.id,
-      metadata: sampleMetadata.metadata,
-      createdBy: testUserId,
-      createdAt: new Date("2025-01-01"),
-      updatedAt: new Date("2025-01-01"),
-    };
-
-    vi.spyOn(metadataWarehouseRepository, "create").mockResolvedValue(success(mockResult));
-
-    const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
-
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toEqual(mockResult);
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(metadataWarehouseRepository.create).toHaveBeenCalledWith(
-      experiment.id,
-      expect.any(String),
-      sampleMetadata,
-      testUserId,
-      expect.any(Date),
-    );
-  });
-
-  it("should return NOT_FOUND if experiment does not exist", async () => {
-    const nonExistentId = "00000000-0000-0000-0000-000000000000";
-
-    const result = await useCase.execute(nonExistentId, sampleMetadata, testUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("NOT_FOUND");
-  });
-
-  it("should propagate repository failure on create", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Metadata Create Failure Test",
-      userId: testUserId,
-    });
-
-    vi.spyOn(metadataWarehouseRepository, "create").mockResolvedValue(
-      failure(AppError.internal("Databricks unavailable")),
-    );
-
-    const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
-
-    expect(result.isSuccess()).toBe(false);
-    assertFailure(result);
-    expect(result.error.code).toBe("INTERNAL_ERROR");
-  });
-
-  it("should allow members with archive access to create metadata", async () => {
-    const { experiment } = await testApp.createExperiment({
-      name: "Member Create Test",
-      userId: testUserId,
-    });
-
-    const memberId = await testApp.createTestUser({});
-    await testApp.addExperimentAdmin(experiment.id, memberId);
-
-    const mockResult: ExperimentMetadataDto = {
-      metadataId: "metadata-uuid-member",
-      experimentId: experiment.id,
-      metadata: sampleMetadata.metadata,
-      createdBy: memberId,
-      createdAt: new Date("2025-01-01"),
-      updatedAt: new Date("2025-01-01"),
-    };
-
-    vi.spyOn(metadataWarehouseRepository, "create").mockResolvedValue(success(mockResult));
-
-    const result = await useCase.execute(experiment.id, sampleMetadata, memberId);
-
-    expect(result.isSuccess()).toBe(true);
-    assertSuccess(result);
-    expect(result.value).toEqual(mockResult);
-  });
-
-  function postgres(): Promise<MetadataSheetRecord[]> {
-    return testApp.database.select().from(experimentMetadataSheets);
-  }
-
-  describe("the copy in Postgres", () => {
-    it("keeps the sheet with the id and time the lakehouse got", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Drought trial",
-        userId: testUserId,
-      });
-      const create = vi
-        .spyOn(metadataWarehouseRepository, "create")
-        .mockImplementation((experimentId, metadataId, dto, userId, now) =>
-          Promise.resolve(
-            success({
-              metadataId,
-              experimentId,
-              metadata: dto.metadata,
-              createdBy: userId,
-              createdAt: now,
-              updatedAt: now,
-            }),
-          ),
-        );
-
-      assertSuccess(await useCase.execute(experiment.id, sampleMetadata, testUserId));
-
-      const [, metadataId, , , now] = create.mock.calls[0];
-      expect(await postgres()).toEqual([
-        {
-          id: metadataId,
-          experimentId: experiment.id,
-          metadata: sampleMetadata.metadata,
-          createdBy: testUserId,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
-    });
-
-    it("stays empty when the lakehouse refuses the sheet", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Drought trial",
-        userId: testUserId,
-      });
-      vi.spyOn(metadataWarehouseRepository, "create").mockResolvedValue(
-        failure(AppError.internal("Warehouse down")),
-      );
-
-      assertFailure(await useCase.execute(experiment.id, sampleMetadata, testUserId));
-
-      expect(await postgres()).toEqual([]);
-    });
-  });
-
-  it("still creates the sheet when the copy in Postgres fails", async () => {
+  it("keeps the sheet, owes its copy and starts it, and returns it as kept", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Drought trial",
       userId: testUserId,
     });
-    const mockResult: ExperimentMetadataDto = {
-      metadataId: "metadata-uuid-1",
-      experimentId: experiment.id,
-      metadata: sampleMetadata.metadata,
-      createdBy: testUserId,
-      createdAt: new Date("2025-01-01"),
-      updatedAt: new Date("2025-01-01"),
-    };
-    const create = vi
-      .spyOn(metadataWarehouseRepository, "create")
-      .mockResolvedValue(success(mockResult));
-    vi.spyOn(testApp.module.get(ExperimentMetadataRepository), "insert").mockResolvedValue(
-      failure(AppError.internal("Postgres did not answer the metadata sheets query")),
-    );
-    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
 
     const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
 
     assertSuccess(result);
-    expect(result.value).toEqual(mockResult);
-    const [, metadataId] = create.mock.calls[0];
-    expect(warn).toHaveBeenCalledWith(
+    const [kept] = await sheets();
+    expect(kept).toEqual(
       expect.objectContaining({
-        msg: "Experiment metadata not copied to Postgres",
         experimentId: experiment.id,
-        metadataId,
+        metadata: sampleMetadata.metadata,
+        createdBy: testUserId,
       }),
     );
+    const { id, ...sheet } = kept;
+    expect(result.value).toEqual({ ...sheet, metadataId: id });
+    expect(await outbox()).toEqual([
+      expect.objectContaining({
+        recordType: "metadata_sheet",
+        recordId: kept.id,
+        destination: "lakehouse",
+      }),
+    ]);
+    expect(nudge).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets an admin of the experiment create a sheet", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const adminId = await testApp.createTestUser({});
+    await testApp.addExperimentAdmin(experiment.id, adminId);
+
+    const result = await useCase.execute(experiment.id, sampleMetadata, adminId);
+
+    assertSuccess(result);
+    expect(result.value.createdBy).toBe(adminId);
+  });
+
+  it("refuses a sheet on an archived experiment", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+      status: "archived",
+    });
+
+    const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
+
+    assertFailure(result);
+    expect(result.error.code).toBe("FORBIDDEN");
+    expect(await sheets()).toEqual([]);
+  });
+
+  it("answers not found for an experiment that does not exist", async () => {
+    const result = await useCase.execute(
+      "00000000-0000-0000-0000-000000000000",
+      sampleMetadata,
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+  });
+
+  it("fails, and owes no copy, when Postgres refuses the sheet", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentMetadataRepository), "transaction").mockResolvedValue(
+      failure(AppError.internal("Postgres did not answer the metadata sheets query")),
+    );
+
+    const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
+
+    assertFailure(result);
+    expect(result.error.message).toBe("Postgres did not answer the metadata sheets query");
+    expect(await outbox()).toEqual([]);
+  });
+
+  it("keeps no sheet when the copy it owes cannot be written", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+      new Error("outbox unavailable"),
+    );
+
+    const result = await useCase.execute(experiment.id, sampleMetadata, testUserId);
+
+    assertFailure(result);
+    expect(await sheets()).toEqual([]);
+    expect(await outbox()).toEqual([]);
   });
 });

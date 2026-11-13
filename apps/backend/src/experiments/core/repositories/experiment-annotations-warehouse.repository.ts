@@ -1,333 +1,97 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
-import { z } from "zod";
+import { Injectable, Inject } from "@nestjs/common";
 
-import type {
-  ExperimentAnnotationRowsAffected,
-  ExperimentAnnotationType,
-} from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
-
-import type {
-  SchemaData,
-  StatementParameter,
-} from "../../../common/modules/databricks/services/sql/sql.types";
+import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
-import {
-  BaseAnnotation,
-  CreateAnnotationDto,
-  UpdateAnnotationDto,
-} from "../models/experiment-data-annotation.model";
+import type { AnnotationCopy } from "../models/experiment-data-annotation.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
+/**
+ * The lakehouse's copy of annotations, `centrum.experiment_annotations`, which the warehouse views,
+ * charts and exports read. Postgres holds the annotations; the experiment data outbox keeps this
+ * copy to its state.
+ */
 @Injectable()
 export class ExperimentAnnotationsWarehouseRepository {
-  private readonly logger = new Logger(ExperimentAnnotationsWarehouseRepository.name);
-
   constructor(
     @Inject(DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,
   ) {}
 
-  // Zod validation schemas
-  private readonly schemas = {
-    uuid: z.string().guid(),
-    identifier: z
-      .string()
-      .regex(/^[a-zA-Z0-9_]+$/)
-      .max(64),
-    // Table name is either a static identifier (raw_data, device, ...) or a macro UUID
-    tableName: z.union([
-      z
-        .string()
-        .regex(/^[a-zA-Z0-9_]+$/)
-        .max(64),
-      z.string().guid(),
-    ]),
-    content: z.string().max(10000).nullable().optional(),
-    flag: z.string().max(100).nullable().optional(),
-    userName: z.string().max(255).nullable().optional(),
-  };
-
-  /**
-   * Validate input parameters
-   */
-  private validate = {
-    uuid: (value: string) => this.schemas.uuid.safeParse(value),
-    uuids: (values: string[]) => z.array(this.schemas.uuid).safeParse(values),
-    identifier: (value: string) => this.schemas.identifier.safeParse(value),
-    tableName: (value: string) => this.schemas.tableName.safeParse(value),
-    content: (value: string | null | undefined) => this.schemas.content.safeParse(value),
-    flag: (value: string | null | undefined) => this.schemas.flag.safeParse(value),
-    userName: (value: string | null | undefined) => this.schemas.userName.safeParse(value),
-
-    annotation: (annotation: CreateAnnotationDto & { id: string }): boolean => {
-      const validations = [
-        this.validate.uuid(annotation.id),
-        this.validate.uuid(annotation.userId),
-        this.validate.tableName(annotation.tableName),
-        this.validate.identifier(annotation.type),
-        this.validate.content(annotation.contentText),
-        this.validate.flag(annotation.flagType),
-        this.validate.userName(annotation.userName),
-      ];
-
-      return validations.every((result) => result.success);
-    },
-
-    updateData: (updateData: Partial<UpdateAnnotationDto>): boolean => {
-      const validations: z.ZodSafeParseResult<string | null | undefined>[] = [];
-
-      if ("contentText" in updateData) {
-        validations.push(this.validate.content(updateData.contentText));
-      }
-      if ("flagType" in updateData) {
-        validations.push(this.validate.flag(updateData.flagType));
-      }
-
-      return validations.every((result) => result.success);
-    },
-  };
-
-  private getRowsAffectedFromResult(result: SchemaData): ExperimentAnnotationRowsAffected {
-    if (result.rows[0]) {
-      const rowsAffectedIndex = result.columns.findIndex((col) => col.name === "num_affected_rows");
-      if (rowsAffectedIndex !== -1 && result.rows[0][rowsAffectedIndex]) {
-        const rowsAffected = parseInt(result.rows[0][rowsAffectedIndex], 10);
-        return {
-          rowsAffected,
-        };
-      }
-    }
-    return {
-      rowsAffected: 0,
-    };
-  }
-
-  /** Stores annotations with the ids and the time their caller gave them. */
-  async storeAnnotations(
-    experimentId: string,
-    annotations: Omit<BaseAnnotation, "createdAt" | "updatedAt">[],
-    now: Date,
-  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
-    this.logger.log({
-      msg: "Storing annotations",
-      operation: "storeAnnotations",
-      experimentId,
-      annotationCount: annotations.length,
-    });
-
+  /** Writes each annotation as Postgres holds it, inserting the ones the copy lacks. */
+  async merge(annotations: AnnotationCopy[]): Promise<Result<void>> {
     if (annotations.length === 0) {
-      return success({ rowsAffected: 0 });
+      return success(undefined);
     }
 
-    const invalid = annotations.find((annotation) => !this.validate.annotation(annotation));
-    if (invalid !== undefined) {
-      return failure(
-        AppError.validationError(`Validation failed for annotation: ${JSON.stringify(invalid)}`),
-      );
-    }
-
-    const parameters: StatementParameter[] = [
-      { name: "experiment_id", value: experimentId },
-      { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
-    ];
-
-    const valuesClauses = annotations.map((annotation, i) => {
+    const parameters: StatementParameter[] = [];
+    const rows = annotations.map((annotation, i) => {
       parameters.push(
         { name: `id_${i}`, value: annotation.id },
-        { name: `user_id_${i}`, value: annotation.userId },
+        { name: `experiment_id_${i}`, value: annotation.experimentId },
+        { name: `user_id_${i}`, value: annotation.createdBy },
         { name: `user_name_${i}`, value: annotation.userName ?? undefined },
         { name: `table_name_${i}`, value: annotation.tableName },
         { name: `row_id_${i}`, value: annotation.rowId },
         { name: `type_${i}`, value: annotation.type },
         { name: `content_text_${i}`, value: annotation.contentText ?? undefined },
         { name: `flag_type_${i}`, value: annotation.flagType ?? undefined },
+        { name: `created_at_${i}`, value: annotation.createdAt.toISOString(), type: "TIMESTAMP" },
+        { name: `updated_at_${i}`, value: annotation.updatedAt.toISOString(), type: "TIMESTAMP" },
       );
-      return `(:id_${i}, :experiment_id, :user_id_${i}, :user_name_${i}, :table_name_${i}, :row_id_${i}, :type_${i}, :content_text_${i}, :flag_type_${i}, :now, :now)`;
+      return `(:id_${i}, :experiment_id_${i}, :user_id_${i}, CAST(:user_name_${i} AS STRING), :table_name_${i}, :row_id_${i}, :type_${i}, CAST(:content_text_${i} AS STRING), CAST(:flag_type_${i} AS STRING), :created_at_${i}, :updated_at_${i})`;
     });
 
-    const insertQuery = `
-      INSERT INTO experiment_annotations (
-        id,
-        experiment_id,
-        user_id,
-        user_name,
-        table_name,
-        row_id,
-        type,
-        content_text,
-        flag_type,
-        created_at,
-        updated_at
-      ) VALUES ${valuesClauses.join(", ")}
+    const statement = `
+      MERGE INTO experiment_annotations AS target
+      USING (
+        SELECT * FROM VALUES ${rows.join(", ")}
+        AS copy(id, experiment_id, user_id, user_name, table_name, row_id, type, content_text, flag_type, created_at, updated_at)
+      ) AS source
+      ON target.id = source.id
+      WHEN MATCHED THEN UPDATE SET
+        experiment_id = source.experiment_id, user_id = source.user_id, user_name = source.user_name,
+        table_name = source.table_name, row_id = source.row_id, type = source.type,
+        content_text = source.content_text, flag_type = source.flag_type,
+        created_at = source.created_at, updated_at = source.updated_at
+      WHEN NOT MATCHED THEN INSERT
+        (id, experiment_id, user_id, user_name, table_name, row_id, type, content_text, flag_type, created_at, updated_at)
+        VALUES (source.id, source.experiment_id, source.user_id, source.user_name, source.table_name, source.row_id,
+                source.type, source.content_text, source.flag_type, source.created_at, source.updated_at)
     `;
 
-    const insertResult = await this.databricksPort.executeSqlQuery(
+    return this.execute(statement, parameters, "merge annotations");
+  }
+
+  /** Deletes the copies of annotations Postgres no longer holds. */
+  async delete(ids: string[]): Promise<Result<void>> {
+    if (ids.length === 0) {
+      return success(undefined);
+    }
+
+    const parameters = ids.map((id, i) => ({ name: `id_${i}`, value: id }));
+    const statement = `
+      DELETE FROM experiment_annotations
+      WHERE id IN (${parameters.map(({ name }) => `:${name}`).join(", ")})
+    `;
+
+    return this.execute(statement, parameters, "delete annotations");
+  }
+
+  private async execute(
+    statement: string,
+    parameters: StatementParameter[],
+    what: string,
+  ): Promise<Result<void>> {
+    const result = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
-      insertQuery,
+      statement,
       parameters,
     );
-    if (insertResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to insert annotations: ${insertResult.error.message}`),
-      );
-    }
-    return success(this.getRowsAffectedFromResult(insertResult.value));
-  }
-
-  /** Updates an annotation of the given type; one of the other type stays as it is. */
-  async updateAnnotation(
-    experimentId: string,
-    annotationId: string,
-    type: ExperimentAnnotationType,
-    updateData: UpdateAnnotationDto,
-    now: Date,
-  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
-    this.logger.log({
-      msg: "Updating annotation",
-      operation: "updateAnnotation",
-      experimentId,
-      annotationId,
-    });
-
-    if (!this.validate.updateData(updateData)) {
-      return failure(AppError.validationError("Invalid update data"));
+    if (result.isFailure()) {
+      return failure(AppError.internal(`Failed to ${what}: ${result.error.message}`));
     }
 
-    const annotationIdValidation = this.validate.uuid(annotationId);
-    if (!annotationIdValidation.success) {
-      return failure(AppError.validationError("Invalid annotation ID"));
-    }
-
-    const setClauses: string[] = [];
-    const parameters: StatementParameter[] = [
-      { name: "annotation_id", value: annotationId },
-      { name: "experiment_id", value: experimentId },
-      { name: "type", value: type },
-      { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
-    ];
-
-    if (updateData.contentText !== undefined) {
-      setClauses.push("content_text = :content_text");
-      parameters.push({ name: "content_text", value: updateData.contentText ?? undefined });
-    }
-    if (updateData.flagType !== undefined) {
-      setClauses.push("flag_type = :flag_type");
-      parameters.push({ name: "flag_type", value: updateData.flagType ?? undefined });
-    }
-
-    setClauses.push("updated_at = :now");
-
-    const updateQuery = `
-      UPDATE experiment_annotations
-      SET ${setClauses.join(", ")}
-      WHERE id = :annotation_id AND experiment_id = :experiment_id AND type = :type
-    `;
-
-    const updateResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      updateQuery,
-      parameters,
-    );
-    if (updateResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to update annotation: ${updateResult.error.message}`),
-      );
-    }
-    return success(this.getRowsAffectedFromResult(updateResult.value));
-  }
-
-  /**
-   * Delete a single annotation
-   */
-  async deleteAnnotation(
-    experimentId: string,
-    annotationId: string,
-  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
-    this.logger.log({
-      msg: "Deleting annotation",
-      operation: "deleteAnnotation",
-      experimentId,
-      annotationId,
-    });
-
-    const annotationIdValidation = this.validate.uuid(annotationId);
-    if (!annotationIdValidation.success) {
-      return failure(AppError.validationError("Invalid annotation ID"));
-    }
-
-    const deleteQuery = `
-      DELETE FROM experiment_annotations
-      WHERE id = :annotation_id AND experiment_id = :experiment_id
-    `;
-
-    const deleteResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      deleteQuery,
-      [
-        { name: "annotation_id", value: annotationId },
-        { name: "experiment_id", value: experimentId },
-      ],
-    );
-    if (deleteResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to delete annotation: ${deleteResult.error.message}`),
-      );
-    }
-    return success(this.getRowsAffectedFromResult(deleteResult.value));
-  }
-
-  /**
-   * Delete multiple annotations by their IDs
-   */
-  async deleteAnnotationsBulk(
-    experimentId: string,
-    tableName: string,
-    rowIds: string[],
-    type: string,
-  ): Promise<Result<ExperimentAnnotationRowsAffected>> {
-    this.logger.log({
-      msg: "Bulk deleting annotations",
-      operation: "deleteAnnotationsBulk",
-      experimentId,
-      tableName,
-      type,
-      rowCount: rowIds.length,
-    });
-
-    if (rowIds.length === 0) {
-      return success({ rowsAffected: 0 });
-    }
-
-    const rowIdParameters: StatementParameter[] = rowIds.map((id, i) => ({
-      name: `row_id_${i}`,
-      value: id,
-    }));
-    const rowIdMarkers = rowIdParameters.map(({ name }) => `:${name}`).join(", ");
-
-    const deleteQuery = `
-      DELETE FROM experiment_annotations
-      WHERE experiment_id = :experiment_id
-      AND table_name = :table_name
-      AND type = :type
-      AND row_id IN (${rowIdMarkers})
-    `;
-
-    const deleteResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      deleteQuery,
-      [
-        { name: "experiment_id", value: experimentId },
-        { name: "table_name", value: tableName },
-        { name: "type", value: type },
-        ...rowIdParameters,
-      ],
-    );
-    if (deleteResult.isFailure()) {
-      return failure(
-        AppError.internal(`Failed to delete annotations: ${deleteResult.error.message}`),
-      );
-    }
-    return success(this.getRowsAffectedFromResult(deleteResult.value));
+    return success(undefined);
   }
 }

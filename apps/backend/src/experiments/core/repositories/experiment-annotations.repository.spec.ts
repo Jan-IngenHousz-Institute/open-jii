@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { eq, experimentAnnotations, experiments, sql } from "@repo/database";
+import { eq, experimentAnnotations, experiments, profiles, sql } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -35,6 +35,10 @@ describe("ExperimentAnnotationsRepository", () => {
     return testApp.database.select().from(experimentAnnotations);
   }
 
+  async function insert(...records: AnnotationRecord[]): Promise<void> {
+    assertSuccess(await repository.transaction((tx) => repository.insert(tx, records)));
+  }
+
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -58,7 +62,7 @@ describe("ExperimentAnnotationsRepository", () => {
   it("keeps an annotation with the id and times it was given", async () => {
     const comment = record();
 
-    assertSuccess(await repository.insert([comment]));
+    await insert(comment);
 
     expect(await stored()).toEqual([comment]);
   });
@@ -66,10 +70,11 @@ describe("ExperimentAnnotationsRepository", () => {
   it("updates an annotation's text and flag and its updated time, and nothing else", async () => {
     const flag = record({ type: "flag", flagType: "outlier", contentText: null });
     const later = new Date("2026-09-02T08:00:00.000Z");
-    await repository.insert([flag]);
+    await insert(flag);
 
-    assertSuccess(
-      await repository.update(
+    const found = await repository.transaction((tx) =>
+      repository.update(
+        tx,
         experimentId,
         flag.id,
         "flag",
@@ -78,17 +83,20 @@ describe("ExperimentAnnotationsRepository", () => {
       ),
     );
 
+    assertSuccess(found);
+    expect(found.value).toBe(true);
     expect(await stored()).toEqual([
       { ...flag, flagType: "needs_review", contentText: "Check", updatedAt: later },
     ]);
   });
 
-  it("leaves an annotation of the other type as it is", async () => {
+  it("leaves an annotation of the other type as it is, and says it found none", async () => {
     const comment = record();
-    await repository.insert([comment]);
+    await insert(comment);
 
-    assertSuccess(
-      await repository.update(
+    const found = await repository.transaction((tx) =>
+      repository.update(
+        tx,
         experimentId,
         comment.id,
         "flag",
@@ -97,29 +105,59 @@ describe("ExperimentAnnotationsRepository", () => {
       ),
     );
 
+    assertSuccess(found);
+    expect(found.value).toBe(false);
     expect(await stored()).toEqual([comment]);
   });
 
-  it("deletes one annotation by its id, only in its experiment", async () => {
-    const comment = record();
-    await repository.insert([comment]);
+  it("says when there was no annotation to update", async () => {
+    const found = await repository.transaction((tx) =>
+      repository.update(
+        tx,
+        experimentId,
+        faker.string.uuid(),
+        "comment",
+        { contentText: "Check" },
+        created,
+      ),
+    );
 
-    assertSuccess(await repository.delete(faker.string.uuid(), comment.id));
+    assertSuccess(found);
+    expect(found.value).toBe(false);
+  });
+
+  it("deletes one annotation by its id, only in its experiment, and says which", async () => {
+    const comment = record();
+    await insert(comment);
+
+    const elsewhere = await repository.transaction((tx) =>
+      repository.delete(tx, faker.string.uuid(), comment.id),
+    );
+    assertSuccess(elsewhere);
+    expect(elsewhere.value).toEqual([]);
     expect(await stored()).toHaveLength(1);
 
-    assertSuccess(await repository.delete(experimentId, comment.id));
+    const deleted = await repository.transaction((tx) =>
+      repository.delete(tx, experimentId, comment.id),
+    );
+    assertSuccess(deleted);
+    expect(deleted.value).toEqual([comment.id]);
     expect(await stored()).toEqual([]);
   });
 
-  it("deletes the annotations of one type on the given rows of one table", async () => {
+  it("deletes the annotations of one type on the given rows of one table, and says which", async () => {
     const onRow1 = record({ rowId: "1" });
     const onRow2 = record({ rowId: "2" });
     const flagOnRow1 = record({ rowId: "1", type: "flag", flagType: "outlier" });
     const otherTable = record({ rowId: "1", tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c" });
-    await repository.insert([onRow1, onRow2, flagOnRow1, otherTable]);
+    await insert(onRow1, onRow2, flagOnRow1, otherTable);
 
-    assertSuccess(await repository.deleteFromRows(experimentId, "raw_data", ["1"], "comment"));
+    const deleted = await repository.transaction((tx) =>
+      repository.deleteFromRows(tx, experimentId, "raw_data", ["1"], "comment"),
+    );
 
+    assertSuccess(deleted);
+    expect(deleted.value).toEqual([onRow1.id]);
     expect((await stored()).map(({ id }) => id).sort()).toEqual(
       [onRow2.id, flagOnRow1.id, otherTable.id].sort(),
     );
@@ -128,7 +166,7 @@ describe("ExperimentAnnotationsRepository", () => {
   it("keeps a flag's type, and only a type the API takes", async () => {
     const flag = record({ type: "flag", flagType: "needs_review", contentText: null });
 
-    assertSuccess(await repository.insert([flag]));
+    await insert(flag);
 
     expect(await stored()).toEqual([flag]);
     await expect(
@@ -140,7 +178,7 @@ describe("ExperimentAnnotationsRepository", () => {
   });
 
   it("goes with its experiment", async () => {
-    await repository.insert([record()]);
+    await insert(record());
 
     await testApp.database.delete(experiments).where(eq(experiments.id, experimentId));
 
@@ -150,26 +188,72 @@ describe("ExperimentAnnotationsRepository", () => {
   it("inserts more annotations than one statement takes, all or none", async () => {
     const many = Array.from({ length: 2500 }, (_, index) => record({ rowId: String(index) }));
 
-    assertSuccess(await repository.insert(many));
-    assertFailure(await repository.insert([record({ rowId: "new" }), many[2499]]));
+    await insert(...many);
+    assertFailure(
+      await repository.transaction((tx) =>
+        repository.insert(tx, [record({ rowId: "new" }), many[2499]]),
+      ),
+    );
 
     expect(await stored()).toHaveLength(2500);
   });
 
   it("deletes annotations on more rows than one statement takes", async () => {
     const rowIds = Array.from({ length: 10_005 }, (_, index) => String(index));
-    await repository.insert(rowIds.map((rowId) => record({ rowId })));
+    await insert(...rowIds.map((rowId) => record({ rowId })));
 
-    assertSuccess(await repository.deleteFromRows(experimentId, "raw_data", rowIds, "comment"));
+    const deleted = await repository.transaction((tx) =>
+      repository.deleteFromRows(tx, experimentId, "raw_data", rowIds, "comment"),
+    );
 
+    assertSuccess(deleted);
+    expect(deleted.value).toHaveLength(10_005);
     expect(await stored()).toEqual([]);
+  });
+
+  it("finds the annotations that still exist, each with its author's name as it reads now", async () => {
+    const kept = record();
+    await insert(kept);
+    await testApp.database
+      .update(profiles)
+      .set({ firstName: "Ada", lastName: "Lovelace" })
+      .where(eq(profiles.userId, userId));
+
+    const found = await repository.findCopies([kept.id, faker.string.uuid()]);
+
+    assertSuccess(found);
+    expect(found.value).toEqual([{ ...kept, userName: "Ada Lovelace" }]);
+  });
+
+  it("names an author who deactivated their profile as every other read does", async () => {
+    const kept = record();
+    await insert(kept);
+    await testApp.database
+      .update(profiles)
+      .set({ firstName: "Ada", lastName: "Lovelace", activated: false })
+      .where(eq(profiles.userId, userId));
+
+    const found = await repository.findCopies([kept.id]);
+
+    assertSuccess(found);
+    expect(found.value).toEqual([{ ...kept, userName: "Unknown User" }]);
+  });
+
+  it("finds no name for an author without a profile", async () => {
+    const orphan = record({ createdBy: faker.string.uuid() });
+    await insert(orphan);
+
+    const found = await repository.findCopies([orphan.id]);
+
+    assertSuccess(found);
+    expect(found.value).toEqual([{ ...orphan, userName: null }]);
   });
 
   it("reports a refused write by Postgres's code, without the annotation in it", async () => {
     const comment = record({ contentText: "Plot 12 was trampled" });
-    await repository.insert([comment]);
+    await insert(comment);
 
-    const result = await repository.insert([comment]);
+    const result = await repository.transaction((tx) => repository.insert(tx, [comment]));
 
     assertFailure(result);
     expect(result.error.message).toBe("Postgres refused the annotations query with SQLSTATE 23505");
@@ -180,7 +264,7 @@ describe("ExperimentAnnotationsRepository", () => {
       new Error("write failed", { cause: { code: "CONNECT_TIMEOUT" } }),
     );
 
-    const result = await repository.insert([record()]);
+    const result = await repository.transaction((tx) => repository.insert(tx, [record()]));
 
     assertFailure(result);
     expect(result.error.message).toBe("Postgres did not answer the annotations query");
