@@ -159,7 +159,7 @@ describe("zExperimentCustomMetadataPayload", () => {
       expect(result.error?.issues).toContainEqual(
         expect.objectContaining({
           path: [field],
-          message: "Metadata cannot hold a NUL character or a broken character",
+          message: "A cell holds a character that cannot be saved, such as a hidden null character",
         }),
       );
     },
