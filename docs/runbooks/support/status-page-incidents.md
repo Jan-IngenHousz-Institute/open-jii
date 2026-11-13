@@ -6,6 +6,16 @@ can do about it and when to expect news. You write that in Contentful. The statu
 the published entries every five minutes, puts them on https://status.openjii.org and posts each
 change to the status Slack channel.
 
+## Post from a terminal
+
+A developer with a Contentful management token can do the steps for incidents and planned
+maintenance below with `pnpm status:incident`. It checks the entry against the rules in this guide,
+prints the page card and the exact Slack message, and writes drafts only. Each write ends with a
+review token. Nothing reaches the page or Slack until you run its `publish` step with that token,
+which refuses if anyone has changed the drafts since you read them. It does not post notices, so
+those stay a job in Contentful. `tooling/devkit/README.md` lists the commands, and
+`.agents/skills/openjii-status-incident/SKILL.md` is the procedure an agent follows.
+
 ## When to post
 
 - Post when researchers would notice a problem for more than a few minutes. The checks may already
@@ -275,22 +285,32 @@ minutes. Slack posts each message once and never edits or deletes it, so an edit
 
 ## One-time setup
 
-For whoever adds the content types to Contentful. The repo has no script for this. The JSON files in
-`packages/cms/content-models/` record the definitions, and an administrator applies them by hand in
-each Contentful environment that a status publisher reads, as `apps/docs/content/developers/extending/public-navigation.mdx`
-describes for the footer.
+For whoever adds the content types to Contentful, in each environment that a status publisher reads.
+The JSON files in `packages/cms/content-models/` record the definitions, and `pnpm cms:models`
+applies them with your own management token, as `tooling/devkit/README.md` describes. Steps 1 to 4
+name the command first and the manual route after it. The manual route is the fallback. An
+administrator follows it in the Contentful content model, as
+`apps/docs/content/developers/extending/public-navigation.mdx` describes for the footer.
 
 1. Create `statusUpdate` first and `statusIncident` second, because the incident links to the
-   update type. In the Contentful content model, add a content type with the name from the JSON
-   file. Set its API identifier to the file name, `statusUpdate` or `statusIncident`, because the
-   publisher finds the types by that identifier. Then add each field with the id, type,
+   update type. Run `pnpm cms:models diff` to see what is missing. Read the requests with
+   `pnpm cms:models apply statusUpdate --expected-version 0 --dry-run`, then run it without
+   `--dry-run` and with `--environment <name>`, which must be the configured environment, and
+   repeat for `statusIncident`. By hand, add a content type with the name from the
+   JSON file. Set its API identifier to the file name, `statusUpdate` or `statusIncident`, because
+   the publisher finds the types by that identifier. Then add each field with the id, type,
    localization, required flag and validations from the file, and set the display field the file
    names.
-2. Open each Date field's appearance settings and choose date and time with time zone. A date
-   without a time cannot say when an incident started.
-3. Publish both content types.
-4. Add `status` to the Audience values of `componentAlert`. That model is not in the repo, so this
-   is a manual edit. Open the content type, open the Audience field, then Validation, add `status`
+2. `apply` gives each Date field the date and time with time zone widget. By hand, open each Date
+   field's appearance settings and choose date and time with time zone. A date without a time cannot
+   say when an incident started.
+3. `apply` publishes the types. By hand, publish both content types.
+4. Add `status` to the Audience values of `componentAlert`. Run
+   `pnpm cms:models pull componentAlert` to write the live model to
+   `packages/cms/content-models/componentAlert.json`, add `"status"` to the `in` validation of its
+   `audience` field, and review the change in a pull request. Then run `diff componentAlert` and
+   `apply componentAlert --expected-version <n> --environment <name>` with the version `diff`
+   printed. By hand, open the content type, open the Audience field, then Validation, add `status`
    to the accepted values, and save and publish the content type. Web and mobile cannot show a
    `status` alert. Their queries ask for `web` and `both`, or `mobile` and `both`, and the audience
    filter matches exactly (`apps/web/components/alerts-bar.tsx`,
