@@ -638,6 +638,7 @@ locals {
     calibration = local.flow_hop_colours.platform.calibration
     sent        = local.flow_hop_colours.platform.email
     failed      = "#005a5a"
+    queued      = "light-blue"
     waiting     = "text"
   }
 
@@ -707,7 +708,7 @@ locals {
     email = {
       id          = 355
       title       = "Notification emails"
-      description = "Notification emails the outbox sent and gave up on each hour, and how long the oldest one still waiting has waited."
+      description = "Notification emails the outbox sent and gave up on each hour, the most waiting at once in that hour, and how long the oldest one still waiting has waited."
       unit        = "short"
       max         = null
       inputs      = []
@@ -715,9 +716,11 @@ locals {
       direct = [
         merge(local.heartbeat_readings["emails-sent"], { refId = "sent", id = "sent", label = "Sent", period = "3600" }),
         merge(local.heartbeat_readings["email-failures"], { refId = "failed", id = "failed", label = "Given up on", period = "3600" }),
-        merge(local.heartbeat_readings["email-outbox-waiting"], { refId = "waiting", id = "waiting", label = "Oldest waiting", period = "300" }),
+        merge(local.heartbeat_readings["emails-waiting"], { refId = "queued", id = "queued", label = "Waiting", period = "3600" }),
+        merge(local.heartbeat_readings["email-outbox-waiting"], { refId = "waiting", id = "waiting", label = "Oldest wait", period = "300" }),
       ]
-      # Counts per hour as stacked bars, the age as a line on its own axis.
+      # Sent and given up on per hour as stacked bars, the waiting count as an unstacked line on the
+      # same axis, and the age as a line on its own.
       styles = {
         sent    = local.flow_platform_hourly_bars
         failed  = local.flow_platform_hourly_bars
