@@ -33,8 +33,23 @@ export interface Registration {
   otp?: string;
 }
 
+// Mailchimp calls have no timeout, so a hung subscription must not keep someone on the form.
+const NEWSLETTER_WAIT_MS = 5_000;
+
 function leavesThisOrigin(destination: string): boolean {
   return new URL(destination, window.location.href).origin !== window.location.origin;
+}
+
+async function settleWithin(promise: Promise<unknown>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const elapsed = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms);
+  });
+  try {
+    await Promise.race([promise, elapsed]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function RegistrationForm({
@@ -128,8 +143,8 @@ export function RegistrationForm({
             : t("registration.newsletterOptInError"),
         });
       });
-      // Only a cross-origin page load aborts the request, and Mailchimp calls have no timeout.
-      if (leavesThisOrigin(destination)) await subscription;
+      // Only a cross-origin page load aborts the request, so only that waits for it.
+      if (leavesThisOrigin(destination)) await settleWithin(subscription, NEWSLETTER_WAIT_MS);
     }
 
     toast({ description: t("registration.successMessage") });
