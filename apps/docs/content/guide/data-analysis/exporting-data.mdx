@@ -77,6 +77,8 @@ downloaded, so create a new export when you need the data again.
 - A macro or question field with the same name as one of the table's own columns
   is exported with a suffix: a macro's `device` becomes `device_output`, and a
   question's `date` becomes `date_answer`.
+- Question answers are exported as the text that was entered, Number questions
+  included. Convert a Number question's column after loading the file.
 - Prefer Parquet when types and large columnar datasets matter; prefer CSV only
   when flattening and spreadsheet compatibility are acceptable.
 - Read the files of a multi-part export together, in the order of their part numbers.
