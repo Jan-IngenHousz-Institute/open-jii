@@ -48,13 +48,13 @@ cookie-free distribution modules and retention rule. Firewall logs continue to r
 
 ## Approve retention and clear historical logs
 
-Before applying the retention rule, Petar must confirm that no investigation
+Before applying the retention rule, the platform lead must confirm that no investigation
 needs logs older than 30 days. Existing objects already older than 30 days become
 eligible for removal at the first lifecycle processing after apply. Obtain this
 confirmation before approving the apply, and review a separate infrastructure
 plan for each environment.
 
-After Petar explicitly approves clearing the stored CloudFront logs, an operator
+After the platform lead explicitly approves clearing the stored CloudFront logs, an operator
 deletes objects under `cloudfront-logs/` in each of dev, production and DR's access-log buckets,
 including any previous versions. Record the confirmation, environment, prefix
 and completion in the ticket. Keep other prefixes, including ALB logs. This is a
