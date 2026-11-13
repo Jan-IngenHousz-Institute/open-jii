@@ -2,31 +2,29 @@
 
 import { useMyOrganizations } from "@/hooks/organization/useMyOrganizations/useMyOrganizations";
 import { ExternalLink } from "lucide-react";
+import { env } from "~/env";
 
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
-// Equipment resolves production device identities; dev's JII test organization is separate.
-const JII_ORGANIZATION_ID = "1beb5413-3b39-4d16-81b9-87ea686dfb45";
-
 export function DeviceEquipmentLink({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
+  const jiiOrganizationId = env.NEXT_PUBLIC_JII_ORGANIZATION_ID;
   const eligible =
-    device.organizationId === JII_ORGANIZATION_ID &&
+    jiiOrganizationId !== undefined &&
+    device.organizationId === jiiOrganizationId &&
     ["ambyte", "ambit", "multispeq"].includes(device.deviceType);
   const { data: organizations, isError, isPending } = useMyOrganizations({ enabled: eligible });
+  const isJiiMember =
+    !isError &&
+    !isPending &&
+    organizations.some((org) => org.id === jiiOrganizationId && !org.isPersonal);
 
-  if (
-    !eligible ||
-    isError ||
-    isPending ||
-    !organizations.some((org) => org.id === JII_ORGANIZATION_ID && !org.isPersonal)
-  )
-    return null;
+  if (!eligible || !isJiiMember) return null;
 
   return (
     <a
-      href={`https://equipment.openjii.org/assets/by-device/${encodeURIComponent(device.serialNumber)}`}
+      href={`${env.NEXT_PUBLIC_EQUIPMENT_URL}/assets/by-device/${encodeURIComponent(device.serialNumber)}`}
       target="_blank"
       rel="noopener noreferrer"
       className="text-primary inline-flex items-center gap-1 text-sm underline underline-offset-4"

@@ -10,6 +10,20 @@ import { useSession } from "@repo/auth/client";
 import { DeviceEquipmentLink } from "./device-equipment-link";
 
 const jiiId = "1beb5413-3b39-4d16-81b9-87ea686dfb45";
+const configured = vi.hoisted(() => ({ jiiOrganizationId: undefined as string | undefined }));
+
+vi.mock("~/env", async (importOriginal) => {
+  const { env } = await importOriginal<typeof import("~/env")>();
+  return {
+    env: {
+      ...env,
+      NEXT_PUBLIC_EQUIPMENT_URL: "https://equipment.example.org",
+      get NEXT_PUBLIC_JII_ORGANIZATION_ID() {
+        return configured.jiiOrganizationId;
+      },
+    },
+  };
+});
 const jii = createMyOrganization({
   id: jiiId,
   name: "Jan IngenHousz Institute",
@@ -23,6 +37,7 @@ const device = createIotDeviceDetail({
 
 describe("DeviceEquipmentLink", () => {
   beforeEach(() => {
+    configured.jiiOrganizationId = jiiId;
     vi.mocked(useSession).mockReturnValue({
       data: { user: { id: "user-1" } },
       isPending: false,
@@ -47,7 +62,7 @@ describe("DeviceEquipmentLink", () => {
       render(<DeviceEquipmentLink device={{ ...device, deviceType, serialNumber }} />);
       expect(
         await screen.findByRole("link", { name: "iot.devices.detail.equipmentLink" }),
-      ).toHaveAttribute("href", `https://equipment.openjii.org/assets/by-device/${encoded}`);
+      ).toHaveAttribute("href", `https://equipment.example.org/assets/by-device/${encoded}`);
       expect(screen.getByRole("link")).toHaveAttribute("rel", "noopener noreferrer");
       expect(screen.getByRole("link")).toHaveAttribute("target", "_blank");
     },
@@ -79,6 +94,13 @@ describe("DeviceEquipmentLink", () => {
   ])("hides the link for other ownership and unsupported families: %j", (overrides) => {
     server.mount(contract.organizations.listMyOrganizations, { body: [jii] });
     render(<DeviceEquipmentLink device={{ ...device, ...overrides }} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("hides the link when the environment configures no JII organization", () => {
+    configured.jiiOrganizationId = undefined;
+    server.mount(contract.organizations.listMyOrganizations, { body: [jii] });
+    render(<DeviceEquipmentLink device={device} />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
