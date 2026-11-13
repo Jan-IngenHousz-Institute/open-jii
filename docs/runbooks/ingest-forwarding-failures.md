@@ -85,44 +85,53 @@ the broker, in UTC, not when they were measured.
   it, for a window the pipeline lost after Kinesis, such as a consumer stopped for longer than the
   stream keeps records. Firehose writes an object up to a quarter of an hour after its first
   message, filed under that message's day, so the command reads every object written from the
-  window's start to 20 minutes after its end. It can therefore read and replay messages from just
-  before the window too.
+  window's start to 20 minutes after its end. It therefore also reads, and can replay, messages
+  that arrived up to a quarter of an hour either side of the window.
 
-Inside the stream's retention, `--apply` refuses to run until bronze has read past the window's end,
-because the stream may still hold the window, and a replay would land each message twice. Bronze
-shows it has read past it by holding a later message. On a stream quiet since the window, the
-stream's `GetRecords.IteratorAgeMilliseconds` shows instead how far its slowest reader has read, so
-your AWS profile needs to read CloudWatch metrics too. A dry run in that state warns that messages
-the stream still holds count as `missing`.
+With `--source archive`, while the newest object read is younger than the stream's retention,
+`--apply` refuses to run until bronze holds a message that arrived after that object was written,
+on every shard. Until then the stream may still hold messages bronze has not read, and a replay
+would land them twice. Only bronze's own rows show this: the stream's other reader, the health
+check's, keeps reading while bronze's flow is down. On a stream quiet since the window, wait for
+the next measurement to land, or until the newest object is older than the retention. A dry run in
+that state warns that messages the stream still holds count as `missing`. `--source errors` skips
+the check, since those messages never entered the stream.
 
 It runs under your AWS profile for the environment, which must hold the infrastructure maintainer
 role, the one that may call `kinesis:PutRecords` on the stream, and your Databricks profile.
 `--warehouse` takes the id of the environment's Investigations warehouse, which
 `databricks warehouses list -p <env>` lists. `--apply` writes to the environment's stream directly,
 outside the release path, so on prod it is a step a person takes while following this runbook, with
-the dry run's counts in the incident's ticket first. An agent runs dry runs only. Start with a dry
-run, which only reads:
+the dry run's counts in the incident's ticket first. An agent runs dry runs only. Run one replay of
+an environment at a time: two at once, or one started before bronze has read an earlier one's
+records, each count the other's messages as missing. Start with a dry run, which only reads:
 
 ```bash
 aws sso login --sso-session openjii
 pnpm ingest:replay <env> --source errors --from 2026-10-07T12:00Z --to 2026-10-07T16:00Z \
-  --warehouse <warehouse id> [--experiment <experiment id>] [--client <thing name>]
+  --warehouse <warehouse id> [--experiment <experiment id>] [--client <thing name>] \
+  [--device <device id>]
 ```
 
-It refuses an argument it does not know, so a misspelt filter cannot widen a replay. It prints a
-count per decision and writes a manifest of every message it read, with its object, line and
-decision, to `.claude/ingest-replays/`. The manifest names devices and measurements, so delete it
-once the incident is closed.
+`--client` keeps to one publisher, a phone or a device on its own certificate, and `--device` to
+one sensor. It refuses an argument it does not know, so a misspelt filter cannot widen a replay. It
+prints its run id first, then a count per decision, and writes a manifest of every message it read,
+with its object, line and decision, to `.claude/ingest-replays/`. The manifest names devices and
+measurements, so delete it once the incident is closed.
 
 - `missing`: not in bronze, and sent on `--apply`.
 - `in bronze`: already landed. A message with the phone's record id (`_client_id`) matches that id
   in any bronze row, including one bronze could not parse. A message without one matches a row
   without one on its client, device, measurement time and sample, since a device can send several
   samples under one time. A row bronze wrote before it kept the record id matches the same way.
+  Copies ingested more than 30 days before the window are not looked for, which bounds the scan.
 - `repeated in the window`: a second copy of a message the window already holds, sent at most once.
 - `reached kinesis`: an error object whose failures all name the Firehose stream.
 - `health check`, `no experiment in its topic` and `no timestamp`: never sent, since none would land
   as a measurement.
+- `unreadable`: a line or object that is not a message, which nothing can replay.
+- `outside the filters`: a count, not a decision: messages `--experiment`, `--client` or `--device`
+  left out.
 
 When the counts look right, run the same command with `--apply`. Each record goes to the stream
 under the partition key `replay/<run>/<n>`, a batch a second of at most 250 records or 256 KiB. That
@@ -130,29 +139,55 @@ is a quarter of what one shard takes, so live ingest keeps the rest, and ten tho
 about 40 seconds. `kinesis-write-throttling` should stay at zero while it runs. A record Kinesis
 refuses is tried twice more.
 
-The command ends with exit code 1 when a record stays refused or a request fails. A failed request
-stops the replay, and the manifest marks each message `sent`, `refused`, `unknown` for the batch in
-flight, or `not sent`. Before running `--apply` again, wait until a dry run counts the sent ones as
-`in bronze`, so none goes twice. A few minutes after the pipeline catches up, a dry run of the same
+The command ends with exit code 1 when a record stays refused, a request fails, or you stop it. The
+first Ctrl-C finishes the batch in hand and still writes the manifest; a second quits at once and
+writes none. A failed request or a stop ends the replay early, and the manifest then holds the
+messages decided until then, each marked `sent`, `refused`, `unknown` for the batch in flight, or
+`not sent`. Before running `--apply` again, wait until a dry run of the same window counts the sent
+ones as `in bronze`, and until bronze holds a message that arrived after the failure, since an
+`unknown` batch may have landed. A few minutes after the pipeline catches up, a dry run of the same
 window should count no `missing`. Note the window, the source and the counts in the incident's
 ticket.
 
-A replay sends no message bronze already holds. One that slips through lands as a second copy with
-the same `_client_id`, so silver gives it the same id. The heartbeat's `measurement-copies` counts
-it. Silver and the experiment tables keep every copy, and the serving store and exports keep one row
-per id. To list the measurements a replay copied, with the run from the manifest and the window's
-first day:
+The command asks bronze about a thousand messages at a time, but the manifest keeps an entry for
+every message read, so split a window of more than about a million messages into several runs.
+
+A replay sends no message bronze already holds. One that slips through lands as a second copy that
+silver gives the same id: by the phone's record id, or by what the capture holds when it carries
+none. The heartbeat's `measurement-copies` counts it. Silver and the experiment tables keep every
+copy, and the serving store and exports keep one row per id. To list the measurements a replay
+copied, with the run id the command printed, the day it ran, and the day 30 days before the
+window:
 
 ```sql
-SELECT _client_id, count(*) AS copies
-FROM open_jii_<env>.centrum.raw_data
-WHERE ingest_date >= '<first day of the window>'
-  AND _client_id IN (
+-- Messages with the phone's record id.
+SELECT r._client_id, count(*) AS copies
+FROM open_jii_<env>.centrum.raw_data r
+WHERE r.ingest_date >= '<30 days before the window>'
+  AND r._client_id IN (
     SELECT _client_id FROM open_jii_<env>.centrum.raw_data
     WHERE ingest_date >= '<day of the replay>' AND partitionKey LIKE 'replay/<run>/%'
       AND _client_id != ''
   )
-GROUP BY _client_id
+GROUP BY r._client_id
+HAVING count(*) > 1;
+
+-- Messages without one, matched on their experiment, device, time and sample.
+SELECT r.experiment_id, r.parsed_data.device_id, r.parsed_data.timestamp, count(*) AS copies
+FROM open_jii_<env>.centrum.raw_data r
+JOIN (
+  SELECT DISTINCT experiment_id, parsed_data.device_id AS device_id,
+         parsed_data.timestamp AS measured_at, sha2(parsed_data.sample, 256) AS sample_hash
+  FROM open_jii_<env>.centrum.raw_data
+  WHERE ingest_date >= '<day of the replay>' AND partitionKey LIKE 'replay/<run>/%'
+    AND _client_id = ''
+) replayed
+  ON r.experiment_id = replayed.experiment_id
+  AND r.parsed_data.device_id <=> replayed.device_id
+  AND r.parsed_data.timestamp = replayed.measured_at
+  AND sha2(r.parsed_data.sample, 256) <=> replayed.sample_hash
+WHERE r.ingest_date >= '<30 days before the window>' AND r._client_id = ''
+GROUP BY r.experiment_id, r.parsed_data.device_id, r.parsed_data.timestamp, replayed.sample_hash
 HAVING count(*) > 1;
 ```
 
@@ -171,8 +206,7 @@ later. `aws s3 ls s3://open-jii-iot-raw-archive-prod/raw-iot/2026/` and the same
 
 Until 20 August on dev, and the release that followed on prod, `raw-iot/` held one object per
 message, so a day from then takes a read per message, four at a time. Since then each object holds a
-quarter of an hour of gzipped lines. The command asks bronze about a thousand messages at a time and
-keeps no more than that in memory, so a long window takes longer but no more memory.
+quarter of an hour of gzipped lines.
 
 The bucket never deletes. Its lifecycle moves an object to Glacier at 90 days and to Deep Archive at
 a year, but S3 moves no object under 128 KB, and the archive's objects are mostly far smaller: dev's
