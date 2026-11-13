@@ -6,10 +6,8 @@ import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/e
 import { experimentMetadataSheets } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
-import { ExperimentMetadataWarehouseRepository } from "../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../core/repositories/experiment-metadata.repository";
 
 // Minimal payload that satisfies zCustomMetadataPayload. Reused across
@@ -53,19 +51,18 @@ describe("ExperimentMetadataController", () => {
         userId: testUserId,
       });
 
-      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
-      vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(
-        success([
-          {
-            metadataId: faker.string.uuid(),
-            experimentId: experiment.id,
-            metadata: { location: "Lab A", temperature: 25 },
-            createdBy: testUserId,
-            createdAt: new Date("2025-06-01T12:00:00.000Z"),
-            updatedAt: new Date("2025-06-02T12:00:00.000Z"),
-          },
-        ]),
+      const sheets = testApp.module.get(ExperimentMetadataRepository);
+      const saved = await sheets.transaction((tx) =>
+        sheets.insert(tx, {
+          id: faker.string.uuid(),
+          experimentId: experiment.id,
+          metadata: { location: "Lab A", temperature: 25 },
+          createdBy: testUserId,
+          createdAt: new Date("2025-06-01T12:00:00.000Z"),
+          updatedAt: new Date("2025-06-02T12:00:00.000Z"),
+        }),
       );
+      expect(saved.isSuccess()).toBe(true);
 
       const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,
@@ -88,9 +85,6 @@ describe("ExperimentMetadataController", () => {
         name: "No Metadata Test",
         userId: testUserId,
       });
-
-      const metadataRepository = testApp.module.get(ExperimentMetadataWarehouseRepository);
-      vi.spyOn(metadataRepository, "findAllByExperimentId").mockResolvedValue(success([]));
 
       const path = testApp.resolveOrpcPath(contract.experiments.listExperimentMetadata, {
         id: experiment.id,

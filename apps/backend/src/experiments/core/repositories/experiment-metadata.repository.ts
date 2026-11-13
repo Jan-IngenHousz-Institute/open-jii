@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, experimentMetadataSheets, inArray } from "@repo/database";
+import { and, desc, eq, experimentMetadataSheets, inArray, sql } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -58,6 +58,36 @@ export class ExperimentMetadataRepository {
       .returning({ id: experimentMetadataSheets.id });
 
     return deleted.length > 0;
+  }
+
+  /** An experiment's sheets, newest first. */
+  async findByExperimentId(experimentId: string): Promise<Result<MetadataSheetRecord[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select()
+          .from(experimentMetadataSheets)
+          .where(eq(experimentMetadataSheets.experimentId, experimentId))
+          .orderBy(desc(experimentMetadataSheets.createdAt), desc(experimentMetadataSheets.id)),
+      (error) => this.queryError(error),
+    );
+  }
+
+  /** Each sheet's size as text, which sizes a copy before its documents are read. */
+  async findSizes(ids: string[]): Promise<Result<{ id: string; bytes: number }[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select({
+            id: experimentMetadataSheets.id,
+            bytes: sql<number>`octet_length(${experimentMetadataSheets.metadata}::text)`.mapWith(
+              Number,
+            ),
+          })
+          .from(experimentMetadataSheets)
+          .where(inArray(experimentMetadataSheets.id, ids)),
+      (error) => this.queryError(error),
+    );
   }
 
   /** The sheets among `ids` that still exist. */

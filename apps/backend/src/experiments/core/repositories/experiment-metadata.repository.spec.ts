@@ -136,6 +136,35 @@ describe("ExperimentMetadataRepository", () => {
     expect(found.value).toEqual([plots]);
   });
 
+  it("lists an experiment's sheets, newest first, and no other experiment's", async () => {
+    const older = sheet();
+    const newer = sheet({ createdAt: new Date("2026-09-02T08:00:00.000Z") });
+    const { experiment: other } = await testApp.createExperiment({ name: "Other trial", userId });
+    await insert(older);
+    await insert(newer);
+    await insert(sheet({ experimentId: other.id }));
+
+    const listed = await repository.findByExperimentId(experimentId);
+
+    assertSuccess(listed);
+    expect(listed.value).toEqual([newer, older]);
+  });
+
+  it("sizes each sheet as text before its document is read", async () => {
+    const small = sheet({ metadata: { name: "a" } });
+    const large = sheet({ metadata: { notes: "x".repeat(10_000) } });
+    await insert(small);
+    await insert(large);
+
+    const sizes = await repository.findSizes([small.id, large.id, faker.string.uuid()]);
+
+    assertSuccess(sizes);
+    const byId = new Map(sizes.value.map(({ id, bytes }) => [id, bytes]));
+    expect(byId.size).toBe(2);
+    expect(byId.get(small.id)).toBeLessThan(20);
+    expect(byId.get(large.id)).toBeGreaterThan(10_000);
+  });
+
   it("goes with its experiment", async () => {
     await insert(sheet());
 

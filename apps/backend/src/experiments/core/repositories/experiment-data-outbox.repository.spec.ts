@@ -246,4 +246,56 @@ describe("ExperimentDataOutboxRepository", () => {
     expect(all[0]).toEqual(expect.objectContaining({ claimedAt: null, attempts: 0 }));
     expect(all[0].id).not.toBe(held.id);
   });
+
+  it("releases a row a stopped copy never reached as it was, due at once", async () => {
+    await owe(annotation());
+    const [held] = await claim();
+
+    const released = await repository.release([held]);
+
+    assertSuccess(released);
+    expect(released.value).toBe(1);
+    expect(await rows()).toEqual([
+      expect.objectContaining({ attempts: 0, claimedAt: null, lastError: null }),
+    ]);
+    expect(await claim()).toHaveLength(1);
+  });
+
+  it("drops a released row whose record changed again while it was held", async () => {
+    const record = annotation();
+    await owe(record);
+    const [held] = await claim();
+    await owe(record);
+
+    assertSuccess(await repository.release([held]));
+
+    const all = await rows();
+    expect(all).toHaveLength(1);
+    expect(all[0].id).not.toBe(held.id);
+  });
+
+  it("runs a put-back once more when a twin committed between its two statements", async () => {
+    await owe(annotation());
+    const [held] = await claim();
+    const clash = Object.assign(new Error("duplicate key value"), { cause: { code: "23505" } });
+    const transaction = vi.spyOn(testApp.database, "transaction").mockRejectedValueOnce(clash);
+
+    assertSuccess(await repository.markRetry([held], WAITS, "Warehouse down"));
+
+    expect(transaction).toHaveBeenCalledTimes(2);
+    expect(await rows()).toEqual([expect.objectContaining({ attempts: 1, claimedAt: null })]);
+  });
+
+  it("fails a put-back on any other error without running it again", async () => {
+    await owe(annotation());
+    const [held] = await claim();
+    const transaction = vi
+      .spyOn(testApp.database, "transaction")
+      .mockRejectedValueOnce(new Error("connection lost"));
+
+    const retried = await repository.markRetry([held], WAITS, "Warehouse down");
+
+    expect(retried.isFailure()).toBe(true);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
 });
