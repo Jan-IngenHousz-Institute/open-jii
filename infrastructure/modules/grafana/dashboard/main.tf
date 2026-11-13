@@ -3902,6 +3902,98 @@ resource "grafana_rule_group" "status_publisher_health" {
   }
 }
 
+resource "grafana_rule_group" "status_slack_health" {
+  count = var.status_slack_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Status Slack Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  rule {
+    name      = "Status Slack Messages Dropped"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "AsyncEventsDropped"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.status_slack_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Lambda dropped an event for the status Slack function after its retries or its maximum event age, so a change on the public status page never reached the status channel."
+      summary          = "Status events were dropped before reaching Slack"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-slack-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["status-slack-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "status-slack-errors"
+    }
+  }
+}
+
 # A day's spend past its limit, one alert per service or pipeline. Each producer works out the
 # limit and publishes yesterday as a share of it, the same figure the daily board and the Cost
 # dashboard draw. Neither publishes a day before 06:00 UTC, when the billing data has most of it, so
