@@ -472,7 +472,7 @@ export const embargoSchema = zUpdateExperimentBody
   });
 
 export const zExperimentSort = zListSort(
-  z.enum(["name", "status", "owner", "organization", "members", "updated"]),
+  z.enum(["name", "status", "owner", "organization", "members", "updated", "activity"]),
 );
 
 export type ExperimentSort = z.infer<typeof zExperimentSort>;
@@ -493,7 +493,9 @@ export const zExperimentFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zExperimentPaginatedList = zPaginated(zExperimentListEntry);
+export const zExperimentPaginatedList = zPaginated(zExperimentListEntry).extend({
+  activityAvailable: z.boolean(),
+});
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zExperimentListResponse = z.union([zExperimentList, zExperimentPaginatedList]);

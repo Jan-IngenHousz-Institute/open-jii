@@ -311,7 +311,7 @@ describe("filterColumnsForRole", () => {
     expect(result).not.toContain("ts");
   });
 
-  it.each(["count", "count_distinct"] as const)(
+  it.each(["count", "count_distinct", "row_number"] as const)(
     "accepts scalar Y columns for %s while keeping other roles restricted",
     (aggregate) => {
       expect(filterColumnsForRole(cols, "bar", "y", aggregate).map((c) => c.name)).toEqual([
@@ -326,6 +326,16 @@ describe("filterColumnsForRole", () => {
       ]);
     },
   );
+
+  it("accepts temporal differences as numeric results but preserves input types for previous/latest/earliest", () => {
+    expect(
+      filterColumnsForRole(cols, "bar", "y", "change_from_previous").map((c) => c.name),
+    ).toEqual(["ch1", "ts"]);
+    for (const fn of ["previous", "latest", "earliest"] as const) {
+      expect(filterColumnsForRole(cols, "bar", "y", fn).map((c) => c.name)).toEqual(["ch1"]);
+      expect(filterColumnsForRole(cols, "line", "y", fn).map((c) => c.name)).toContain("ts");
+    }
+  });
 
   it("falls back to ANY_PLOTTABLE when the role has no acceptedKinds set", () => {
     // Heatmap X / Y are permissive; only complex types get dropped.

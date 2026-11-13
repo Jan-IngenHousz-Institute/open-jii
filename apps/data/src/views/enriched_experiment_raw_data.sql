@@ -3,6 +3,8 @@ WITH
 -- and custom metadata as they are now. A plain view stores nothing, so an edit
 -- to an annotation or to custom metadata shows on the next read and nothing is
 -- recomputed on a pipeline trigger. ${catalog} is filled in by terraform.
+-- Restart backend instances after redefining or rolling back this view to refresh
+-- their cached source columns. See apps/data/README.md.
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 db_annotations AS (
   SELECT
@@ -71,6 +73,7 @@ measurements AS (
   SELECT
     raw.experiment_id,
     raw.id,
+    raw.client_id,
     raw.device_id,
     raw.device_name,
     raw.timestamp,
@@ -84,6 +87,7 @@ measurements AS (
     devices.device AS device,
     raw.protocol_id,
     raw.workbook_run_id,
+    raw.workbook_version_id,
     raw.latitude,
     raw.longitude,
     raw.data,
@@ -97,6 +101,7 @@ measurements AS (
 SELECT
   m.experiment_id,
   m.id,
+  m.client_id,
   m.device_id,
   m.device_name,
   m.timestamp,
@@ -109,6 +114,8 @@ SELECT
   m.device,
   m.protocol_id,
   m.workbook_run_id,
+  -- The published workbook version the measurement ran, so an export says which method produced it.
+  m.workbook_version_id,
   m.latitude,
   m.longitude,
   m.data,

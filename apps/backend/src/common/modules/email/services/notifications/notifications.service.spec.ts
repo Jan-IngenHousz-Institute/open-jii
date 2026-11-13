@@ -543,6 +543,112 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("the data upload notifications", () => {
+    const sentMail = () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+      return mockSendMail;
+    };
+
+    it("sendDataUploadCompletedNotification renders its template with the Data tab link and sends it to the address", async () => {
+      const mockRender = spyOnProtected(
+        service,
+        "renderDataUploadCompletedNotificationEmail",
+      ).mockResolvedValue({ html: MOCK_HTML_CONTENT, text: MOCK_TEXT_CONTENT });
+      const mockSendMail = sentMail();
+
+      const result = await service.sendDataUploadCompletedNotification({
+        experimentId: MOCK_EXPERIMENT_ID,
+        experimentName: "Drought trial",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRender).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: "Drought trial",
+        dataUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}/data`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "Your upload to Drought trial is ready to query",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("sendDataUploadPartlyCompletedNotification renders its template with the left-out files and the Data tab link and sends it to the address", async () => {
+      const mockRender = spyOnProtected(
+        service,
+        "renderDataUploadPartlyCompletedNotificationEmail",
+      ).mockResolvedValue({ html: MOCK_HTML_CONTENT, text: MOCK_TEXT_CONTENT });
+      const mockSendMail = sentMail();
+
+      const result = await service.sendDataUploadPartlyCompletedNotification({
+        experimentId: MOCK_EXPERIMENT_ID,
+        experimentName: "Drought trial",
+        skippedCount: "2",
+        skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRender).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: "Drought trial",
+        skippedCount: "2",
+        skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+        dataUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}/data`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "Your upload to Drought trial is ready to query, with files left out",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("sendDataUploadFailedNotification renders its template with the table and the Data tab link and sends it to the address", async () => {
+      const mockRender = spyOnProtected(
+        service,
+        "renderDataUploadFailedNotificationEmail",
+      ).mockResolvedValue({ html: MOCK_HTML_CONTENT, text: MOCK_TEXT_CONTENT });
+      const mockSendMail = sentMail();
+
+      const result = await service.sendDataUploadFailedNotification({
+        experimentId: MOCK_EXPERIMENT_ID,
+        experimentName: "Drought trial",
+        tableName: "leaf_traits",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRender).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: "Drought trial",
+        tableName: "leaf_traits",
+        dataUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}/data`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "Your upload to leaf_traits in Drought trial failed",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+  });
+
   describe("sendTransferRequestConfirmation", () => {
     const MOCK_EMAIL = "test@example.com";
     const MOCK_PROJECT_ID_OLD = "project-123";
@@ -1792,6 +1898,42 @@ describe("NotificationsService", () => {
             deviceName: "Greenhouse 3 MiniPAR",
             definitionName: "PAR sweep",
             actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataUploadCompletedNotification",
+        "renderDataUploadCompletedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataUploadCompletedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataUploadPartlyCompletedNotification",
+        "renderDataUploadPartlyCompletedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataUploadPartlyCompletedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            skippedCount: "2",
+            skippedFiles: "broken.csv — could not be read\nempty.csv — no rows",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataUploadFailedNotification",
+        "renderDataUploadFailedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataUploadFailedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            tableName: "leaf_traits",
             email: MOCK_EMAIL,
             unsubscribe,
           }),

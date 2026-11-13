@@ -56,6 +56,21 @@ describe("CategoricalOption", () => {
     expect(screen.getByText("Alice")).toBeInTheDocument();
   });
 
+  it("renders a projected unregistered label and selects it", async () => {
+    const onSelect = vi.fn();
+    renderInCommand(
+      <CategoricalOption
+        optionValue="Ambit (d2)"
+        isSelected={false}
+        isContributor={false}
+        isDevice
+        onSelect={onSelect}
+      />,
+    );
+    await userEvent.setup().click(screen.getByRole("option", { name: "Ambit (d2)" }));
+    expect(onSelect).toHaveBeenCalledOnce();
+  });
+
   it("renders the device serial number for DEVICE columns", () => {
     const struct = JSON.stringify({
       id: "d-1",

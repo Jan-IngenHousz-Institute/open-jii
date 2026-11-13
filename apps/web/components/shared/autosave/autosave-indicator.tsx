@@ -1,6 +1,5 @@
 "use client";
 
-import type { AutosaveStatus } from "@/hooks/useAutosave";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
@@ -12,13 +11,14 @@ import {
 } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
+import type { AutosaveDisplayStatus } from "./autosave-status-context";
 import { useAutosaveStatus } from "./autosave-status-context";
 
 type AutosaveIndicatorVariant = "full" | "compact";
 
 interface AutosaveIndicatorProps {
   /** `null` reports nothing at all, for a host that knows no save is coming. */
-  status?: AutosaveStatus | null;
+  status?: AutosaveDisplayStatus | null;
   /** `compact` swaps the label for a tooltip — sized for editor toolbars. */
   variant?: AutosaveIndicatorVariant;
   className?: string;
@@ -36,6 +36,13 @@ export function AutosaveIndicator({
   if (!status) return null;
 
   const view = (() => {
+    if (status === "invalid") {
+      return {
+        icon: <AlertCircle className="text-destructive size-4" />,
+        label: t("autosave.invalid", "Not saved: check the chart settings"),
+        labelClassName: "text-destructive",
+      };
+    }
     if (status === "error") {
       return {
         icon: <AlertCircle className="text-destructive size-4" />,

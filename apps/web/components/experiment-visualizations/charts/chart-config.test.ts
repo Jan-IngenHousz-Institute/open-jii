@@ -1,7 +1,127 @@
+import { act, renderHook } from "@/test/test-utils";
+import { useForm } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
-import { defaultAxisTypeFor, narrowChartConfig } from "./chart-config";
+import { chartFormResolver, defaultAxisTypeFor, narrowChartConfig } from "./chart-config";
+import type { ChartFormValues } from "./chart-config";
 import { CATEGORY_PALETTE } from "./colors/palettes";
+
+describe("chartFormResolver", () => {
+  const values: ChartFormValues = {
+    name: "Chart",
+    chartFamily: "basic",
+    chartType: "line",
+    config: {},
+    dataConfig: {
+      tableName: "readings",
+      dataSources: [{ tableName: "readings", columnName: "temp", role: "y" }],
+    },
+  };
+
+  it("requires a data source even without a translation context", async () => {
+    const { result } = renderHook(() =>
+      useForm<ChartFormValues>({
+        resolver: chartFormResolver,
+        defaultValues: { ...values, dataConfig: { tableName: "readings", dataSources: [] } },
+      }),
+    );
+
+    await act(async () => {
+      expect(await result.current.trigger()).toBe(false);
+    });
+
+    expect(result.current.getFieldState("dataConfig.dataSources").error?.message).toBe(
+      "workspace.validation.seriesRequired",
+    );
+  });
+
+  it("reports multiple invalid filters as one translated shelf error", async () => {
+    const { result } = renderHook(() =>
+      useForm<ChartFormValues>({
+        resolver: chartFormResolver,
+        context: { translate: (key: string) => `translated: ${key}` },
+        defaultValues: {
+          ...values,
+          dataConfig: {
+            ...values.dataConfig,
+            filters: [
+              { column: "temp", operator: "between", value: [5] },
+              { column: "temp", operator: "contains", value: 10 },
+            ],
+          },
+        },
+      }),
+    );
+
+    await act(async () => {
+      expect(await result.current.trigger()).toBe(false);
+    });
+
+    expect(result.current.getFieldState("dataConfig.filters").error).toEqual({
+      type: "custom",
+      message: "translated: workspace.validation.invalidFilters",
+      ref: undefined,
+    });
+  });
+
+  it("allows empty series names and aliases so charts can use their default labels", async () => {
+    const { result } = renderHook(() =>
+      useForm<ChartFormValues>({
+        resolver: chartFormResolver,
+        defaultValues: {
+          ...values,
+          dataConfig: {
+            ...values.dataConfig,
+            dataSources: [
+              { tableName: "readings", columnName: "temp", role: "y", seriesName: "", alias: "" },
+            ],
+          },
+        },
+      }),
+    );
+
+    await act(async () => {
+      expect(await result.current.trigger()).toBe(true);
+    });
+  });
+
+  it.each([
+    {
+      source: { aggregate: "avg", orderColumn: "timestamp" },
+      field: "orderColumn",
+      message: "workspace.shelves.windowOrderUnsupported",
+    },
+    {
+      source: { aggregate: "latest", orderColumn: "timestamp", partitionColumn: "sensor" },
+      field: "partitionColumn",
+      message: "workspace.shelves.windowPerUnsupported",
+    },
+  ] as const)(
+    "explains a forbidden $field for $source.aggregate",
+    async ({ source, field, message }) => {
+      const { result } = renderHook(() =>
+        useForm<ChartFormValues>({
+          resolver: chartFormResolver,
+          defaultValues: {
+            ...values,
+            dataConfig: {
+              ...values.dataConfig,
+              dataSources: [{ tableName: "readings", columnName: "temp", role: "y", ...source }],
+            },
+          },
+        }),
+      );
+
+      await act(async () => {
+        expect(await result.current.trigger()).toBe(false);
+      });
+
+      expect(result.current.getFieldState(`dataConfig.dataSources.0.${field}`).error?.message).toBe(
+        message,
+      );
+    },
+  );
+});
 
 describe("narrowChartConfig", () => {
   it("returns the visualization's config when present", () => {

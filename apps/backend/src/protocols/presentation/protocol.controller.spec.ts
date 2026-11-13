@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
-import { macros } from "@repo/database";
+import { eq, protocols, macros, protocolMacros } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
@@ -129,6 +129,36 @@ describe("ProtocolController - read and update endpoints", () => {
     await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
   });
 
+  it("keeps the default array order without counts and includes counts only for pages", async () => {
+    const alpha = await testApp.createProtocol({ name: "Alpha", createdBy: testUserId });
+    const zulu = await testApp.createProtocol({ name: "Zulu", createdBy: testUserId });
+    await testApp.database.update(protocols).set({ sortOrder: 1 }).where(eq(protocols.id, zulu.id));
+    const compatible = await testApp.createMacro({ name: "Compatible", createdBy: testUserId });
+    await testApp.database.insert(protocolMacros).values({
+      protocolId: zulu.id,
+      macroId: compatible.id,
+    });
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
+
+    const array: SuperTestResponse<{ id: string }[]> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(array.body.map((item) => item.id)).toEqual([zulu.id, alpha.id]);
+    for (const item of array.body) {
+      expect(item).not.toHaveProperty("compatibleMacroCount");
+    }
+
+    const page: SuperTestResponse<{ items: { id: string; compatibleMacroCount: number }[] }> =
+      await testApp.get(path).query({ page: 1 }).withAuth(testUserId).expect(StatusCodes.OK);
+
+    expect(page.body.items.map((item) => [item.id, item.compatibleMacroCount])).toEqual([
+      [zulu.id, 1],
+      [alpha.id, 0],
+    ]);
+  });
+
   it("listProtocols returns 200 including the created protocol", async () => {
     const protocol = await testApp.createProtocol({
       name: "Listed Protocol",
@@ -181,7 +211,7 @@ describe("ProtocolController - read and update endpoints", () => {
   it("listProtocols rejects a sort field outside the allowlist", async () => {
     await testApp
       .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
-      .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+      .query({ page: 1, "sort[0][field]": "invalid", "sort[0][direction]": "asc" })
       .withAuth(testUserId)
       .expect(StatusCodes.BAD_REQUEST);
   });
@@ -189,7 +219,7 @@ describe("ProtocolController - read and update endpoints", () => {
   it("listProtocols passes the indexed family and visibility arrays the web client sends", async () => {
     const executeSpy = vi
       .spyOn(testApp.module.get(ListProtocolsUseCase), "executePaginated")
-      .mockResolvedValue(success({ items: [], totalCount: 0 }));
+      .mockResolvedValue(success({ items: [], totalCount: 0, activityAvailable: false }));
 
     await testApp
       .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))

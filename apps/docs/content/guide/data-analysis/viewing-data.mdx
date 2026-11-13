@@ -3,7 +3,7 @@ title: "Viewing your data"
 description: "Inspect, filter, annotate, and visualize an experiment's processed tables."
 ---
 
-{/* verified: code@efd66bdd4 2026-08-04 */}
+{/* verified: code@109f58a49 2026-11-10 */}
 
 Open an experiment and select **Data**. The dataset picker above the table names
 the dataset you are looking at and its row count. Opening it lists every dataset
@@ -35,6 +35,13 @@ and ordinary decimals, including `.5` and `1.`, sort numerically. Very long or
 very precise numbers, scientific notation such as `1e3`, separators such as
 `1,000`, and units such as `12 cm` sort as text. Sorting preserves the original
 answers and does not make a text column numeric for filters or charts.
+
+A Number question's column is numeric. It goes on a chart's numeric axes, takes
+averages and sums, sorts by value with empty answers last, and its filters
+compare values. An answer that is not a number reads as empty, and leading zeros
+are dropped. Which questions count as Number follows the experiment's current
+flow: changing a question back to text, or detaching the workbook, returns its
+column to text for every row.
 
 A chart without aggregation that requests its rows sorted by a question-answer
 column, usually its X axis, receives them in this order. Charts with aggregation
@@ -85,6 +92,22 @@ same line, for the datasets their charts and tables use.
 {/* NEEDS-LIVE-CHECK: confirm representative MultispeQ and Ambyte tables, filter operators, raw-trace visibility, and the processing delay from mobile sync to visible row. */}
 {/* NEEDS-RECAPTURE: this frame predates the dataset picker and the live-update line, and still shows the tab strip the picker replaced. */}
 ![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
+
+In the platform, the **Device** column uses a registered device's serial number.
+For an unregistered sensor, it uses the reported name, then the client id when
+the name is empty. A device-id suffix keeps sensors with the same name or
+uploading phone separate, for example `Ambit (d2)` and `Ambit (d3)`. When only a
+device id is available, that id is the label. Rows without a name, client id or
+device id appear as `Unknown device`.
+
+The **Device** filter uses these same labels. Its options load in name order
+without case sensitivity, including devices beyond the first page. The picker
+shows a loading hint while more options arrive.
+
+Exports and Python table loads keep the registry `device` struct unchanged.
+There, `device IS NULL` still finds unregistered sensors and `serial_number`
+contains only the registry serial. The platform computes display labels when
+it reads the data.
 
 {/* NEEDS-RECAPTURE-REVIEW: the rolling-filter capture is staged as charts-filters.webp; publish after human frame review. */}
 ![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.webp)
@@ -182,6 +205,52 @@ text, numeric and date columns. Their results use a numeric Y axis.
 
 In a bar chart, if you change a text Y series to a numeric aggregate such as **Sum**, the column
 selection clears. Choose a numeric column to continue.
+
+### Compare rows in order
+
+Under **Y axis**, the **Aggregate** menu offers **Previous value**, **Change from
+previous** and **Row number**. Choose **Ordered by** to set the numeric or date
+column that orders the rows from smallest to largest. Optionally choose **Per**
+to restart the calculation for each sensor or other group. **Whole table** uses
+one sequence for all rows.
+
+- **Previous value** returns the selected Y column's value from the preceding row.
+- **Change from previous** subtracts that value from the current value. It accepts
+  numeric and date columns. Differences between dates or times are in seconds.
+- **Row number** starts at 1 within each group and counts rows in the chosen order.
+  Its result uses a numeric Y axis, whatever Y column you selected.
+
+![A line chart of the seconds between sensor reports, using Change from previous on the timestamp column per sensor](/img/guide/web/ordered-aggregates-gap.webp)
+
+Filters apply before these calculations. The first row in each group, including
+the first row inside a filtered time range, has no previous value. A chart does
+not draw a point for that missing value. If rows have the same ordering value,
+the row ID breaks the tie when available. Otherwise their order can vary between reads.
+Rows with a missing **Ordered by** value sort last and have no calculation result.
+They do not take part in the sequence.
+
+![A line chart numbering each sensor's readings in time order with Row number](/img/guide/web/ordered-aggregates-row-number.webp)
+
+These three functions keep every row. Turn off the X **Bucket** and remove other
+aggregates that combine rows before using them. Cumulative sum can share their
+chart. If you later add a bucket, the editor shows an error and holds the change.
+Other raw Y series stay raw. Remove the bucket to continue, or change the
+row calculation to a function that combines rows.
+
+### Choose a value at the latest or earliest row
+
+Choose **Value at latest** or **Value at earliest** under **Aggregate**, then set
+**Ordered by** to a numeric or date column. These return the selected Y value
+from the row with the largest or smallest ordering value. **Per** shows the
+chart's actual groups, including its X buckets, colour groups and panels. It is
+read-only because these functions use the chart's grouping. Choosing either
+function groups the chart by X and turns other raw Y series into **Average**.
+
+Filters apply first. Rows with a missing ordering value do not take part. A
+missing Y value at the selected row remains missing, so **Value at latest** does
+not mean the latest non-empty value. If several rows tie for the latest or
+earliest ordering value, the row ID breaks the tie when available. Without a row
+ID, any of the tied rows' Y values may be returned.
 
 ### Split a chart into panels
 

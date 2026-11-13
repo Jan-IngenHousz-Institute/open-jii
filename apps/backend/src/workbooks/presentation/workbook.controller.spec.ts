@@ -229,7 +229,7 @@ describe("WorkbookController", () => {
     it("passes the indexed visibility array the web client sends", async () => {
       const executeSpy = vi
         .spyOn(listWorkbooksUseCase, "executePaginated")
-        .mockResolvedValue(success({ items: [], totalCount: 0 }));
+        .mockResolvedValue(success({ items: [], totalCount: 0, activityAvailable: false }));
 
       await testApp
         .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))

@@ -7,6 +7,11 @@ import type {
   ExperimentGroupByItem,
   ExperimentTimeBucketUnit,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  aggregateKind,
+  requiresGroupBy,
+  takesWindow,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { ChartFormDataConfig, ChartFormValues } from "../chart-config";
 
@@ -28,9 +33,9 @@ export function getDataSourceAggregate(
   return sources[dsIndex]?.aggregate;
 }
 
-/** Row aggregates require GROUP BY; the `cumsum` window function does not. */
+/** Row aggregates combine rows; running totals and row windows keep them. */
 export function aggregateRequiresGroupBy(fn: ExperimentAggregationFunction): boolean {
-  return fn !== "cumsum";
+  return requiresGroupBy(fn);
 }
 
 /** Stable SQL alias for a series's aggregate, unique even when two series share column + function. */
@@ -77,7 +82,7 @@ function materializeFunctions(
       if (!ds.aggregate) return null;
       const rawColumn = ds.columnName;
       const column = rawColumn === "" ? "*" : rawColumn;
-      if (column === "*" && ds.aggregate !== "count" && ds.aggregate !== "cumsum") return null;
+      if (column === "*" && !["count", "cumsum", "row_number"].includes(ds.aggregate)) return null;
       if (
         (ds.role === "y" || ds.role === "size") &&
         rawColumn.length > 0 &&
@@ -89,6 +94,12 @@ function materializeFunctions(
         column,
         function: ds.aggregate,
         alias: aggregateAliasForSource(rawColumn, ds.aggregate, dsIndex),
+        ...(takesWindow(ds.aggregate)
+          ? {
+              partitionColumn: ds.partitionColumn === "" ? undefined : ds.partitionColumn,
+              orderColumn: ds.orderColumn === "" ? undefined : ds.orderColumn,
+            }
+          : {}),
       };
     })
     .filter((x): x is ExperimentAggregationItem => x !== null);
@@ -96,6 +107,11 @@ function materializeFunctions(
 
 /** Strip draft / incomplete entries from the form snapshot before sending it to the API. */
 export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): ChartFormDataConfig {
+  const dataSources = dataConfig.dataSources.map((source) => ({
+    ...source,
+    partitionColumn: source.partitionColumn === "" ? undefined : source.partitionColumn,
+    orderColumn: source.orderColumn === "" ? undefined : source.orderColumn,
+  }));
   const cleanedFilters = dataConfig.filters?.filter((f) => {
     if (!f.column || f.column.length === 0) return false;
     if (Array.isArray(f.value)) return f.value.length > 0;
@@ -110,7 +126,7 @@ export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): Char
     (g) => g.column && g.column.length > 0,
   );
   const groupByColumnSet = new Set(groupBy.map((g) => g.column));
-  const sourceFunctions = materializeFunctions(dataConfig.dataSources, groupByColumnSet);
+  const sourceFunctions = materializeFunctions(dataSources, groupByColumnSet);
   const existingFunctions = (dataConfig.aggregation?.functions ?? []).filter(
     (f) => f.column && f.column.length > 0 && Boolean(f.function),
   );
@@ -126,6 +142,7 @@ export function sanitizeDataConfigForSave(dataConfig: ChartFormDataConfig): Char
 
   return {
     ...dataConfig,
+    dataSources,
     filters: cleanedFilters && cleanedFilters.length > 0 ? cleanedFilters : undefined,
     aggregation: cleanedAggregation,
   };
@@ -210,6 +227,29 @@ export function setDataSourceAggregate(
   const wasAnyRowAggregateActive =
     anyAxisWasBucketed ||
     previousSources.some((ds) => ds.aggregate && aggregateRequiresGroupBy(ds.aggregate));
+
+  // Keep cleared controls as empty strings so RHF does not restore their persisted defaults.
+  const previousFn = previousSources[dsIndex]?.aggregate;
+  if (
+    fn === undefined ||
+    previousFn === undefined ||
+    aggregateKind(previousFn) !== "rowWindow" ||
+    aggregateKind(fn) !== "rowWindow"
+  ) {
+    form.setValue(`dataConfig.dataSources.${dsIndex}.partitionColumn`, "", {
+      shouldDirty: true,
+    });
+  }
+  if (
+    fn === undefined ||
+    previousFn === undefined ||
+    !takesWindow(previousFn) ||
+    !takesWindow(fn)
+  ) {
+    form.setValue(`dataConfig.dataSources.${dsIndex}.orderColumn`, "", {
+      shouldDirty: true,
+    });
+  }
 
   form.setValue(`dataConfig.dataSources.${dsIndex}.aggregate` as const, fn, {
     shouldDirty: true,

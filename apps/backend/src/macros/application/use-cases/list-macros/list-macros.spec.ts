@@ -1,4 +1,10 @@
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { protocolMacros } from "@repo/database";
+
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { resourceMetricsCacheKey } from "../../../../metrics/application/resource-metrics.service";
+import { CACHE_PORT } from "../../../../metrics/core/ports/cache.port";
+import type { CachePort } from "../../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateMacroDto } from "../../../core/models/macro.model";
 import { MacroRepository } from "../../../core/repositories/macro.repository";
@@ -29,6 +35,25 @@ describe("ListMacrosUseCase", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  it("carries the compatible protocol count alongside activity on paginated items", async () => {
+    const linked = await testApp.createMacro({ name: "Linked", createdBy: testUserId });
+    const unlinked = await testApp.createMacro({ name: "Unlinked", createdBy: testUserId });
+    const compatible = await testApp.createProtocol({ name: "Compatible", createdBy: testUserId });
+    await testApp.database.insert(protocolMacros).values({
+      macroId: linked.id,
+      protocolId: compatible.id,
+    });
+
+    const result = await useCase.executePaginated(1, 20, { userId: testUserId });
+
+    assertSuccess(result);
+    expect(result.value.items.every((item) => "activity" in item)).toBe(true);
+    expect(result.value.items).toEqual([
+      expect.objectContaining({ id: linked.id, compatibleProtocolCount: 1 }),
+      expect.objectContaining({ id: unlinked.id, compatibleProtocolCount: 0 }),
+    ]);
   });
 
   it("should list all macros without filter", async () => {
@@ -301,6 +326,166 @@ describe("ListMacrosUseCase", () => {
       assertSuccess(paged);
       expect(ids(paged.value.items)).toEqual([match.id]);
       expect(paged.value.totalCount).toBe(1);
+    });
+  });
+
+  describe("activity snapshot fallback", () => {
+    async function makeWarehouseUnavailable() {
+      const adapter = testApp.module.get(DatabricksAdapter);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        failure({
+          name: "AppError",
+          code: "INTERNAL_ERROR",
+          message: "warehouse down",
+          statusCode: 500,
+        }),
+      );
+      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("macro"));
+    }
+
+    it("falls back to name order and reports unavailable when activity is paired with name and there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      await testApp.createMacro({ name: "Alpha", createdBy: testUserId, visibility: "public" });
+      await testApp.createMacro({ name: "Bravo", createdBy: testUserId, visibility: "public" });
+
+      const result = await useCase.executePaginated(1, 20, {
+        userId: testUserId,
+        sort: [
+          { field: "activity", direction: "desc" },
+          { field: "name", direction: "asc" },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.name)).toEqual(["Alpha", "Bravo"]);
+    });
+
+    it("reports unavailable and the default order when sorting only by activity with no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Created out of alphabetical order, so a name-order result proves the
+      // real default ordering ran rather than insertion order.
+      const charlie = await testApp.createMacro({
+        name: "Charlie",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const alpha = await testApp.createMacro({
+        name: "Alpha",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const bravo = await testApp.createMacro({
+        name: "Bravo",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const result = await useCase.executePaginated(1, 20, {
+        userId: testUserId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.id)).toEqual([alpha.id, bravo.id, charlie.id]);
+    });
+
+    it("orders items consistently with the activity measurements it reports", async () => {
+      const busy = await testApp.createMacro({
+        name: "Busy macro",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const quiet = await testApp.createMacro({
+        name: "Quiet macro",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        success([
+          { date: today, resourceType: "macro", resourceId: busy.id, measurements: 9 },
+          { date: today, resourceType: "macro", resourceId: quiet.id, measurements: 1 },
+        ]),
+      );
+      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("macro"));
+
+      const result = await useCase.executePaginated(1, 20, {
+        userId: testUserId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(true);
+      const foundIds = result.value.items.map((item) => item.id);
+      expect(foundIds.indexOf(busy.id)).toBeLessThan(foundIds.indexOf(quiet.id));
+      expect(result.value.items.find((item) => item.id === busy.id)?.activity?.measurements).toBe(
+        9,
+      );
+      expect(result.value.items.find((item) => item.id === quiet.id)?.activity?.measurements).toBe(
+        1,
+      );
+    });
+
+    it("array path (execute): sorts by activity when a snapshot is available", async () => {
+      // Named so default (name) order would put quiet first; only activity
+      // sort can put busy first, proving activity actually drove the order.
+      const busy = await testApp.createMacro({
+        name: "Zulu macro",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const quiet = await testApp.createMacro({
+        name: "Alpha macro",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        success([
+          { date: today, resourceType: "macro", resourceId: busy.id, measurements: 9 },
+          { date: today, resourceType: "macro", resourceId: quiet.id, measurements: 1 },
+        ]),
+      );
+      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("macro"));
+
+      const result = await useCase.execute({
+        userId: testUserId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      const ids = result.value.map((item) => item.id);
+      expect(ids.indexOf(busy.id)).toBeLessThan(ids.indexOf(quiet.id));
+    });
+
+    it("array path (execute): drops the activity criterion silently when there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Created out of alphabetical order, so a name-order result proves the
+      // real default ordering ran rather than insertion order.
+      const charlie = await testApp.createMacro({
+        name: "Charlie",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+      const alpha = await testApp.createMacro({
+        name: "Alpha",
+        createdBy: testUserId,
+        visibility: "public",
+      });
+
+      const result = await useCase.execute({
+        userId: testUserId,
+        sort: [{ field: "activity", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.map((item) => item.id)).toEqual([alpha.id, charlie.id]);
     });
   });
 });

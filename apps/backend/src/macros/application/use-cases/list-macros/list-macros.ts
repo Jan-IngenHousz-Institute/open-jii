@@ -2,12 +2,16 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 
+import { sortsByActivity, withoutActivity } from "../../../../common/utils/activity-sort";
 import { Result, success } from "../../../../common/utils/fp-utils";
 import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
 import { MacroDto } from "../../../core/models/macro.model";
 import { MacroRepository, MacroFilter } from "../../../core/repositories/macro.repository";
 
-type MacroWithActivity = MacroDto & { activity: ResourceSeries | null };
+type MacroWithActivity = MacroDto & {
+  activity: ResourceSeries | null;
+  compatibleProtocolCount: number;
+};
 
 @Injectable()
 export class ListMacrosUseCase {
@@ -26,14 +30,25 @@ export class ListMacrosUseCase {
       visibilities: filter?.visibilities,
       hasSearch: !!filter?.search,
     });
-    return await this.macroRepository.findAll(filter);
+    const snapshot = sortsByActivity(filter?.sort)
+      ? await this.resourceMetrics.activitySnapshot("macro")
+      : undefined;
+    const activeSort = snapshot === null ? withoutActivity(filter?.sort) : filter?.sort;
+    const activeFilter = activeSort === filter?.sort ? filter : { ...filter, sort: activeSort };
+    return await this.macroRepository.findAll(
+      activeFilter,
+      undefined,
+      sortsByActivity(activeSort) ? snapshot?.totals : undefined,
+    );
   }
 
   async executePaginated(
     page: number,
     pageSize: number,
     filter?: MacroFilter,
-  ): Promise<Result<{ items: MacroWithActivity[]; totalCount: number }>> {
+  ): Promise<
+    Result<{ items: MacroWithActivity[]; totalCount: number; activityAvailable: boolean }>
+  > {
     this.logger.log({
       msg: "Listing macros",
       operation: "listMacrosPaginated",
@@ -43,16 +58,23 @@ export class ListMacrosUseCase {
       visibilities: filter?.visibilities,
       hasSearch: !!filter?.search,
     });
-    const paged = await this.macroRepository.findPage(page, pageSize, filter);
+    const snapshot = await this.resourceMetrics.activitySnapshot("macro");
+    const activeSort = snapshot === null ? withoutActivity(filter?.sort) : filter?.sort;
+    const activeFilter = activeSort === filter?.sort ? filter : { ...filter, sort: activeSort };
+    const paged = await this.macroRepository.findPage(
+      page,
+      pageSize,
+      activeFilter,
+      sortsByActivity(activeSort) ? snapshot?.totals : undefined,
+    );
     if (paged.isFailure()) {
       return paged;
     }
 
     // These ids already passed the access check.
-    const series = await this.resourceMetrics.seriesFor(
-      "macro",
-      paged.value.items.map((item) => item.id),
-    );
+    const series =
+      snapshot?.seriesFor(paged.value.items.map((item) => item.id)) ??
+      new Map<string, ResourceSeries>();
 
     return success({
       items: paged.value.items.map((item) => ({
@@ -60,6 +82,7 @@ export class ListMacrosUseCase {
         activity: series.get(item.id) ?? null,
       })),
       totalCount: paged.value.totalCount,
+      activityAvailable: snapshot !== null,
     });
   }
 }

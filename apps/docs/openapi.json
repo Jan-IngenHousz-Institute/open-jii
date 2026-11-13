@@ -668,7 +668,8 @@
                       "owner",
                       "organization",
                       "members",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -1432,6 +1433,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -1439,7 +1443,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -3500,6 +3505,19 @@
             "allowReserved": true
           },
           {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Number of sorted DEVICE labels to skip. Other columns support only zero."
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -3534,7 +3552,7 @@
                           }
                         ]
                       },
-                      "description": "Distinct non-null values, sorted ascending"
+                      "description": "Distinct non-null values, sorted ascending. Device columns return display names."
                     },
                     "truncated": {
                       "type": "boolean",
@@ -4377,11 +4395,14 @@
                 "type": "object",
                 "properties": {
                   "tableName": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "rowId": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "annotation": {
                     "type": "object",
@@ -4500,14 +4521,17 @@
                 "type": "object",
                 "properties": {
                   "tableName": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "rowIds": {
                     "type": "array",
                     "minItems": 1,
                     "items": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "maxLength": 64
                     }
                   },
                   "annotation": {
@@ -4784,6 +4808,8 @@
                 "properties": {
                   "tableName": {
                     "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
                     "description": "Name of the data table"
                   },
                   "rowIds": {
@@ -4791,7 +4817,8 @@
                     "minItems": 1,
                     "items": {
                       "type": "string",
-                      "minLength": 1
+                      "minLength": 1,
+                      "maxLength": 64
                     },
                     "description": "Rows IDs to delete"
                   },
@@ -11617,9 +11644,22 @@
                                     "std",
                                     "var",
                                     "cumsum",
+                                    "previous",
+                                    "change_from_previous",
+                                    "row_number",
+                                    "latest",
+                                    "earliest",
                                     "corr"
                                   ],
                                   "type": "string"
+                                },
+                                "partitionColumn": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "orderColumn": {
+                                  "type": "string",
+                                  "minLength": 1
                                 },
                                 "errorColumn": {
                                   "type": "string"
@@ -11743,6 +11783,11 @@
                                         "std",
                                         "var",
                                         "cumsum",
+                                        "previous",
+                                        "change_from_previous",
+                                        "row_number",
+                                        "latest",
+                                        "earliest",
                                         "corr"
                                       ],
                                       "type": "string"
@@ -11752,6 +11797,14 @@
                                     },
                                     "secondColumn": {
                                       "type": "string"
+                                    },
+                                    "partitionColumn": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "orderColumn": {
+                                      "type": "string",
+                                      "minLength": 1
                                     }
                                   },
                                   "required": [
@@ -11994,9 +12047,22 @@
                                 "std",
                                 "var",
                                 "cumsum",
+                                "previous",
+                                "change_from_previous",
+                                "row_number",
+                                "latest",
+                                "earliest",
                                 "corr"
                               ],
                               "type": "string"
+                            },
+                            "partitionColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "orderColumn": {
+                              "type": "string",
+                              "minLength": 1
                             },
                             "errorColumn": {
                               "type": "string"
@@ -12120,6 +12186,11 @@
                                     "std",
                                     "var",
                                     "cumsum",
+                                    "previous",
+                                    "change_from_previous",
+                                    "row_number",
+                                    "latest",
+                                    "earliest",
                                     "corr"
                                   ],
                                   "type": "string"
@@ -12129,6 +12200,14 @@
                                 },
                                 "secondColumn": {
                                   "type": "string"
+                                },
+                                "partitionColumn": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "orderColumn": {
+                                  "type": "string",
+                                  "minLength": 1
                                 }
                               },
                               "required": [
@@ -12349,9 +12428,22 @@
                                   "std",
                                   "var",
                                   "cumsum",
+                                  "previous",
+                                  "change_from_previous",
+                                  "row_number",
+                                  "latest",
+                                  "earliest",
                                   "corr"
                                 ],
                                 "type": "string"
+                              },
+                              "partitionColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "orderColumn": {
+                                "type": "string",
+                                "minLength": 1
                               },
                               "errorColumn": {
                                 "type": "string"
@@ -12475,6 +12567,11 @@
                                       "std",
                                       "var",
                                       "cumsum",
+                                      "previous",
+                                      "change_from_previous",
+                                      "row_number",
+                                      "latest",
+                                      "earliest",
                                       "corr"
                                     ],
                                     "type": "string"
@@ -12484,6 +12581,14 @@
                                   },
                                   "secondColumn": {
                                     "type": "string"
+                                  },
+                                  "partitionColumn": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orderColumn": {
+                                    "type": "string",
+                                    "minLength": 1
                                   }
                                 },
                                 "required": [
@@ -12753,9 +12858,22 @@
                                   "std",
                                   "var",
                                   "cumsum",
+                                  "previous",
+                                  "change_from_previous",
+                                  "row_number",
+                                  "latest",
+                                  "earliest",
                                   "corr"
                                 ],
                                 "type": "string"
+                              },
+                              "partitionColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "orderColumn": {
+                                "type": "string",
+                                "minLength": 1
                               },
                               "errorColumn": {
                                 "type": "string"
@@ -12879,6 +12997,11 @@
                                       "std",
                                       "var",
                                       "cumsum",
+                                      "previous",
+                                      "change_from_previous",
+                                      "row_number",
+                                      "latest",
+                                      "earliest",
                                       "corr"
                                     ],
                                     "type": "string"
@@ -12888,6 +13011,14 @@
                                   },
                                   "secondColumn": {
                                     "type": "string"
+                                  },
+                                  "partitionColumn": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orderColumn": {
+                                    "type": "string",
+                                    "minLength": 1
                                   }
                                 },
                                 "required": [
@@ -13139,9 +13270,22 @@
                                 "std",
                                 "var",
                                 "cumsum",
+                                "previous",
+                                "change_from_previous",
+                                "row_number",
+                                "latest",
+                                "earliest",
                                 "corr"
                               ],
                               "type": "string"
+                            },
+                            "partitionColumn": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "orderColumn": {
+                              "type": "string",
+                              "minLength": 1
                             },
                             "errorColumn": {
                               "type": "string"
@@ -13265,6 +13409,11 @@
                                     "std",
                                     "var",
                                     "cumsum",
+                                    "previous",
+                                    "change_from_previous",
+                                    "row_number",
+                                    "latest",
+                                    "earliest",
                                     "corr"
                                   ],
                                   "type": "string"
@@ -13274,6 +13423,14 @@
                                 },
                                 "secondColumn": {
                                   "type": "string"
+                                },
+                                "partitionColumn": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "orderColumn": {
+                                  "type": "string",
+                                  "minLength": 1
                                 }
                               },
                               "required": [
@@ -13494,9 +13651,22 @@
                                   "std",
                                   "var",
                                   "cumsum",
+                                  "previous",
+                                  "change_from_previous",
+                                  "row_number",
+                                  "latest",
+                                  "earliest",
                                   "corr"
                                 ],
                                 "type": "string"
+                              },
+                              "partitionColumn": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "orderColumn": {
+                                "type": "string",
+                                "minLength": 1
                               },
                               "errorColumn": {
                                 "type": "string"
@@ -13620,6 +13790,11 @@
                                       "std",
                                       "var",
                                       "cumsum",
+                                      "previous",
+                                      "change_from_previous",
+                                      "row_number",
+                                      "latest",
+                                      "earliest",
                                       "corr"
                                     ],
                                     "type": "string"
@@ -13629,6 +13804,14 @@
                                   },
                                   "secondColumn": {
                                     "type": "string"
+                                  },
+                                  "partitionColumn": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orderColumn": {
+                                    "type": "string",
+                                    "minLength": 1
                                   }
                                 },
                                 "required": [
@@ -28358,7 +28541,8 @@
                       "name",
                       "language",
                       "protocols",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -28594,6 +28778,11 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "compatibleProtocolCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -28749,6 +28938,11 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "compatibleProtocolCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -28784,6 +28978,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -28791,7 +28988,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -33351,7 +33549,8 @@
                       "name",
                       "family",
                       "macros",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -33604,6 +33803,11 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "compatibleMacroCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           }
                         },
                         "required": [
@@ -33756,6 +33960,11 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "compatibleMacroCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
@@ -33791,6 +34000,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -33798,7 +34010,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]
@@ -38327,7 +38540,8 @@
                       "name",
                       "usedBy",
                       "user",
-                      "updated"
+                      "updated",
+                      "activity"
                     ],
                     "type": "string"
                   },
@@ -38741,6 +38955,9 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
+                        },
+                        "activityAvailable": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -38748,7 +38965,8 @@
                         "page",
                         "pageSize",
                         "totalPages",
-                        "totalCount"
+                        "totalCount",
+                        "activityAvailable"
                       ]
                     }
                   ]

@@ -264,8 +264,15 @@ export function filterColumnsForRole(
   aggregate?: ExperimentAggregationFunction,
 ): ExperimentDataColumn[] {
   const entry = getRoleContract(chartType)?.[role];
-  const countsValues = role === "y" && (aggregate === "count" || aggregate === "count_distinct");
-  const accepted = countsValues ? ANY_PLOTTABLE : (entry?.acceptedKinds ?? ANY_PLOTTABLE);
+  const countsValues =
+    role === "y" &&
+    (aggregate === "count" || aggregate === "count_distinct" || aggregate === "row_number");
+  const accepted =
+    role === "y" && aggregate === "change_from_previous"
+      ? (["numeric", "temporal"] as const)
+      : countsValues
+        ? ANY_PLOTTABLE
+        : (entry?.acceptedKinds ?? ANY_PLOTTABLE);
   return columns.filter((col) => {
     const kind = getColumnKind(col.type_text);
     if (!kind || kind === "complex") return false;

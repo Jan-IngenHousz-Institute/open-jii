@@ -5,6 +5,7 @@ import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CACHE_PORT } from "../core/ports/cache.port";
 import type { CachePort } from "../core/ports/cache.port";
+import { MetricsRepository } from "../core/repositories/metrics.repository";
 import { ResourceMetricsService, resourceMetricsCacheKey } from "./resource-metrics.service";
 
 /** Dates relative to today: the window slides, so fixed ones would age out. */
@@ -93,9 +94,9 @@ describe("ResourceMetricsService", () => {
   });
 
   it("returns a dense daily series for the rows it was given", async () => {
-    const series = await service.seriesFor("protocol", [visibleProtocolId]);
+    const snapshot = await service.activitySnapshot("protocol");
 
-    const resource = series.get(visibleProtocolId);
+    const resource = snapshot?.seriesFor([visibleProtocolId]).get(visibleProtocolId);
     expect(resource?.measurements).toBe(102);
     // The window is complete so every row's sparkline is the same length.
     expect(resource?.days).toHaveLength(30);
@@ -103,6 +104,83 @@ describe("ResourceMetricsService", () => {
       { date: TWO_DAYS_AGO, measurements: 40 },
       { date: YESTERDAY, measurements: 62 },
     ]);
+  });
+
+  it("snapshots current-window totals for the whole kind and omits previous-only and zero totals", async () => {
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: YESTERDAY,
+          resourceType: "protocol",
+          resourceId: visibleProtocolId,
+          measurements: 12,
+        },
+        {
+          date: LAST_WINDOW,
+          resourceType: "protocol",
+          resourceId: outsiderId,
+          measurements: 90,
+        },
+        {
+          date: YESTERDAY,
+          resourceType: "protocol",
+          resourceId: ownerId,
+          measurements: 0,
+        },
+      ]),
+    );
+    const cache = testApp.module.get<CachePort>(CACHE_PORT);
+    await cache.invalidate(resourceMetricsCacheKey("protocol"));
+
+    const snapshot = await service.activitySnapshot("protocol");
+
+    expect(snapshot?.totals).toEqual(new Map([[visibleProtocolId, 12]]));
+    expect(snapshot?.totals.has(outsiderId)).toBe(false);
+    expect(snapshot?.totals.has(ownerId)).toBe(false);
+  });
+
+  it("reads the kind cache once for an activity snapshot", async () => {
+    const cache = testApp.module.get<CachePort>(CACHE_PORT);
+    await cache.invalidate(resourceMetricsCacheKey("protocol"));
+    const tryCache = vi.spyOn(cache, "tryCache");
+
+    const snapshot = await service.activitySnapshot("protocol");
+
+    expect(snapshot).not.toBeNull();
+    expect(tryCache).toHaveBeenCalledTimes(1);
+    expect(tryCache).toHaveBeenCalledWith(
+      resourceMetricsCacheKey("protocol"),
+      expect.any(Function),
+    );
+  });
+
+  it("drops warehouse ids that are not UUIDs from the snapshot", async () => {
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        { date: YESTERDAY, resourceType: "protocol", resourceId: "not-a-uuid", measurements: 8 },
+        {
+          date: YESTERDAY,
+          resourceType: "protocol",
+          resourceId: visibleProtocolId,
+          measurements: 3,
+        },
+      ]),
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+
+    const snapshot = await service.activitySnapshot("protocol");
+
+    expect(snapshot?.totals).toEqual(new Map([[visibleProtocolId, 3]]));
+    expect(snapshot?.seriesFor(["not-a-uuid"]).size).toBe(0);
+  });
+
+  it("returns null from a snapshot when the warehouse read fails", async () => {
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+
+    await expect(service.activitySnapshot("protocol")).resolves.toBeNull();
   });
 
   it("states the window against the one before it", async () => {
@@ -138,20 +216,11 @@ describe("ResourceMetricsService", () => {
   });
 
   it("returns nothing for a resource the caller did not ask about", async () => {
-    const series = await service.seriesFor("protocol", [visibleProtocolId]);
+    const snapshot = await service.activitySnapshot("protocol");
 
-    expect(series.has(privateProtocolId)).toBe(false);
+    expect(snapshot?.seriesFor([visibleProtocolId]).has(privateProtocolId)).toBe(false);
   });
 
-  it("returns no series at all when the warehouse is unavailable", async () => {
-    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
-      failure(AppError.internal("warehouse down")),
-    );
-
-    const series = await service.seriesFor("protocol", [visibleProtocolId]);
-
-    expect(series.size).toBe(0);
-  });
   it("reads experiment activity from the scoped rows it already has", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Collecting experiment",
@@ -164,9 +233,9 @@ describe("ResourceMetricsService", () => {
       .get<CachePort>(CACHE_PORT)
       .invalidate(resourceMetricsCacheKey("experiment"));
 
-    const series = await service.seriesFor("experiment", [experiment.id]);
+    const snapshot = await service.activitySnapshot("experiment");
 
-    expect(series.get(experiment.id)?.measurements).toBe(5);
+    expect(snapshot?.seriesFor([experiment.id]).get(experiment.id)?.measurements).toBe(5);
   });
 
   it("folds a workbook version's rows onto the workbook that owns them", async () => {
@@ -195,13 +264,107 @@ describe("ResourceMetricsService", () => {
     );
     await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
 
-    const series = await service.seriesFor("workbook", [workbook.id]);
+    const snapshot = await service.activitySnapshot("workbook");
+    const totals = await service.totalsFor("workbook", [workbook.id]);
 
-    expect(series.get(workbook.id)?.measurements).toBe(7);
+    expect(snapshot?.seriesFor([workbook.id]).get(workbook.id)?.measurements).toBe(7);
+    expect(totals.measurements).toBe(7);
+  });
+
+  it("resolves workbook versions once per cache fill, not once per read", async () => {
+    const versionMap = vi.spyOn(
+      testApp.module.get(MetricsRepository),
+      "getWorkbookVersionMapForVersions",
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+
+    await service.activitySnapshot("workbook");
+    await service.activitySnapshot("workbook");
+    await service.totalsFor("workbook", [visibleProtocolId]);
+
+    expect(versionMap).toHaveBeenCalledTimes(1);
+  });
+
+  it("sums snapshot activity across every version of each workbook", async () => {
+    const workbook = await testApp.createWorkbook({ name: "Collecting", createdBy: ownerId });
+    const otherWorkbook = await testApp.createWorkbook({ name: "Other", createdBy: ownerId });
+    const versions = await testApp.database
+      .insert(workbookVersions)
+      .values([
+        {
+          workbookId: workbook.id,
+          version: 1,
+          cells: [],
+          metadata: {},
+          entitySnapshots: { protocols: {}, macros: {} },
+          createdBy: ownerId,
+        },
+        {
+          workbookId: workbook.id,
+          version: 2,
+          cells: [],
+          metadata: {},
+          entitySnapshots: { protocols: {}, macros: {} },
+          createdBy: ownerId,
+        },
+        {
+          workbookId: otherWorkbook.id,
+          version: 1,
+          cells: [],
+          metadata: {},
+          entitySnapshots: { protocols: {}, macros: {} },
+          createdBy: ownerId,
+        },
+      ])
+      .returning();
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: YESTERDAY,
+          resourceType: "workbook_version",
+          resourceId: versions[0].id,
+          measurements: 7,
+        },
+        {
+          date: TWO_DAYS_AGO,
+          resourceType: "workbook_version",
+          resourceId: versions[1].id,
+          measurements: 5,
+        },
+        {
+          date: YESTERDAY,
+          resourceType: "workbook_version",
+          resourceId: versions[2].id,
+          measurements: 11,
+        },
+      ]),
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+
+    const snapshot = await service.activitySnapshot("workbook");
+
+    expect(snapshot?.totals).toEqual(
+      new Map([
+        [workbook.id, 12],
+        [otherWorkbook.id, 11],
+      ]),
+    );
+    expect(snapshot?.seriesFor([workbook.id]).get(workbook.id)?.measurements).toBe(12);
+  });
+
+  it("returns null when workbook version attribution fails", async () => {
+    vi.spyOn(
+      testApp.module.get(MetricsRepository),
+      "getWorkbookVersionMapForVersions",
+    ).mockResolvedValue(failure(AppError.internal("version map unavailable")));
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+
+    await expect(service.activitySnapshot("workbook")).resolves.toBeNull();
   });
 
   it("asks for nothing when the caller passed no ids", async () => {
-    const series = await service.seriesFor("protocol", []);
+    const snapshot = await service.activitySnapshot("protocol");
+    const series = snapshot?.seriesFor([]) ?? new Map();
     const totals = await service.totalsFor("protocol", []);
 
     expect(series.size).toBe(0);

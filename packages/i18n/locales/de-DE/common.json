@@ -91,6 +91,7 @@
     "sortAscending": "aufsteigend",
     "sortDescending": "absteigend",
     "sortSecondary": "zweite Sortierung",
+    "sortActivityUnavailable": "Sortieren nach Aktivität ist gerade nicht verfügbar",
     "searchMinCharacters": "Gib mindestens 2 Zeichen ein, um zu suchen",
     "searchFailed": "Suchergebnisse konnten nicht geladen werden.",
     "emailMatched": "Entspricht der eingegebenen E-Mail-Adresse",
@@ -1299,6 +1300,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Protokollcode als JSON eingeben",
     "columns": {
+      "macroCount_one": "{{count}} Makro",
+      "macroCount_other": "{{count}} Makros",
+      "macroCountLabel_one": "{{count}} kompatibles Makro, Namen anzeigen",
+      "macroCountLabel_other": "{{count}} kompatible Makros, Namen anzeigen",
       "name": "Name",
       "family": "Familie",
       "macros": "Makros",
@@ -1434,9 +1439,10 @@
     "analyticsDisabledToast": null
   },
   "autosave": {
-    "saving": null,
-    "saved": null,
-    "failed": null
+    "saving": "Wird gespeichert…",
+    "saved": "Alle Änderungen gespeichert",
+    "failed": "Deine Änderungen konnten nicht gespeichert werden",
+    "invalid": "Nicht gespeichert: Diagrammeinstellungen prüfen"
   },
   "columnPicker": {
     "dragHandle": "{{name}} ziehen",

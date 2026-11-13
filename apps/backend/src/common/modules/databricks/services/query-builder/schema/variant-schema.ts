@@ -56,6 +56,17 @@ export class VariantSchema {
     return merged === null ? null : VariantSchema.render(merged);
   }
 
+  /** The object schema with the named top-level fields as DOUBLE, so their values cast on read. */
+  static withDoubles(schema: string, names: ReadonlySet<string>): string {
+    const node = VariantSchema.parse(schema);
+    if (node.kind !== "object") return schema;
+
+    const fields = new Map(
+      [...node.fields].map(([name, type]) => [name, names.has(name) ? DOUBLE : type]),
+    );
+    return VariantSchema.render({ kind: "object", fields });
+  }
+
   private static parse(schema: string): SchemaNode {
     const trimmed = schema.trim();
     const inner = VariantSchema.unwrap(trimmed);

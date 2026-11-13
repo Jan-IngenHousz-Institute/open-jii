@@ -1,4 +1,10 @@
-import { assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
+import { protocolMacros } from "@repo/database";
+
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { resourceMetricsCacheKey } from "../../../../metrics/application/resource-metrics.service";
+import { CACHE_PORT } from "../../../../metrics/core/ports/cache.port";
+import type { CachePort } from "../../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../../test/test-harness";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 import { ListProtocolsUseCase } from "./list-protocols";
@@ -26,6 +32,25 @@ describe("ListProtocolsUseCase", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  it("carries the compatible macro count alongside activity on paginated items", async () => {
+    const linked = await testApp.createProtocol({ name: "Linked", createdBy: testUserId });
+    const unlinked = await testApp.createProtocol({ name: "Unlinked", createdBy: testUserId });
+    const compatible = await testApp.createMacro({ name: "Compatible", createdBy: testUserId });
+    await testApp.database.insert(protocolMacros).values({
+      protocolId: linked.id,
+      macroId: compatible.id,
+    });
+
+    const result = await useCase.executePaginated(1, 20, undefined, undefined, testUserId);
+
+    assertSuccess(result);
+    expect(result.value.items.every((item) => "activity" in item)).toBe(true);
+    expect(result.value.items).toEqual([
+      expect.objectContaining({ id: linked.id, compatibleMacroCount: 1 }),
+      expect.objectContaining({ id: unlinked.id, compatibleMacroCount: 0 }),
+    ]);
   });
 
   it("should list all protocols without filter", async () => {
@@ -112,6 +137,7 @@ describe("ListProtocolsUseCase", () => {
       undefined,
       [...sort],
       undefined,
+      undefined,
     );
     expect(findPage).toHaveBeenCalledWith(
       1,
@@ -121,6 +147,7 @@ describe("ListProtocolsUseCase", () => {
       testUserId,
       undefined,
       [...sort],
+      undefined,
       undefined,
     );
   });
@@ -143,6 +170,7 @@ describe("ListProtocolsUseCase", () => {
       undefined,
       undefined,
       filter,
+      undefined,
     );
     expect(findPage).toHaveBeenCalledWith(
       1,
@@ -153,6 +181,7 @@ describe("ListProtocolsUseCase", () => {
       undefined,
       undefined,
       filter,
+      undefined,
     );
   });
 
@@ -179,6 +208,177 @@ describe("ListProtocolsUseCase", () => {
       code: "INTERNAL_ERROR",
       message: "Repository error",
       statusCode: 500,
+    });
+  });
+
+  describe("activity snapshot fallback", () => {
+    async function makeWarehouseUnavailable() {
+      const adapter = testApp.module.get(DatabricksAdapter);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        failure({
+          name: "AppError",
+          code: "INTERNAL_ERROR",
+          message: "warehouse down",
+          statusCode: 500,
+        }),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("protocol"));
+    }
+
+    it("falls back to the default order and reports unavailable when sorting by activity with no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Created out of alphabetical order, so a name-order result proves the
+      // repository's real default ordering ran rather than insertion order.
+      const charlie = await protocolRepository.create(
+        { name: "Charlie", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      const alpha = await protocolRepository.create(
+        { name: "Alpha", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      const bravo = await protocolRepository.create(
+        { name: "Bravo", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(charlie);
+      assertSuccess(alpha);
+      assertSuccess(bravo);
+
+      const result = await useCase.executePaginated(1, 20, undefined, "all", testUserId, [
+        { field: "activity", direction: "desc" },
+      ]);
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.id)).toEqual([
+        alpha.value[0].id,
+        bravo.value[0].id,
+        charlie.value[0].id,
+      ]);
+    });
+
+    it("falls back to the remaining field when activity is paired with name and there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      const alpha = await protocolRepository.create(
+        { name: "Alpha", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      const bravo = await protocolRepository.create(
+        { name: "Bravo", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(alpha);
+      assertSuccess(bravo);
+
+      const result = await useCase.executePaginated(1, 20, undefined, "all", testUserId, [
+        { field: "activity", direction: "desc" },
+        { field: "name", direction: "asc" },
+      ]);
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(false);
+      expect(result.value.items.map((item) => item.name)).toEqual(["Alpha", "Bravo"]);
+    });
+
+    it("orders items consistently with the activity measurements it reports", async () => {
+      const busy = await protocolRepository.create(
+        { name: "Busy protocol", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      const quiet = await protocolRepository.create(
+        { name: "Quiet protocol", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(busy);
+      assertSuccess(quiet);
+      const busyId = busy.value[0].id;
+      const quietId = quiet.value[0].id;
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        success([
+          { date: today, resourceType: "protocol", resourceId: busyId, measurements: 9 },
+          { date: today, resourceType: "protocol", resourceId: quietId, measurements: 1 },
+        ]),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("protocol"));
+
+      const result = await useCase.executePaginated(1, 20, undefined, "all", testUserId, [
+        { field: "activity", direction: "desc" },
+      ]);
+
+      assertSuccess(result);
+      expect(result.value.activityAvailable).toBe(true);
+      const ids = result.value.items.map((item) => item.id);
+      expect(ids.indexOf(busyId)).toBeLessThan(ids.indexOf(quietId));
+      const busyItem = result.value.items.find((item) => item.id === busyId);
+      const quietItem = result.value.items.find((item) => item.id === quietId);
+      expect(busyItem?.activity?.measurements).toBe(9);
+      expect(quietItem?.activity?.measurements).toBe(1);
+    });
+
+    it("array path (execute): sorts by activity when a snapshot is available", async () => {
+      const busy = await protocolRepository.create(
+        { name: "Busy protocol", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      const quiet = await protocolRepository.create(
+        { name: "Quiet protocol", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(busy);
+      assertSuccess(quiet);
+      const busyId = busy.value[0].id;
+      const quietId = quiet.value[0].id;
+
+      const adapter = testApp.module.get(DatabricksAdapter);
+      const today = new Date().toISOString().slice(0, 10);
+      vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+        success([
+          { date: today, resourceType: "protocol", resourceId: busyId, measurements: 9 },
+          { date: today, resourceType: "protocol", resourceId: quietId, measurements: 1 },
+        ]),
+      );
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("protocol"));
+
+      const result = await useCase.execute(undefined, "all", testUserId, [
+        { field: "activity", direction: "desc" },
+      ]);
+
+      assertSuccess(result);
+      const ids = result.value.map((item) => item.id);
+      expect(ids.indexOf(busyId)).toBeLessThan(ids.indexOf(quietId));
+    });
+
+    it("array path (execute): drops the activity criterion silently when there is no snapshot", async () => {
+      await makeWarehouseUnavailable();
+      // Out of alphabetical order, so name-order output proves the default
+      // ordering ran rather than the activity criterion being honoured by luck.
+      const charlie = await protocolRepository.create(
+        { name: "Charlie", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      const alpha = await protocolRepository.create(
+        { name: "Alpha", description: "", code: [], family: "multispeq" },
+        testUserId,
+      );
+      assertSuccess(charlie);
+      assertSuccess(alpha);
+
+      const result = await useCase.execute(undefined, "all", testUserId, [
+        { field: "activity", direction: "desc" },
+      ]);
+
+      assertSuccess(result);
+      expect(result.value.map((item) => item.id)).toEqual([alpha.value[0].id, charlie.value[0].id]);
     });
   });
 });

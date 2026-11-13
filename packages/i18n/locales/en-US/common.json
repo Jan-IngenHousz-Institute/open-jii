@@ -91,6 +91,7 @@
     "sortAscending": "ascending",
     "sortDescending": "descending",
     "sortSecondary": "secondary sort",
+    "sortActivityUnavailable": "Sorting by activity is unavailable right now",
     "searchMinCharacters": "Type at least 2 characters to search",
     "searchFailed": "Could not load search results.",
     "emailMatched": "Matches the email you entered",
@@ -1299,6 +1300,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Enter protocol code as JSON",
     "columns": {
+      "macroCount_one": "{{count}} macro",
+      "macroCount_other": "{{count}} macros",
+      "macroCountLabel_one": "{{count}} compatible macro, show names",
+      "macroCountLabel_other": "{{count}} compatible macros, show names",
       "name": "Name",
       "family": "Family",
       "macros": "Macros",
@@ -1438,7 +1443,8 @@
   "autosave": {
     "saving": "Saving…",
     "saved": "All changes saved",
-    "failed": "Couldn't save your changes"
+    "failed": "Couldn't save your changes",
+    "invalid": "Not saved: check the chart settings"
   },
   "columnPicker": {
     "dragHandle": "Drag {{name}}",

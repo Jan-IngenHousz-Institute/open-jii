@@ -53,6 +53,53 @@ const baseProps = {
 };
 
 describe("YSeriesItem", () => {
+  it("orders whole-table latest values by numeric or temporal columns only", async () => {
+    const user = userEvent.setup();
+    const { form } = renderWithForm<ChartFormValues>(
+      (form) => (
+        <YSeriesItem
+          {...baseProps}
+          form={form}
+          aggregateValue="latest"
+          windowColumns={[
+            ...columns,
+            { name: "recorded_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+            { name: "site", type_name: "STRING", type_text: "STRING" },
+            { name: "payload", type_name: "BINARY", type_text: "BINARY" },
+          ]}
+          onColumnChange={vi.fn()}
+          onAggregateChange={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      ),
+      {
+        useFormProps: {
+          defaultValues: defaults({
+            dataConfig: {
+              tableName: "readings",
+              dataSources: [
+                { tableName: "readings", columnName: "time", role: "x" },
+                { tableName: "readings", columnName: "temp", role: "y", aggregate: "latest" },
+              ],
+            },
+          }),
+        },
+      },
+    );
+
+    expect(screen.getByText("workspace.shelves.windowWholeTable")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "workspace.shelves.windowPer" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "workspace.shelves.windowOrderedBy" }));
+    expect(screen.getByRole("option", { name: "temp" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "humidity" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "site" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "payload" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "recorded_at" }));
+    expect(form.getValues("dataConfig.dataSources.1.orderColumn")).toBe("recorded_at");
+  });
+
   it("renders the series header and column picker", () => {
     renderWithForm<ChartFormValues>(
       (form) => (

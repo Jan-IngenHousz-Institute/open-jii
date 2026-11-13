@@ -80,3 +80,18 @@ Earlier versions injected this into `_config.py` at wheel-build time (one wheel 
 `pnpm build` produces wheels for every lib via `uv build --all-packages` (these end up in `dist/`).
 
 The Databricks bundle (`databricks.yml`) builds wheels and uploads notebooks via `databricks bundle deploy`. CI for that is in [.github/workflows/deploy-databricks.yml](../../.github/workflows/deploy-databricks.yml). Pipeline and job definitions themselves live in terraform, not in the bundle.
+
+### Changing experiment views
+
+Platform experiment reads use the warehouse views as their source. The backend
+replaces the Device struct's display serial in its query, so charts and filters
+share one label rule. Exports and the Python library read the original registry
+struct from the views. Raw and macro views expose `client_id` for the label rule;
+the platform hides that base column and preserves user fields with the same name.
+
+Apply view changes before deploying a backend that depends on new columns. After
+applying or rolling back a view definition, restart every backend instance to
+refresh its `experiment-schema:` cache. Source column lists stay cached for one
+hour. A cached list that names a removed column can fail reads until it refreshes.
+Before the `client_id` addition is available, the backend uses the device name and
+device id for fallback labels.

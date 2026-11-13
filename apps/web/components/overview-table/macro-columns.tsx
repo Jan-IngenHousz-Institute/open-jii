@@ -70,10 +70,16 @@ export function getMacroColumns(
       header: t("macros.columns.protocols"),
       sortId: "protocols",
       className: "hidden w-56 xl:table-cell",
-      cell: (macro) => <CompatibleProtocolsCell macroId={macro.id} />,
+      cell: (macro) => (
+        <CompatibleProtocolsCell
+          macroId={macro.id}
+          compatibleProtocolCount={macro.compatibleProtocolCount}
+        />
+      ),
     },
     {
       header: t("macros.columns.activity"),
+      sortId: "activity",
       // Gated like the other secondary columns: ungated, it left the name ~90px.
       className: "hidden w-48 lg:table-cell",
       cell: (macro) => (

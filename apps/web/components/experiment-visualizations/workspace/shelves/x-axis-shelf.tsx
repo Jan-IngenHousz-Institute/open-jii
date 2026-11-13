@@ -4,6 +4,10 @@ import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { ColumnName } from "~/components/experiment-data/column-name";
 
+import {
+  aggregateKind,
+  requiresGroupBy,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentTimeBucketUnit } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
@@ -67,7 +71,7 @@ export function XAxisShelf({
   const xColumn = columns.find((c) => c.name === xColumnName);
   const isTemporal = getColumnKind(xColumn?.type_text) === "temporal";
   const currentBucket = getColumnBucket(aggregation, xColumnName);
-  const hasFunctions = (aggregation?.functions?.length ?? 0) > 0;
+  const hasFunctions = aggregation?.functions?.some((fn) => requiresGroupBy(fn.function)) ?? false;
 
   const handleColumnChange = (value: string) => {
     const tableName = form.getValues("dataConfig.tableName");
@@ -110,7 +114,10 @@ export function XAxisShelf({
     // Bucketing X without aggregating Y produces SQL that projects only
     // the bucket. Default each Y series without an explicit aggregate to
     // AVG so picking a Bucket actually changes the chart.
-    if (bucket !== undefined) {
+    if (
+      bucket !== undefined &&
+      !sources.some((source) => source.aggregate && aggregateKind(source.aggregate) === "rowWindow")
+    ) {
       const ySources = dataSourcesByRole(sources, "y").filter(
         (d) => d.source.columnName && d.source.columnName.length > 0,
       );

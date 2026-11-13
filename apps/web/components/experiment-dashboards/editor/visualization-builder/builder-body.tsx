@@ -77,6 +77,8 @@ export function BuilderBody({ experimentId, renderWidgetTab }: BuilderBodyProps)
       columnName: "",
       alias: "",
       aggregate: undefined,
+      partitionColumn: "",
+      orderColumn: "",
     }));
     form.setValue("dataConfig.dataSources", reset, { shouldDirty: true });
     form.setValue("dataConfig.join", undefined, { shouldDirty: true });

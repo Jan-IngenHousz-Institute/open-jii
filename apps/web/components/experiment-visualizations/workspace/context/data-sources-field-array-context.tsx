@@ -45,6 +45,8 @@ export function DataSourcesFieldArrayProvider({
       `dataConfig.dataSources.${newLength}.columnName` as const,
       `dataConfig.dataSources.${newLength}.alias` as const,
       `dataConfig.dataSources.${newLength}.errorColumn` as const,
+      `dataConfig.dataSources.${newLength}.partitionColumn` as const,
+      `dataConfig.dataSources.${newLength}.orderColumn` as const,
       `dataConfig.dataSources.${newLength}.traceType` as const,
       `dataConfig.dataSources.${newLength}.axis` as const,
     ]);

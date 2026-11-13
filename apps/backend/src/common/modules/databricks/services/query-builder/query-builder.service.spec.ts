@@ -904,3 +904,121 @@ describe("as-of joins", () => {
     ).toBe(true);
   });
 });
+
+describe("ordered aggregate query inputs", () => {
+  const service = new QueryBuilderService();
+
+  it("filters all rows before LAG and only then applies the result limit", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "readings",
+        filters: [{ column: "value", operator: "greater_than", value: 5 }],
+        aggregation: {
+          functions: [{ column: "value", function: "previous", orderColumn: "timestamp" }],
+        },
+        limit: 2,
+      }),
+    );
+    expect(sql).toBe(
+      "SELECT *, CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST) END AS `value_previous` FROM (SELECT * FROM readings WHERE `value` > 5) LIMIT 2",
+    );
+  });
+
+  it("returns a bad request for a raw window mixed with grouped rows", () => {
+    const result = service.buildQuery({
+      table: "readings",
+      aggregation: {
+        groupBy: [{ column: "sensor" }],
+        functions: [{ column: "value", function: "previous", orderColumn: "timestamp" }],
+      },
+    });
+    expect(result.isFailure()).toBe(true);
+    if (result.isFailure()) expect(result.error.statusCode).toBe(400);
+  });
+
+  it.each(["latest", "previous"] as const)(
+    "keeps a second-table order column referenced only by %s",
+    (fn) => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "readings",
+          columns:
+            fn === "previous" ? ["id", "value", "second__ordered", "second__station"] : undefined,
+          aggregation: {
+            functions: [
+              {
+                column: "value",
+                function: fn,
+                orderColumn: "second__ordered",
+                ...(fn === "previous" ? { partitionColumn: "second__station" } : {}),
+              },
+            ],
+          },
+          join: {
+            secondary: { table: "weather" },
+            primaryColumns: ["id", "timestamp", "station", "value"],
+            secondaryColumns: [
+              { name: "ordered", alias: "second__ordered" },
+              { name: "station", alias: "second__station" },
+              { name: "unused", alias: "second__unused" },
+            ],
+            matchColumn: "station",
+            primaryTimeColumn: "timestamp",
+            secondaryTimeColumn: "timestamp",
+            primaryTimeType: "TIMESTAMP",
+            secondaryTimeType: "TIMESTAMP",
+            toleranceMinutes: 5,
+          },
+        }),
+      );
+      expect(sql).toContain("s.`ordered`");
+      if (fn === "previous") expect(sql).toContain("s.`station`");
+      expect(sql).not.toContain("s.`unused`");
+    },
+  );
+});
+
+describe("number question answers", () => {
+  const service = new QueryBuilderService();
+  const variants = [
+    { columnName: "questions_data", schema: "OBJECT<height: DOUBLE, plot: STRING>" },
+  ];
+  const height = `try_variant_get(\`questions_data\`, '$["height"]', 'DOUBLE')`;
+  const plot = `try_variant_get(\`questions_data\`, '$["plot"]', 'STRING')`;
+
+  it.each(["ASC", "DESC"] as const)(
+    "sorts %s with empty answers last and the row id breaking ties",
+    (direction) => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "measurements",
+          variants,
+          reservedColumns: ["id"],
+          ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+        }),
+      );
+
+      expect(sql.endsWith(`ORDER BY \`height\` ${direction} NULLS LAST, \`id\` ASC`)).toBe(true);
+    },
+  );
+
+  it("compares text with the number it holds, so text that is not one matches no row", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "measurements",
+        variants,
+        filters: [
+          { column: "height", operator: "equals", value: "n/a" },
+          { column: "height", operator: "in", value: ["10", ""] },
+          { column: "height", operator: "greater_than", value: 10 },
+          { column: "plot", operator: "equals", value: "007" },
+        ],
+      }),
+    );
+
+    expect(sql).toContain(`${height} = try_cast('n/a' AS DOUBLE)`);
+    expect(sql).toContain(`${height} IN (try_cast('10' AS DOUBLE), try_cast('' AS DOUBLE))`);
+    expect(sql).toContain(`${height} > 10`);
+    expect(sql).toContain(`${plot} = '007'`);
+  });
+});

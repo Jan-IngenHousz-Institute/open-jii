@@ -34,6 +34,18 @@ describe("ProtocolRepository explicit sorting", () => {
       .where(eq(protocols.id, id));
   }
 
+  // Names run against id order, so a result in name order cannot come from the id tiebreak.
+  async function nameAgainstIdOrder(ids: string[]) {
+    const expected = [...ids].sort().reverse();
+    for (const [index, id] of expected.entries()) {
+      await testApp.database
+        .update(protocols)
+        .set({ name: `Tie ${String.fromCharCode(65 + index)}` })
+        .where(eq(protocols.id, id));
+    }
+    return expected;
+  }
+
   async function linkMacros(protocolId: string, count: number) {
     for (let index = 0; index < count; index += 1) {
       const macro = await testApp.createMacro({
@@ -178,12 +190,13 @@ describe("ProtocolRepository explicit sorting", () => {
     expect(unsorted.value.items[0]?.id).toBe(preferred.id);
   });
 
-  it("breaks count ties by ID so pages never repeat or skip a row", async () => {
+  it("breaks count ties by the default order so pages never repeat or skip a row", async () => {
     const created = await Promise.all(
       ["Tie one", "Tie two", "Tie three"].map((name) =>
         testApp.createProtocol({ name, createdBy: owner, visibility: "public" }),
       ),
     );
+    const expected = await nameAgainstIdOrder(created.map((protocol) => protocol.id));
     const sort = [{ field: "macros", direction: "asc" }] as const;
 
     const [first, second] = await Promise.all([
@@ -194,7 +207,7 @@ describe("ProtocolRepository explicit sorting", () => {
     assertSuccess(first);
     assertSuccess(second);
     const ids = [...first.value.items, ...second.value.items].map((protocol) => protocol.id);
-    expect(ids).toEqual(created.map((protocol) => protocol.id).sort());
+    expect(ids).toEqual(expected);
     expect(first.value.totalCount).toBe(created.length);
   });
 
@@ -343,6 +356,315 @@ describe("ProtocolRepository explicit sorting", () => {
       assertSuccess(result);
       expect(result.value.items.map((protocol) => protocol.id)).toEqual([ambyte.id]);
       expect(result.value.totalCount).toBe(2);
+    });
+  });
+
+  it("returns only accessible macros in paginated counts and count sorting", async () => {
+    const privateOwner = await testApp.createTestUser({});
+    const hiddenLinks = await testApp.createProtocol({
+      name: "Alpha hidden links",
+      createdBy: owner,
+      visibility: "public",
+    });
+    const publicLink = await testApp.createProtocol({
+      name: "Bravo public link",
+      createdBy: owner,
+      visibility: "public",
+    });
+    const unlinked = await testApp.createProtocol({
+      name: "Charlie unlinked",
+      createdBy: owner,
+      visibility: "public",
+    });
+    for (let index = 0; index < 2; index += 1) {
+      const linked = await testApp.createMacro({
+        name: `Private linked macro ${index}`,
+        createdBy: privateOwner,
+        visibility: "private",
+      });
+      await testApp.database.insert(protocolMacros).values({
+        protocolId: hiddenLinks.id,
+        macroId: linked.id,
+      });
+    }
+    const visible = await testApp.createMacro({
+      name: "Public linked macro",
+      createdBy: privateOwner,
+      visibility: "public",
+    });
+    await testApp.database.insert(protocolMacros).values({
+      protocolId: publicLink.id,
+      macroId: visible.id,
+    });
+
+    for (const userId of [owner, undefined, privateOwner]) {
+      for (const direction of ["asc", "desc"] as const) {
+        const result = await repository.findPage(1, 20, undefined, undefined, userId, undefined, [
+          { field: "macros", direction },
+        ]);
+        assertSuccess(result);
+        const ascending =
+          userId === privateOwner
+            ? [
+                [unlinked.id, 0],
+                [publicLink.id, 1],
+                [hiddenLinks.id, 2],
+              ]
+            : [
+                [hiddenLinks.id, 0],
+                [unlinked.id, 0],
+                [publicLink.id, 1],
+              ];
+        const descending =
+          userId === privateOwner
+            ? [
+                [hiddenLinks.id, 2],
+                [publicLink.id, 1],
+                [unlinked.id, 0],
+              ]
+            : [
+                [publicLink.id, 1],
+                [hiddenLinks.id, 0],
+                [unlinked.id, 0],
+              ];
+        const expected = direction === "asc" ? ascending : descending;
+        expect(result.value.items.map((item) => [item.id, item.compatibleMacroCount])).toEqual(
+          expected,
+        );
+        expect(result.value.totalCount).toBe(3);
+      }
+    }
+  });
+
+  describe("activity sort", () => {
+    it("puts a protocol with no activity total last in both directions", async () => {
+      const active = await testApp.createProtocol({
+        name: "Active protocol",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const none = await testApp.createProtocol({
+        name: "No activity protocol",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const totals = new Map([[active.id, 7]]);
+
+      const ascending = await repository.findAll(
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        undefined,
+        [{ field: "activity", direction: "asc" }],
+        undefined,
+        totals,
+      );
+      const descending = await repository.findAll(
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        undefined,
+        [{ field: "activity", direction: "desc" }],
+        undefined,
+        totals,
+      );
+
+      assertSuccess(ascending);
+      assertSuccess(descending);
+      expect(ascending.value.map((protocol) => protocol.id)).toEqual([active.id, none.id]);
+      expect(descending.value.map((protocol) => protocol.id)).toEqual([active.id, none.id]);
+    });
+
+    it("orders by activity whether it is the first or the second sort key", async () => {
+      const zulu = await testApp.createProtocol({
+        name: "Zulu",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const alpha = await testApp.createProtocol({
+        name: "Alpha",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const mike = await testApp.createProtocol({
+        name: "Mike",
+        createdBy: owner,
+        visibility: "public",
+      });
+      // zulu and alpha tie on activity; mike trails both.
+      const totals = new Map([
+        [zulu.id, 10],
+        [alpha.id, 10],
+        [mike.id, 1],
+      ]);
+
+      const activityThenName = await repository.findAll(
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        undefined,
+        [
+          { field: "activity", direction: "desc" },
+          { field: "name", direction: "asc" },
+        ],
+        undefined,
+        totals,
+      );
+      const nameThenActivity = await repository.findAll(
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        undefined,
+        [
+          { field: "name", direction: "asc" },
+          { field: "activity", direction: "desc" },
+        ],
+        undefined,
+        totals,
+      );
+
+      assertSuccess(activityThenName);
+      assertSuccess(nameThenActivity);
+      expect(activityThenName.value.map((protocol) => protocol.id)).toEqual([
+        alpha.id,
+        zulu.id,
+        mike.id,
+      ]);
+      expect(nameThenActivity.value.map((protocol) => protocol.id)).toEqual([
+        alpha.id,
+        mike.id,
+        zulu.id,
+      ]);
+    });
+
+    it("never repeats or drops a row across pages when many totals tie", async () => {
+      const created = await Promise.all(
+        ["Tie one", "Tie two", "Tie three", "Tie four"].map((name) =>
+          testApp.createProtocol({ name, createdBy: owner, visibility: "public" }),
+        ),
+      );
+      const expected = await nameAgainstIdOrder(created.map((protocol) => protocol.id));
+      const totals = new Map(created.map((protocol) => [protocol.id, 5]));
+      const sort = [{ field: "activity", direction: "desc" }] as const;
+
+      const [first, second] = await Promise.all([
+        repository.findPage(
+          1,
+          2,
+          undefined,
+          undefined,
+          owner,
+          undefined,
+          [...sort],
+          undefined,
+          totals,
+        ),
+        repository.findPage(
+          2,
+          2,
+          undefined,
+          undefined,
+          owner,
+          undefined,
+          [...sort],
+          undefined,
+          totals,
+        ),
+      ]);
+
+      assertSuccess(first);
+      assertSuccess(second);
+      const ids = [...first.value.items, ...second.value.items].map((protocol) => protocol.id);
+      expect(ids).toEqual(expected);
+      expect(new Set(ids).size).toBe(created.length);
+      expect(first.value.totalCount).toBe(created.length);
+    });
+
+    it("does not change the page count when sorting by activity", async () => {
+      const created = await Promise.all(
+        ["Count one", "Count two", "Count three"].map((name) =>
+          testApp.createProtocol({ name, createdBy: owner, visibility: "public" }),
+        ),
+      );
+      const totals = new Map([[created[0].id, 3]]);
+
+      const withActivity = await repository.findPage(
+        1,
+        1,
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        [{ field: "activity", direction: "desc" }],
+        undefined,
+        totals,
+      );
+      const withoutActivity = await repository.findPage(1, 1, undefined, undefined, owner);
+
+      assertSuccess(withActivity);
+      assertSuccess(withoutActivity);
+      expect(withActivity.value.totalCount).toBe(created.length);
+      expect(withActivity.value.totalCount).toBe(withoutActivity.value.totalCount);
+    });
+
+    it("ignores activity totals entirely when the sort does not include activity", async () => {
+      const alpha = await testApp.createProtocol({
+        name: "Alpha",
+        createdBy: owner,
+        visibility: "public",
+      });
+      const bravo = await testApp.createProtocol({
+        name: "Bravo",
+        createdBy: owner,
+        visibility: "public",
+      });
+      // Out of int4 range: if this were joined anyway, the query would fail to
+      // bind it rather than silently ignore it, so success here is itself proof
+      // that a non-activity sort never triggers the join.
+      const totals = new Map([[bravo.id, Number.MAX_SAFE_INTEGER]]);
+
+      const result = await repository.findAll(
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        undefined,
+        [{ field: "name", direction: "asc" }],
+        undefined,
+        totals,
+      );
+
+      assertSuccess(result);
+      expect(result.value.map((protocol) => protocol.id)).toEqual([alpha.id, bravo.id]);
+    });
+
+    it("accepts an empty totals map, treating every row as having no activity", async () => {
+      const created = await Promise.all(
+        ["Empty one", "Empty two", "Empty three"].map((name) =>
+          testApp.createProtocol({ name, createdBy: owner, visibility: "public" }),
+        ),
+      );
+      const expected = await nameAgainstIdOrder(created.map((protocol) => protocol.id));
+      const empty = new Map<string, number>();
+
+      const result = await repository.findAll(
+        undefined,
+        undefined,
+        owner,
+        undefined,
+        undefined,
+        [{ field: "activity", direction: "desc" }],
+        undefined,
+        empty,
+      );
+
+      assertSuccess(result);
+      // Every row ties at "no activity", so the default order decides.
+      expect(result.value.map((protocol) => protocol.id)).toEqual(expected);
     });
   });
 });

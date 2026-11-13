@@ -77,6 +77,8 @@ const zProtocolListEntry = zProtocol.extend({
   code: z.unknown(),
   /** Present on the paginated list, which reads it for the rows it returns. */
   activity: zResourceSeries.nullable().optional(),
+  /** Compatible macros the caller can open. Present on the paginated list only. */
+  compatibleMacroCount: z.number().int().nonnegative().optional(),
 });
 
 export const zProtocolList = z.array(zProtocolListEntry);
@@ -89,7 +91,7 @@ export const zProtocolDetail = zProtocol.extend({
   capabilities: zResourceCapabilities,
 });
 
-export const zProtocolSort = zListSort(z.enum(["name", "family", "macros", "updated"]));
+export const zProtocolSort = zListSort(z.enum(["name", "family", "macros", "updated", "activity"]));
 export type ProtocolSort = z.infer<typeof zProtocolSort>;
 
 // Query parameters
@@ -109,7 +111,9 @@ export const zProtocolFilterQuery = z
   })
   .merge(zPaginationQuery);
 
-export const zProtocolPaginatedList = zPaginated(zProtocolListEntry);
+export const zProtocolPaginatedList = zPaginated(zProtocolListEntry).extend({
+  activityAvailable: z.boolean(),
+});
 
 /** Array when the caller sent no `page`, envelope when they did. */
 export const zProtocolListResponse = z.union([zProtocolList, zProtocolPaginatedList]);

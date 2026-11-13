@@ -91,6 +91,7 @@
     "sortAscending": "oplopend",
     "sortDescending": "aflopend",
     "sortSecondary": "tweede sortering",
+    "sortActivityUnavailable": "Sorteren op activiteit is nu niet beschikbaar",
     "searchMinCharacters": "Typ minimaal 2 tekens om te zoeken",
     "searchFailed": "Zoekresultaten konden niet worden geladen.",
     "emailMatched": "Komt overeen met het ingevoerde e-mailadres",
@@ -1299,6 +1300,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Voer protocol code in als JSON",
     "columns": {
+      "macroCount_one": "{{count}} macro",
+      "macroCount_other": "{{count}} macro's",
+      "macroCountLabel_one": "{{count}} compatibele macro, namen tonen",
+      "macroCountLabel_other": "{{count}} compatibele macro's, namen tonen",
       "name": "Naam",
       "family": "Familie",
       "macros": "Macro's",
