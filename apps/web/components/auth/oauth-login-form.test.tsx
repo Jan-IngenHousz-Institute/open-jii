@@ -70,7 +70,7 @@ describe("OAuthLoginForm", () => {
   });
 
   it.each(["github", "orcid"])("returns %s users through registration to Equipment", async (id) => {
-    const callbackUrl = "https://equipment.openjii.org/login/openjii?returnTo=%2Fdevices";
+    const callbackUrl = "http://localhost:3100/login/openjii?returnTo=%2Fdevices";
     render(<OAuthLoginForm locale="en-US" provider={{ id, name: id }} callbackUrl={callbackUrl} />);
     await userEvent.setup().click(screen.getByRole("button"));
     expect(mockSignInSocial).toHaveBeenCalledWith(

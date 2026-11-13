@@ -48,6 +48,15 @@ describe("auth return addresses", () => {
     ).toBe("http://localhost:3100/login/openjii");
   });
 
+  it.each(["dev", "local"])("refuses production Equipment in %s", (environment) => {
+    expect(
+      resolveAuthCallback("https://equipment.openjii.org/login/openjii", {
+        ...settings,
+        environment,
+      }),
+    ).toBe("/platform");
+  });
+
   it("keeps the production sibling allowlist explicit and refuses unknown environments", () => {
     expect(getSiblingAppOrigins("prod")).toEqual(["https://equipment.openjii.org"]);
     expect(getSiblingAppOrigins("unknown")).toEqual([]);

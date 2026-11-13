@@ -1,7 +1,8 @@
+// Dev and local session cookies never reach production Equipment, so they return to a local one.
 const siblingAppOrigins: Record<string, readonly string[]> = {
   prod: ["https://equipment.openjii.org"],
-  dev: ["https://equipment.openjii.org", "http://localhost:3100"],
-  local: ["https://equipment.openjii.org", "http://localhost:3100"],
+  dev: ["http://localhost:3100"],
+  local: ["http://localhost:3100"],
 };
 
 export function getSiblingAppOrigins(environment: string): readonly string[] {

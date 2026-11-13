@@ -196,7 +196,7 @@ describe("RegistrationForm", () => {
       completeSubscription = () => resolve(undefined);
     });
     mockSubscribeNewsletter.mockReturnValueOnce(subscription);
-    const callbackUrl = "https://equipment.openjii.org/login/openjii";
+    const callbackUrl = "http://localhost:3100/login/openjii";
     render(<RegistrationForm {...defaultProps} callbackUrl={callbackUrl} />);
 
     const user = userEvent.setup();
@@ -210,6 +210,21 @@ describe("RegistrationForm", () => {
     expect(pushMock).not.toHaveBeenCalled();
     completeSubscription();
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(callbackUrl));
+  });
+
+  it("does not hold a same-origin destination for the newsletter subscription", async () => {
+    mockSubscribeNewsletter.mockReturnValueOnce(new Promise(() => undefined));
+    render(<RegistrationForm {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("registration.firstName"), "News");
+    await user.type(screen.getByLabelText("registration.lastName"), "Reader");
+    await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+    await user.click(screen.getByRole("checkbox", { name: "registration.newsletterOptIn" }));
+    await user.click(screen.getByRole("button", { name: "registration.register" }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(mockSubscribeNewsletter).toHaveBeenCalledTimes(1);
   });
 
   it("does not call the newsletter endpoint when the user leaves the opt-in unchecked", async () => {
@@ -230,10 +245,7 @@ describe("RegistrationForm", () => {
   it("completes registration when the newsletter subscription fails", async () => {
     mockSubscribeNewsletter.mockRejectedValueOnce(new Error("Mailchimp unavailable"));
     render(
-      <RegistrationForm
-        {...defaultProps}
-        callbackUrl="https://equipment.openjii.org/login/openjii"
-      />,
+      <RegistrationForm {...defaultProps} callbackUrl="http://localhost:3100/login/openjii" />,
     );
 
     const user = userEvent.setup();
@@ -244,7 +256,7 @@ describe("RegistrationForm", () => {
     await user.click(screen.getByRole("button", { name: "registration.register" }));
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("https://equipment.openjii.org/login/openjii");
+      expect(pushMock).toHaveBeenCalledWith("http://localhost:3100/login/openjii");
       expect(toastMock).toHaveBeenCalledWith({
         description: "registration.newsletterOptInError",
       });
@@ -277,7 +289,7 @@ describe("RegistrationForm", () => {
   });
 
   it.each([
-    ["https://equipment.openjii.org/login/openjii", "https://equipment.openjii.org/login/openjii"],
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
     ["https://example.com", "/platform"],
   ])("validates the registration return address %s", async (callbackUrl, expected) => {
     render(<RegistrationForm {...defaultProps} callbackUrl={callbackUrl} />);

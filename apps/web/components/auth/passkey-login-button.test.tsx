@@ -31,7 +31,7 @@ describe("PasskeyLoginButton", () => {
   });
 
   it.each([
-    ["https://equipment.openjii.org/login/openjii", "https://equipment.openjii.org/login/openjii"],
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
     ["https://example.com", "/platform"],
   ])("validates the return address %s", async (callbackUrl, expected) => {
     const { router } = render(<PasskeyLoginButton callbackUrl={callbackUrl} />);

@@ -86,7 +86,7 @@ describe("EmailLoginForm", () => {
   });
 
   it.each([
-    ["https://equipment.openjii.org/login/openjii", "https://equipment.openjii.org/login/openjii"],
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
     ["https://example.com", "/platform"],
   ])("validates the email code return address %s", async (callbackUrl, expected) => {
     const { router } = render(<EmailLoginForm {...defaultProps} callbackUrl={callbackUrl} />);
@@ -100,7 +100,7 @@ describe("EmailLoginForm", () => {
       error: null,
       data: { user: { registered: false } },
     });
-    const callbackUrl = "https://equipment.openjii.org/login/openjii";
+    const callbackUrl = "http://localhost:3100/login/openjii";
     const { router } = render(<EmailLoginForm {...defaultProps} callbackUrl={callbackUrl} />);
     await submitEmail();
     await submitOTP();
@@ -126,22 +126,29 @@ describe("EmailLoginForm", () => {
     expect(authClient.signIn.passkey).not.toHaveBeenCalled();
   });
 
-  it("signs in and redirects when conditional passkey autofill is picked", async () => {
-    vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null } as never);
-    Object.defineProperty(window, "PublicKeyCredential", {
-      value: { isConditionalMediationAvailable: () => Promise.resolve(true) },
-      configurable: true,
-    });
-    try {
-      const { router } = render(<EmailLoginForm {...defaultProps} />);
-      await waitFor(() =>
-        expect(authClient.signIn.passkey).toHaveBeenCalledWith({ autoFill: true }),
-      );
-      await waitFor(() => expect(router.push).toHaveBeenCalledWith("/platform"));
-    } finally {
-      Reflect.deleteProperty(window, "PublicKeyCredential");
-    }
-  });
+  // The hostile row catches a revert to `router.push(callbackUrl ?? "/platform")`.
+  it.each([
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
+    ["https://example.com", "/platform"],
+  ])(
+    "signs in and validates the return address %s when conditional passkey autofill is picked",
+    async (callbackUrl, expected) => {
+      vi.mocked(authClient.signIn.passkey).mockResolvedValue({ data: null, error: null } as never);
+      Object.defineProperty(window, "PublicKeyCredential", {
+        value: { isConditionalMediationAvailable: () => Promise.resolve(true) },
+        configurable: true,
+      });
+      try {
+        const { router } = render(<EmailLoginForm {...defaultProps} callbackUrl={callbackUrl} />);
+        await waitFor(() =>
+          expect(authClient.signIn.passkey).toHaveBeenCalledWith({ autoFill: true }),
+        );
+        await waitFor(() => expect(router.push).toHaveBeenCalledWith(expected));
+      } finally {
+        Reflect.deleteProperty(window, "PublicKeyCredential");
+      }
+    },
+  );
 
   it("cancels conditional passkey sign-in when the user continues with email OTP", async () => {
     vi.mocked(authClient.signIn.passkey).mockImplementation(() => new Promise(() => undefined));

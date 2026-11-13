@@ -33,6 +33,10 @@ export interface Registration {
   otp?: string;
 }
 
+function leavesThisOrigin(destination: string): boolean {
+  return new URL(destination, window.location.href).origin !== window.location.origin;
+}
+
 export function RegistrationForm({
   callbackUrl,
   termsData,
@@ -114,8 +118,9 @@ export function RegistrationForm({
       return;
     }
 
+    const destination = getAuthCallback(callbackUrl);
     if (newsletterOptIn) {
-      await subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
+      const subscription = subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
         const isForgottenEmail = parseApiError(error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
         toast({
           description: isForgottenEmail
@@ -123,10 +128,12 @@ export function RegistrationForm({
             : t("registration.newsletterOptInError"),
         });
       });
+      // Only a cross-origin page load aborts the request, and Mailchimp calls have no timeout.
+      if (leavesThisOrigin(destination)) await subscription;
     }
 
     toast({ description: t("registration.successMessage") });
-    router.push(getAuthCallback(callbackUrl));
+    router.push(destination);
   };
 
   const { mutateAsync: createUserProfile } = useCreateUserProfile({
