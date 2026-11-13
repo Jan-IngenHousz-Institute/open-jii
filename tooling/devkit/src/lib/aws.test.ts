@@ -1,21 +1,19 @@
-import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { KinesisClient, PutRecordsCommand } from "@aws-sdk/client-kinesis";
 import { GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { mockClient } from "aws-sdk-client-mock";
+import { Agent } from "node:https";
 import { Readable } from "node:stream";
 import { gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createArchiveReader, createStreamReaders, createStreamWriter } from "./aws.js";
+import { createArchiveReader, createStreamWriter, streamWriterConfig } from "./aws.js";
 
 const s3 = mockClient(S3Client);
 const kinesis = mockClient(KinesisClient);
-const cloudwatch = mockClient(CloudWatchClient);
 
 afterEach(() => {
   s3.reset();
   kinesis.reset();
-  cloudwatch.reset();
 });
 
 /** An S3 object body as the SDK hands it back: a stream that can also read itself whole. */
@@ -117,31 +115,15 @@ describe("createStreamWriter", () => {
   });
 });
 
-describe("createStreamReaders", () => {
-  const now = new Date("2026-10-07T14:00:00Z");
+describe("streamWriterConfig", () => {
+  it("never lets the SDK resend a request, and opens a connection per request", () => {
+    const config = streamWriterConfig("openjii-dev");
 
-  it("takes how far the slowest reader had read from the latest minute's iterator age", async () => {
-    cloudwatch.on(GetMetricStatisticsCommand).resolves({
-      Datapoints: [
-        { Timestamp: new Date("2026-10-07T13:57:00Z"), Maximum: 0 },
-        { Timestamp: new Date("2026-10-07T13:58:00Z"), Maximum: 90_000 },
-        { Timestamp: new Date("2026-10-07T13:56:00Z"), Maximum: 0 },
-      ],
-    });
+    const handler = config.requestHandler;
+    const agent = handler !== undefined && "httpsAgent" in handler ? handler.httpsAgent : undefined;
 
-    const readUpTo = await createStreamReaders("stream", "openjii-dev").readUpTo(now);
-
-    expect(readUpTo).toEqual(new Date("2026-10-07T13:56:30Z"));
-    const [call] = cloudwatch.commandCalls(GetMetricStatisticsCommand);
-    expect(call.args[0].input.MetricName).toBe("GetRecords.IteratorAgeMilliseconds");
-    expect(call.args[0].input.Dimensions).toEqual([{ Name: "StreamName", Value: "stream" }]);
-    expect(call.args[0].input.StartTime).toEqual(new Date("2026-10-07T13:50:00Z"));
-    expect(call.args[0].input.Statistics).toEqual(["Maximum"]);
-  });
-
-  it("says nothing read the stream when the metric has no datapoints", async () => {
-    cloudwatch.on(GetMetricStatisticsCommand).resolves({ Datapoints: [] });
-
-    expect(await createStreamReaders("stream", "openjii-dev").readUpTo(now)).toBeNull();
+    expect(config.maxAttempts).toBe(1);
+    expect(config.profile).toBe("openjii-dev");
+    expect(agent instanceof Agent ? agent.options.keepAlive : undefined).toBe(false);
   });
 });

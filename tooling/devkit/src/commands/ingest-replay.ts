@@ -3,14 +3,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { optionAfter } from "../lib/args.js";
-import { createArchiveReader, createStreamReaders, createStreamWriter } from "../lib/aws.js";
-import type {
-  ArchiveObject,
-  ArchiveReader,
-  StreamReaders,
-  StreamRecord,
-  StreamWriter,
-} from "../lib/aws.js";
+import { createArchiveReader, createStreamWriter } from "../lib/aws.js";
+import type { ArchiveObject, ArchiveReader, StreamRecord, StreamWriter } from "../lib/aws.js";
 import { pathFromRoot, repositoryRoot } from "../lib/config.js";
 import { createWarehouse } from "../lib/databricks.js";
 import type { StatementParameter, Warehouse } from "../lib/databricks.js";
@@ -25,6 +19,7 @@ export interface ReplayArgs {
   source: Source;
   experiment: string | null;
   client: string | null;
+  device: string | null;
   warehouse: string;
   awsProfile: string;
   databricksProfile: string;
@@ -55,6 +50,8 @@ export interface Message {
   deviceId: string | null;
   timestampMs: number | null;
   sampleDigest: string;
+  /** The sample's size as text, which bounds what a content lookup brings back. */
+  sampleBytes: number;
 }
 
 export interface Entry {
@@ -79,8 +76,9 @@ export interface Manifest {
   to: string;
   experiment: string | null;
   client: string | null;
+  device: string | null;
   applied: boolean;
-  /** How far bronze had read the stream, when the window was still inside the stream's retention. */
+  /** How far bronze had read the stream on its slowest shard, when the stream may still hold what was read. */
   bronzeReadUpTo: string | null;
   streamMayHold: boolean;
   restoreFirst: string[];
@@ -92,11 +90,12 @@ export interface Manifest {
 export interface ReplayDeps {
   archive: ArchiveReader;
   stream: StreamWriter;
-  readers: StreamReaders;
   warehouse: Warehouse;
   wait: (ms: number) => Promise<void>;
   now: Date;
   runId: string;
+  /** Aborted when the operator stops the run; it then ends after the batch in hand. */
+  stop: AbortSignal;
 }
 
 interface Statement {
@@ -122,7 +121,7 @@ interface BronzeHolding {
 
 const USAGE =
   "Usage: ingest:replay <dev|prod> --from <UTC time> --to <UTC time> --warehouse <id> " +
-  "[--source archive|errors] [--experiment <id>] [--client <thing name>] " +
+  "[--source archive|errors] [--experiment <id>] [--client <thing name>] [--device <device id>] " +
   "[--aws-profile <name>] [--databricks-profile <name>] [--apply]";
 const VALUE_FLAGS = new Set([
   "--from",
@@ -130,6 +129,7 @@ const VALUE_FLAGS = new Set([
   "--source",
   "--experiment",
   "--client",
+  "--device",
   "--warehouse",
   "--aws-profile",
   "--databricks-profile",
@@ -147,10 +147,15 @@ const BRONZE_CAUGHT_UP_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
-// A Firehose object holds up to 128 MB before compression.
+// Objects read at once. Each can hold up to 128 MB once unzipped, Firehose's buffer.
 const READ_CONCURRENCY = 4;
 // The messages bronze is asked about at a time, which bounds each statement's parameters.
 const LOOKUP_SIZE = 1000;
+// Samples a content lookup asks after at once, well under the warehouse's 25 MiB inline result.
+const CONTENT_LOOKUP_BYTES = 8 * 1024 * 1024;
+// A copy ingested further back than this before the window is not looked for, which bounds the
+// scan; a message whose only copy is older is sent again, and the runbook's query lists the copy.
+const LOOKBACK_DAYS = 30;
 
 // A quarter of a shard's write limit (1,000 records, 1 MiB a second), leaving live ingest the rest.
 const BATCH_RECORDS = 250;
@@ -165,7 +170,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** A field as bronze keeps it: text, or a number or flag written as text. */
 function textOf(value: unknown): string | null {
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
   return typeof value === "string" && value !== "" ? value : null;
 }
 
@@ -173,7 +182,7 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** A time as UTC milliseconds; a time without a zone is read as UTC, as the pipeline reads it. */
+/** A time as UTC milliseconds; a time without a zone is read as UTC. */
 export function utcMillis(value: unknown): number | null {
   if (typeof value !== "string") {
     return null;
@@ -245,6 +254,7 @@ export function parseArgs(given: string[]): ReplayArgs {
     source,
     experiment: optionAfter(args, "--experiment"),
     client: optionAfter(args, "--client"),
+    device: optionAfter(args, "--device"),
     warehouse,
     awsProfile: optionAfter(args, "--aws-profile") ?? `openjii-${environment}`,
     databricksProfile: optionAfter(args, "--databricks-profile") ?? environment,
@@ -275,6 +285,7 @@ export function messageOf(object: string, line: number, data: string): Message |
     return null;
   }
 
+  const sample = canonicalSample(parsed.sample);
   return {
     object,
     line,
@@ -284,7 +295,8 @@ export function messageOf(object: string, line: number, data: string): Message |
     recordId: textOf(parsed._client_id),
     deviceId: textOf(parsed.device_id),
     timestampMs: utcMillis(parsed.timestamp),
-    sampleDigest: sampleDigest(parsed.sample),
+    sampleDigest: digestOf(sample),
+    sampleBytes: Buffer.byteLength(sample),
   };
 }
 
@@ -325,7 +337,7 @@ export function messageFromRuleError(
   if (!isRecord(payload)) {
     return null;
   }
-  // The broker's fields win over a payload's own fields of the same name.
+  // The broker's topic and client replace a payload's own fields of those names.
   return messageOf(
     object,
     1,
@@ -334,25 +346,30 @@ export function messageFromRuleError(
 }
 
 /**
- * A sample as one digest however it was written. Bronze keeps `sample` as text and rewrites a JSON
+ * A sample as one text however it was written. Bronze keeps `sample` as text and rewrites a JSON
  * one compactly, so both sides are parsed and written again before they are compared.
  */
-export function sampleDigest(value: unknown): string {
+function canonicalSample(value: unknown): string {
   if (value === null || value === undefined) {
     return "";
   }
 
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  let canonical = text;
   try {
     const parsed: unknown = JSON.parse(text);
-    if (typeof parsed === "object" && parsed !== null) {
-      canonical = JSON.stringify(parsed);
-    }
+    return typeof parsed === "object" && parsed !== null ? JSON.stringify(parsed) : text;
   } catch {
     // A sample that is not JSON is compared as written.
+    return text;
   }
-  return createHash("sha256").update(canonical).digest("base64");
+}
+
+function digestOf(sample: string): string {
+  return sample === "" ? "" : createHash("sha256").update(sample).digest("base64");
+}
+
+export function sampleDigest(value: unknown): string {
+  return digestOf(canonicalSample(value));
 }
 
 /**
@@ -416,15 +433,29 @@ export function contentQuery(
   };
 }
 
-/** The latest arrival bronze has read, counting only rows ingested since a day. */
-export function latestArrivalQuery(table: string, since: string): Statement {
+/**
+ * How far bronze has read the stream: the latest arrival on its slowest shard, among the shards
+ * that delivered anything since the retention began. A shard further behind than that has nothing
+ * left in the stream to deliver twice.
+ */
+export function bronzeProgressQuery(table: string, retentionStartMs: number): Statement {
   return {
     statement: [
-      "SELECT unix_millis(max(kinesis_arrival_time))",
-      `FROM ${table}`,
-      "WHERE ingest_date >= :since",
+      "SELECT unix_millis(min(latest)) FROM (",
+      "  SELECT kinesis_shard_id, max(kinesis_arrival_time) AS latest",
+      `  FROM ${table}`,
+      "  WHERE ingest_date >= :since AND kinesis_arrival_time >= :retention_start",
+      "  GROUP BY kinesis_shard_id",
+      ")",
     ].join("\n"),
-    parameters: [{ name: "since", value: since, type: "DATE" }],
+    parameters: [
+      { name: "since", value: dayOf(retentionStartMs), type: "DATE" },
+      {
+        name: "retention_start",
+        value: new Date(retentionStartMs).toISOString(),
+        type: "TIMESTAMP",
+      },
+    ],
   };
 }
 
@@ -447,8 +478,10 @@ async function lookUpBronze(
   for (const message of candidates) {
     earliest = Math.min(earliest, message.timestampMs);
   }
-  // The day before allows for a device clock running ahead of the broker's.
-  const since = dayOf(earliest - DAY_MS);
+  // A copy is ingested after it is measured; the day before allows for a device clock running
+  // ahead of the broker's.
+  const floor = args.from.getTime() - LOOKBACK_DAYS * DAY_MS;
+  const since = dayOf(Math.max(earliest - DAY_MS, floor));
 
   const recordIds = [
     ...new Set(candidates.flatMap((message) => (message.recordId ? [message.recordId] : []))),
@@ -462,27 +495,56 @@ async function lookUpBronze(
     }
   }
 
-  const experiments = [...new Set(candidates.map((message) => message.experimentId))];
-  const times = [...new Set(candidates.map((message) => message.timestampMs))];
-  const byContent = contentQuery(table, experiments, times, since);
-  for (const row of await warehouse.rows(byContent.statement, byContent.parameters)) {
-    const [experimentId, recordId, clientId, deviceId, millis, sample] = row;
-    if (experimentId && millis) {
-      const key = contentKey({
-        experimentId,
-        clientId: clientId ?? null,
-        deviceId: deviceId ?? null,
-        timestampMs: Number(millis),
-        sampleDigest: sampleDigest(sample),
-      });
-      if (recordId === null) {
-        holding.earlyContent.add(key);
-      } else {
-        holding.idlessContent.add(key);
-      }
+  for (const group of bySampleSize(candidates)) {
+    const experiments = [...new Set(group.map((message) => message.experimentId))];
+    const times = [...new Set(group.map((message) => message.timestampMs))];
+    const byContent = contentQuery(table, experiments, times, since);
+    for (const row of await warehouse.rows(byContent.statement, byContent.parameters)) {
+      addContent(holding, row);
     }
   }
   return holding;
+}
+
+/** Candidates in groups whose samples a content lookup can bring back in one result. */
+function bySampleSize(candidates: Candidate[]): Candidate[][] {
+  const groups: Candidate[][] = [];
+  let group: Candidate[] = [];
+  let bytes = 0;
+  for (const candidate of candidates) {
+    const isFull = group.length > 0 && bytes + candidate.sampleBytes > CONTENT_LOOKUP_BYTES;
+    if (isFull) {
+      groups.push(group);
+      group = [];
+      bytes = 0;
+    }
+    group.push(candidate);
+    bytes += candidate.sampleBytes;
+  }
+  if (group.length > 0) {
+    groups.push(group);
+  }
+  return groups;
+}
+
+function addContent(holding: BronzeHolding, row: (string | null)[]): void {
+  const [experimentId, recordId, clientId, deviceId, millis, sample] = row;
+  if (!experimentId || !millis) {
+    return;
+  }
+
+  const key = contentKey({
+    experimentId,
+    clientId: clientId ?? null,
+    deviceId: deviceId ?? null,
+    timestampMs: Number(millis),
+    sampleDigest: sampleDigest(sample),
+  });
+  if (recordId === null) {
+    holding.earlyContent.add(key);
+  } else {
+    holding.idlessContent.add(key);
+  }
 }
 
 /**
@@ -603,7 +665,8 @@ function isCandidate(message: Message): message is Candidate {
 function isWithinFilters(args: ReplayArgs, message: Message): boolean {
   const isExperiment = args.experiment === null || message.experimentId === args.experiment;
   const isClient = args.client === null || message.clientId === args.client;
-  return isExperiment && isClient;
+  const isDevice = args.device === null || message.deviceId === args.device;
+  return isExperiment && isClient && isDevice;
 }
 
 /** Each message's decision, and the missing ones to send, in the order they were read. */
@@ -739,27 +802,14 @@ function createSender(deps: ReplayDeps) {
   return { send, hasSent: () => hasSent };
 }
 
-/**
- * How far bronze has read the stream: its latest arrival, or, when the stream has been quiet since,
- * where the stream's slowest reader stands.
- */
-async function readUpTo(
-  args: ReplayArgs,
+async function bronzeReadUpTo(
   deps: ReplayDeps,
-  caughtUpAt: number,
+  table: string,
+  retentionStartMs: number,
 ): Promise<number | null> {
-  const latest = latestArrivalQuery(targetsOf(args.environment).bronze, dayOf(args.to.getTime()));
-  const [[millis] = []] = await deps.warehouse.rows(latest.statement, latest.parameters);
-  const fromBronze = millis ? Number(millis) : null;
-  if (fromBronze !== null && fromBronze >= caughtUpAt) {
-    return fromBronze;
-  }
-
-  const fromReaders = await deps.readers.readUpTo(deps.now);
-  if (fromReaders === null) {
-    return fromBronze;
-  }
-  return Math.max(fromBronze ?? 0, fromReaders.getTime());
+  const progress = bronzeProgressQuery(table, retentionStartMs);
+  const [[millis] = []] = await deps.warehouse.rows(progress.statement, progress.parameters);
+  return millis ? Number(millis) : null;
 }
 
 export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Manifest> {
@@ -774,37 +824,51 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
     );
   }
 
-  // Inside its retention the stream may still hold the window for bronze to read, and a replay
-  // would then land every message twice.
+  // The stream may still hold messages of the objects read, for bronze to read later, and a replay
+  // would then land them twice. Each message arrived before its object was written, so bronze has
+  // to have read past the newest one. Only bronze's own rows show that: the stream's other reader
+  // keeps reading while bronze's flow is down.
+  const readable = objects.filter((object) => !isArchived(object, deps.now));
+  let newestWrite = 0;
+  for (const object of readable) {
+    newestWrite = Math.max(newestWrite, object.lastModified.getTime());
+  }
   const retentionStart = deps.now.getTime() - targets.retentionHours * HOUR_MS;
-  const isInRetention = args.source === "archive" && args.to.getTime() > retentionStart;
-  const caughtUpAt = args.to.getTime() + BRONZE_CAUGHT_UP_MS;
-  const bronzeReadUpTo = isInRetention ? await readUpTo(args, deps, caughtUpAt) : null;
-  const streamMayHold = isInRetention && (bronzeReadUpTo === null || bronzeReadUpTo < caughtUpAt);
+  const isInRetention = args.source === "archive" && newestWrite > retentionStart;
+  const caughtUpAt = newestWrite + BRONZE_CAUGHT_UP_MS;
+  const readUpTo = isInRetention
+    ? await bronzeReadUpTo(deps, targets.bronze, retentionStart)
+    : null;
+  const streamMayHold = isInRetention && (readUpTo === null || readUpTo < caughtUpAt);
   if (args.apply && streamMayHold) {
-    const readTo = bronzeReadUpTo === null ? "nothing" : new Date(bronzeReadUpTo).toISOString();
+    const readTo = readUpTo === null ? "nothing" : new Date(readUpTo).toISOString();
     throw new Error(
-      `Bronze has read the stream up to ${readTo}, so the stream may still hold this window. ` +
-        `Run again once it reads past ${new Date(caughtUpAt).toISOString()}, or once the window ` +
-        `is older than the stream's ${targets.retentionHours} hours`,
+      `Bronze has read the stream up to ${readTo} on its slowest shard, so the stream may still ` +
+        `hold messages of the objects read. Run again once bronze holds a message that arrived ` +
+        `after ${new Date(caughtUpAt).toISOString()}, or once the newest object is older than ` +
+        `the stream's ${targets.retentionHours} hours`,
     );
   }
 
-  const readable = objects.filter((object) => !isArchived(object, deps.now));
   const entries: Entry[] = [];
   const missing: Entry[] = [];
   const seen = new Set<string>();
   const sender = createSender(deps);
   let outsideFilters = 0;
   let stopped: string | null = null;
+  const isStopped = () => deps.stop.aborted;
 
   async function settle(messages: Message[]): Promise<void> {
     const kept = messages.filter((message) => isWithinFilters(args, message));
     outsideFilters += messages.length - kept.length;
     const holding = await lookUpBronze(kept.filter(isCandidate), args, deps.warehouse);
     const decided = decide(kept, holding, seen);
-    entries.push(...decided.entries);
-    missing.push(...decided.missing.map(({ entry }) => entry));
+    for (const entry of decided.entries) {
+      entries.push(entry);
+    }
+    for (const { entry } of decided.missing) {
+      missing.push(entry);
+    }
     if (args.apply) {
       await sender.send(decided.missing);
     }
@@ -812,19 +876,27 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
 
   try {
     const pending: Message[] = [];
-    for (let start = 0; start < readable.length; start += READ_CONCURRENCY) {
+    for (let start = 0; start < readable.length && !isStopped(); start += READ_CONCURRENCY) {
       const slice = readable.slice(start, start + READ_CONCURRENCY);
       const texts = await Promise.all(slice.map((object) => deps.archive.read(object.key)));
       slice.forEach((object, index) => {
         const read = readObject(args.source, object.key, texts[index], targets.archiveStream);
-        entries.push(...read.entries);
-        pending.push(...read.messages);
+        for (const entry of read.entries) {
+          entries.push(entry);
+        }
+        for (const message of read.messages) {
+          pending.push(message);
+        }
       });
-      while (pending.length >= LOOKUP_SIZE) {
+      while (pending.length >= LOOKUP_SIZE && !isStopped()) {
         await settle(pending.splice(0, LOOKUP_SIZE));
       }
     }
-    await settle(pending.splice(0));
+    if (isStopped()) {
+      stopped = "stopped by the operator; messages after the last batch are not in this manifest";
+    } else {
+      await settle(pending.splice(0));
+    }
   } catch (error) {
     // Once anything may have reached the stream, the manifest has to say what.
     if (!sender.hasSent()) {
@@ -851,8 +923,9 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
     to: args.to.toISOString(),
     experiment: args.experiment,
     client: args.client,
+    device: args.device,
     applied: args.apply,
-    bronzeReadUpTo: bronzeReadUpTo === null ? null : new Date(bronzeReadUpTo).toISOString(),
+    bronzeReadUpTo: readUpTo === null ? null : new Date(readUpTo).toISOString(),
     streamMayHold,
     restoreFirst,
     stopped,
@@ -874,15 +947,24 @@ async function run(args: string[]): Promise<number> {
   const parsed = parseArgs(args);
   const targets = targetsOf(parsed.environment);
   const runId = new Date().toISOString().replace(/[:.]/g, "-");
+  process.stdout.write(`run: ${runId} (partition keys replay/${runId}/<n>)\n`);
+
+  // The first Ctrl-C finishes the batch in hand and writes the manifest; a second one quits.
+  const stop = new AbortController();
+  process.once("SIGINT", () => {
+    process.stdout.write("stopping after the batch in hand; press Ctrl-C again to quit at once\n");
+    stop.abort();
+    process.once("SIGINT", () => process.exit(130));
+  });
 
   const manifest = await runReplay(parsed, {
     archive: createArchiveReader(targets.bucket, parsed.awsProfile),
     stream: createStreamWriter(targets.stream, parsed.awsProfile),
-    readers: createStreamReaders(targets.stream, parsed.awsProfile),
     warehouse: createWarehouse(parsed.databricksProfile, parsed.warehouse),
     wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: new Date(),
     runId,
+    stop: stop.signal,
   });
 
   // The manifest names devices and measurements, so it stays in the gitignored .claude folder.
@@ -903,7 +985,7 @@ async function run(args: string[]): Promise<number> {
   }
   if (manifest.streamMayHold) {
     process.stdout.write(
-      "bronze has not read past the window yet, so messages the stream still holds count as missing\n",
+      "bronze has not read past the objects read yet, so messages the stream still holds count as missing\n",
     );
   }
   if (manifest.stopped !== null) {

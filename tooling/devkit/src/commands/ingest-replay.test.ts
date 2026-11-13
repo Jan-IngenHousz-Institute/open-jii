@@ -1,14 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type {
-  ArchiveObject,
-  ArchiveReader,
-  StreamReaders,
-  StreamRecord,
-  StreamWriter,
-} from "../lib/aws.js";
+import type { ArchiveObject, ArchiveReader, StreamRecord, StreamWriter } from "../lib/aws.js";
 import type { Warehouse } from "../lib/databricks.js";
 import {
+  bronzeProgressQuery,
   contentQuery,
   dayPrefixes,
   isComplete,
@@ -38,6 +33,7 @@ function args(overrides: Partial<ReplayArgs> = {}): ReplayArgs {
     source: "archive",
     experiment: null,
     client: null,
+    device: null,
     warehouse: "warehouse-1",
     awsProfile: "openjii-dev",
     databricksProfile: "dev",
@@ -73,14 +69,15 @@ interface Bronze {
   recordIds?: string[];
   /** Rows without a record id: experiment, _client_id (null or empty), client, device, millis. */
   contentRows?: (string | null)[][];
-  latestArrival?: string | null;
+  /** The latest arrival on bronze's slowest shard, in epoch milliseconds. */
+  readUpTo?: string | null;
 }
 
 function warehouse(bronze: Bronze = {}): Warehouse {
   return {
     rows: vi.fn<Warehouse["rows"]>((statement) => {
-      if (statement.includes("max(kinesis_arrival_time)")) {
-        return Promise.resolve([[bronze.latestArrival ?? null]]);
+      if (statement.includes("kinesis_shard_id")) {
+        return Promise.resolve([[bronze.readUpTo ?? null]]);
       }
       if (statement.includes("SELECT DISTINCT _client_id")) {
         return Promise.resolve((bronze.recordIds ?? []).map((id) => [id]));
@@ -109,23 +106,16 @@ function stream(refuse: (record: StreamRecord, call: number) => boolean = () => 
   return Object.assign(writer, { sent });
 }
 
-/** The stream's readers, caught up to a time, or reading nothing. */
-function readers(readUpTo: string | null): StreamReaders {
-  return {
-    readUpTo: vi.fn(() => Promise.resolve(readUpTo === null ? null : new Date(readUpTo))),
-  };
-}
-
 function deps(overrides: Partial<ReplayDeps> = {}): ReplayDeps {
   return {
     archive: archive([]),
     stream: stream(),
-    readers: readers(null),
     warehouse: warehouse(),
     wait: vi.fn(() => Promise.resolve()),
     // Long after the window, so the stream no longer holds it.
     now: new Date("2026-10-20T00:00:00Z"),
     runId: "run-1",
+    stop: new AbortController().signal,
     ...overrides,
   };
 }
@@ -160,6 +150,7 @@ describe("parseArgs", () => {
       source: "archive",
       experiment: null,
       client: null,
+      device: null,
       warehouse: "w",
       awsProfile: "openjii-prod",
       databricksProfile: "prod",
@@ -169,6 +160,12 @@ describe("parseArgs", () => {
 
   it("takes the arguments behind the `--` the root alias passes", () => {
     expect(parseArgs(["--", "dev", ...window, "--warehouse", "w"]).environment).toBe("dev");
+  });
+
+  it("takes a sensor's device id to narrow a replay to it", () => {
+    expect(parseArgs(["dev", ...window, "--warehouse", "w", "--device", "MS-1"]).device).toBe(
+      "MS-1",
+    );
   });
 
   it("refuses a missing warehouse, a window that ends first, an unknown source or environment", () => {
@@ -198,7 +195,7 @@ describe("parseArgs", () => {
 });
 
 describe("utcMillis", () => {
-  it("reads a time without a zone as UTC, as the pipeline does", () => {
+  it("reads a time without a zone as UTC", () => {
     expect(utcMillis("2026-10-07T12:00:00")).toBe(Date.parse("2026-10-07T12:00:00Z"));
     expect(utcMillis("2026-10-07T14:00:00+02:00")).toBe(Date.parse("2026-10-07T12:00:00Z"));
     expect(utcMillis("not a time")).toBeNull();
@@ -222,6 +219,12 @@ describe("messageOf", () => {
     );
     expect(messageOf("k", 1, "{not json")).toBeNull();
     expect(messageOf("k", 1, JSON.stringify({ device_id: "MS-1" }))).toBeNull();
+  });
+
+  it("reads a numeric id as the text bronze keeps of it", () => {
+    const numeric = messageOf("k", 1, message({ device_id: 4021, timestamp: "2026-10-07T11:00Z" }));
+
+    expect(numeric?.deviceId).toBe("4021");
   });
 });
 
@@ -322,6 +325,17 @@ describe("bronze lookups", () => {
     expect(query.statement).toContain("(_client_id IS NULL OR _client_id = '')");
     expect(query.statement).toContain("unix_millis(parsed_data.timestamp) IN (:time_0, :time_1)");
     expect(query.parameters).toContainEqual({ name: "time_1", value: "2", type: "BIGINT" });
+  });
+
+  it("measures bronze's progress on its slowest shard, among shards heard from in the retention", () => {
+    const query = bronzeProgressQuery("t", Date.parse("2026-10-06T14:00:00Z"));
+
+    expect(query.statement).toContain("SELECT unix_millis(min(latest))");
+    expect(query.statement).toContain("GROUP BY kinesis_shard_id");
+    expect(query.parameters).toEqual([
+      { name: "since", value: "2026-10-06", type: "DATE" },
+      { name: "retention_start", value: "2026-10-06T14:00:00.000Z", type: "TIMESTAMP" },
+    ]);
   });
 });
 
@@ -469,6 +483,39 @@ describe("runReplay", () => {
     ]);
   });
 
+  it("looks no further back than 30 days before the window, whatever a device clock says", async () => {
+    const epoch = message({ _client_id: "rec-epoch", timestamp: "1970-01-01T00:00:00Z" });
+    const lake = warehouse();
+
+    await runReplay(
+      args(),
+      deps({ archive: archive([object("raw-iot/2026/10/07/a.gz", [epoch])]), warehouse: lake }),
+    );
+
+    const [byRecord] = vi.mocked(lake.rows).mock.calls;
+    expect(byRecord[1][0]).toEqual({ name: "since", value: "2026-09-07", type: "DATE" });
+  });
+
+  it("asks after no more large samples at once than the warehouse returns inline", async () => {
+    const lake = warehouse();
+    const large = Array.from({ length: 3 }, (_, index) =>
+      message({
+        timestamp: new Date(Date.parse("2026-10-07T11:00:00Z") + index).toISOString(),
+        sample: "x".repeat(3 * 1024 * 1024),
+      }),
+    );
+
+    await runReplay(
+      args(),
+      deps({ archive: archive([object("raw-iot/2026/10/07/a.gz", large)]), warehouse: lake }),
+    );
+
+    const contentLookups = vi
+      .mocked(lake.rows)
+      .mock.calls.filter(([statement]) => statement.includes("parsed_data.sample"));
+    expect(contentLookups.map(([, parameters]) => parameters.length)).toEqual([4, 3]);
+  });
+
   it("asks bronze about a thousand messages at a time", async () => {
     const lake = warehouse();
 
@@ -500,6 +547,46 @@ describe("runReplay", () => {
     );
 
     expect(manifest.counts).toEqual({ "outside the filters": 1, missing: 1 });
+  });
+
+  it("keeps to one sensor when asked", async () => {
+    const otherSensor = message({
+      _client_id: "rec-2",
+      device_id: "MS-2",
+      timestamp: "2026-10-07T11:01:00Z",
+    });
+
+    const manifest = await runReplay(
+      args({ device: "MS-1" }),
+      deps({ archive: archive([object("raw-iot/2026/10/07/a.gz", [missing, otherSensor])]) }),
+    );
+
+    expect(manifest.counts).toEqual({ "outside the filters": 1, missing: 1 });
+  });
+
+  it("stops after the batch in hand when the operator stops it, and says so", async () => {
+    const stop = new AbortController();
+    const lake = warehouse();
+    vi.mocked(lake.rows).mockImplementation(() => {
+      stop.abort();
+      return Promise.resolve([]);
+    });
+
+    const manifest = await runReplay(
+      args(),
+      deps({
+        archive: archive([
+          object("raw-iot/2026/10/07/a.gz", manyMissing(1000)),
+          object("raw-iot/2026/10/07/b.gz", [missing]),
+        ]),
+        warehouse: lake,
+        stop: stop.signal,
+      }),
+    );
+
+    expect(manifest.counts.missing).toBe(1000);
+    expect(manifest.stopped).toContain("stopped by the operator");
+    expect(isComplete(manifest)).toBe(false);
   });
 
   it("sends the missing messages under their own partition keys, retrying a refused record", async () => {
@@ -688,13 +775,14 @@ describe("runReplay", () => {
     const now = new Date("2026-10-07T14:00:00Z");
     const window = (apply: boolean) => args({ apply });
     const reader = () => archive([object("raw-iot/2026/10/07/a.gz", [missing])]);
+    const readTo = (time: string) => warehouse({ readUpTo: String(Date.parse(time)) });
 
-    it("refuses to send until bronze has read past the window", async () => {
-      const behind = warehouse({ latestArrival: String(Date.parse("2026-10-07T12:30:00Z")) });
+    it("refuses to send until bronze has read past the newest object read", async () => {
+      const behind = readTo("2026-10-07T12:15:00Z");
 
       await expect(
         runReplay(window(true), deps({ archive: reader(), warehouse: behind, now })),
-      ).rejects.toThrow("the stream may still hold this window");
+      ).rejects.toThrow("may still hold messages of the objects read");
       await expect(
         runReplay(window(true), deps({ archive: reader(), warehouse: warehouse(), now })),
       ).rejects.toThrow("Bronze has read the stream up to nothing");
@@ -703,69 +791,52 @@ describe("runReplay", () => {
         window(false),
         deps({ archive: reader(), warehouse: behind, now }),
       );
-      expect(dryRun).toEqual(
-        expect.objectContaining({
-          streamMayHold: true,
-          bronzeReadUpTo: "2026-10-07T12:30:00.000Z",
-        }),
-      );
+      expect(dryRun.streamMayHold).toBe(true);
+      expect(dryRun.bronzeReadUpTo).toBe("2026-10-07T12:15:00.000Z");
     });
 
-    it("sends once bronze has read past the window", async () => {
-      const caughtUp = warehouse({ latestArrival: String(Date.parse("2026-10-07T13:05:00Z")) });
-      const writer = stream();
-
-      const manifest = await runReplay(
-        window(true),
-        deps({ archive: reader(), warehouse: caughtUp, stream: writer, now }),
-      );
-
-      expect(manifest.streamMayHold).toBe(false);
-      expect(writer.sent).toHaveLength(1);
-    });
-
-    it("sends on a stream quiet since the window once its readers have caught up past it", async () => {
-      const quiet = warehouse({ latestArrival: String(Date.parse("2026-10-07T12:30:00Z")) });
+    it("sends once bronze holds a message that arrived after the newest object", async () => {
       const writer = stream();
 
       const manifest = await runReplay(
         window(true),
         deps({
           archive: reader(),
-          warehouse: quiet,
-          readers: readers("2026-10-07T13:55:00Z"),
+          warehouse: readTo("2026-10-07T12:30:00Z"),
           stream: writer,
           now,
         }),
       );
 
-      expect(manifest.bronzeReadUpTo).toBe("2026-10-07T13:55:00.000Z");
+      expect(manifest.streamMayHold).toBe(false);
       expect(writer.sent).toHaveLength(1);
     });
 
-    it("refuses while the stream's readers are behind the window or not reading", async () => {
-      const quiet = warehouse({ latestArrival: String(Date.parse("2026-10-07T12:30:00Z")) });
-      const withReaders = (streamReaders: StreamReaders) =>
-        deps({ archive: reader(), warehouse: quiet, readers: streamReaders, now });
+    it("waits for an object Firehose wrote after the window's end, whose messages it sends too", async () => {
+      const late = archive([
+        object("raw-iot/2026/10/07/late.gz", [missing], "2026-10-07T13:10:00Z"),
+      ]);
 
       await expect(
-        runReplay(window(true), withReaders(readers("2026-10-07T12:45:00Z"))),
-      ).rejects.toThrow("may still hold this window");
-      await expect(runReplay(window(true), withReaders(readers(null)))).rejects.toThrow(
-        "may still hold this window",
-      );
+        runReplay(
+          window(true),
+          deps({ archive: late, warehouse: readTo("2026-10-07T13:05:00Z"), now }),
+        ),
+      ).rejects.toThrow("arrived after 2026-10-07T13:11:00.000Z");
     });
 
-    it("asks the readers nothing when bronze already holds a later message", async () => {
-      const streamReaders = readers(null);
-      const caughtUp = warehouse({ latestArrival: String(Date.parse("2026-10-07T13:05:00Z")) });
+    it("asks bronze nothing once the newest object is older than the stream's retention", async () => {
+      const lake = warehouse();
 
       await runReplay(
-        window(false),
-        deps({ archive: reader(), warehouse: caughtUp, readers: streamReaders, now }),
+        window(true),
+        deps({ archive: reader(), warehouse: lake, now: new Date("2026-10-08T12:30:00Z") }),
       );
 
-      expect(streamReaders.readUpTo).not.toHaveBeenCalled();
+      const progress = vi
+        .mocked(lake.rows)
+        .mock.calls.filter(([statement]) => statement.includes("kinesis_shard_id"));
+      expect(progress).toHaveLength(0);
     });
 
     it("skips the check for error objects, whose messages never entered the stream", async () => {

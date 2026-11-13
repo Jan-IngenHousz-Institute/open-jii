@@ -15,13 +15,29 @@ export interface Warehouse {
 /** Runs `databricks <args>` and returns its standard output. */
 export type DatabricksCli = (args: string[]) => Promise<string>;
 
-const execFileAsync = promisify(execFile);
+type ExecFile = (
+  file: string,
+  args: string[],
+  options: { maxBuffer: number },
+) => Promise<{ stdout: string; stderr: string }>;
 
-// The Databricks CLI holds the profile's credentials, so no token passes through this process.
-const runCli: DatabricksCli = async (args) => {
-  const { stdout } = await execFileAsync("databricks", args, { maxBuffer: 256 * 1024 * 1024 });
-  return stdout;
-};
+/**
+ * Runs the Databricks CLI, which holds the profile's credentials, so no token passes through this
+ * process. A failure names the call and the CLI's own error: Node's message would repeat the whole
+ * command line, request body and its values included.
+ */
+export function databricksCli(exec: ExecFile = promisify(execFile)): DatabricksCli {
+  return async (args) => {
+    try {
+      const { stdout } = await exec("databricks", args, { maxBuffer: 256 * 1024 * 1024 });
+      return stdout;
+    } catch (error) {
+      const stderr = isRecord(error) && typeof error.stderr === "string" ? error.stderr.trim() : "";
+      const call = `databricks ${args.slice(0, 3).join(" ")}`;
+      throw new Error(stderr === "" ? `${call} failed` : `${call} failed: ${stderr}`);
+    }
+  };
+}
 
 const POLL_MS = 2000;
 const DEADLINE_MS = 10 * 60_000;
@@ -42,7 +58,7 @@ function rowsOf(result: unknown): (string | null)[][] {
 export function createWarehouse(
   profile: string,
   warehouseId: string,
-  cli: DatabricksCli = runCli,
+  cli: DatabricksCli = databricksCli(),
   wait: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 ): Warehouse {
   async function api(method: "get" | "post", path: string, body?: unknown): Promise<unknown> {

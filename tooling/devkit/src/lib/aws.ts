@@ -1,6 +1,7 @@
-import { CloudWatchClient, GetMetricStatisticsCommand } from "@aws-sdk/client-cloudwatch";
 import { KinesisClient, PutRecordsCommand } from "@aws-sdk/client-kinesis";
+import type { KinesisClientConfig } from "@aws-sdk/client-kinesis";
 import { GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { Agent } from "node:https";
 import { gunzipSync } from "node:zlib";
 
 /** An object in a bucket, as a listing gives it. */
@@ -32,16 +33,6 @@ export interface StreamResult {
 export interface StreamWriter {
   put(records: StreamRecord[]): Promise<StreamResult[]>;
 }
-
-export interface StreamReaders {
-  /**
-   * The arrival time the stream's slowest reader had reached in its latest minute of reading, or
-   * null when nothing read the stream in the ten minutes before `now`.
-   */
-  readUpTo(now: Date): Promise<Date | null>;
-}
-
-const READERS_LOOKBACK_MS = 10 * 60_000;
 
 // The profile names an SSO session in ~/.aws/config, which also gives the region.
 export function createArchiveReader(bucket: string, profile: string): ArchiveReader {
@@ -80,7 +71,9 @@ export function createArchiveReader(bucket: string, profile: string): ArchiveRea
 
     async read(key) {
       const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-      if (!object.Body) throw new Error(`s3://${bucket}/${key} has no body`);
+      if (!object.Body) {
+        throw new Error(`s3://${bucket}/${key} has no body`);
+      }
       const bytes = Buffer.from(await object.Body.transformToByteArray());
       // Firehose gzips what it writes; the rule's error action writes plain JSON.
       const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
@@ -89,10 +82,21 @@ export function createArchiveReader(bucket: string, profile: string): ArchiveRea
   };
 }
 
+/**
+ * A resent PutRecords whose first try landed would copy every record in it, so the SDK never
+ * retries, and the replay resends only the records Kinesis says it refused. Without the SDK's retry
+ * a reused connection the server has closed would fail a batch, so each request opens its own.
+ */
+export function streamWriterConfig(profile: string): KinesisClientConfig {
+  return {
+    profile,
+    maxAttempts: 1,
+    requestHandler: { httpsAgent: new Agent({ keepAlive: false }) },
+  };
+}
+
 export function createStreamWriter(streamName: string, profile: string): StreamWriter {
-  // A resent PutRecords whose first try landed would copy every record in it, so the SDK never
-  // retries; the replay resends only the records Kinesis says it refused.
-  const kinesis = new KinesisClient({ profile, maxAttempts: 1 });
+  const kinesis = new KinesisClient(streamWriterConfig(profile));
 
   return {
     async put(records) {
@@ -109,40 +113,6 @@ export function createStreamWriter(streamName: string, profile: string): StreamW
         sequenceNumber: result.SequenceNumber ?? null,
         error: result.ErrorCode ? `${result.ErrorCode}: ${result.ErrorMessage ?? ""}` : null,
       }));
-    },
-  };
-}
-
-/**
- * Reads the stream's `GetRecords.IteratorAgeMilliseconds`, whose maximum is the slowest reader's
- * lag, and which reads zero while a reader is caught up on a quiet stream.
- */
-export function createStreamReaders(streamName: string, profile: string): StreamReaders {
-  const cloudwatch = new CloudWatchClient({ profile });
-
-  return {
-    async readUpTo(now) {
-      const response = await cloudwatch.send(
-        new GetMetricStatisticsCommand({
-          Namespace: "AWS/Kinesis",
-          MetricName: "GetRecords.IteratorAgeMilliseconds",
-          Dimensions: [{ Name: "StreamName", Value: streamName }],
-          StartTime: new Date(now.getTime() - READERS_LOOKBACK_MS),
-          EndTime: now,
-          Period: 60,
-          Statistics: ["Maximum"],
-        }),
-      );
-
-      let latest: { at: number; age: number } | null = null;
-      for (const { Timestamp, Maximum } of response.Datapoints ?? []) {
-        const isLatest = Timestamp && (latest === null || Timestamp.getTime() > latest.at);
-        if (isLatest && Maximum !== undefined) {
-          latest = { at: Timestamp.getTime(), age: Maximum };
-        }
-      }
-      // At the start of that minute the reader had reached records at least this old.
-      return latest === null ? null : new Date(latest.at - latest.age);
     },
   };
 }

@@ -39,7 +39,6 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch": "catalog:aws-sdk",
     "@aws-sdk/client-kinesis": "catalog:aws-sdk",
     "@aws-sdk/client-s3": "catalog:aws-sdk",
     "@repo/monitoring": "workspace:*",

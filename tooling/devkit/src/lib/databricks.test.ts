@@ -1,7 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createWarehouse } from "./databricks.js";
+import { createWarehouse, databricksCli } from "./databricks.js";
 import type { DatabricksCli } from "./databricks.js";
+
+describe("databricksCli", () => {
+  it("names the call and the CLI's error, never the request body", async () => {
+    const failing = () =>
+      Promise.reject(
+        Object.assign(new Error('Command failed: databricks api post ... --json {"a":"secret"}'), {
+          stderr: "Error: warehouse is stopped\n",
+        }),
+      );
+
+    const run = databricksCli(failing)(["api", "post", "/api/2.0/sql/statements", "--json", "{}"]);
+
+    await expect(run).rejects.toThrow(
+      "databricks api post /api/2.0/sql/statements failed: Error: warehouse is stopped",
+    );
+    await expect(run).rejects.not.toThrow("secret");
+  });
+});
 
 function cli(...answers: unknown[]): DatabricksCli & { calls: string[][] } {
   const calls: string[][] = [];
