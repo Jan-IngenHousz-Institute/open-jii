@@ -6,12 +6,14 @@ import {
   STATUS_DOCUMENT_VERSION,
   STATUS_HISTORY_DAYS,
   dayRecordSchema,
+  endedAt,
   statusComponentIdSchema,
 } from "./status-document.js";
 import type {
   ComponentState,
   DayRecord,
   Incident,
+  Notice,
   StatusComponent,
   StatusComponentId,
   StatusDocument,
@@ -30,11 +32,14 @@ export const WEBSITE_SLOW_PROBE_MS = 3000;
 /** The API answers a cheap health request, so two seconds means it is struggling. */
 export const PLATFORM_SLOW_PROBE_MS = 2000;
 
-/** One slow or failed probe is often a cold start or a dropped request, so degraded needs two in a row. */
-export const BAD_PROBES_FOR_DEGRADED = 2;
+/**
+ * One bad minute is often a cold start, a dropped request or a pipeline restarting, so degraded
+ * needs two in a row. Grafana's alerts wait in the same way before they fire.
+ */
+export const MINUTES_FOR_DEGRADED = 2;
 
-/** One failed probe is often the network between us and the service, three in a row is the service. */
-export const PROBE_FAILURES_FOR_OUTAGE = 3;
+/** One failed minute is often the network between us and the service, three in a row is the service. */
+export const MINUTES_FOR_OUTAGE = 3;
 
 /** Past half the requests failing, CloudFront is not serving the site. */
 export const WEBSITE_OUTAGE_ERROR_PERCENT = 50;
@@ -69,13 +74,13 @@ export const MACRO_DEGRADED_LATENCY_MINUTES = 5;
 /** Half an hour late, macro results are not usable while the researcher is still at the device. */
 export const MACRO_OUTAGE_LATENCY_MINUTES = 30;
 
-export const PUBLISHER_STATE_VERSION = 1;
+export const PUBLISHER_STATE_VERSION = 2;
 
 const componentHistorySchema = z.object({
-  /** Probes failed in a row, up to and including the last judged minute; zero for a component without a probe. */
-  probeFailures: z.int().check(z.nonnegative()),
-  /** Probes failed or slower than their limit in a row, counted like `probeFailures`. */
-  badProbes: z.int().check(z.nonnegative()),
+  /** Minutes in a row the checks read degraded or worse, up to and including the last judged minute. */
+  degradedStreak: z.int().check(z.nonnegative()),
+  /** Minutes in a row the checks read an outage, counted like `degradedStreak`. */
+  outageStreak: z.int().check(z.nonnegative()),
   days: z.array(dayRecordSchema).check(z.maxLength(STATUS_HISTORY_DAYS)),
 });
 type ComponentHistory = z.infer<typeof componentHistorySchema>;
@@ -100,10 +105,8 @@ export interface StatusProbes {
 }
 
 export interface ComponentEvidence {
-  /** Failed probes in a row for this component's own probe, this run included. */
-  probeFailures: number;
-  /** Failed or slow probes in a row for this component's own probe, this run included. */
-  badProbes: number;
+  /** This minute's probes; a component without its own ignores them. */
+  probes: StatusProbes;
   readings: StatusReadings;
 }
 
@@ -137,39 +140,32 @@ function isDependencyDown(reading: number | undefined): boolean {
   return reading !== undefined && reading < 1;
 }
 
-function judgeWebsite({ probeFailures, badProbes, readings }: ComponentEvidence): ComponentVerdict {
+function judgeWebsite({ probes, readings }: ComponentEvidence): ComponentVerdict {
   const requests = readings.websiteRequests ?? 0;
   const failedRequests = readings.websiteFailedRequests ?? 0;
 
-  const isUnreachable = probeFailures >= PROBE_FAILURES_FOR_OUTAGE;
+  const isUnreachable = !probes.website.ok;
   const isServingErrors =
     requests >= WEBSITE_MIN_REQUESTS &&
     failedRequests * 100 > requests * WEBSITE_OUTAGE_ERROR_PERCENT;
-  const isSlowOrFailing = badProbes >= BAD_PROBES_FOR_DEGRADED;
+  const isSlow = probes.website.durationMs > WEBSITE_SLOW_PROBE_MS;
 
-  return { state: stateOf(isUnreachable || isServingErrors, isSlowOrFailing) };
+  return { state: stateOf(isUnreachable || isServingErrors, isSlow) };
 }
 
-function judgePlatform({
-  probeFailures,
-  badProbes,
-  readings,
-}: ComponentEvidence): ComponentVerdict {
+function judgePlatform({ probes, readings }: ComponentEvidence): ComponentVerdict {
   const errors = (readings.albElb5xx ?? 0) + (readings.albTarget5xx ?? 0);
   const requests = readings.albRequests ?? 0;
 
-  const isUnreachable = probeFailures >= PROBE_FAILURES_FOR_OUTAGE;
+  const isUnreachable = !probes.platform.ok;
   const isErroring =
     errors >= PLATFORM_MIN_ERRORS && errors > requests * PLATFORM_OUTAGE_ERROR_SHARE;
   const isDatabaseDown = isDependencyDown(readings.databaseUp);
-  const isSlowOrFailing = badProbes >= BAD_PROBES_FOR_DEGRADED;
+  const isSlow = probes.platform.durationMs > PLATFORM_SLOW_PROBE_MS;
   const isDatabricksDown = isDependencyDown(readings.databricksUp);
 
   return {
-    state: stateOf(
-      isUnreachable || isDatabaseDown || isErroring,
-      isSlowOrFailing || isDatabricksDown,
-    ),
+    state: stateOf(isUnreachable || isDatabaseDown || isErroring, isSlow || isDatabricksDown),
   };
 }
 
@@ -222,7 +218,7 @@ function judgeMacroProcessing({ readings }: ComponentEvidence): ComponentVerdict
   return { state: stateOf(isVeryLate, isLate || isFailing || isBacklogged) };
 }
 
-/** The worst state any rule of the component reaches, from the evidence alone. */
+/** The worst state any rule of the component reaches in this one minute, before it has held long enough to show. */
 export function judgeComponent(
   id: StatusComponentId,
   evidence: ComponentEvidence,
@@ -249,31 +245,12 @@ export function judgeComponent(
  * Open from its start until it is resolved. Planned work also ends at its scheduled end, so a
  * window nobody closed cannot hide a real outage behind it.
  */
-function isOpen(incident: Incident, atMs: number): boolean {
+export function isOpen(incident: Incident, atMs: number): boolean {
   const hasStarted = Date.parse(incident.startsAt) <= atMs;
-  const isResolved = incident.resolvedAt !== undefined && Date.parse(incident.resolvedAt) <= atMs;
-  const hasWindowEnded =
-    incident.kind === "maintenance" &&
-    incident.endsAt !== undefined &&
-    Date.parse(incident.endsAt) <= atMs;
+  const end = endedAt(incident);
+  const hasEnded = end !== undefined && Date.parse(end) <= atMs;
 
-  return hasStarted && !isResolved && !hasWindowEnded;
-}
-
-interface ComponentProbe {
-  result: StatusProbeResult;
-  slowMs: number;
-}
-
-function probeOf(id: StatusComponentId, probes: StatusProbes): ComponentProbe | undefined {
-  switch (id) {
-    case "website":
-      return { result: probes.website, slowMs: WEBSITE_SLOW_PROBE_MS };
-    case "platform":
-      return { result: probes.platform, slowMs: PLATFORM_SLOW_PROBE_MS };
-    default:
-      return undefined;
-  }
+  return hasStarted && !hasEnded;
 }
 
 interface JudgeInput {
@@ -283,6 +260,7 @@ interface JudgeInput {
   /** Undefined on the first run. */
   previous: PublisherState | undefined;
   incidents: Incident[];
+  notices: Notice[];
 }
 
 export interface JudgeResult {
@@ -295,61 +273,58 @@ interface Run extends JudgeInput {
   previousMinute: number | undefined;
   /** The minute was already judged, so recording it again would count it twice. */
   isRepeat: boolean;
-  /** Minutes were skipped since the last judged one, so no probe streak spans them. */
+  /** Minutes were skipped since the last judged one, so no streak spans them. */
   isAfterGap: boolean;
 }
 
-type ProbeStreaks = Pick<ComponentEvidence, "probeFailures" | "badProbes">;
+type StateStreaks = Pick<ComponentHistory, "degradedStreak" | "outageStreak">;
 
-const NO_STREAKS: ProbeStreaks = { probeFailures: 0, badProbes: 0 };
+const NO_STREAKS: StateStreaks = { degradedStreak: 0, outageStreak: 0 };
 
-function nextProbeStreaks(
-  previous: ProbeStreaks,
-  probe: ComponentProbe | undefined,
+function nextStreaks(
+  previous: StateStreaks,
+  judged: MeasuredState,
   isRepeat: boolean,
-): ProbeStreaks {
-  if (probe === undefined || isRepeat) {
+): StateStreaks {
+  if (isRepeat) {
     return previous;
   }
 
-  const isFailed = !probe.result.ok;
-  const isBad = isFailed || probe.result.durationMs > probe.slowMs;
-
   return {
-    probeFailures: isFailed ? previous.probeFailures + 1 : 0,
-    badProbes: isBad ? previous.badProbes + 1 : 0,
+    degradedStreak: judged === "operational" ? 0 : previous.degradedStreak + 1,
+    outageStreak: judged === "outage" ? previous.outageStreak + 1 : 0,
   };
+}
+
+function confirmedState({ degradedStreak, outageStreak }: StateStreaks): MeasuredState {
+  return stateOf(outageStreak >= MINUTES_FOR_OUTAGE, degradedStreak >= MINUTES_FOR_DEGRADED);
 }
 
 function advanceDays(
   history: ComponentHistory | undefined,
   run: Run,
   outcome: ComponentState,
-  incidentIds: string[],
 ): DayRecord[] {
   if (history === undefined || run.previousMinute === undefined) {
-    return recordMinute([], run.minute, outcome, incidentIds);
+    return recordMinute([], run.minute, outcome);
   }
   if (run.isRepeat) {
     return history.days;
   }
 
   const withGap = recordUnknown(history.days, run.previousMinute + 1, run.minute - 1);
-  return recordMinute(withGap, run.minute, outcome, incidentIds);
+  return recordMinute(withGap, run.minute, outcome);
 }
 
 function judgeLiveComponent(id: StatusComponentId, run: Run) {
   const history = run.previous?.components[id];
   const carried = run.isAfterGap
     ? NO_STREAKS
-    : { probeFailures: history?.probeFailures ?? 0, badProbes: history?.badProbes ?? 0 };
-  const { probeFailures, badProbes } = nextProbeStreaks(
-    carried,
-    probeOf(id, run.probes),
-    run.isRepeat,
-  );
+    : { degradedStreak: history?.degradedStreak ?? 0, outageStreak: history?.outageStreak ?? 0 };
 
-  const verdict = judgeComponent(id, { probeFailures, badProbes, readings: run.readings });
+  const verdict = judgeComponent(id, { probes: run.probes, readings: run.readings });
+  const streaks = nextStreaks(carried, verdict.state, run.isRepeat);
+  const confirmed = confirmedState(streaks);
 
   const open = run.incidents.filter(
     (incident) => incident.components.includes(id) && isOpen(incident, run.now.getTime()),
@@ -357,26 +332,22 @@ function judgeLiveComponent(id: StatusComponentId, run: Run) {
   const incidentImpacts = open
     .filter((incident) => incident.kind === "incident")
     .map((incident) => incident.impact);
-  const measured = worstState([verdict.state, ...incidentImpacts]);
+  const measured = worstState([confirmed, ...incidentImpacts]);
   const isUnderMaintenance = open.some((incident) => incident.kind === "maintenance");
   const state = isUnderMaintenance ? "maintenance" : measured;
-  const days = advanceDays(
-    history,
-    run,
-    state,
-    open.map((incident) => incident.id),
-  );
+  const days = advanceDays(history, run, state);
+  const delayMinutes = confirmed === "operational" ? undefined : verdict.delayMinutes;
 
   const component: StatusComponent = {
     id,
     state,
-    ...(verdict.delayMinutes === undefined ? {} : { delayMinutes: verdict.delayMinutes }),
+    ...(delayMinutes === undefined ? {} : { delayMinutes }),
     uptimePercent: uptimePercent(days),
     degradedMinutes: totalDegradedMinutes(days),
     days,
   };
 
-  return { component, history: { probeFailures, badProbes, days } };
+  return { component, history: { ...streaks, days } };
 }
 
 /**
@@ -408,7 +379,7 @@ export function judgeStatus(input: JudgeInput): JudgeResult {
       generatedAt: now.toISOString(),
       components,
       incidents: input.incidents,
-      notices: [],
+      notices: input.notices,
     },
     state: {
       version: PUBLISHER_STATE_VERSION,

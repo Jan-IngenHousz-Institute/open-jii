@@ -48,6 +48,16 @@ variable "kinesis_stream_name" {
   type        = string
 }
 
+variable "contentful_secret_arn" {
+  description = "Secret holding CONTENTFUL_SPACE_ID and CONTENTFUL_ACCESS_TOKEN, which the incident read uses"
+  type        = string
+}
+
+variable "page_url" {
+  description = "Public https URL of the status page, which published events link to"
+  type        = string
+}
+
 variable "log_retention_days" {
   description = "CloudWatch log retention for the status publisher's log group"
   type        = number

@@ -13,14 +13,14 @@ import { ComponentRow } from "./component-row";
 interface ComponentsSectionProps {
   components: StatusComponent[];
   incidents: Incident[];
-  today: string;
+  generatedAt: string;
   isStale: boolean;
 }
 
 export const ComponentsSection = memo(function ComponentsSection({
   components,
   incidents,
-  today,
+  generatedAt,
   isStale,
 }: ComponentsSectionProps) {
   const { t } = useTranslation("status");
@@ -31,7 +31,7 @@ export const ComponentsSection = memo(function ComponentsSection({
         key={component.id}
         component={component}
         incidents={incidents}
-        today={today}
+        generatedAt={generatedAt}
         isStale={isStale}
       />
     );

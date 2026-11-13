@@ -9,12 +9,10 @@ import { MaintenanceCard } from "~/components/incidents/maintenance-card";
 import { NoticeBanner } from "~/components/incidents/notice-banner";
 import { PastIncidents } from "~/components/incidents/past-incidents";
 
-import type { Incident, StatusDocument } from "@repo/monitoring/status-document";
+import type { Incident, Notice, StatusDocument } from "@repo/monitoring/status-document";
 
 import { StatusTitle } from "./status-title";
 import { useStatusView } from "./use-status-view";
-
-type Notice = StatusDocument["notices"][number];
 
 interface StatusContentProps {
   document: StatusDocument;
@@ -31,10 +29,8 @@ function renderIncident(incident: Incident) {
 }
 
 export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: StatusContentProps) {
-  const { now, groups, openWindows, components, isStale, isAllOperational } = useStatusView(
-    document,
-    serverOffsetMs,
-  );
+  const { now, groups, openWindows, components, headlineComponents, isStale, isAllOperational } =
+    useStatusView(document, serverOffsetMs);
 
   function renderWindow(maintenance: Incident) {
     return <MaintenanceCard key={maintenance.id} incident={maintenance} now={now} />;
@@ -54,7 +50,7 @@ export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: St
       {document.notices.map(renderNotice)}
 
       <StatusHeadline
-        components={components}
+        components={headlineComponents}
         openWindows={openWindows}
         generatedAt={document.generatedAt}
         isStale={isStale}
@@ -67,7 +63,7 @@ export function StatusContent({ document, serverOffsetMs, hasRefreshFailed }: St
       <ComponentsSection
         components={components}
         incidents={document.incidents}
-        today={document.generatedAt.slice(0, 10)}
+        generatedAt={document.generatedAt}
         isStale={isStale}
       />
 

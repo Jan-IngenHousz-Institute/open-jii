@@ -3572,6 +3572,27 @@ module "ingest_healthcheck" {
   publishing_enabled = local.ingest_healthcheck_publishing
 }
 
+# The status publisher's own Contentful credentials: the delivery token only, never the preview ones.
+module "status_contentful_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-status-contentful-${var.environment}"
+  description = "Contentful delivery credentials for the status publisher"
+
+  secret_string = jsonencode({
+    CONTENTFUL_SPACE_ID     = var.contentful_space_id
+    CONTENTFUL_ACCESS_TOKEN = var.contentful_access_token
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "status-publisher"
+    SecretType  = "contentful"
+  }
+}
+
 module "status_publisher" {
   source = "../../modules/monitoring/status-publisher"
 
@@ -3582,13 +3603,18 @@ module "status_publisher" {
   state_bucket_id  = module.status_state_s3.bucket_id
   state_bucket_arn = module.status_state_s3.bucket_arn
 
-  # A static page that reads nothing from the backend: the home page's public metrics reload
-  # through the SQL warehouse, which a probe every minute would keep starting.
-  web_url             = "https://${module.route53.environment_domain}/en-US/cookie-settings"
+  # The email sign-in confirmation renders on every request and reads Contentful only through
+  # shared caches. A cached page regenerates under the probe, the sign-in page reads its terms
+  # uncached, and the home page's public metrics go through the SQL warehouse.
+  web_url             = "https://${module.route53.environment_domain}/en-US/verify-request?provider=email"
   api_health_url      = "https://${module.route53.api_domain}/health"
   load_balancer_arn   = module.backend_alb.alb_arn
   web_distribution_id = module.opennext.cloudfront_distribution_id
   kinesis_stream_name = module.kinesis.kinesis_stream_name
+
+  # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
+  contentful_secret_arn = nonsensitive(module.status_contentful_secrets.secret_arn)
+  page_url              = "https://${module.route53.status_domain}"
 }
 
 module "heartbeat_metrics_s3" {

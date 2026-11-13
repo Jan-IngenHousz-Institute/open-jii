@@ -15,12 +15,12 @@ import type {
   ComponentState,
   DayRecord,
   Incident,
+  Notice,
   StatusComponent,
   StatusComponentId,
 } from "./status-document.js";
 import { DAY_DEGRADED_MINUTES, dayState } from "./status-history.js";
 import {
-  BAD_PROBES_FOR_DEGRADED,
   DELIVERY_DEGRADED_LATENCY_MINUTES,
   DELIVERY_OUTAGE_LATENCY_MINUTES,
   DELIVERY_STALL_IDLE_MINUTES,
@@ -28,10 +28,11 @@ import {
   ITERATOR_AGE_DEGRADED_MINUTES,
   MACRO_DEGRADED_LATENCY_MINUTES,
   MACRO_OUTAGE_LATENCY_MINUTES,
+  MINUTES_FOR_DEGRADED,
+  MINUTES_FOR_OUTAGE,
   PLATFORM_MIN_ERRORS,
   PLATFORM_OUTAGE_ERROR_SHARE,
   PLATFORM_SLOW_PROBE_MS,
-  PROBE_FAILURES_FOR_OUTAGE,
   PUBLISHER_STATE_VERSION,
   WEBSITE_MIN_REQUESTS,
   WEBSITE_OUTAGE_ERROR_PERCENT,
@@ -89,14 +90,12 @@ const HEALTHY_READINGS: StatusReadings = {
 
 interface Change {
   readings?: StatusReadings;
-  probeFailures?: number;
-  badProbes?: number;
+  probes?: Partial<StatusProbes>;
 }
 
 function evidence(change: Change = {}): ComponentEvidence {
   return {
-    probeFailures: change.probeFailures ?? 0,
-    badProbes: change.badProbes ?? 0,
+    probes: { ...HEALTHY_PROBES, ...change.probes },
     readings: { ...HEALTHY_READINGS, ...change.readings },
   };
 }
@@ -115,45 +114,27 @@ const thresholdCases: Case[] = [
   { id: "website", name: "everything healthy", change: {}, state: "operational" },
   {
     id: "website",
-    name: "one bad probe",
-    change: { badProbes: BAD_PROBES_FOR_DEGRADED - 1 },
+    name: "a probe at the slow limit",
+    change: { probes: { website: { ok: true, durationMs: WEBSITE_SLOW_PROBE_MS } } },
     state: "operational",
   },
   {
     id: "website",
-    name: "bad probes in a row at the degraded count",
-    change: { badProbes: BAD_PROBES_FOR_DEGRADED },
+    name: "a probe over the slow limit",
+    change: { probes: { website: { ok: true, durationMs: WEBSITE_SLOW_PROBE_MS + 1 } } },
     state: "degraded",
   },
   {
     id: "website",
-    name: "one failed probe",
-    change: { probeFailures: 1, badProbes: 1 },
-    state: "operational",
-  },
-  {
-    id: "website",
-    name: "failed probes one short of an outage",
-    change: {
-      probeFailures: PROBE_FAILURES_FOR_OUTAGE - 1,
-      badProbes: PROBE_FAILURES_FOR_OUTAGE - 1,
-    },
-    state: "degraded",
-  },
-  {
-    id: "website",
-    name: "failed probes in a row at the outage count",
-    change: { probeFailures: PROBE_FAILURES_FOR_OUTAGE, badProbes: PROBE_FAILURES_FOR_OUTAGE },
+    name: "a failed probe",
+    change: { probes: { website: FAILED_PROBE } },
     state: "outage",
   },
   {
     id: "website",
-    name: "bad probes past the outage count that did not all fail",
-    change: {
-      probeFailures: PROBE_FAILURES_FOR_OUTAGE - 1,
-      badProbes: PROBE_FAILURES_FOR_OUTAGE + 2,
-    },
-    state: "degraded",
+    name: "the platform's probe failing",
+    change: { probes: { platform: FAILED_PROBE } },
+    state: "operational",
   },
   {
     id: "website",
@@ -198,27 +179,27 @@ const thresholdCases: Case[] = [
 
   {
     id: "platform",
-    name: "one bad probe",
-    change: { badProbes: BAD_PROBES_FOR_DEGRADED - 1 },
+    name: "a probe at the slow limit",
+    change: { probes: { platform: { ok: true, durationMs: PLATFORM_SLOW_PROBE_MS } } },
     state: "operational",
   },
   {
     id: "platform",
-    name: "bad probes in a row at the degraded count",
-    change: { badProbes: BAD_PROBES_FOR_DEGRADED },
+    name: "a probe over the slow limit",
+    change: { probes: { platform: { ok: true, durationMs: PLATFORM_SLOW_PROBE_MS + 1 } } },
     state: "degraded",
   },
   {
     id: "platform",
-    name: "one failed probe",
-    change: { probeFailures: 1, badProbes: 1 },
-    state: "operational",
+    name: "a failed probe",
+    change: { probes: { platform: FAILED_PROBE } },
+    state: "outage",
   },
   {
     id: "platform",
-    name: "failed probes in a row at the outage count",
-    change: { probeFailures: PROBE_FAILURES_FOR_OUTAGE, badProbes: PROBE_FAILURES_FOR_OUTAGE },
-    state: "outage",
+    name: "the website's probe failing",
+    change: { probes: { website: FAILED_PROBE } },
+    state: "operational",
   },
   {
     id: "platform",
@@ -567,8 +548,8 @@ describe("the thresholds and windows", () => {
     expect({
       WEBSITE_SLOW_PROBE_MS,
       PLATFORM_SLOW_PROBE_MS,
-      BAD_PROBES_FOR_DEGRADED,
-      PROBE_FAILURES_FOR_OUTAGE,
+      MINUTES_FOR_DEGRADED,
+      MINUTES_FOR_OUTAGE,
       WEBSITE_OUTAGE_ERROR_PERCENT,
       WEBSITE_MIN_REQUESTS,
       PLATFORM_OUTAGE_ERROR_SHARE,
@@ -588,8 +569,8 @@ describe("the thresholds and windows", () => {
     }).toEqual({
       WEBSITE_SLOW_PROBE_MS: 3000,
       PLATFORM_SLOW_PROBE_MS: 2000,
-      BAD_PROBES_FOR_DEGRADED: 2,
-      PROBE_FAILURES_FOR_OUTAGE: 3,
+      MINUTES_FOR_DEGRADED: 2,
+      MINUTES_FOR_OUTAGE: 3,
       WEBSITE_OUTAGE_ERROR_PERCENT: 50,
       WEBSITE_MIN_REQUESTS: 20,
       PLATFORM_OUTAGE_ERROR_SHARE: 0.5,
@@ -625,16 +606,17 @@ describe("judgeComponent thresholds", () => {
   });
 });
 
+const CONFIG: StatusConfig = {
+  environment: "prod",
+  albArnSuffix: "app/backend-alb/abc123",
+  webDistributionId: "E2EXAMPLE",
+  kinesisStreamName: "ingest-stream-prod",
+};
+
 describe("a dependency check whose newest answer failed after good ones", () => {
-  const config: StatusConfig = {
-    environment: "prod",
-    albArnSuffix: "app/backend-alb/abc123",
-    webDistributionId: "E2EXAMPLE",
-    kinesisStreamName: "ingest-stream-prod",
-  };
   const now = new Date("2026-11-03T12:00:00Z");
   const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
-  const checks = statusSignals(config).filter(
+  const checks = statusSignals(CONFIG).filter(
     ({ id }) => id === "databaseUp" || id === "databricksUp",
   );
   const readings = collapseReadings(
@@ -663,8 +645,11 @@ describe("the worst of several rules", () => {
     ],
     [
       "platform",
-      "slow probes beside a database outage",
-      { badProbes: BAD_PROBES_FOR_DEGRADED, readings: { databaseUp: 0 } },
+      "a slow probe beside a database outage",
+      {
+        probes: { platform: { ok: true, durationMs: PLATFORM_SLOW_PROBE_MS + 1 } },
+        readings: { databaseUp: 0 },
+      },
       "outage",
     ],
     [
@@ -704,8 +689,8 @@ function at(iso: string): Date {
 }
 
 interface RunChange extends Change {
-  probes?: Partial<StatusProbes>;
   incidents?: Incident[];
+  notices?: Notice[];
 }
 
 function run(
@@ -719,7 +704,39 @@ function run(
     readings: { ...HEALTHY_READINGS, ...change.readings },
     previous,
     incidents: change.incidents ?? [],
+    notices: change.notices ?? [],
   });
+}
+
+function minuteStamp(index: number): string {
+  return `2026-11-03T12:${String(index).padStart(2, "0")}:00.000Z`;
+}
+
+/** One run per minute from 12:00, each with its own change. */
+function runMinutes(changes: RunChange[]): JudgeResult[] {
+  const results: JudgeResult[] = [];
+  let previous: PublisherState | undefined;
+
+  for (const [index, change] of changes.entries()) {
+    const result = run(previous, minuteStamp(index), change);
+    results.push(result);
+    previous = result.state;
+  }
+
+  return results;
+}
+
+/** The same change once a minute until `now`, long enough for an outage to show. */
+function runHeld(now: string, change: RunChange = {}): JudgeResult {
+  const end = Date.parse(now);
+  const stamp = (minutesBefore: number) => new Date(end - minutesBefore * 60_000).toISOString();
+
+  let result = run(undefined, stamp(MINUTES_FOR_OUTAGE - 1), change);
+  for (let minutesBefore = MINUTES_FOR_OUTAGE - 2; minutesBefore >= 0; minutesBefore -= 1) {
+    result = run(result.state, stamp(minutesBefore), change);
+  }
+
+  return result;
 }
 
 function componentOf(result: JudgeResult, id: StatusComponentId): StatusComponent {
@@ -743,7 +760,7 @@ function cleanDay(date: string): DayRecord {
     maintenanceMinutes: 0,
     unknownMinutes: 0,
   };
-  return { date, ...counts, state: dayState(counts), incidentIds: [] };
+  return { date, ...counts, state: dayState(counts) };
 }
 
 function cleanDays(lastDate: string, count: number): DayRecord[] {
@@ -760,7 +777,7 @@ function stateWithDays(
 ): PublisherState {
   const components: PublisherState["components"] = {};
   for (const id of ids) {
-    components[id] = { probeFailures: 0, badProbes: 0, days };
+    components[id] = { degradedStreak: 0, outageStreak: 0, days };
   }
   return { version: PUBLISHER_STATE_VERSION, lastJudgedAt, components };
 }
@@ -810,48 +827,123 @@ describe("judgeStatus first run", () => {
     expectValid(result);
   });
 
-  it("carries no notices and the incidents it was given", () => {
+  it("carries the incidents and notices it was given", () => {
     const open = incident();
-    const withIncident = run(undefined, "2026-11-03T12:00:00.000Z", { incidents: [open] });
+    const notice: Notice = { id: "notice-1", title: "Heads up", body: "", severity: "info" };
+    const withContent = run(undefined, "2026-11-03T12:00:00.000Z", {
+      incidents: [open],
+      notices: [notice],
+    });
 
-    expect(result.document.notices).toEqual([]);
     expect(result.document.incidents).toEqual([]);
-    expect(withIncident.document.incidents).toEqual([open]);
-    expectValid(withIncident);
+    expect(result.document.notices).toEqual([]);
+    expect(withContent.document.incidents).toEqual([open]);
+    expect(withContent.document.notices).toEqual([notice]);
+    expectValid(withContent);
   });
 });
 
 describe("recording measured outcomes", () => {
   it("records each component's own minute as operational, degraded or down", () => {
-    const change = {
+    const result = runHeld("2026-11-03T12:02:00.000Z", {
       probes: { website: { ok: true, durationMs: WEBSITE_SLOW_PROBE_MS + 1 } },
       readings: { ingestForwardingFailures: INGEST_OUTAGE_FAILURES + 1 },
-    };
-    const first = run(undefined, "2026-11-03T12:00:00.000Z", change);
-    const result = run(first.state, "2026-11-03T12:01:00.000Z", change);
+    });
 
-    expect(componentOf(result, "website")).toMatchObject({ state: "degraded", degradedMinutes: 1 });
+    expect(componentOf(result, "website")).toMatchObject({ state: "degraded", degradedMinutes: 2 });
+    expect(componentOf(result, "data-intake")).toMatchObject({
+      state: "outage",
+      uptimePercent: 66.67,
+    });
     expect(componentOf(result, "data-intake").days[0]).toMatchObject({
       state: "outage",
-      downMinutes: 2,
+      degradedMinutes: 1,
+      downMinutes: 1,
     });
-    expect(componentOf(result, "data-intake").uptimePercent).toBe(0);
     expect(componentOf(result, "platform").state).toBe("operational");
     expectValid(result);
   });
 
-  it("reports how far behind delivery is while latency makes it degraded or down", () => {
-    const late = run(undefined, "2026-11-03T12:00:00.000Z", {
-      readings: { deliveryLatencyP95: 1500 },
-    });
-    const recovered = run(late.state, "2026-11-03T12:01:00.000Z");
+  it("reports how far behind delivery is once lateness has made it degraded or down", () => {
+    const late = { readings: { deliveryLatencyP95: 1500 } };
+    const first = run(undefined, minuteStamp(0), late);
+    const held = run(first.state, minuteStamp(1), late);
+    const recovered = run(held.state, minuteStamp(2));
 
-    expect(componentOf(late, "data-delivery")).toMatchObject({
+    expect(componentOf(first, "data-delivery")).toMatchObject({ state: "operational" });
+    expect(componentOf(first, "data-delivery")).not.toHaveProperty("delayMinutes");
+    expect(componentOf(held, "data-delivery")).toMatchObject({
       state: "degraded",
       delayMinutes: 25,
     });
-    expect(componentOf(late, "data-intake")).not.toHaveProperty("delayMinutes");
+    expect(componentOf(held, "data-intake")).not.toHaveProperty("delayMinutes");
     expect(componentOf(recovered, "data-delivery")).not.toHaveProperty("delayMinutes");
+  });
+});
+
+const BEHIND: RunChange = {
+  readings: { ingestIteratorAge: ITERATOR_AGE_DEGRADED_MINUTES * 60_000 + 1 },
+};
+const STALLED: RunChange = { readings: { ingestIdle: DELIVERY_STALL_IDLE_MINUTES + 0.4 } };
+
+describe("a measured state", () => {
+  it.each([
+    ["one minute behind the stream", [BEHIND, {}], ["operational", "operational"]],
+    [
+      "behind the stream for as long as degraded needs",
+      [BEHIND, BEHIND, BEHIND],
+      ["operational", "degraded", "degraded"],
+    ],
+    [
+      "a stall read for one minute between healthy ones",
+      [{}, STALLED, {}],
+      ["operational", "operational", "operational"],
+    ],
+    ["a stall that holds", [STALLED, STALLED, STALLED], ["operational", "degraded", "outage"]],
+    [
+      "a stall that clears before it counts as down",
+      [STALLED, STALLED, {}],
+      ["operational", "degraded", "operational"],
+    ],
+    [
+      "a lag that becomes a stall",
+      [BEHIND, STALLED, STALLED, STALLED],
+      ["operational", "degraded", "degraded", "outage"],
+    ],
+  ] satisfies [string, RunChange[], ComponentState[]][])(
+    "shows %s only once it has held",
+    (_name, changes, states) => {
+      const results = runMinutes(changes);
+
+      expect(results.map((result) => componentOf(result, "data-delivery").state)).toEqual(states);
+    },
+  );
+});
+
+describe("a stream reader that resumes after a pause", () => {
+  const lag = statusSignals(CONFIG).filter(({ id }) => id === "ingestIteratorAge");
+  const ages = [0, 0, 34 * 60_000, 0, 0];
+  const minuteAt = (index: number) => new Date(Date.parse(minuteStamp(index)));
+
+  function readingsAt(index: number): StatusReadings {
+    const seen = ages.slice(0, index + 1);
+    return collapseReadings(
+      lag,
+      [{ Id: "ingestIteratorAge", Timestamps: seen.map((_, at) => minuteAt(at)), Values: seen }],
+      new Date(minuteAt(index).getTime() + 24_000),
+    );
+  }
+
+  it("reads its high age for the minute it reported it", () => {
+    expect(ages.map((_, index) => readingsAt(index).ingestIteratorAge)).toEqual(ages);
+  });
+
+  it("leaves data delivery operational", () => {
+    const results = runMinutes(ages.map((_, index) => ({ readings: readingsAt(index) })));
+
+    expect(results.map((result) => componentOf(result, "data-delivery").state)).toEqual(
+      ages.map(() => "operational"),
+    );
   });
 });
 
@@ -881,32 +973,17 @@ function probesFor(id: ProbedId, probe: StatusProbeResult): Partial<StatusProbes
   return id === "website" ? { website: probe } : { platform: probe };
 }
 
-function minuteStamp(index: number): string {
-  return `2026-11-03T12:${String(index).padStart(2, "0")}:00.000Z`;
-}
-
 /** One run per minute from 12:00, each with the probe its step describes. */
 function runSteps(id: ProbedId, steps: Step[]): JudgeResult[] {
-  const results: JudgeResult[] = [];
-  let previous: PublisherState | undefined;
-
-  for (const [index, step] of steps.entries()) {
-    const result = run(previous, minuteStamp(index), {
-      probes: probesFor(id, probeFor(id, step)),
-    });
-    results.push(result);
-    previous = result.state;
-  }
-
-  return results;
+  return runMinutes(steps.map((step) => ({ probes: probesFor(id, probeFor(id, step)) })));
 }
 
 interface StepCase {
   name: string;
   steps: Step[];
   states: ComponentState[];
-  badProbes: number[];
-  probeFailures: number[];
+  degradedStreak: number[];
+  outageStreak: number[];
 }
 
 const stepCases: StepCase[] = [
@@ -914,89 +991,91 @@ const stepCases: StepCase[] = [
     name: "one slow probe",
     steps: ["slow"],
     states: ["operational"],
-    badProbes: [1],
-    probeFailures: [0],
+    degradedStreak: [1],
+    outageStreak: [0],
   },
   {
     name: "two slow probes in a row",
     steps: ["slow", "slow"],
     states: ["operational", "degraded"],
-    badProbes: [1, 2],
-    probeFailures: [0, 0],
+    degradedStreak: [1, 2],
+    outageStreak: [0, 0],
   },
   {
     name: "slow probes that never count as failures",
     steps: ["slow", "slow", "slow", "slow"],
     states: ["operational", "degraded", "degraded", "degraded"],
-    badProbes: [1, 2, 3, 4],
-    probeFailures: [0, 0, 0, 0],
+    degradedStreak: [1, 2, 3, 4],
+    outageStreak: [0, 0, 0, 0],
   },
   {
     name: "a good probe between slow ones",
     steps: ["slow", "good", "slow"],
     states: ["operational", "operational", "operational"],
-    badProbes: [1, 0, 1],
-    probeFailures: [0, 0, 0],
+    degradedStreak: [1, 0, 1],
+    outageStreak: [0, 0, 0],
   },
   {
     name: "a good probe after a degraded run",
     steps: ["slow", "slow", "good"],
     states: ["operational", "degraded", "operational"],
-    badProbes: [1, 2, 0],
-    probeFailures: [0, 0, 0],
+    degradedStreak: [1, 2, 0],
+    outageStreak: [0, 0, 0],
   },
   {
     name: "probes at the slow limit",
     steps: ["limit", "limit", "limit"],
     states: ["operational", "operational", "operational"],
-    badProbes: [0, 0, 0],
-    probeFailures: [0, 0, 0],
+    degradedStreak: [0, 0, 0],
+    outageStreak: [0, 0, 0],
   },
   {
     name: "one failed probe",
     steps: ["failed"],
     states: ["operational"],
-    badProbes: [1],
-    probeFailures: [1],
+    degradedStreak: [1],
+    outageStreak: [1],
   },
   {
     name: "a failed probe then a slow one",
     steps: ["failed", "slow"],
     states: ["operational", "degraded"],
-    badProbes: [1, 2],
-    probeFailures: [1, 0],
+    degradedStreak: [1, 2],
+    outageStreak: [1, 0],
   },
   {
     name: "failed probes up to the outage count",
     steps: ["failed", "failed", "failed"],
     states: ["operational", "degraded", "outage"],
-    badProbes: [1, 2, 3],
-    probeFailures: [1, 2, 3],
+    degradedStreak: [1, 2, 3],
+    outageStreak: [1, 2, 3],
   },
   {
     name: "failed probes broken by a slow one",
     steps: ["failed", "failed", "slow", "failed"],
     states: ["operational", "degraded", "degraded", "degraded"],
-    badProbes: [1, 2, 3, 4],
-    probeFailures: [1, 2, 0, 1],
+    degradedStreak: [1, 2, 3, 4],
+    outageStreak: [1, 2, 0, 1],
   },
   {
     name: "failed probes broken by a good one",
     steps: ["failed", "failed", "good", "failed"],
     states: ["operational", "degraded", "operational", "operational"],
-    badProbes: [1, 2, 0, 1],
-    probeFailures: [1, 2, 0, 1],
+    degradedStreak: [1, 2, 0, 1],
+    outageStreak: [1, 2, 0, 1],
   },
 ];
 
 describe.each<ProbedId>(["website", "platform"])("consecutive bad probes of %s", (id) => {
-  it.each(stepCases)("reads $name", ({ steps, states, badProbes, probeFailures }) => {
+  it.each(stepCases)("reads $name", ({ steps, states, degradedStreak, outageStreak }) => {
     const results = runSteps(id, steps);
 
     expect(results.map((result) => componentOf(result, id).state)).toEqual(states);
-    expect(results.map((result) => result.state.components[id]?.badProbes)).toEqual(badProbes);
-    expect(results.map((result) => result.state.components[id]?.probeFailures)).toEqual(
-      probeFailures,
+    expect(results.map((result) => result.state.components[id]?.degradedStreak)).toEqual(
+      degradedStreak,
+    );
+    expect(results.map((result) => result.state.components[id]?.outageStreak)).toEqual(
+      outageStreak,
     );
   });
 
@@ -1007,7 +1086,7 @@ describe.each<ProbedId>(["website", "platform"])("consecutive bad probes of %s",
     "colours the day for %s of degraded minutes as %s",
     (_name, degradedMinutes, expected) => {
       const steps: Step[] = Array.from(
-        { length: BAD_PROBES_FOR_DEGRADED - 1 + degradedMinutes },
+        { length: MINUTES_FOR_DEGRADED - 1 + degradedMinutes },
         () => "slow",
       );
       const last = runSteps(id, steps).at(-1);
@@ -1025,29 +1104,29 @@ describe("the two probes", () => {
       probes: { platform: FAILED_PROBE },
     });
 
-    expect(first.state.components.platform).toMatchObject({ probeFailures: 1, badProbes: 1 });
-    expect(first.state.components.website).toMatchObject({ probeFailures: 0, badProbes: 0 });
-    expect(first.state.components["data-intake"]).toMatchObject({ probeFailures: 0, badProbes: 0 });
+    expect(first.state.components.platform).toMatchObject({ outageStreak: 1, degradedStreak: 1 });
+    expect(first.state.components.website).toMatchObject({ outageStreak: 0, degradedStreak: 0 });
+    expect(first.state.components["data-intake"]).toMatchObject({
+      outageStreak: 0,
+      degradedStreak: 0,
+    });
   });
 });
 
 describe("recording a minute only once", () => {
   it("leaves the history alone when the same minute runs again", () => {
-    const first = run(undefined, "2026-11-03T12:00:05.000Z", {
-      readings: { ingestForwardingFailures: 9 },
-    });
-    const again = run(first.state, "2026-11-03T12:00:50.000Z", {
-      readings: { ingestForwardingFailures: 9 },
-    });
+    const failing = { readings: { ingestForwardingFailures: 9 } };
+    const held = runHeld("2026-11-03T12:02:05.000Z", failing);
+    const again = run(held.state, "2026-11-03T12:02:50.000Z", failing);
 
     for (const id of LIVE_IDS) {
-      expect(componentOf(again, id).days).toEqual(componentOf(first, id).days);
+      expect(componentOf(again, id).days).toEqual(componentOf(held, id).days);
     }
     expect(componentOf(again, "data-intake").days[0]).toMatchObject({
-      recordedMinutes: 1,
+      recordedMinutes: 3,
       downMinutes: 1,
     });
-    expect(again.state.lastJudgedAt).toBe(first.state.lastJudgedAt);
+    expect(again.state.lastJudgedAt).toBe(held.state.lastJudgedAt);
     expectValid(again);
   });
 
@@ -1056,13 +1135,13 @@ describe("recording a minute only once", () => {
     ["a slow probe", { ok: true, durationMs: WEBSITE_SLOW_PROBE_MS + 1 }, 0, 2],
   ] satisfies [string, StatusProbeResult, number, number][])(
     "does not advance either count for %s twice in the same minute",
-    (_name, probe, probeFailures, badProbes) => {
+    (_name, probe, outageStreak, degradedStreak) => {
       const change = { probes: { website: probe } };
       const first = run(undefined, "2026-11-03T12:00:05.000Z", change);
       const second = run(first.state, "2026-11-03T12:01:05.000Z", change);
       const again = run(second.state, "2026-11-03T12:01:50.000Z", change);
 
-      expect(again.state.components.website).toMatchObject({ probeFailures, badProbes });
+      expect(again.state.components.website).toMatchObject({ outageStreak, degradedStreak });
       expect(componentOf(again, "website").state).toBe("degraded");
       expect(componentOf(again, "website").days[0]).toMatchObject({
         recordedMinutes: 2,
@@ -1071,14 +1150,14 @@ describe("recording a minute only once", () => {
     },
   );
 
-  it("still judges the current evidence on a repeat", () => {
+  it("shows the state its minute was judged with on a repeat", () => {
     const first = run(undefined, "2026-11-03T12:00:05.000Z");
     const again = run(first.state, "2026-11-03T12:00:50.000Z", {
       readings: { ingestForwardingFailures: 9 },
     });
 
-    expect(componentOf(again, "data-intake").state).toBe("outage");
-    expect(componentOf(again, "data-intake").days[0]?.downMinutes).toBe(0);
+    expect(componentOf(again, "data-intake").state).toBe("operational");
+    expect(again.state.components["data-intake"]).toMatchObject({ outageStreak: 0 });
   });
 
   it("ignores a run stamped before the last judged minute", () => {
@@ -1153,7 +1232,7 @@ describe("minutes that were not judged", () => {
   });
 });
 
-describe.each<ProbedId>(["website", "platform"])("probe streaks of %s across a gap", (id) => {
+describe.each<ProbedId>(["website", "platform"])("streaks of %s across a gap", (id) => {
   const failed = { probes: probesFor(id, FAILED_PROBE) };
 
   it("start again after minutes that were not judged", () => {
@@ -1161,8 +1240,8 @@ describe.each<ProbedId>(["website", "platform"])("probe streaks of %s across a g
     const second = run(first.state, minuteStamp(1), failed);
     const afterGap = run(second.state, minuteStamp(5), failed);
 
-    expect(second.state.components[id]).toMatchObject({ probeFailures: 2, badProbes: 2 });
-    expect(afterGap.state.components[id]).toMatchObject({ probeFailures: 1, badProbes: 1 });
+    expect(second.state.components[id]).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
+    expect(afterGap.state.components[id]).toMatchObject({ outageStreak: 1, degradedStreak: 1 });
     expect(componentOf(afterGap, id).state).toBe("operational");
   });
 
@@ -1171,7 +1250,7 @@ describe.each<ProbedId>(["website", "platform"])("probe streaks of %s across a g
     const second = run(first.state, minuteStamp(1), failed);
     const third = run(second.state, minuteStamp(2), failed);
 
-    expect(third.state.components[id]).toMatchObject({ probeFailures: 3, badProbes: 3 });
+    expect(third.state.components[id]).toMatchObject({ outageStreak: 3, degradedStreak: 3 });
     expect(componentOf(third, id).state).toBe("outage");
   });
 });
@@ -1236,10 +1315,8 @@ describe("open incidents", () => {
     expect(componentOf(result, "platform").days[0]).toMatchObject({
       downMinutes: 1,
       state: "outage",
-      incidentIds: ["inc-1"],
     });
     expect(componentOf(result, "website").state).toBe("operational");
-    expect(componentOf(result, "website").days[0]?.incidentIds).toEqual([]);
     expectValid(result);
   });
 
@@ -1263,7 +1340,7 @@ describe("open incidents", () => {
   });
 
   it("does not lower a measured outage", () => {
-    const result = run(undefined, now, {
+    const result = runHeld(now, {
       probes: { platform: FAILED_PROBE },
       readings: { databaseUp: 0 },
       incidents: [incident({ impact: "degraded" })],
@@ -1279,7 +1356,6 @@ describe("open incidents", () => {
     const result = run(undefined, now, { incidents: [incident({ impact: "outage", ...change })] });
 
     expect(componentOf(result, "platform").state).toBe("operational");
-    expect(componentOf(result, "platform").days[0]?.incidentIds).toEqual([]);
   });
 
   it("applies until the time it is resolved", () => {
@@ -1304,7 +1380,7 @@ describe("maintenance", () => {
   const maintenance = incident({ id: "maint-1", kind: "maintenance", components: ["platform"] });
 
   it("records the minute as maintenance even when something measured is down", () => {
-    const result = run(undefined, now, {
+    const result = runHeld(now, {
       probes: { platform: FAILED_PROBE },
       readings: { databaseUp: 0 },
       incidents: [maintenance],
@@ -1312,17 +1388,16 @@ describe("maintenance", () => {
 
     expect(componentOf(result, "platform").days[0]).toMatchObject({
       state: "maintenance",
-      maintenanceMinutes: 1,
+      maintenanceMinutes: MINUTES_FOR_OUTAGE,
       downMinutes: 0,
       degradedMinutes: 0,
-      incidentIds: ["maint-1"],
     });
     expect(componentOf(result, "platform").uptimePercent).toBe(100);
     expectValid(result);
   });
 
   it("shows the component as under maintenance, not as the outage the window causes", () => {
-    const result = run(undefined, now, {
+    const result = runHeld(now, {
       probes: { platform: FAILED_PROBE },
       readings: { databaseUp: 0 },
       incidents: [{ ...maintenance, impact: "outage" }],
@@ -1332,17 +1407,18 @@ describe("maintenance", () => {
     expectValid(result);
   });
 
-  it("goes back to the measured state once the window has ended", () => {
-    const result = run(undefined, now, {
+  it("goes back to the measured state once the window has ended, counting what held during it", () => {
+    const result = runHeld(now, {
       readings: { databaseUp: 0 },
       incidents: [{ ...maintenance, endsAt: "2026-11-03T11:59:00.000Z" }],
     });
 
+    expect(componentOf(result, "platform").days[0]).toMatchObject({ maintenanceMinutes: 1 });
     expect(componentOf(result, "platform").state).toBe("outage");
   });
 
   it("leaves other components measured as usual", () => {
-    const result = run(undefined, now, {
+    const result = runHeld(now, {
       readings: { ingestForwardingFailures: INGEST_OUTAGE_FAILURES + 1 },
       incidents: [maintenance],
     });
@@ -1354,10 +1430,10 @@ describe("maintenance", () => {
   });
 
   it("stops overriding once its window has ended", () => {
-    const result = run(undefined, now, {
+    const result = runHeld(now, {
       probes: { platform: FAILED_PROBE },
       readings: { databaseUp: 0 },
-      incidents: [{ ...maintenance, endsAt: "2026-11-03T11:59:00.000Z" }],
+      incidents: [{ ...maintenance, endsAt: "2026-11-03T11:50:00.000Z" }],
     });
 
     expect(componentOf(result, "platform").days[0]).toMatchObject({
@@ -1399,25 +1475,25 @@ describe("state round trip", () => {
     const next = run(stored, "2026-11-03T12:02:00.000Z", { probes: { website: FAILED_PROBE } });
 
     expect(stored).toEqual(result.state);
-    expect(next.state.components.website).toMatchObject({ probeFailures: 2, badProbes: 2 });
+    expect(next.state.components.website).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
     expect(componentOf(next, "website").days[0]).toMatchObject({ recordedMinutes: 3 });
     expectValid(next);
   });
 
-  it("rejects a state with a bad version or a bad day", () => {
+  it("rejects a state from another version or with a negative streak", () => {
     const result = run(undefined, "2026-11-03T12:00:00.000Z");
 
-    expect(publisherStateSchema.safeParse({ ...result.state, version: 2 }).success).toBe(false);
+    expect(publisherStateSchema.safeParse({ ...result.state, version: 1 }).success).toBe(false);
     expect(
       publisherStateSchema.safeParse({
         ...result.state,
-        components: { website: { probeFailures: -1, badProbes: 0, days: [] } },
+        components: { website: { outageStreak: -1, degradedStreak: 0, days: [] } },
       }).success,
     ).toBe(false);
     expect(
       publisherStateSchema.safeParse({
         ...result.state,
-        components: { website: { probeFailures: 0, badProbes: -1, days: [] } },
+        components: { website: { outageStreak: 0, degradedStreak: -1, days: [] } },
       }).success,
     ).toBe(false);
   });
