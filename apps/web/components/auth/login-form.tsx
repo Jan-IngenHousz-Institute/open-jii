@@ -48,10 +48,12 @@ function ProviderGrid({
   providers,
   callbackUrl,
   lastLoginMethod,
+  locale,
 }: {
   providers: { id: string; name: string }[];
   callbackUrl: string | undefined;
   lastLoginMethod: string | null;
+  locale: string;
 }) {
   const count = providers.length;
   const variant = count === 2 ? 2 : count === 3 ? 3 : count > 3 ? "many" : 1;
@@ -62,6 +64,7 @@ function ProviderGrid({
         <OAuthLoginForm
           key={provider.id}
           provider={provider}
+          locale={locale}
           callbackUrl={callbackUrl}
           layoutCount={count}
           isLastUsed={lastLoginMethod === provider.id}
@@ -121,6 +124,7 @@ export function LoginForm({ callbackUrl, locale, termsData }: LoginFormProps) {
       {!showOTP && (
         <ProviderGrid
           providers={oauthProviders}
+          locale={locale}
           callbackUrl={callbackUrl}
           lastLoginMethod={lastLoginMethod}
         />

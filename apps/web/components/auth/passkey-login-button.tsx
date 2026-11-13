@@ -3,6 +3,7 @@
 import { Fingerprint, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSignInPasskey } from "~/hooks/auth/useSignInPasskey/useSignInPasskey";
+import { getAuthCallback } from "~/lib/auth-callback";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -23,7 +24,7 @@ export function PasskeyLoginButton({ callbackUrl, isLastUsed }: PasskeyLoginButt
   const handleClick = async () => {
     try {
       await signInPasskey.mutateAsync(undefined);
-      router.push(callbackUrl ?? "/platform");
+      router.push(getAuthCallback(callbackUrl));
     } catch {
       // Covers WebAuthn ceremony cancellation too.
       toast({ description: t("auth.passkeyError"), variant: "destructive" });

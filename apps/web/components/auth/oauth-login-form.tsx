@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { env } from "~/env";
+import { getAuthCallback } from "~/lib/auth-callback";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -13,12 +14,14 @@ import { LastUsedBadge } from "./last-used-badge";
 interface OAuthLoginFormProps {
   provider: { id: string; name: string };
   callbackUrl: string | undefined;
+  locale: string;
   layoutCount?: number;
   isLastUsed?: boolean;
 }
 
 export function OAuthLoginForm({
   provider,
+  locale,
   callbackUrl,
   layoutCount,
   isLastUsed,
@@ -29,11 +32,15 @@ export function OAuthLoginForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsPending(true);
-    const redirectUrl = callbackUrl
-      ? callbackUrl.startsWith("http")
-        ? callbackUrl
-        : `${env.NEXT_PUBLIC_BASE_URL}${callbackUrl}`
-      : `${env.NEXT_PUBLIC_BASE_URL}/platform`;
+    const destination = getAuthCallback(callbackUrl);
+    const callback = new URL(destination, env.NEXT_PUBLIC_BASE_URL);
+    const redirectUrl =
+      callback.origin === new URL(env.NEXT_PUBLIC_BASE_URL).origin
+        ? callback.href
+        : new URL(
+            `/${locale}/register?callbackUrl=${encodeURIComponent(destination)}`,
+            env.NEXT_PUBLIC_BASE_URL,
+          ).href;
 
     const errorURL = `${env.NEXT_PUBLIC_BASE_URL}/login-error`;
 
