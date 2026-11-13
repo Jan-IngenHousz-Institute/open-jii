@@ -226,7 +226,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
         df = df.withColumn("_copy", row_number().over(newest_first)).filter(col("_copy") == 1).drop("_copy")
 
     parsed = []
-    # payload_annotations repeats the phone's share of annotations for the backend's pages.
+    # payload_annotations repeats the phone's share of annotations, which `annotations` already holds.
     exclude_cols = ["experiment_id", "payload_annotations"]
 
     if table_type == "macro":
