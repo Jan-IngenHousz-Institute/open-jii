@@ -168,7 +168,8 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllEnvs());
 
-describe(`first-party session contract (${ADR})`, () => {
+// Every test cold-imports the server after vi.resetModules(); under CI coverage that alone can pass 5 s.
+describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
   it.each([
     ["prod", "__Secure-better-auth.prod.session_token", ".openjii.org"],
     ["local", "better-auth.dev.session_token", undefined],
