@@ -44,6 +44,11 @@ output "jobs_policy_name" {
   value       = aws_iot_policy.jobs.name
 }
 
+output "device_location_policy_name" {
+  description = "Name of the IoT policy letting a device request AWS IoT Device Location estimates for itself"
+  value       = aws_iot_policy.device_location.name
+}
+
 output "jobs_presign_role_arn" {
   description = "ARN of the role AWS IoT Jobs assumes to presign firmware objects (null when enable_firmware_jobs is false)"
   value       = var.enable_firmware_jobs ? aws_iam_role.jobs_presign[0].arn : null

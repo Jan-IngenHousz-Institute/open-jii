@@ -70,8 +70,13 @@ export class RegisterIotDeviceUseCase {
     );
 
     if (createResult.isFailure() || createResult.value.length === 0) {
-      // Roll back the Thing so AWS does not keep an orphan when the row cannot be persisted.
-      await this.awsPort.deleteThing(thing.thingName);
+      // The Thing stays: CreateThing succeeding does not prove this call made
+      // it, and an orphan is harmless, since the next attempt adopts it.
+      this.logger.warn({
+        msg: "Device row not stored; thing left in AWS",
+        operation: "registerIotDevice",
+        thingName: thing.thingName,
+      });
       return createResult.isFailure()
         ? failure(createResult.error)
         : failure(

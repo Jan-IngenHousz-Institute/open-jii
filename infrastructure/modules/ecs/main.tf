@@ -142,6 +142,13 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
           "iot:SearchIndex"
         ]
         Resource = "*"
+      },
+      {
+        # Sets a thing's deviceLocationId attribute when credentials are issued
+        # or rotated; nothing else on a thing is updated.
+        Effect   = "Allow"
+        Action   = "iot:UpdateThing"
+        Resource = "arn:aws:iot:${var.region}:${data.aws_caller_identity.current.account_id}:thing/*"
       }
     ]
   })

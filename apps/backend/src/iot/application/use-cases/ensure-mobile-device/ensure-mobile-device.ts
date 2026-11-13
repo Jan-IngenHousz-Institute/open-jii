@@ -71,15 +71,19 @@ export class EnsureMobileDeviceUseCase {
     );
 
     if (createResult.isFailure() || createResult.value.length === 0) {
-      // A concurrent ensure may have won the serial's unique constraint. Only
-      // roll the Thing back when there is genuinely no row, otherwise the
-      // rollback would delete the winner's Thing.
+      // A concurrent ensure may have won the serial's unique constraint.
       const raced = await this.deviceRepository.findBySerialNumber(body.installId);
       if (raced.isSuccess() && raced.value) {
         return this.resolveExisting(raced.value, userId, body.name);
       }
 
-      await this.awsPort.deleteThing(thing.thingName);
+      // The Thing stays: CreateThing succeeding does not prove this call made
+      // it, and an orphan is harmless, since the next attempt adopts it.
+      this.logger.warn({
+        msg: "Device row not stored; thing left in AWS",
+        operation: "ensureMobileDevice",
+        thingName: thing.thingName,
+      });
       return createResult.isFailure()
         ? failure(createResult.error)
         : failure(

@@ -36,6 +36,7 @@ describe("IotDeviceGroupController", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
+    vi.spyOn(testApp.module.get(AwsAdapter), "ensureDeviceLocationId").mockResolvedValue(undefined);
     userId = await testApp.createTestUser({ name: "Owner" });
   });
 

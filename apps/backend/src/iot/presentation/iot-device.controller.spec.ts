@@ -40,6 +40,7 @@ describe("IotDeviceController", () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
     awsAdapter = testApp.module.get(AwsAdapter);
+    vi.spyOn(awsAdapter, "ensureDeviceLocationId").mockResolvedValue(undefined);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));

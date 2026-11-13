@@ -79,6 +79,8 @@ export class IssueIotCredentialsUseCase {
       return failure(policyResult.error);
     }
 
+    await this.awsPort.ensureDeviceLocationId(device.thingName);
+
     const updateResult = await this.deviceRepository.update(deviceId, {
       certificateId: cert.certificateId,
       certificateArn: cert.certificateArn,

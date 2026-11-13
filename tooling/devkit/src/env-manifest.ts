@@ -74,6 +74,7 @@ export const envManifest: readonly EnvVar[] = [
   env("AWS_COGNITO_DEVELOPER_PROVIDER_NAME", set, "local.openjii", backend),
   env("AWS_IOT_POLICY_NAMES", set, "local-disabled", backend),
   env("AWS_IOT_JOBS_POLICY_NAME", set, "local-disabled", backend),
+  env("AWS_IOT_DEVICE_LOCATION_POLICY_NAME", set, "local-disabled", backend),
   env("AWS_IOT_DEVICE_THING_TYPE_NAME", set, "local-disabled", backend),
   env("AWS_IOT_DEVICE_THING_GROUP_NAME", set, "local-disabled", backend),
   env("AWS_LAMBDA_MACRO_SANDBOX_PYTHON_FUNCTION_NAME", set, "local-disabled-python", backend),

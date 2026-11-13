@@ -38,6 +38,8 @@ export interface AwsPort {
   detachThingPrincipal(thingName: string, principal: string): Promise<Result<void>>;
   listThingPrincipals(thingName: string): Promise<Result<string[]>>;
   attachDevicePolicies(certificateArn: string): Promise<Result<void>>;
+  /** Best-effort; never fails, so credential flows need not handle it. */
+  ensureDeviceLocationId(thingName: string): Promise<void>;
   setCertificateStatus(certificateId: string, status: CertificateStatus): Promise<Result<void>>;
   getIotDataEndpoint(): Promise<Result<string>>;
   getCognitoIdentityId(userId: string): Promise<Result<string>>;

@@ -16,6 +16,12 @@ export interface CertificateResult {
   privateKey: string;
 }
 
+/**
+ * What ensuring a thing's deviceLocationId attribute did. "conflict" means a
+ * differing value was kept; "unsupported" that the thing name has no id.
+ */
+export type DeviceLocationIdOutcome = "unchanged" | "set" | "conflict" | "unsupported";
+
 export type CertificateStatus = "ACTIVE" | "INACTIVE" | "REVOKED";
 
 /**

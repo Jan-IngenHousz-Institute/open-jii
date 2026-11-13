@@ -7,6 +7,7 @@ export interface AwsConfig {
   cognitoDeveloperProviderName: string;
   iotPolicyNames: string[];
   iotJobsPolicyName: string;
+  iotDeviceLocationPolicyName: string;
   deviceThingTypeName: string;
   deviceThingGroupName: string;
   lambda: {
@@ -32,6 +33,8 @@ export const awsConfigSchema = z.object({
   // Empty until the Jobs policy is applied in an environment; the attach is
   // skipped rather than failing credential issuance.
   iotJobsPolicyName: z.string(),
+  // Empty until the device-location policy is applied; skipped the same way.
+  iotDeviceLocationPolicyName: z.string(),
   deviceThingTypeName: z.string().min(1),
   deviceThingGroupName: z.string().min(1),
   lambda: z.object({

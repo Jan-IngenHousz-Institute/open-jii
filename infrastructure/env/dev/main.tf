@@ -2987,6 +2987,10 @@ module "backend_ecs" {
       value = module.iot_core.jobs_policy_name
     },
     {
+      name  = "AWS_IOT_DEVICE_LOCATION_POLICY_NAME"
+      value = module.iot_core.device_location_policy_name
+    },
+    {
       # A family left unset renders the Firmware tab as "JII does not publish
       # firmware for this device family yet" rather than an error.
       #

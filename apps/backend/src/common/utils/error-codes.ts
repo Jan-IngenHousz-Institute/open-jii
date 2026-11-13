@@ -51,6 +51,7 @@ export enum ErrorCodes {
   AWS_IOT_ATTACH_POLICY_FAILED = "AWS_IOT_ATTACH_POLICY_FAILED", // IoT policy attachment to Cognito identity failed
   AWS_IOT_CREATE_THING_FAILED = "AWS_IOT_CREATE_THING_FAILED", // IoT CreateThing / group attachment failed
   AWS_IOT_DELETE_THING_FAILED = "AWS_IOT_DELETE_THING_FAILED", // IoT DeleteThing failed
+  AWS_IOT_UPDATE_THING_FAILED = "AWS_IOT_UPDATE_THING_FAILED", // IoT Describe/UpdateThing attribute write failed
   AWS_IOT_CREATE_CERT_FAILED = "AWS_IOT_CREATE_CERT_FAILED", // IoT CreateKeysAndCertificate failed
   AWS_IOT_ATTACH_PRINCIPAL_FAILED = "AWS_IOT_ATTACH_PRINCIPAL_FAILED", // IoT Attach/DetachThingPrincipal failed
   AWS_IOT_ATTACH_CERT_POLICY_FAILED = "AWS_IOT_ATTACH_CERT_POLICY_FAILED", // IoT AttachPolicy to certificate failed
