@@ -45,7 +45,7 @@ describe("RegisterPage", () => {
   });
 
   it.each([
-    ["https://equipment.openjii.org/login/openjii", "https://equipment.openjii.org/login/openjii"],
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
     ["https://example.com", "/en-US/platform"],
   ])("validates the destination for a registered user: %s", async (callbackUrl, expected) => {
     vi.mocked(auth).mockResolvedValue(createSession());
@@ -55,7 +55,7 @@ describe("RegisterPage", () => {
 
   it("preserves the final destination across an unauthenticated registration visit", async () => {
     vi.mocked(auth).mockResolvedValue(null);
-    const callbackUrl = "https://equipment.openjii.org/login/openjii?returnTo=%2Fdevices";
+    const callbackUrl = "http://localhost:3100/login/openjii?returnTo=%2Fdevices";
     await RegisterPage({ ...props, searchParams: Promise.resolve({ callbackUrl }) }).catch(
       () => undefined,
     );
