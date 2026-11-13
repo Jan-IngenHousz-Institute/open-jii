@@ -31,6 +31,7 @@ describe("IssueIotCredentialsUseCase", () => {
     useCase = testApp.module.get(IssueIotCredentialsUseCase);
     repo = testApp.module.get(IotDeviceRepository);
     awsAdapter = testApp.module.get(AwsAdapter);
+    vi.spyOn(awsAdapter, "ensureDeviceLocationId").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -93,6 +94,17 @@ describe("IssueIotCredentialsUseCase", () => {
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe(CERT.certificateId);
     expect(stored.value?.certificateArn).toBe(CERT.certificateArn);
+  });
+
+  it("ensures the thing's device-location id when issuing", async () => {
+    mockHappyPath();
+    const ensureSpy = vi.spyOn(awsAdapter, "ensureDeviceLocationId").mockResolvedValue(undefined);
+    const device = await createDevice("revoked");
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertSuccess(result);
+    expect(ensureSpy).toHaveBeenCalledWith(device.thingName);
   });
 
   it("re-issues a certificate for a revoked device", async () => {

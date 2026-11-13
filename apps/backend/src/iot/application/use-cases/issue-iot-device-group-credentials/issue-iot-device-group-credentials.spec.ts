@@ -38,6 +38,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
     useCase = testApp.module.get(IssueIotDeviceGroupCredentialsUseCase);
     groupRepository = testApp.module.get(IotDeviceGroupRepository);
     awsAdapter = testApp.module.get(AwsAdapter);
+    vi.spyOn(awsAdapter, "ensureDeviceLocationId").mockResolvedValue(undefined);
   });
 
   afterEach(() => {

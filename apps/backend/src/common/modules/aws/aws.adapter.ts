@@ -214,15 +214,15 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort, Notifi
   }
 
   /**
-   * Attach every configured device policy to the certificate. One policy per
-   * ingest channel, so a device cert carries all of them.
+   * Attach every configured device policy to the certificate: one per channel,
+   * plus the device-only Jobs and device-location policies where configured.
    */
   async attachDevicePolicies(certificateArn: string): Promise<Result<void>> {
-    const jobsPolicyName = this.awsConfigService.iotJobsPolicyName;
-    const policyNames =
-      jobsPolicyName === ""
-        ? this.awsConfigService.iotPolicyNames
-        : [...this.awsConfigService.iotPolicyNames, jobsPolicyName];
+    const policyNames = [
+      ...this.awsConfigService.iotPolicyNames,
+      this.awsConfigService.iotJobsPolicyName,
+      this.awsConfigService.iotDeviceLocationPolicyName,
+    ].filter((name) => name !== "");
 
     for (const policyName of policyNames) {
       const result = await this.awsIotService.attachPolicy(policyName, certificateArn);
@@ -231,6 +231,22 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort, Notifi
       }
     }
     return success(undefined);
+  }
+
+  /**
+   * Best-effort: without the id a device only loses its location estimates,
+   * which is no reason to withhold working credentials, so this never fails.
+   */
+  async ensureDeviceLocationId(thingName: string): Promise<void> {
+    const result = await this.awsIotService.ensureDeviceLocationId(thingName);
+    if (result.isFailure() || result.value === "conflict" || result.value === "unsupported") {
+      this.logger.warn({
+        msg: "Device location id not ensured",
+        operation: "ensureDeviceLocationId",
+        thingName,
+        outcome: result.isFailure() ? result.error.message : result.value,
+      });
+    }
   }
 
   async setCertificateStatus(

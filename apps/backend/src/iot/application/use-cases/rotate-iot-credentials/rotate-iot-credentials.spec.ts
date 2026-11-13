@@ -31,6 +31,7 @@ describe("RotateIotCredentialsUseCase", () => {
     useCase = testApp.module.get(RotateIotCredentialsUseCase);
     repo = testApp.module.get(IotDeviceRepository);
     awsAdapter = testApp.module.get(AwsAdapter);
+    vi.spyOn(awsAdapter, "ensureDeviceLocationId").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -86,6 +87,21 @@ describe("RotateIotCredentialsUseCase", () => {
     assertSuccess(stored);
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe(NEW_CERT.certificateId);
+  });
+
+  it("ensures the thing's device-location id when rotating", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(NEW_CERT));
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+    const ensureSpy = vi.spyOn(awsAdapter, "ensureDeviceLocationId").mockResolvedValue(undefined);
+    const device = await createDevice("active");
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertSuccess(result);
+    expect(ensureSpy).toHaveBeenCalledWith(device.thingName);
   });
 
   it("rejects rotating a device that is not active", async () => {

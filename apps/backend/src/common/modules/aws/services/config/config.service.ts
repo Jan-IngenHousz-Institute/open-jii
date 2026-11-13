@@ -49,6 +49,9 @@ export class AwsConfigService {
         .map((name) => name.trim())
         .filter(Boolean),
       iotJobsPolicyName: (this.configService.get<string>("aws.iot.jobsPolicyName") ?? "").trim(),
+      iotDeviceLocationPolicyName: (
+        this.configService.get<string>("aws.iot.deviceLocationPolicyName") ?? ""
+      ).trim(),
       deviceThingTypeName: this.configService.getOrThrow<string>("aws.iot.deviceThingTypeName"),
       deviceThingGroupName: this.configService.getOrThrow<string>("aws.iot.deviceThingGroupName"),
       lambda: {
@@ -142,6 +145,14 @@ export class AwsConfigService {
    */
   get iotJobsPolicyName(): string {
     return this.config.iotJobsPolicyName;
+  }
+
+  /**
+   * Policy letting a device request AWS IoT Device Location estimates for
+   * itself. Device certificates only, like {@link iotJobsPolicyName}.
+   */
+  get iotDeviceLocationPolicyName(): string {
+    return this.config.iotDeviceLocationPolicyName;
   }
 
   get deviceThingTypeName(): string {

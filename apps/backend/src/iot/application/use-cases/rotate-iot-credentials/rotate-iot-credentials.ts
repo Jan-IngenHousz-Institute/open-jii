@@ -71,6 +71,8 @@ export class RotateIotCredentialsUseCase {
       return failure(policyResult.error);
     }
 
+    await this.awsPort.ensureDeviceLocationId(device.thingName);
+
     // New cert is live — retire the old one. Best-effort: the device already works
     // with the new cert, so log failures but do not abort.
     await this.retireCertificate(device.thingName, oldCertificateId, oldCertificateArn);

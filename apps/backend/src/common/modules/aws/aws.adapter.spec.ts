@@ -1,3 +1,5 @@
+import { Logger } from "@nestjs/common";
+
 import { TestHarness } from "../../../test/test-harness";
 import { ErrorCodes } from "../../utils/error-codes";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
@@ -522,6 +524,35 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("ensureDeviceLocationId", () => {
+    it("delegates to the IoT service and stays quiet when the id is in place", async () => {
+      const ensureSpy = vi
+        .spyOn(awsIotService, "ensureDeviceLocationId")
+        .mockResolvedValue(success("set"));
+      const warnSpy = vi.spyOn(Logger.prototype, "warn");
+
+      await awsAdapter.ensureDeviceLocationId("ambyte_1");
+
+      expect(ensureSpy).toHaveBeenCalledWith("ambyte_1");
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["a kept conflicting value", success("conflict" as const)],
+      ["a thing name with no id", success("unsupported" as const)],
+      ["an AWS failure", failure(AppError.internal("update thing failed"))],
+    ])("logs %s instead of failing", async (_label, outcome) => {
+      vi.spyOn(awsIotService, "ensureDeviceLocationId").mockResolvedValue(outcome);
+      const warnSpy = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      await expect(awsAdapter.ensureDeviceLocationId("ambyte_1")).resolves.toBeUndefined();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: "Device location id not ensured", thingName: "ambyte_1" }),
+      );
+    });
+  });
+
   describe("attachDevicePolicies", () => {
     it("attaches every configured policy to the certificate", async () => {
       const attachSpy = vi
@@ -541,6 +572,7 @@ describe("AwsAdapter", () => {
         .spyOn(awsIotService, "attachPolicy")
         .mockResolvedValue(success(undefined));
       vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("jobs-policy");
+      vi.spyOn(awsConfigService, "iotDeviceLocationPolicyName", "get").mockReturnValue("");
 
       const result = await awsAdapter.attachDevicePolicies("arn:cert");
 
@@ -549,11 +581,28 @@ describe("AwsAdapter", () => {
       expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length + 1);
     });
 
-    it("skips the Jobs policy until an environment configures one", async () => {
+    it("also attaches the device-location policy, which Cognito identities never receive", async () => {
       const attachSpy = vi
         .spyOn(awsIotService, "attachPolicy")
         .mockResolvedValue(success(undefined));
       vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("");
+      vi.spyOn(awsConfigService, "iotDeviceLocationPolicyName", "get").mockReturnValue(
+        "location-policy",
+      );
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledWith("location-policy", "arn:cert");
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length + 1);
+    });
+
+    it("skips the Jobs and device-location policies until an environment configures them", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("");
+      vi.spyOn(awsConfigService, "iotDeviceLocationPolicyName", "get").mockReturnValue("");
 
       const result = await awsAdapter.attachDevicePolicies("arn:cert");
 

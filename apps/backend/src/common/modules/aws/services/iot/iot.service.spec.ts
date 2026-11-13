@@ -9,9 +9,13 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  DescribeThingCommand,
+  UpdateThingCommand,
   ListThingPrincipalsCommand,
   SearchIndexCommand,
   InvalidRequestException,
+  ResourceAlreadyExistsException,
+  VersionConflictException,
 } from "@aws-sdk/client-iot";
 import { mockClient } from "aws-sdk-client-mock";
 
@@ -47,6 +51,102 @@ describe("AwsIotService", () => {
     await testApp.teardown();
   });
 
+  describe("ensureDeviceLocationId", () => {
+    const thingName = "ambyte_28:37:2F:FF:E7:04";
+
+    it("sets a missing attribute, merged and version-guarded", async () => {
+      iotMock
+        .on(DescribeThingCommand)
+        .resolves({ attributes: { deviceType: "ambyte" }, version: 4 });
+      iotMock.on(UpdateThingCommand).resolves({});
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertSuccess(result);
+      expect(result.value).toBe("set");
+      expect(iotMock.commandCalls(UpdateThingCommand)[0].args[0].input).toEqual({
+        thingName,
+        expectedVersion: 4,
+        attributePayload: {
+          attributes: { deviceLocationId: "ambyte-5F28-3A37-3A2F-3AFF-3AE7-3A04" },
+          merge: true,
+        },
+      });
+    });
+
+    it("writes nothing when the attribute already matches", async () => {
+      iotMock.on(DescribeThingCommand).resolves({
+        attributes: { deviceLocationId: "ambyte-5F28-3A37-3A2F-3AFF-3AE7-3A04" },
+        version: 4,
+      });
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertSuccess(result);
+      expect(result.value).toBe("unchanged");
+      expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(0);
+    });
+
+    it("keeps a differing attribute and reports the conflict", async () => {
+      iotMock.on(DescribeThingCommand).resolves({ attributes: { deviceLocationId: "hand-set" } });
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertSuccess(result);
+      expect(result.value).toBe("conflict");
+      expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(0);
+    });
+
+    it("retries once against a fresh read when the thing changed in between", async () => {
+      iotMock
+        .on(DescribeThingCommand)
+        .resolvesOnce({ attributes: {}, version: 1 })
+        .resolves({ attributes: { serialNumber: "x" }, version: 2 });
+      iotMock
+        .on(UpdateThingCommand)
+        .rejectsOnce(new VersionConflictException({ message: "stale", $metadata: {} }))
+        .resolves({});
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertSuccess(result);
+      expect(result.value).toBe("set");
+      const updates = iotMock.commandCalls(UpdateThingCommand);
+      expect(updates.map((call) => call.args[0].input.expectedVersion)).toEqual([1, 2]);
+    });
+
+    it("gives up after a second version conflict", async () => {
+      iotMock.on(DescribeThingCommand).resolves({ attributes: {}, version: 1 });
+      iotMock
+        .on(UpdateThingCommand)
+        .rejects(new VersionConflictException({ message: "stale", $metadata: {} }));
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_UPDATE_THING_FAILED);
+      expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(2);
+    });
+
+    it("reports a thing name with no id without calling AWS", async () => {
+      const result = await service.ensureDeviceLocationId("a".repeat(129));
+
+      assertSuccess(result);
+      expect(result.value).toBe("unsupported");
+      expect(iotMock.calls()).toHaveLength(0);
+    });
+
+    it("maps an SDK error to an update-thing failure", async () => {
+      iotMock.on(DescribeThingCommand).resolves({ attributes: {}, version: 1 });
+      iotMock.on(UpdateThingCommand).rejects(new Error("throttled"));
+
+      const result = await service.ensureDeviceLocationId(thingName);
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_UPDATE_THING_FAILED);
+    });
+  });
+
   describe("createThing", () => {
     const input = {
       thingName: "AMBYTE_E8:F6:0A:B1:1D:D4",
@@ -72,13 +172,94 @@ describe("AwsIotService", () => {
       expect(createCall).toMatchObject({
         thingName: input.thingName,
         thingTypeName: awsConfig.deviceThingTypeName,
-        attributePayload: { attributes: input.attributes },
+      });
+      expect(createCall.attributePayload?.attributes).toEqual({
+        ...input.attributes,
+        deviceLocationId: "AMBYTE-5FE8-3AF6-3A0A-3AB1-3A1D-3AD4",
       });
 
       const groupCall = iotMock.commandCalls(AddThingToThingGroupCommand)[0].args[0].input;
       expect(groupCall).toMatchObject({
         thingName: input.thingName,
         thingGroupName: awsConfig.deviceThingGroupName,
+      });
+    });
+
+    it("omits the attribute for a thing name with no id", async () => {
+      const longName = "a".repeat(129);
+      iotMock.on(CreateThingCommand).resolves({ thingName: longName, thingArn: "arn:thing" });
+      iotMock.on(AddThingToThingGroupCommand).resolves({});
+
+      const result = await service.createThing({ ...input, thingName: longName });
+
+      assertSuccess(result);
+      const createCall = iotMock.commandCalls(CreateThingCommand)[0].args[0].input;
+      expect(createCall.attributePayload?.attributes).toEqual(input.attributes);
+    });
+
+    describe("when the thing already exists", () => {
+      const conflict = new ResourceAlreadyExistsException({
+        message: "different configuration",
+        $metadata: {},
+        resourceId: input.thingName,
+      });
+      const existingArn = "arn:aws:iot:eu-central-1:123456789012:thing/AMBYTE_E8:F6:0A:B1:1D:D4";
+
+      it("adopts a thing made before the attribute existed and gives it the id", async () => {
+        iotMock.on(CreateThingCommand).rejects(conflict);
+        iotMock.on(DescribeThingCommand).resolves({
+          thingName: input.thingName,
+          thingArn: existingArn,
+          thingTypeName: awsConfig.deviceThingTypeName,
+          attributes: input.attributes,
+          version: 3,
+        });
+        iotMock.on(UpdateThingCommand).resolves({});
+        iotMock.on(AddThingToThingGroupCommand).resolves({});
+
+        const result = await service.createThing(input);
+
+        assertSuccess(result);
+        expect(result.value).toEqual({ thingName: input.thingName, thingArn: existingArn });
+        expect(iotMock.commandCalls(UpdateThingCommand)[0].args[0].input).toMatchObject({
+          thingName: input.thingName,
+          attributePayload: {
+            attributes: { deviceLocationId: "AMBYTE-5FE8-3AF6-3A0A-3AB1-3A1D-3AD4" },
+          },
+        });
+        expect(iotMock.commandCalls(AddThingToThingGroupCommand)).toHaveLength(1);
+      });
+
+      it("keeps the original error when the existing thing is a different device", async () => {
+        iotMock.on(CreateThingCommand).rejects(conflict);
+        iotMock.on(DescribeThingCommand).resolves({
+          thingName: input.thingName,
+          thingArn: existingArn,
+          thingTypeName: awsConfig.deviceThingTypeName,
+          attributes: { ...input.attributes, serialNumber: "something-else" },
+        });
+
+        const result = await service.createThing(input);
+
+        assertFailure(result);
+        expect(result.error.code).toBe(ErrorCodes.AWS_IOT_CREATE_THING_FAILED);
+        expect(result.error.message).toContain("different configuration");
+        expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(0);
+        expect(iotMock.commandCalls(AddThingToThingGroupCommand)).toHaveLength(0);
+      });
+
+      it("keeps the original error when the existing thing has another type", async () => {
+        iotMock.on(CreateThingCommand).rejects(conflict);
+        iotMock.on(DescribeThingCommand).resolves({
+          thingName: input.thingName,
+          thingArn: existingArn,
+          attributes: input.attributes,
+        });
+
+        const result = await service.createThing(input);
+
+        assertFailure(result);
+        expect(result.error.message).toContain("different configuration");
       });
     });
 

@@ -9,20 +9,26 @@ import {
   AttachPolicyCommand,
   UpdateCertificateCommand,
   DescribeEndpointCommand,
+  DescribeThingCommand,
+  UpdateThingCommand,
   ListThingPrincipalsCommand,
   SearchIndexCommand,
+  ResourceAlreadyExistsException,
+  VersionConflictException,
 } from "@aws-sdk/client-iot";
 import type { ThingDocument } from "@aws-sdk/client-iot";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AppError, Result, success, tryCatch } from "../../../../utils/fp-utils";
 import { AwsConfigService } from "../config/config.service";
+import { DEVICE_LOCATION_ID_ATTRIBUTE, toDeviceLocationId } from "./device-location-id";
 import type {
   CreateThingInput,
   CreatedThing,
   CertificateResult,
   CertificateStatus,
+  DeviceLocationIdOutcome,
   ThingConnectivity,
 } from "./iot.types";
 
@@ -37,6 +43,7 @@ const SEARCH_INDEX_TERM_OVERHEAD = 'thingName:""'.length + " OR ".length;
 
 @Injectable()
 export class AwsIotService {
+  private readonly logger = new Logger(AwsIotService.name);
   private readonly iotClient: IoTClient;
   private cachedDataEndpoint: string | null = null;
 
@@ -47,32 +54,75 @@ export class AwsIotService {
   async createThing(input: CreateThingInput): Promise<Result<CreatedThing>> {
     return tryCatch(
       async () => {
-        const response = await this.iotClient.send(
-          new CreateThingCommand({
-            thingName: input.thingName,
-            thingTypeName: this.awsConfig.deviceThingTypeName,
-            attributePayload: { attributes: input.attributes },
-          }),
-        );
-
-        if (!response.thingName || !response.thingArn) {
-          throw AppError.internal(
-            "AWS IoT CreateThing returned an incomplete response",
-            ErrorCodes.AWS_IOT_CREATE_THING_FAILED,
+        const locationId = toDeviceLocationId(input.thingName);
+        let created: CreatedThing;
+        try {
+          const response = await this.iotClient.send(
+            new CreateThingCommand({
+              thingName: input.thingName,
+              thingTypeName: this.awsConfig.deviceThingTypeName,
+              attributePayload: {
+                attributes:
+                  locationId === null
+                    ? input.attributes
+                    : { ...input.attributes, [DEVICE_LOCATION_ID_ATTRIBUTE]: locationId },
+              },
+            }),
           );
+          if (!response.thingName || !response.thingArn) {
+            throw AppError.internal(
+              "AWS IoT CreateThing returned an incomplete response",
+              ErrorCodes.AWS_IOT_CREATE_THING_FAILED,
+            );
+          }
+          created = { thingName: response.thingName, thingArn: response.thingArn };
+        } catch (error) {
+          if (!(error instanceof ResourceAlreadyExistsException)) throw error;
+          created = await this.adoptExistingThing(input, error);
         }
 
         await this.iotClient.send(
           new AddThingToThingGroupCommand({
-            thingName: response.thingName,
+            thingName: created.thingName,
             thingGroupName: this.awsConfig.deviceThingGroupName,
           }),
         );
 
-        return { thingName: response.thingName, thingArn: response.thingArn };
+        return created;
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_CREATE_THING_FAILED),
     );
+  }
+
+  // CreateThing is idempotent only for an identical configuration, so a thing
+  // made before the deviceLocationId attribute existed now conflicts. It is the
+  // same thing when type and every other attribute match; anything else is a
+  // genuine name clash and keeps the original error.
+  private async adoptExistingThing(
+    input: CreateThingInput,
+    conflict: ResourceAlreadyExistsException,
+  ): Promise<CreatedThing> {
+    const existing = await this.iotClient.send(
+      new DescribeThingCommand({ thingName: input.thingName }),
+    );
+    const { [DEVICE_LOCATION_ID_ATTRIBUTE]: _locationId, ...otherAttributes } =
+      existing.attributes ?? {};
+    const requested = Object.entries(input.attributes);
+    const sameThing =
+      existing.thingTypeName === this.awsConfig.deviceThingTypeName &&
+      requested.length === Object.keys(otherAttributes).length &&
+      requested.every(([key, value]) => otherAttributes[key] === value);
+    if (!sameThing || !existing.thingName || !existing.thingArn) throw conflict;
+
+    const ensured = await this.ensureDeviceLocationId(input.thingName);
+    if (ensured.isFailure()) {
+      this.logger.warn({
+        msg: "Device location id not ensured on an existing thing",
+        thingName: input.thingName,
+        error: ensured.error.message,
+      });
+    }
+    return { thingName: existing.thingName, thingArn: existing.thingArn };
   }
 
   async deleteThing(thingName: string): Promise<Result<void>> {
@@ -105,6 +155,43 @@ export class AwsIotService {
         return { certificateId, certificateArn, certificatePem, publicKey, privateKey };
       },
       (error) => this.mapError(error, ErrorCodes.AWS_IOT_CREATE_CERT_FAILED),
+    );
+  }
+
+  // Things created before the device-location policy lack the attribute it
+  // binds. A differing value is left alone, never overwritten from here. A
+  // concurrent edit gets one retry against a fresh read.
+  async ensureDeviceLocationId(thingName: string): Promise<Result<DeviceLocationIdOutcome>> {
+    return tryCatch(
+      async () => {
+        const id = toDeviceLocationId(thingName);
+        if (id === null) return "unsupported";
+
+        for (let attempt = 1; ; attempt++) {
+          const thing = await this.iotClient.send(new DescribeThingCommand({ thingName }));
+          const current = thing.attributes?.[DEVICE_LOCATION_ID_ATTRIBUTE];
+          if (current === id) return "unchanged";
+          if (current !== undefined) return "conflict";
+
+          try {
+            await this.iotClient.send(
+              new UpdateThingCommand({
+                thingName,
+                expectedVersion: thing.version,
+                attributePayload: {
+                  attributes: { [DEVICE_LOCATION_ID_ATTRIBUTE]: id },
+                  merge: true,
+                },
+              }),
+            );
+            return "set";
+          } catch (error) {
+            if (attempt === 1 && error instanceof VersionConflictException) continue;
+            throw error;
+          }
+        }
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_UPDATE_THING_FAILED),
     );
   }
 
