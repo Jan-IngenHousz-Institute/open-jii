@@ -1,19 +1,14 @@
-import { render, screen, userEvent } from "@/test/test-utils";
+import { act, fireEvent, render, screen, userEvent } from "@/test/test-utils";
 import type React from "react";
 import { useForm } from "react-hook-form";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import { authClient } from "@repo/auth/client";
 import { Form } from "@repo/ui/components/form";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import type { Registration } from "./registration-form";
 import { RegistrationOtpVerification } from "./registration-otp-verification";
-
-const mockSignInEmailMutate = vi.fn();
-vi.mock("~/hooks/auth/useSignInEmail/useSignInEmail", () => ({
-  useSignInEmail: () => ({
-    mutateAsync: mockSignInEmailMutate,
-  }),
-}));
 
 vi.mock("@repo/ui/components/input-otp", async () => {
   const actual = await vi.importActual("@repo/ui/components/input-otp");
@@ -154,5 +149,62 @@ describe("RegistrationOtpVerification", () => {
     const resendBtn = screen.getByRole("button", { name: /resend code in \d+ seconds/i });
     expect(resendBtn).toBeInTheDocument();
     expect(resendBtn).toBeDisabled();
+  });
+
+  describe("resending the code", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function waitOutCooldown() {
+      for (let second = 0; second < 30; second++) {
+        act(() => {
+          vi.advanceTimersByTime(1000);
+        });
+      }
+    }
+
+    async function resend() {
+      waitOutCooldown();
+      fireEvent.click(screen.getByRole("button", { name: "Resend code" }));
+      await act(async () => {
+        await vi.runOnlyPendingTimersAsync();
+      });
+    }
+
+    it("asks for a new code for the pending address, never a sign-in code", async () => {
+      render(<Wrapper pendingEmail="carol@uni.edu" />);
+
+      await resend();
+
+      expect(authClient.emailOtp.requestEmailChange).toHaveBeenCalledWith({
+        newEmail: "carol@uni.edu",
+      });
+      expect(authClient.emailOtp.sendVerificationOtp).not.toHaveBeenCalled();
+    });
+
+    it("starts the cooldown again after a resend", async () => {
+      render(<Wrapper pendingEmail="carol@uni.edu" />);
+
+      await resend();
+
+      expect(screen.getByRole("button", { name: /resend code in \d+ seconds/i })).toBeDisabled();
+    });
+
+    it("shows the server's refusal", async () => {
+      vi.mocked(authClient.emailOtp.requestEmailChange).mockResolvedValue({
+        data: null,
+        error: { message: "Too many requests", status: 429, statusText: "Too Many Requests" },
+      });
+      render(<Wrapper pendingEmail="carol@uni.edu" />);
+
+      await resend();
+
+      expect(toast).toHaveBeenCalledWith({ description: "Too many requests" });
+    });
   });
 });

@@ -29,7 +29,9 @@ const repoRoot = resolve(__dirname, "../../..");
 const playReviewModulePath = "infrastructure/modules/play-review-sign-in/main.tf";
 
 function createAuth(playReview: PlayReviewSettings) {
-  const sendEmail = vi.fn((_message: { email: string; otp: string }) => Promise.resolve());
+  const sendEmail = vi.fn((_message: { email: string; otp: string; type: string }) =>
+    Promise.resolve(),
+  );
   const log = vi.fn();
   const tables = {
     user: [],
@@ -46,7 +48,10 @@ function createAuth(playReview: PlayReviewSettings) {
     secret: "email-otp-test-secret-0123456789abcdef",
     logger: { level: "info", log },
     database: memoryAdapter(tables),
-    user: { changeEmail: { enabled: true } },
+    user: {
+      changeEmail: { enabled: true },
+      additionalFields: { registered: { type: "boolean", defaultValue: false, required: false } },
+    },
     plugins: [
       openJiiEmailOTP({ playReview, sendEmail }),
       apiKey(),
@@ -319,5 +324,156 @@ describe("openJiiEmailOTP", () => {
     for (const line of Object.values(PLAY_REVIEW_LOG_LINES)) {
       expect(filter).toContain(`?\\"${line}\\"`);
     }
+  });
+
+  describe("changing the address with a code", () => {
+    const ORCID_ID = "0000-0002-1825-0097";
+    const NEW_EMAIL = "carol@uni.edu";
+
+    /** The account a private-email ORCID sign-up leaves: the iD as its email, unverified. */
+    async function orcidSignUp(auth: ReturnType<typeof createAuth>) {
+      const cookie = await auth.sessionCookie("signing-up@example.com");
+      const user = (auth.tables.user as Record<string, unknown>[]).find(
+        (row) => row.email === "signing-up@example.com",
+      );
+      if (!user) throw new Error("Expected the signing-up user");
+      Object.assign(user, { email: ORCID_ID, emailVerified: false, registered: false });
+      (auth.tables.account as Record<string, unknown>[]).push({
+        id: "orcid-row",
+        userId: user.id,
+        providerId: "orcid",
+        accountId: ORCID_ID,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      auth.sendEmail.mockClear();
+      return { cookie, user };
+    }
+
+    function sentCode(sendEmail: ReturnType<typeof createAuth>["sendEmail"]) {
+      const { calls } = sendEmail.mock;
+      if (calls.length === 0) throw new Error("Expected a code to have been sent");
+      return calls[calls.length - 1][0];
+    }
+
+    it("gives an ORCID sign-up an address, verified, keeping its ORCID row and its session", async () => {
+      const auth = createAuth(unconfigured);
+      const { cookie, user } = await orcidSignUp(auth);
+      const sessionsBefore = [...auth.tables.session];
+
+      const requested = await auth.request("/email-otp/request-email-change", {
+        cookie,
+        body: { newEmail: "Carol@Uni.EDU" },
+      });
+      expect(requested.status).toBe(200);
+      const { otp, ...sent } = sentCode(auth.sendEmail);
+      expect(sent).toEqual({ email: NEW_EMAIL, type: "change-email" });
+
+      const wrong = await auth.request("/email-otp/change-email", {
+        cookie,
+        body: { newEmail: NEW_EMAIL, otp: otp === "000000" ? "111111" : "000000" },
+      });
+      expect(wrong.status).toBe(400);
+      expect(user).toMatchObject({ email: ORCID_ID, emailVerified: false });
+
+      const changed = await auth.request("/email-otp/change-email", {
+        cookie,
+        body: { newEmail: NEW_EMAIL, otp },
+      });
+      expect(changed.status).toBe(200);
+      expect(user).toMatchObject({ email: NEW_EMAIL, emailVerified: true });
+      expect(auth.tables.account).toEqual([expect.objectContaining({ id: "orcid-row" })]);
+      expect(auth.tables.session).toEqual(sessionsBefore);
+
+      const session = await auth.request("/get-session", { method: "GET", cookie });
+      expect(await session.json()).toMatchObject({
+        user: { email: NEW_EMAIL, emailVerified: true },
+      });
+    });
+
+    it("refuses an address another account holds before sending anything", async () => {
+      const auth = createAuth(unconfigured);
+      await auth.sessionCookie(OTHER_EMAIL);
+      const { cookie, user } = await orcidSignUp(auth);
+
+      const response = await auth.request("/email-otp/request-email-change", {
+        cookie,
+        body: { newEmail: OTHER_EMAIL.toUpperCase() },
+      });
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        message: "This email is already associated with another account",
+      });
+      expect(auth.sendEmail).not.toHaveBeenCalled();
+      expect(user.email).toBe(ORCID_ID);
+    });
+
+    it.each(["/email-otp/request-email-change", "/email-otp/change-email"])(
+      "refuses %s for a registered account that has an address",
+      async (path) => {
+        const auth = createAuth(unconfigured);
+        const cookie = await auth.sessionCookie(OTHER_EMAIL);
+        Object.assign(auth.tables.user[0], { registered: true });
+        auth.sendEmail.mockClear();
+
+        const response = await auth.request(path, {
+          cookie,
+          body: { newEmail: NEW_EMAIL, otp: "123456" },
+        });
+
+        expect(response.status).toBe(403);
+        expect(auth.sendEmail).not.toHaveBeenCalled();
+        expect((auth.tables.user[0] as Record<string, unknown>).email).toBe(OTHER_EMAIL);
+      },
+    );
+
+    async function changeAddress(auth: ReturnType<typeof createAuth>, cookie: string) {
+      const requested = await auth.request("/email-otp/request-email-change", {
+        cookie,
+        body: { newEmail: NEW_EMAIL },
+      });
+      if (requested.status !== 200) return { requested: requested.status, changed: undefined };
+
+      const { otp } = sentCode(auth.sendEmail);
+      const changed = await auth.request("/email-otp/change-email", {
+        cookie,
+        body: { newEmail: NEW_EMAIL, otp },
+      });
+      return { requested: requested.status, changed: changed.status };
+    }
+
+    it("lets a registered account whose email is an ORCID iD take an address", async () => {
+      const auth = createAuth(unconfigured);
+      const { cookie, user } = await orcidSignUp(auth);
+      user.registered = true;
+
+      expect(await changeAddress(auth, cookie)).toEqual({ requested: 200, changed: 200 });
+      expect(user).toMatchObject({ email: NEW_EMAIL, emailVerified: true });
+    });
+
+    it("lets an unregistered account with a confirmed address change it", async () => {
+      const auth = createAuth(unconfigured);
+      const cookie = await auth.sessionCookie(OTHER_EMAIL);
+      const user = auth.tables.user[0] as Record<string, unknown>;
+      expect(user).toMatchObject({ emailVerified: true, registered: false });
+      auth.sendEmail.mockClear();
+
+      expect(await changeAddress(auth, cookie)).toEqual({ requested: 200, changed: 200 });
+      expect(user).toMatchObject({ email: NEW_EMAIL, emailVerified: true });
+    });
+
+    it("does not let the core change-email route set an address without proof", async () => {
+      const auth = createAuth(unconfigured);
+      const { cookie, user } = await orcidSignUp(auth);
+
+      const response = await auth.request("/change-email", {
+        cookie,
+        body: { newEmail: NEW_EMAIL },
+      });
+
+      expect(response.status).toBe(400);
+      expect(user.email).toBe(ORCID_ID);
+    });
   });
 });

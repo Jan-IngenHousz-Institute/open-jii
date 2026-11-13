@@ -56,4 +56,31 @@ describe("DeletePasskeyDialog", () => {
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
+
+  it("says the only way in cannot go when the server refuses it", async () => {
+    vi.mocked(authClient.passkey.deletePasskey).mockResolvedValue({
+      data: null,
+      error: { code: "LAST_SIGN_IN_METHOD", message: "This is the only way to sign in" },
+    });
+    const user = userEvent.setup();
+    render(<DeletePasskeyDialog passkeyId="p1" passkeyName="Work laptop" />);
+
+    await user.click(screen.getByRole("button", { name: "passkeys.deleteNamed:Work laptop" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "passkeys.delete" }),
+    );
+
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        description: "signInMethods.lastSignInMethod",
+        variant: "destructive",
+      }),
+    );
+  });
+
+  it("cannot be opened while disabled", () => {
+    render(<DeletePasskeyDialog passkeyId="p1" passkeyName="Work laptop" disabled />);
+
+    expect(screen.getByRole("button", { name: "passkeys.deleteNamed:Work laptop" })).toBeDisabled();
+  });
 });

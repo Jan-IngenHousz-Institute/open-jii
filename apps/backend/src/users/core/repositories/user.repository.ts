@@ -42,7 +42,7 @@ import {
   resourceGrants,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, Transaction } from "@repo/database";
+import type { DatabaseInstance, SQL, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, trigramMatch } from "../../../common/utils/fts";
@@ -73,6 +73,7 @@ import {
   SoleAdminResource,
   SoleOwnedOrganization,
   PendingOrganizationInvitation,
+  UserSignInMethods,
 } from "../models/user.model";
 
 /**
@@ -84,6 +85,14 @@ export const SOLE_RESOURCE_ADMIN_MESSAGE =
 
 export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
+
+/**
+ * Drizzle renders a single-table query's columns bare, so an outer column interpolated
+ * into a correlated subquery would bind to the subquery's own table instead.
+ */
+function qualified(table: string, column: string): SQL {
+  return sql`${sql.identifier(table)}.${sql.identifier(column)}`;
+}
 
 @Injectable()
 export class UserRepository {
@@ -130,6 +139,37 @@ export class UserRepository {
         .limit(1);
 
       return rows[0]?.id ?? null;
+    });
+  }
+
+  /**
+   * The person's ways to sign in, as `canRemoveSignInMethod` reads them, with the passkey
+   * ids alongside so a caller can tell whether a passkey is theirs. Read from the
+   * database rather than the session, whose cached copy of the user can be a day old.
+   */
+  async findSignInMethods(userId: string): Promise<Result<UserSignInMethods | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({
+          email: users.email,
+          emailVerified: users.emailVerified,
+          passkeyIds: sql<string[]>`array(
+            SELECT ${qualified("passkeys", "id")}::text FROM ${passkeys}
+            WHERE ${qualified("passkeys", "user_id")} = ${qualified("users", "id")}
+          )`,
+          accountIds: sql<string[]>`array(
+            SELECT ${qualified("accounts", "id")}::text FROM ${accounts}
+            WHERE ${qualified("accounts", "user_id")} = ${qualified("users", "id")}
+          )`,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const row = rows.at(0);
+      if (!row) return null;
+
+      return { ...row, passkeyCount: row.passkeyIds.length };
     });
   }
 

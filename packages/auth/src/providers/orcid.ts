@@ -135,16 +135,19 @@ export function orcidProvider(config: OrcidProviderConfig) {
       let email = "";
       let emailVerified = false;
 
-      const emails = person?.emails?.email;
-      if (emails?.length) {
+      // ORCID is a trusted provider for account linking, so Better Auth no longer
+      // checks emailVerified before linking a sign-in to an account with the same
+      // address. An unverified email is skipped here instead, so nobody can claim
+      // an account by publishing its address on an ORCID record.
+      const verifiedEmails = person?.emails?.email?.filter((e) => e.verified) ?? [];
+      if (verifiedEmails.length) {
         // Try to find a primary email, or take the first one
-        const publicEmail = emails.find((e) => e.primary) ?? emails[0];
-        // We checked length > 0, so publicEmail is guaranteed to be defined
+        const publicEmail = verifiedEmails.find((e) => e.primary) ?? verifiedEmails[0];
         email = publicEmail.email;
-        emailVerified = publicEmail.verified;
+        emailVerified = true;
       }
 
-      // Final fallback: If no email is available, use the ORCID ID.
+      // Final fallback: If no verified email is available, use the ORCID ID.
       // Mark emailVerified = false so the user is prompted to supply a real email.
       if (!email) {
         email = orcidId;

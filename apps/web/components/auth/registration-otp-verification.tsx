@@ -3,7 +3,7 @@
 import { Pencil } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
+import { useRequestEmailChange } from "~/hooks/auth/useRequestEmailChange/useRequestEmailChange";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -35,7 +35,7 @@ export function RegistrationOtpVerification({
 }) {
   const { t } = useTranslation();
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SECONDS);
-  const sendOtpVerification = useSignInEmail();
+  const requestEmailChange = useRequestEmailChange();
 
   useEffect(() => {
     if (countdown > 0) {
@@ -49,7 +49,7 @@ export function RegistrationOtpVerification({
 
     setIsPending(true);
     try {
-      const res = await sendOtpVerification.mutateAsync(pendingEmail);
+      const res = await requestEmailChange.mutateAsync(pendingEmail);
 
       if (res.error) {
         toast({

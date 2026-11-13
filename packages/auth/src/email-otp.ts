@@ -7,6 +7,8 @@ import { PlayReviewAccount } from "./play-review-account";
 
 const OTP_LENGTH = 6;
 const SIGN_IN_PATH = "/sign-in/email-otp";
+const REQUEST_EMAIL_CHANGE_PATH = "/email-otp/request-email-change";
+const EMAIL_CHANGE_PATHS = [REQUEST_EMAIL_CHANGE_PATH, "/email-otp/change-email"];
 
 // Each of these leaves the review account a way in that a new code does not close: a passkey, an
 // API key, a linked GitHub or ORCID account, or the account moved to an address someone else reads.
@@ -29,10 +31,12 @@ export const PLAY_REVIEW_LOG_LINES = {
 };
 
 const zSignInBody = z.object({ email: z.string(), otp: z.string() });
+const zEmailChangeRequestBody = z.object({ newEmail: z.string() });
 
 interface OTPMessage {
   email: string;
   otp: string;
+  type: "sign-in" | "email-verification" | "forget-password" | "change-email";
 }
 
 interface OpenJiiEmailOTPOptions {
@@ -59,6 +63,8 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
 
   const plugin = emailOTP({
     otpLength: OTP_LENGTH,
+    // Gated below to accounts that still need an address; nobody else can change theirs yet.
+    changeEmail: { enabled: true },
     // Not hashed: a six-digit code is recovered from its hash by trying all of them.
     storeOTP: "encrypted",
     generateOTP: (request) => playReviewAccount?.generateOTP(request),
@@ -82,6 +88,8 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
   const isSignInPath = (context: { path?: string }) => context.path === SIGN_IN_PATH;
   const isNewSignInMethodPath = (context: { path?: string }) =>
     !!context.path && NEW_SIGN_IN_METHOD_PATHS.includes(context.path);
+  const isEmailChangePath = (context: { path?: string }) =>
+    !!context.path && EMAIL_CHANGE_PATHS.includes(context.path);
 
   // A refusal thrown here skips the after hooks, so it logs itself. No line names the address.
   const capReviewSignIn = createAuthMiddleware((ctx) => {
@@ -111,6 +119,39 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
     }
   });
 
+  // Changing the address with a code is how an account with none, an ORCID sign-up whose email
+  // is private, gets one during registration. The user is read from the database, because the
+  // session's cached copy can be a day old. No line names the address.
+  const refuseEmailChangeUnlessNeeded = createAuthMiddleware(async (ctx) => {
+    const session = await getSessionFromCtx(ctx);
+    if (!session) {
+      return;
+    }
+
+    const user = await ctx.context.internalAdapter.findUserById(session.user.id);
+    if (!user) {
+      return;
+    }
+
+    const registered = "registered" in user && user.registered === true;
+    if (registered && z.email().safeParse(user.email).success) {
+      throw new APIError("FORBIDDEN", { message: "This account already has an email address" });
+    }
+
+    // The library answers an address someone else holds with a success and sends nothing.
+    const parsed = zEmailChangeRequestBody.safeParse(ctx.body);
+    if (ctx.path !== REQUEST_EMAIL_CHANGE_PATH || !parsed.success) {
+      return;
+    }
+
+    const holder = await ctx.context.internalAdapter.findUserByEmail(parsed.data.newEmail);
+    if (holder && holder.user.id !== user.id) {
+      throw new APIError("BAD_REQUEST", {
+        message: "This email is already associated with another account",
+      });
+    }
+  });
+
   const logReviewSignIn = createAuthMiddleware((ctx) => {
     if (!isReviewSignInBody(ctx.body)) {
       return Promise.resolve();
@@ -135,6 +176,7 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
         ...(declaredHooks.before ?? []),
         { matcher: isSignInPath, handler: capReviewSignIn },
         { matcher: isNewSignInMethodPath, handler: refuseNewSignInMethod },
+        { matcher: isEmailChangePath, handler: refuseEmailChangeUnlessNeeded },
       ],
       after: [...(declaredHooks.after ?? []), { matcher: isSignInPath, handler: logReviewSignIn }],
     },

@@ -2,6 +2,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import z from "zod";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import type { SignInMethods } from "@repo/auth/sign-in-methods";
 import { profiles, users } from "@repo/database";
 
 import type { ExperimentDto } from "../../../experiments/core/models/experiment.model";
@@ -97,4 +98,10 @@ export interface PendingOrganizationInvitation {
   inviterId: string;
   role: string | null;
   organizationName: string;
+}
+
+// A person's ways to sign in, with the passkey ids that `passkeyCount` counts so a guard
+// can tell whether a passkey named in a request is theirs.
+export interface UserSignInMethods extends SignInMethods {
+  passkeyIds: string[];
 }

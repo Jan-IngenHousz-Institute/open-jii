@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
+import { useConfirmEmailChange } from "~/hooks/auth/useConfirmEmailChange/useConfirmEmailChange";
+import { useRequestEmailChange } from "~/hooks/auth/useRequestEmailChange/useRequestEmailChange";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
-import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { orpc } from "~/lib/orpc";
 import { parseApiError } from "~/util/apiError";
@@ -51,8 +51,8 @@ export function RegistrationForm({
   const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
   const updateUser = useUpdateUser();
-  const sendOtpRegistration = useSignInEmail();
-  const verifyOtpRegistration = useVerifyEmail();
+  const requestEmailChange = useRequestEmailChange();
+  const confirmEmailChange = useConfirmEmailChange();
   const subscribeNewsletter = useMutation(orpc.newsletter.subscribeDirect.mutationOptions());
 
   const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
@@ -149,7 +149,7 @@ export function RegistrationForm({
     try {
       // User needs to verify an email address and hasn't entered the OTP yet
       if (needsEmailVerification && data.email && !showOTPInput) {
-        const otpRes = await sendOtpRegistration.mutateAsync(data.email);
+        const otpRes = await requestEmailChange.mutateAsync(data.email);
 
         if (otpRes.error) {
           form.setError("email", {
@@ -166,9 +166,9 @@ export function RegistrationForm({
 
       // User has entered OTP, verify it.
       if (needsEmailVerification && showOTPInput && data.otp) {
-        const result = await verifyOtpRegistration.mutateAsync({
-          email: pendingEmail,
-          code: data.otp,
+        const result = await confirmEmailChange.mutateAsync({
+          newEmail: pendingEmail,
+          otp: data.otp,
         });
 
         if (result.error) {
