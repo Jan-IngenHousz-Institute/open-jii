@@ -26,7 +26,6 @@ import { RegisterIotDeviceUseCase } from "./register-iot-device";
 const RETURNED_THING = {
   thingName: "ambyte_E8:F6:0A:B1:1D:D4",
   thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/ambyte_E8:F6:0A:B1:1D:D4",
-  adopted: false,
 };
 
 describe("RegisterIotDeviceUseCase", () => {
@@ -92,9 +91,9 @@ describe("RegisterIotDeviceUseCase", () => {
     expect(result.error.statusCode).toBe(409);
   });
 
-  it("rolls back the Thing when the DB insert fails", async () => {
+  it("keeps the Thing when the DB insert fails", async () => {
     const createSpy = mockCreateThing();
-    const deleteSpy = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+    const deleteSpy = vi.spyOn(awsAdapter, "deleteThing");
     vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
 
     const result = await useCase.execute(body, userId);
@@ -102,16 +101,21 @@ describe("RegisterIotDeviceUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(500);
     expect(createSpy).toHaveBeenCalled();
-    expect(deleteSpy).toHaveBeenCalledWith(RETURNED_THING.thingName);
+    expect(deleteSpy).not.toHaveBeenCalled();
     vi.restoreAllMocks();
   });
 
-  // Runs the real adapter and IoT service against a mocked SDK, so the
-  // adoption decision and the rollback are exercised together.
+  // Runs the real adapter and IoT service against a mocked SDK, so adoption,
+  // the in-use check and the failure path are exercised together.
   describe("when the thing already existed in AWS", () => {
     const iotMock = mockClient(IoTClient);
     const thingName = "ambyte_E8:F6:0A:B1:1D:D4";
     const thingArn = `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`;
+    const legacyConflict = new ResourceAlreadyExistsException({
+      message: "different configuration",
+      $metadata: {},
+      resourceId: thingName,
+    });
 
     beforeEach(() => {
       iotMock.reset();
@@ -133,31 +137,35 @@ describe("RegisterIotDeviceUseCase", () => {
       iotMock.restore();
     });
 
-    it("keeps an adopted thing when the device row cannot be stored", async () => {
-      iotMock.on(CreateThingCommand).rejects(
-        new ResourceAlreadyExistsException({
-          message: "different configuration",
-          $metadata: {},
-          resourceId: thingName,
-        }),
-      );
+    it("never deletes the thing when the device row cannot be stored, across retries", async () => {
+      // Attempt 1 adopts the legacy thing and writes its id. Attempt 2 then
+      // matches it exactly, so CreateThing succeeds idempotently.
+      iotMock.on(CreateThingCommand).rejectsOnce(legacyConflict).resolves({ thingName, thingArn });
       vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
 
-      const result = await useCase.execute(body, userId);
+      const first = await useCase.execute(body, userId);
+      const second = await useCase.execute(body, userId);
 
-      assertFailure(result);
+      assertFailure(first);
+      assertFailure(second);
+      expect(iotMock.commandCalls(CreateThingCommand)).toHaveLength(2);
       expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(1);
       expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(0);
     });
 
-    it("still deletes a thing it created itself when the row cannot be stored", async () => {
+    it("refuses a thing that already has credentials attached", async () => {
       iotMock.on(CreateThingCommand).resolves({ thingName, thingArn });
-      vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
+      iotMock
+        .on(ListThingPrincipalsCommand)
+        .resolves({ principals: ["arn:aws:iot:eu-central-1:000000000000:cert/live"] });
+      const createRow = vi.spyOn(repo, "create");
 
       const result = await useCase.execute(body, userId);
 
       assertFailure(result);
-      expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(1);
+      expect(result.error.statusCode).toBe(409);
+      expect(createRow).not.toHaveBeenCalled();
+      expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(0);
     });
   });
 });

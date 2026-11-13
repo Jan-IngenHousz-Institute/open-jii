@@ -29,7 +29,6 @@ const THING_NAME = `mobile_${INSTALL_ID}`;
 const RETURNED_THING = {
   thingName: THING_NAME,
   thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${THING_NAME}`,
-  adopted: false,
 };
 const IDENTITY_ID = "eu-central-1:cognito-identity-1";
 
@@ -142,15 +141,15 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(result.value.name).toBeNull();
   });
 
-  it("rolls the Thing back when the insert returns no row at all", async () => {
-    const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+  it("keeps the Thing when the insert returns no row at all", async () => {
+    const deleteThing = vi.spyOn(awsAdapter, "deleteThing");
     vi.spyOn(repo, "create").mockResolvedValue(success([]));
 
     const result = await useCase.execute(body, userId);
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(500);
-    expect(deleteThing).toHaveBeenCalledWith(THING_NAME);
+    expect(deleteThing).not.toHaveBeenCalled();
   });
 
   it("loses the name race to a concurrent rename and returns the fresher row", async () => {
@@ -189,17 +188,17 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(result.value.status).toBe("active");
   });
 
-  it("rolls the Thing back when the row cannot be persisted", async () => {
-    const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+  it("keeps the Thing when the row cannot be persisted", async () => {
+    const deleteThing = vi.spyOn(awsAdapter, "deleteThing");
     vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("db down")));
 
     const result = await useCase.execute(body, userId);
 
     assertFailure(result);
-    expect(deleteThing).toHaveBeenCalledWith(THING_NAME);
+    expect(deleteThing).not.toHaveBeenCalled();
   });
 
-  it("resolves a create race to the winning row instead of rolling its Thing back", async () => {
+  it("resolves a create race to the winning row", async () => {
     // Simulate losing the unique-constraint race: create fails, but the row
     // exists by the time the rollback path re-checks.
     const winner = await useCase.execute(body, userId);
@@ -219,15 +218,21 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(deleteThing).not.toHaveBeenCalled();
   });
 
-  // Runs the real adapter and IoT service against a mocked SDK, so the
-  // adoption decision and the rollback are exercised together.
+  // Runs the real adapter and IoT service against a mocked SDK, so adoption,
+  // the in-use check and the failure path are exercised together.
   describe("when the thing already existed in AWS", () => {
     const iotMock = mockClient(IoTClient);
     const thingName = THING_NAME;
     const thingArn = `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`;
+    const legacyConflict = new ResourceAlreadyExistsException({
+      message: "different configuration",
+      $metadata: {},
+      resourceId: thingName,
+    });
 
     beforeEach(() => {
       iotMock.reset();
+      vi.spyOn(awsAdapter, "createThing").mockRestore();
       const awsConfig = testApp.module.get(AwsConfigService);
       iotMock.on(AddThingToThingGroupCommand).resolves({});
       iotMock.on(UpdateThingCommand).resolves({});
@@ -246,33 +251,35 @@ describe("EnsureMobileDeviceUseCase", () => {
       iotMock.restore();
     });
 
-    it("keeps an adopted thing when the device row cannot be stored", async () => {
-      iotMock.on(CreateThingCommand).rejects(
-        new ResourceAlreadyExistsException({
-          message: "different configuration",
-          $metadata: {},
-          resourceId: thingName,
-        }),
-      );
-      vi.spyOn(awsAdapter, "createThing").mockRestore();
+    it("never deletes the thing when the device row cannot be stored, across retries", async () => {
+      // Attempt 1 adopts the legacy thing and writes its id. Attempt 2 then
+      // matches it exactly, so CreateThing succeeds idempotently.
+      iotMock.on(CreateThingCommand).rejectsOnce(legacyConflict).resolves({ thingName, thingArn });
       vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
 
-      const result = await useCase.execute(body, userId);
+      const first = await useCase.execute(body, userId);
+      const second = await useCase.execute(body, userId);
 
-      assertFailure(result);
+      assertFailure(first);
+      assertFailure(second);
+      expect(iotMock.commandCalls(CreateThingCommand)).toHaveLength(2);
       expect(iotMock.commandCalls(UpdateThingCommand)).toHaveLength(1);
       expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(0);
     });
 
-    it("still deletes a thing it created itself when the row cannot be stored", async () => {
+    it("refuses a thing that already has credentials attached", async () => {
       iotMock.on(CreateThingCommand).resolves({ thingName, thingArn });
-      vi.spyOn(awsAdapter, "createThing").mockRestore();
-      vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
+      iotMock
+        .on(ListThingPrincipalsCommand)
+        .resolves({ principals: ["arn:aws:iot:eu-central-1:000000000000:cert/live"] });
+      const createRow = vi.spyOn(repo, "create");
 
       const result = await useCase.execute(body, userId);
 
       assertFailure(result);
-      expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(1);
+      expect(result.error.statusCode).toBe(409);
+      expect(createRow).not.toHaveBeenCalled();
+      expect(iotMock.commandCalls(DeleteThingCommand)).toHaveLength(0);
     });
   });
 });

@@ -6,11 +6,6 @@ export interface CreateThingInput {
 export interface CreatedThing {
   thingName: string;
   thingArn: string;
-  /**
-   * The thing existed before this call and was adopted rather than created.
-   * Callers must not delete it when a later step fails: it is not theirs.
-   */
-  adopted: boolean;
 }
 
 export interface CertificateResult {

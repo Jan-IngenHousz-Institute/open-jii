@@ -79,11 +79,16 @@ export class AwsIotService {
               ErrorCodes.AWS_IOT_CREATE_THING_FAILED,
             );
           }
-          created = {
-            thingName: response.thingName,
-            thingArn: response.thingArn,
-            adopted: false,
-          };
+          // Success does not prove this call made the thing: CreateThing also
+          // succeeds for an existing thing with an identical configuration.
+          await this.refuseIfInUse(
+            response.thingName,
+            AppError.conflict(
+              `Thing ${response.thingName} already has credentials attached`,
+              ErrorCodes.AWS_IOT_CREATE_THING_FAILED,
+            ),
+          );
+          created = { thingName: response.thingName, thingArn: response.thingArn };
         } catch (error) {
           if (!(error instanceof ResourceAlreadyExistsException)) throw error;
           created = await this.adoptExistingThing(input, error);
@@ -104,9 +109,8 @@ export class AwsIotService {
 
   // CreateThing is idempotent only for an identical configuration, so a thing
   // made before the deviceLocationId attribute existed now conflicts. It is the
-  // same thing when type and every other attribute match and no principal is
-  // attached, so a thing with live credentials is never taken over; anything
-  // else is a genuine name clash and keeps the original error.
+  // same thing when type and every other attribute match; anything else is a
+  // genuine name clash and keeps the original error.
   private async adoptExistingThing(
     input: CreateThingInput,
     conflict: ResourceAlreadyExistsException,
@@ -123,10 +127,7 @@ export class AwsIotService {
       requested.every(([key, value]) => otherAttributes[key] === value);
     if (!sameThing || !existing.thingName || !existing.thingArn) throw conflict;
 
-    const principals = await this.iotClient.send(
-      new ListThingPrincipalsCommand({ thingName: input.thingName, maxResults: 1 }),
-    );
-    if ((principals.principals ?? []).length > 0) throw conflict;
+    await this.refuseIfInUse(input.thingName, conflict);
 
     const ensured = await this.ensureDeviceLocationId(input.thingName);
     if (ensured.isFailure()) {
@@ -136,7 +137,16 @@ export class AwsIotService {
         error: ensured.error.message,
       });
     }
-    return { thingName: existing.thingName, thingArn: existing.thingArn, adopted: true };
+    return { thingName: existing.thingName, thingArn: existing.thingArn };
+  }
+
+  // A thing with a certificate or identity attached is in use by someone, so a
+  // new registration must not hand out credentials for it.
+  private async refuseIfInUse(thingName: string, refusal: Error): Promise<void> {
+    const principals = await this.iotClient.send(
+      new ListThingPrincipalsCommand({ thingName, maxResults: 1 }),
+    );
+    if ((principals.principals ?? []).length > 0) throw refusal;
   }
 
   async deleteThing(thingName: string): Promise<Result<void>> {

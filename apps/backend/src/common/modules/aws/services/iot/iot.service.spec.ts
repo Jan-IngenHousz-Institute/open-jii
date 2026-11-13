@@ -174,6 +174,25 @@ describe("AwsIotService", () => {
       attributes: { serialNumber: "E8:F6:0A:B1:1D:D4", deviceType: "ambyte" },
     };
 
+    beforeEach(() => {
+      iotMock.on(ListThingPrincipalsCommand).resolves({ principals: [] });
+    });
+
+    it("refuses an existing thing that CreateThing accepted but that has credentials", async () => {
+      iotMock
+        .on(CreateThingCommand)
+        .resolves({ thingName: input.thingName, thingArn: "arn:thing" });
+      iotMock
+        .on(ListThingPrincipalsCommand)
+        .resolves({ principals: ["arn:aws:iot:eu-central-1:123456789012:cert/live"] });
+
+      const result = await service.createThing(input);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(409);
+      expect(iotMock.commandCalls(AddThingToThingGroupCommand)).toHaveLength(0);
+    });
+
     it("creates the thing, adds it to the group, and returns name + arn", async () => {
       iotMock.on(CreateThingCommand).resolves({
         thingName: input.thingName,
@@ -187,7 +206,6 @@ describe("AwsIotService", () => {
       expect(result.value).toEqual({
         thingName: input.thingName,
         thingArn: "arn:aws:iot:eu-central-1:123456789012:thing/AMBYTE_E8:F6:0A:B1:1D:D4",
-        adopted: false,
       });
 
       const createCall = iotMock.commandCalls(CreateThingCommand)[0].args[0].input;
@@ -246,7 +264,6 @@ describe("AwsIotService", () => {
         expect(result.value).toEqual({
           thingName: input.thingName,
           thingArn: existingArn,
-          adopted: true,
         });
         expect(iotMock.commandCalls(UpdateThingCommand)[0].args[0].input).toMatchObject({
           thingName: input.thingName,

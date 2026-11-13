@@ -22,7 +22,6 @@ import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices
 const RETURNED_THING = {
   thingName: "ambyte_TEST-SERIAL",
   thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/ambyte_TEST-SERIAL",
-  adopted: false,
 };
 
 describe("IotDeviceController", () => {
@@ -115,7 +114,6 @@ describe("IotDeviceController", () => {
           success({
             thingName: input.thingName,
             thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${input.thingName}`,
-            adopted: false,
           }),
         ),
       );

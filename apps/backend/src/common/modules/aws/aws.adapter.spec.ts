@@ -419,7 +419,6 @@ describe("AwsAdapter", () => {
       const created = {
         thingName: input.thingName,
         thingArn: "arn:aws:iot:thing/x",
-        adopted: false,
       };
       vi.spyOn(awsIotService, "createThing").mockResolvedValue(success(created));
 
