@@ -45,6 +45,7 @@ jobs:
     outputs:
       deploy_sha: ${{ steps.pin.outputs.sha }}
       infra_changed: ${{ steps.infra.outputs.changed }}
+      foundation_changed: ${{ steps.infra.outputs.foundation_changed }}
       affected_apps: ${{ steps.apps.outputs.affected_apps }}
       has_affected_apps: ${{ steps.apps.outputs.has_affected_apps }}
       macro_sandbox_languages: ${{ steps.apps.outputs.macro_sandbox_languages }}
@@ -54,6 +55,7 @@ jobs:
       # Dev infrastructure changes only from main, so it always matches main. App deploys
       # from a branch still run, because a parent that is not needed does not stop them.
       infrastructure_needed: ${{ (inputs.environment != 'dev' || github.ref == 'refs/heads/main') && ((github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) || (github.event_name != 'workflow_dispatch' && steps.infra.outputs.changed == 'true')) }}
+      foundation_needed: ${{ (inputs.environment != 'dev' || github.ref == 'refs/heads/main') && ((github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) || (github.event_name != 'workflow_dispatch' && steps.infra.outputs.foundation_changed == 'true')) }}
       migrations_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'migration') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), '@repo/database')) }}
       backend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'backend')) }}
       frontend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'web')) }}
@@ -111,6 +113,7 @@ jobs:
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
             echo "No previous push to compare with (manual run or new branch), so infrastructure counts as changed."
             echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "foundation_changed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -123,6 +126,13 @@ jobs:
           else
             echo "No infrastructure changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # The foundation root and the modules it is built from.
+          if echo "$CHANGED" | grep -qE '^infrastructure/(foundation/|modules/(iam-oidc|s3|dynamodb)/)'; then
+            echo "foundation_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "foundation_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Setup Node.js and pnpm
@@ -163,10 +173,32 @@ jobs:
       - name: Await Approval for Deployment
         run: echo "Approved deployment for ${{ inputs.environment }} environment."
 
+  # CI's roles, the GitHub trust and the state backend, applied before the infrastructure that
+  # depends on them. It applies only when its plan changes something, in prod after
+  # foundation-prod approves.
+  deploy-foundation:
+    name: Deploy Foundation
+    needs: [detect, approval-gate]
+    if: needs.detect.outputs.foundation_needed == 'true'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/foundation.yml
+    with:
+      environment: ${{ inputs.environment }}
+      ref: ${{ needs.detect.outputs.deploy_sha }}
+      tofu_version: "1.12.9"
+    secrets: inherit
+
   deploy-infrastructure:
     name: Deploy Infrastructure
-    needs: [detect, approval-gate]
-    if: needs.detect.outputs.infrastructure_needed == 'true'
+    needs: [detect, approval-gate, deploy-foundation]
+    if: >-
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
+      (needs.deploy-foundation.result == 'success' || (needs.deploy-foundation.result == 'skipped' && needs.detect.outputs.foundation_needed == 'false')) &&
+      needs.detect.outputs.infrastructure_needed == 'true'
     permissions:
       id-token: write
       contents: read
