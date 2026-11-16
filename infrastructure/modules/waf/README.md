@@ -42,8 +42,8 @@ module "backend_waf" {
 
 | Name                           | Description                                                                                                                | Type           | Default  | Required |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | -------------- | -------- | -------- |
-| `service_name`                 | Base name for the service                                                                                                  | `string`       | —        | yes      |
-| `environment`                  | Environment name                                                                                                           | `string`       | —        | yes      |
+| `service_name`                 | Base name for the service                                                                                                  | `string`       | none     | yes      |
+| `environment`                  | Environment name                                                                                                           | `string`       | none     | yes      |
 | `rate_limit`                   | Requests per 5-min window per IP                                                                                           | `number`       | `500`    | no       |
 | `blocked_countries`            | ISO 3166-1 alpha-2 country codes to block                                                                                  | `list(string)` | `[]`     | no       |
 | `log_retention_days`           | Days to retain WAF logs                                                                                                    | `number`       | `365`    | no       |

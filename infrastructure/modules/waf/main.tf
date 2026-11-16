@@ -325,6 +325,8 @@ resource "aws_wafv2_web_acl" "main" {
 
   # OpenNext regenerates a page with a HEAD request that carries Next's revalidation header and no
   # User-Agent. Every other request the core rule set labels for a missing User-Agent is blocked.
+  # The header's value, the build's preview id, cannot be known here, so any value passes; Next
+  # ignores a wrong one, and a client could pass the user-agent rule by sending one anyway.
   dynamic "rule" {
     for_each = var.allow_page_regeneration ? [1] : []
     content {
@@ -586,6 +588,13 @@ resource "aws_wafv2_web_acl_logging_configuration" "main" {
   redacted_fields {
     single_header {
       name = "cookie"
+    }
+  }
+
+  # Next's revalidation header carries the build's preview id, which also unlocks draft content
+  redacted_fields {
+    single_header {
+      name = "x-prerender-revalidate"
     }
   }
 }
