@@ -278,7 +278,9 @@ function addedUpdateRules(
   const stage = stageOf(added.stage);
   const isFinal = stage !== undefined && FINAL_STAGES.includes(stage);
   const isSet = raw.resolvedAt !== undefined;
-  const mayPrecedeStart = raw.kind === "maintenance" && stage === "scheduled";
+  // A window is announced, and can be cancelled, before it starts.
+  const mayPrecedeStart =
+    raw.kind === "maintenance" && (stage === "scheduled" || stage === "completed");
 
   if (timeOf(added.postedAt) > nowMs) {
     rules.push("update.postedAt is in the future. Leave it out to post now.");

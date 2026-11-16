@@ -1243,6 +1243,24 @@ describe("resolve", () => {
     expect(printed()).toContain("Resolved: Nov 4, 2026, 09:50 UTC");
   });
 
+  it("cancels a window before it starts with a completed update posted now", async () => {
+    const { cms, run, printed } = setup([
+      liveUpdate("upd-1", { stage: "scheduled" }),
+      liveWindow({ startsAt: "2026-11-05T09:00:00Z", endsAt: "2026-11-05T11:00:00Z" }),
+    ]);
+
+    await run({
+      ...options,
+      input: {
+        resolvedAt: "2026-11-04T10:00:00Z",
+        update: { stage: "completed", text: "The work is cancelled." },
+      },
+    });
+
+    expect(cms.writes().length).toBeGreaterThan(0);
+    expect(printed()).toContain("Message 1 of 1 (maintenance.completed)");
+  });
+
   it("previews maintenance.completed for a window", async () => {
     const { run, printed } = setup([liveUpdate("upd-1", { stage: "scheduled" }), liveWindow()]);
 

@@ -247,12 +247,13 @@ describe("checkIncident", () => {
     });
 
     it("lets cancelled maintenance resolve before its start", () => {
+      const before = maintenance({ updates: [update({ id: "upd-1", stage: "scheduled" })] });
       const cancelled = maintenance({
-        resolvedAt: "2026-11-04T09:00:00Z",
-        updates: [update({ stage: "completed" })],
+        resolvedAt: "2026-11-04T10:00:00Z",
+        updates: [...before.updates, update({ stage: "completed" })],
       });
 
-      expect(problems(cancelled)).toEqual([]);
+      expect(problems(cancelled, { action: "resolve", before })).toEqual([]);
     });
   });
 
