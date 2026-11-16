@@ -2954,6 +2954,16 @@ module "backend_ecs" {
       name      = "SERVING_STORE_PASSWORD"
       valueFrom = "${module.serving_store.credentials_secret_arns["reader"]}:password::"
     },
+    # The user the outbox copies annotations and metadata sheets with, which may only read and insert
+    # into those two tables.
+    {
+      name      = "SERVING_STORE_COPIER_USERNAME"
+      valueFrom = "${module.serving_store.credentials_secret_arns["copier"]}:username::"
+    },
+    {
+      name      = "SERVING_STORE_COPIER_PASSWORD"
+      valueFrom = "${module.serving_store.credentials_secret_arns["copier"]}:password::"
+    },
     {
       name      = "DB_CREDENTIALS"
       valueFrom = module.aurora_db.master_user_secret_arn

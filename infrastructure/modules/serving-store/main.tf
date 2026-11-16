@@ -49,14 +49,20 @@ locals {
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
+    "experiment_annotations", "experiment_metadata_rows",
   ]
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
+
+  # The copies the backend's outbox writes from Postgres, which never come from gold.
+  copied_tables = ["annotations", "metadata_rows"]
 
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
   # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
-  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
+  # there is no narrower grant. The copier writes a deletion as a row FINAL leaves out, so it needs
+  # no more than inserts into its own tables, and reads of them to find a sheet's old rows. The
+  # profiles are in templates/users.xml.tftpl.
   users = {
     admin = { name = "openjii_admin", profile = "default", grants = [] }
     writer = {
@@ -80,6 +86,11 @@ locals {
       name    = "openjii_reader"
       profile = "reader"
       grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
+    }
+    copier = {
+      name    = "openjii_copier"
+      profile = "ingest"
+      grants  = [for table in local.copied_tables : "GRANT SELECT, INSERT ON store.${table}"]
     }
   }
 

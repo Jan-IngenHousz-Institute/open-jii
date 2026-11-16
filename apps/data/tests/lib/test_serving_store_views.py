@@ -32,6 +32,8 @@ _READER_VIEWS = (
     "experiment_contributor_ids",
     "experiment_client_ids",
     "experiment_payload_schemas",
+    "experiment_annotations",
+    "experiment_metadata_rows",
 )
 
 _COMMIT = "_commit_version, _commit_timestamp"
@@ -270,3 +272,53 @@ def test_a_row_sent_again_reads_once_at_its_newest_commit_before_any_merge(
     )
 
     assert [(int(row["id"]), int(row["_commit_version"])) for row in rows] == [(1, 4), (2, 3)]
+
+
+def test_an_annotation_reads_at_its_newest_copy_and_a_deleted_one_not_at_all(
+    admin: _User, reader: _User
+) -> None:
+    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.annotations")
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, table_name, row_id, type, flag_type) VALUES "
+        "('e1', 'a1', 'raw_data', '1', 'flag', 'outlier'), "
+        "('e1', 'a2', 'raw_data', '2', 'comment', NULL), "
+        "('e2', 'a3', 'raw_data', '3', 'flag', 'outlier')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, table_name, row_id, type, flag_type) VALUES "
+        "('e1', 'a1', 'raw_data', '1', 'flag', 'needs_review')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, table_name, row_id, type, is_deleted) VALUES "
+        "('e1', 'a2', '', '', '', 1)"
+    )
+
+    rows = reader.rows(f"SELECT id, flag_type FROM {_DATABASE}.experiment_annotations(experiment = 'e1')")
+
+    assert rows == [{"id": "a1", "flag_type": "needs_review"}]
+
+
+def test_a_sheet_row_an_edit_removed_no_longer_reads(admin: _User, reader: _User) -> None:
+    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.metadata_rows")
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id, sheet_id, sheet_created_at, match_on, identifier, fields) "
+        "VALUES ('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-1', '{\"soil\":\"clay\"}'), "
+        "('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-2', '{\"soil\":\"sand\"}')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id, sheet_id, sheet_created_at, match_on, identifier, fields, is_deleted) "
+        "VALUES ('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-2', '', 1)"
+    )
+
+    rows = reader.rows(
+        f"SELECT identifier, fields FROM {_DATABASE}.experiment_metadata_rows(experiment = 'e1')"
+    )
+
+    assert rows == [{"identifier": "plot-1", "fields": '{"soil":"clay"}'}]
+
+
+@pytest.mark.parametrize("table", ["annotations", "metadata_rows"])
+def test_the_reader_reads_the_copies_only_through_their_views(reader: _User, table: str) -> None:
+    response = reader.run(f"SELECT count() FROM {_DATABASE}.{table}")
+
+    assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
