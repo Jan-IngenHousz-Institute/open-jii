@@ -1,9 +1,6 @@
 import type { Result } from "../../../common/utils/fp-utils";
 import type { DeviceLifecycleEventRow } from "../models/device-lifecycle-event.model";
 
-/** Where a device page reads from: the warehouse's silver tables, or the serving store. */
-export type DeviceDataSource = "warehouse" | "store";
-
 /** One time bucket of one device's measurement volume inside one experiment. */
 export interface ExperimentDeviceSeriesRow {
   bucketStart: string | null;

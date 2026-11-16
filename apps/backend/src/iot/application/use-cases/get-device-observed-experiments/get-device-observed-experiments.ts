@@ -4,7 +4,7 @@ import type { ObservedExperiment } from "@repo/api/domains/iot/iot.schema";
 import { foldObservedExperiments } from "@repo/api/transforms/observed-experiments";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
-import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { DeviceDataSourceService } from "../../services/device-data-source.service";
 

@@ -4,7 +4,7 @@ import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
-import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
 import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 interface MixEntry {

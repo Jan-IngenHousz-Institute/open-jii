@@ -4,7 +4,7 @@ import type { DeviceLifecycleEvent, DeviceSession } from "@repo/api/domains/iot/
 import { deriveDeviceConnectivity } from "@repo/api/transforms/device-connectivity";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
-import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
 import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 // One more row than the cap detects truncation without a count query.
