@@ -17,6 +17,8 @@ import {
   customType,
 } from "drizzle-orm/pg-core";
 
+// Child table updated_at triggers are migration-only; drizzle-kit db:push does not install them.
+// See postgres/migrations/0065_cynical_zuras.sql.
 // UTC timestamps helper
 const timestamps = {
   createdAt: timestamp("created_at")
