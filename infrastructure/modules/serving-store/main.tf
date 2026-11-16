@@ -53,6 +53,15 @@ locals {
   ]
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
+  # The platform metrics' hourly views (packages/database/clickhouse/migrations), which hold figures
+  # and never rows, the metrics user's only grants.
+  metrics_views = [
+    "metrics_platform_totals", "metrics_daily_activity", "metrics_client_totals",
+    "metrics_hourly_activity", "metrics_activity_windows", "metrics_parameter_stats",
+    "metrics_pool_facts", "metrics_daily_activity_by_experiment", "metrics_daily_activity_by_resource",
+    "metrics_experiment_contributors_window", "metrics_experiment_devices_window",
+  ]
+
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
@@ -81,6 +90,11 @@ locals {
       name    = "openjii_reader"
       profile = "reader"
       grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
+    }
+    metrics = {
+      name    = "openjii_metrics"
+      profile = "reader"
+      grants  = [for view in local.metrics_views : "GRANT SELECT ON store.${view}"]
     }
   }
 
