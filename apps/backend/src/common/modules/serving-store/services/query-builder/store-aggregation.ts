@@ -11,16 +11,11 @@ import type {
   AggregationSpec,
   GroupByExpression,
   QueryOrdering,
-  WidthBucket,
 } from "../../../databricks/services/query-builder/query-builder.types";
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
+import { SparkWidthBucket } from "./spark-width-bucket";
 import { StoreQueryBuilder } from "./store-query-builder";
 import type { FirstRows, FirstRowsTerm, StoreOutputColumn } from "./store-query-builder";
-
-/** A decimal's precision and scale, as Spark types its arithmetic. */
-type Decimal = [number, number];
-
-const MAX_PRECISION = 38;
 
 /**
  * A chart's grouping and aggregates over a store read, written by the warehouse's own wrapper in
@@ -127,7 +122,7 @@ export class StoreAggregation {
     }
     if (item.widthBucket !== undefined) {
       const { type } = this.columnOf(inner, item.column);
-      return { name, type: this.widthBucketType(type, item.widthBucket) };
+      return { name, type: new SparkWidthBucket(type, item.widthBucket).type };
     }
     return { ...this.columnOf(inner, item.column), name };
   }
@@ -167,73 +162,6 @@ export class StoreAggregation {
       case "previous":
         return { ...this.columnOf(inner, item.column), name };
     }
-  }
-
-  /**
-   * Spark divides whole numbers as doubles, whose floor is a BIGINT, but reads a literal with a
-   * fraction as a DECIMAL, which keeps the division decimal and its floor a DECIMAL of scale 0.
-   */
-  private widthBucketType(columnType: string, bucket: WidthBucket): string {
-    // A time is its epoch milliseconds, a BIGINT.
-    const position = this.wholeColumn(bucket.scale === "time" ? "BIGINT" : columnType);
-    const origin = this.literalDecimal(bucket.origin);
-    const width = this.literalDecimal(bucket.width);
-    const isDouble = position === undefined || origin === undefined || width === undefined;
-    if (isDouble || (origin[1] === 0 && width[1] === 0)) {
-      return "BIGINT";
-    }
-
-    const difference = this.subtracted(position, origin);
-    const [precision, scale] = this.divided(difference, width);
-    return `DECIMAL(${Math.min(precision - scale + 1, MAX_PRECISION)},0)`;
-  }
-
-  private wholeColumn(type: string): Decimal | undefined {
-    if (type === "BIGINT") {
-      return [20, 0];
-    }
-    return type === "INT" ? [10, 0] : undefined;
-  }
-
-  private integerDecimal(value: number): Decimal {
-    return Math.abs(value) <= 2_147_483_647 ? [10, 0] : [20, 0];
-  }
-
-  /** None for a literal Spark reads as a double, which it writes with an exponent. */
-  private literalDecimal(value: number): Decimal | undefined {
-    const text = String(value);
-    if (/e/i.test(text)) {
-      return undefined;
-    }
-    const [whole, fraction = ""] = text.replace("-", "").split(".");
-    if (fraction === "") {
-      return this.integerDecimal(value);
-    }
-    const digits = whole.replace(/^0+/, "").length + fraction.length;
-    return [Math.max(digits, fraction.length), fraction.length];
-  }
-
-  private subtracted([p1, s1]: Decimal, [p2, s2]: Decimal): Decimal {
-    const isWhole = s1 === 0 && s2 === 0;
-    if (isWhole) {
-      return [Math.max(p1, p2), 0];
-    }
-    const scale = Math.max(s1, s2);
-    return this.bounded(Math.max(p1 - s1, p2 - s2) + scale + 1, scale);
-  }
-
-  private divided([p1, s1]: Decimal, [p2, s2]: Decimal): Decimal {
-    const scale = Math.max(6, s1 + p2 + 1);
-    return this.bounded(p1 - s1 + s2 + scale, scale);
-  }
-
-  /** Spark keeps the whole digits of a result past 38 and gives up scale, down to 6. */
-  private bounded(precision: number, scale: number): Decimal {
-    if (precision <= MAX_PRECISION) {
-      return [precision, scale];
-    }
-    const wholeDigits = precision - scale;
-    return [MAX_PRECISION, Math.max(MAX_PRECISION - wholeDigits, Math.min(scale, 6))];
   }
 
   /** A column the read holds, or a field of a contributor or device, which is text. */

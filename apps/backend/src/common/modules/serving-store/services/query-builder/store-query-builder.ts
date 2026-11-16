@@ -24,6 +24,7 @@ import type {
 } from "../../../databricks/services/query-builder/schema/flattened-fields";
 import { VariantSchema } from "../../../databricks/services/query-builder/schema/variant-schema";
 import type { VariantField } from "../../../databricks/services/query-builder/schema/variant-schema";
+import { SparkWidthBucket } from "./spark-width-bucket";
 import type { DeviceParts, StoreColumn, StoreTable } from "./store-tables";
 
 export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "isPairText"> & {
@@ -128,6 +129,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private offsetValue?: number;
   private plotsValues = false;
   private rowNames = new Set<string>();
+  private rowTypes = new Map<string, string>();
   private rowIds = new Map<string, "contributor" | "device">();
   /** Kept until a payload, a reserved name or a sheet changes them. */
   private fields?: Map<string, FlattenedField>;
@@ -233,6 +235,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /** Writes a statement over another's rows, whose contributors and devices are held as ids. */
   over(columns: StoreOutputColumn[]): this {
     this.rowNames = new Set(columns.map(({ name }) => name));
+    this.rowTypes = new Map(columns.map(({ name, type }) => [name, type]));
     this.rowIds = new Map(
       columns.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
     );
@@ -432,10 +435,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const escaped = this.escapeIdentifier(column);
     const position =
       bucket.scale === "time" ? `toUnixTimestamp64Milli(${this.instantOf(escaped)})` : escaped;
-    return {
-      sql: `toInt64(floor((${position} - ${String(bucket.origin)}) / ${String(bucket.width)}))`,
-      alias: alias ?? `${column}_bucket`,
-    };
+    // A contributor's or device's field, which no row type names, is text.
+    const division = new SparkWidthBucket(this.rowTypes.get(column) ?? "STRING", bucket);
+    return { sql: division.sql(position), alias: alias ?? `${column}_bucket` };
   }
 
   buildAggregateExpression(agg: AggregateExpression): { sql: string; alias: string } {

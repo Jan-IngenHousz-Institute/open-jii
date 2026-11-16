@@ -163,6 +163,30 @@
       "device_name": "T",
       "latitude": 1.0,
       "output": "{\"n\":8,\"v\":8.0}"
+    },
+    {
+      "experiment": "edges",
+      "id": 1,
+      "timestamp": "2026-09-01 00:00:00.000",
+      "device_name": "Z",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "edges",
+      "id": 2,
+      "timestamp": "2026-11-29 17:10:43.078",
+      "device_name": "Z",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "edges",
+      "id": 3,
+      "timestamp": "2026-11-29 17:10:43.079",
+      "device_name": "Z",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
     }
   ],
   "matchSchema": "OBJECT<w: DOUBLE>",
@@ -986,6 +1010,32 @@
       "compare": ["id", "v_cumsum", "n_cumsum"],
       "limit": 6,
       "exact": true
+    },
+    "fractionalTimeWidthEdge": {
+      "experiment": "edges",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "alias": "zoom_bucket",
+            "widthBucket": {
+              "origin": 1788220800000,
+              "width": 38757215.395,
+              "scale": "time"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "zoom_bucket",
+        "direction": "ASC"
+      }
     }
   }
 }
