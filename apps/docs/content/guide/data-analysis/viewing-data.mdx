@@ -36,6 +36,13 @@ very precise numbers, scientific notation such as `1e3`, separators such as
 `1,000`, and units such as `12 cm` sort as text. Sorting preserves the original
 answers and does not make a text column numeric for filters or charts.
 
+A Number question's column is numeric. It goes on a chart's numeric axes, takes
+averages and sums, sorts by value with empty answers last, and its filters
+compare values. An answer that is not a number reads as empty, and leading zeros
+are dropped. Which questions count as Number follows the experiment's current
+flow: changing a question back to text, or detaching the workbook, returns its
+column to text for every row.
+
 A chart without aggregation that requests its rows sorted by a question-answer
 column, usually its X axis, receives them in this order. Charts with aggregation
 keep their existing order.

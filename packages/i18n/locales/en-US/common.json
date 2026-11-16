@@ -110,7 +110,8 @@
     "support": "Support",
     "documentation": "Documentation",
     "breadcrumbs": "Breadcrumbs",
-    "faq": "FAQ"
+    "faq": "FAQ",
+    "status": "System status"
   },
   "experiments": {
     "clearSearch": "Clear search",
@@ -1027,6 +1028,7 @@
     "errorTryAgain": "Try Again",
     "errorGoHome": "Go to Homepage",
     "errorSupport": "If this problem persists, please contact support.",
+    "errorStatus": "Check whether openJII is working on its status page",
     "checkEmail": "Check your email for a verification code",
     "loginWith-passkey": "Sign in with a passkey",
     "lastUsed": "Last used",
@@ -1300,6 +1302,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Enter protocol code as JSON",
     "columns": {
+      "macroCount_one": "{{count}} macro",
+      "macroCount_other": "{{count}} macros",
+      "macroCountLabel_one": "{{count}} compatible macro, show names",
+      "macroCountLabel_other": "{{count}} compatible macros, show names",
       "name": "Name",
       "family": "Family",
       "macros": "Macros",

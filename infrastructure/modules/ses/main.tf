@@ -5,7 +5,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0"
+      version = ">= 5.68.0"
     }
   }
 }
@@ -343,6 +343,12 @@ resource "aws_ses_configuration_set" "main" {
   }
 
   reputation_metrics_enabled = true
+}
+
+# Stops repeat sends to an address that bounced or complained. Account-level, one per account,
+# and a put: an account that already has it reads as no change.
+resource "aws_sesv2_account_suppression_attributes" "account" {
+  suppressed_reasons = ["BOUNCE", "COMPLAINT"]
 }
 
 # Event Destination for bounce and complaint tracking (optional)

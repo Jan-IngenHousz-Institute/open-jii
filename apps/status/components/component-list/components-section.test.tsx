@@ -12,7 +12,7 @@ function renderSection(document: StatusDocument, { isStale = false }: { isStale?
     <ComponentsSection
       components={document.components}
       incidents={document.incidents}
-      today="2026-11-03"
+      generatedAt={document.generatedAt}
       isStale={isStale}
     />,
   );

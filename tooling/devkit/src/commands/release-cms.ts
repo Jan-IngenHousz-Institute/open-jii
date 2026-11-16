@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 
-import { devkitEnvPath, readEnvFile, repositoryRoot } from "../lib/config.js";
+import { repositoryRoot } from "../lib/config.js";
+import { loadContentfulConfig } from "../lib/contentful-management.js";
+import type { ContentfulConfig } from "../lib/contentful-management.js";
 
 type Fields = Partial<Record<string, Record<string, unknown>>>;
 interface Entry {
@@ -26,11 +28,6 @@ interface Options {
   note?: Note;
   entryId?: string;
   version?: number;
-}
-interface Config {
-  space: string;
-  environment: string;
-  token: string;
 }
 const contentType = "componentReleaseNote";
 const validId = /^[a-zA-Z0-9_.-]{1,64}$/;
@@ -78,22 +75,9 @@ function validateNote(value: unknown): asserts value is Note {
   }
 }
 
-async function loadConfig(root: string, env: NodeJS.ProcessEnv): Promise<Config> {
-  const file = await readEnvFile(devkitEnvPath(root));
-  const values = { ...file, ...env };
-  return {
-    space: values.CONTENTFUL_SPACE_ID?.trim() ?? "",
-    environment: values.CONTENTFUL_SPACE_ENVIRONMENT?.trim() ?? "",
-    token:
-      [values.CONTENTFUL_MANAGEMENT_TOKEN, values.CMA]
-        .map((value) => value?.trim())
-        .find(Boolean) ?? "",
-  };
-}
-
 export async function releaseCms(
   options: Options,
-  config: Config,
+  config: ContentfulConfig,
   request: typeof fetch = fetch,
 ): Promise<unknown> {
   const note = options.note;
@@ -288,7 +272,7 @@ async function run(): Promise<void> {
       "Usage: release:cms preflight|inspect|draft|publish [--file <absolute-json-path>] [--entry-id ID] [--version N] [--dry-run]",
     );
   }
-  const config = await loadConfig(repositoryRoot(), process.env);
+  const config = await loadContentfulConfig(repositoryRoot(), process.env);
   if (action === "preflight") {
     process.stdout.write(
       `${JSON.stringify({ CONTENTFUL_SPACE_ID: Boolean(config.space), CONTENTFUL_SPACE_ENVIRONMENT: Boolean(config.environment), managementToken: Boolean(config.token) }, null, 2)}\n`,

@@ -7645,66 +7645,6 @@ export type LandingMetadataQuery = {
   } | null;
 };
 
-export type PageAboutFieldsFragment = {
-  __typename: "PageAbout";
-  pageTitle?: string | null;
-  pageDescription?: string | null;
-  internalName?: string | null;
-  title?: string | null;
-  sys: { __typename?: "Sys"; id: string; publishedAt?: any | null; environmentId: string };
-  description?: {
-    __typename?: "PageAboutDescription";
-    json: any;
-    links: {
-      __typename?: "PageAboutDescriptionLinks";
-      entries: {
-        __typename?: "PageAboutDescriptionEntries";
-        block: Array<
-          | { __typename?: "ComponentAlert" }
-          | { __typename?: "ComponentAuthor" }
-          | { __typename?: "ComponentButton" }
-          | { __typename?: "ComponentEmail" }
-          | { __typename?: "ComponentFaqQuestion" }
-          | { __typename?: "ComponentFeature" }
-          | { __typename?: "ComponentPartner" }
-          | { __typename?: "ComponentReleaseNote" }
-          | ({ __typename?: "ComponentRichImage" } & RichImageFieldsFragment)
-          | { __typename?: "ComponentSeo" }
-          | { __typename?: "Footer" }
-          | { __typename?: "LandingMetadata" }
-          | { __typename?: "PageAbout" }
-          | { __typename?: "PageBlogPost" }
-          | { __typename?: "PageCookiePolicy" }
-          | { __typename?: "PageFaq" }
-          | { __typename?: "PageForceUpdate" }
-          | { __typename?: "PageHomeFeatures" }
-          | { __typename?: "PageHomeHero" }
-          | { __typename?: "PageHomeMission" }
-          | { __typename?: "PageHomePartners" }
-          | { __typename?: "PageLanding" }
-          | { __typename?: "PagePolicies" }
-          | { __typename?: "PageTermsAndConditions" }
-          | null
-        >;
-      };
-    };
-  } | null;
-  image?: ({ __typename?: "Asset" } & ImageFieldsFragment) | null;
-};
-
-export type PageAboutQueryVariables = Exact<{
-  locale?: InputMaybe<Scalars["String"]["input"]>;
-  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
-}>;
-
-export type PageAboutQuery = {
-  __typename?: "Query";
-  pageAboutCollection?: {
-    __typename?: "PageAboutCollection";
-    items: Array<({ __typename?: "PageAbout" } & PageAboutFieldsFragment) | null>;
-  } | null;
-};
-
 export type PageBlogQueryVariables = Exact<{
   locale?: InputMaybe<Scalars["String"]["input"]>;
   preview?: InputMaybe<Scalars["Boolean"]["input"]>;
@@ -8637,50 +8577,6 @@ export const ImageFieldsFragmentDoc = gql`
     contentType
   }
 `;
-export const RichImageFieldsFragmentDoc = gql`
-  fragment RichImageFields on ComponentRichImage {
-    __typename
-    internalName
-    sys {
-      id
-    }
-    image {
-      ...ImageFields
-    }
-    caption
-    fullWidth
-  }
-  ${ImageFieldsFragmentDoc}
-`;
-export const PageAboutFieldsFragmentDoc = gql`
-  fragment PageAboutFields on PageAbout {
-    __typename
-    sys {
-      id
-      publishedAt
-      environmentId
-    }
-    pageTitle
-    pageDescription
-    internalName
-    title
-    description {
-      json
-      links {
-        entries {
-          block {
-            ...RichImageFields
-          }
-        }
-      }
-    }
-    image {
-      ...ImageFields
-    }
-  }
-  ${RichImageFieldsFragmentDoc}
-  ${ImageFieldsFragmentDoc}
-`;
 export const SeoFieldsFragmentDoc = gql`
   fragment SeoFields on ComponentSeo {
     __typename
@@ -8708,6 +8604,21 @@ export const AuthorFieldsFragmentDoc = gql`
     avatar {
       ...ImageFields
     }
+  }
+  ${ImageFieldsFragmentDoc}
+`;
+export const RichImageFieldsFragmentDoc = gql`
+  fragment RichImageFields on ComponentRichImage {
+    __typename
+    internalName
+    sys {
+      id
+    }
+    image {
+      ...ImageFields
+    }
+    caption
+    fullWidth
   }
   ${ImageFieldsFragmentDoc}
 `;
@@ -9188,16 +9099,6 @@ export const LandingMetadataDocument = gql`
   }
   ${LandingMetadataFieldsFragmentDoc}
 `;
-export const PageAboutDocument = gql`
-  query pageAbout($locale: String, $preview: Boolean) {
-    pageAboutCollection(limit: 1, locale: $locale, preview: $preview) {
-      items {
-        ...PageAboutFields
-      }
-    }
-  }
-  ${PageAboutFieldsFragmentDoc}
-`;
 export const PageBlogDocument = gql`
   query pageBlog(
     $locale: String
@@ -9589,24 +9490,6 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "landingMetadata",
-        "query",
-        variables,
-      );
-    },
-    pageAbout(
-      variables?: PageAboutQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit["signal"],
-    ): Promise<PageAboutQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<PageAboutQuery>({
-            document: PageAboutDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        "pageAbout",
         "query",
         variables,
       );

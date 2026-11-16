@@ -2,6 +2,14 @@
 
 FROM public.ecr.aws/lambda/python:3.12
 
+# Takes AL2023 security fixes the base image lacks. The repos are locked to the
+# base image's release, so only --releasever=latest reaches them:
+# glibc 2.34-231.amzn2023.0.6 (CVE-2026-86805 HIGH),
+# rpm 4.16.1.3-29.amzn2023.0.10 (CVE-2026-103242/84837/95519/95520 HIGH),
+# sqlite-libs 3.40.0-1.amzn2023.0.9 (CVE-2026-119371 HIGH).
+RUN dnf upgrade -y --releasever=latest glibc glibc-common glibc-langpack-en glibc-minimal-langpack rpm rpm-libs sqlite-libs \
+ && dnf clean all
+
 RUN pip install --no-cache-dir \
     numpy==2.4.2 \
     pandas==3.0.1 \

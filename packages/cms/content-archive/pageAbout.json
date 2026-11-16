@@ -1,0 +1,242 @@
+{
+  "contentType": {
+    "id": "pageAbout",
+    "name": "📄 page - About",
+    "description": "",
+    "displayField": "internalName",
+    "fields": [
+      {
+        "id": "internalName",
+        "name": "Internal name",
+        "type": "Symbol",
+        "localized": false,
+        "required": true,
+        "validations": [
+          {
+            "unique": true
+          }
+        ],
+        "disabled": false,
+        "omitted": false
+      },
+      {
+        "id": "pageTitle",
+        "name": "Page title",
+        "type": "Symbol",
+        "localized": false,
+        "required": true,
+        "validations": [],
+        "disabled": false,
+        "omitted": false
+      },
+      {
+        "id": "pageDescription",
+        "name": "Page description",
+        "type": "Symbol",
+        "localized": false,
+        "required": true,
+        "validations": [],
+        "disabled": false,
+        "omitted": false
+      },
+      {
+        "id": "title",
+        "name": "Title",
+        "type": "Symbol",
+        "localized": false,
+        "required": true,
+        "validations": [],
+        "disabled": false,
+        "omitted": false
+      },
+      {
+        "id": "description",
+        "name": "Description",
+        "type": "RichText",
+        "localized": false,
+        "required": true,
+        "validations": [
+          {
+            "enabledMarks": [
+              "bold",
+              "italic",
+              "underline",
+              "code",
+              "superscript",
+              "subscript",
+              "strikethrough"
+            ],
+            "message": "Only bold, italic, underline, code, superscript, subscript, and strikethrough marks are allowed"
+          },
+          {
+            "enabledNodeTypes": [
+              "heading-1",
+              "heading-2",
+              "heading-3",
+              "heading-4",
+              "heading-5",
+              "heading-6",
+              "ordered-list",
+              "unordered-list",
+              "hr",
+              "blockquote",
+              "embedded-entry-block",
+              "table",
+              "asset-hyperlink",
+              "entry-hyperlink",
+              "hyperlink"
+            ],
+            "message": "Only heading 1, heading 2, heading 3, heading 4, heading 5, heading 6, ordered list, Unordered list, horizontal rule, quote, block entry, table, link to asset, link to entry, and link to Url nodes are allowed"
+          },
+          {
+            "nodes": {
+              "embedded-entry-block": [
+                {
+                  "linkContentType": ["componentRichImage"],
+                  "message": null
+                }
+              ],
+              "entry-hyperlink": [
+                {
+                  "linkContentType": ["componentRichImage"],
+                  "message": null
+                }
+              ]
+            }
+          }
+        ],
+        "disabled": false,
+        "omitted": false
+      },
+      {
+        "id": "image",
+        "name": "Image",
+        "type": "Link",
+        "localized": false,
+        "required": false,
+        "validations": [
+          {
+            "linkMimetypeGroup": ["image"]
+          }
+        ],
+        "disabled": false,
+        "omitted": false,
+        "linkType": "Asset"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "sys": {
+        "id": "4pDf5r0JIf3sT3wnTN9h5N",
+        "version": 281,
+        "publishedVersion": 280,
+        "contentType": {
+          "sys": {
+            "id": "pageAbout"
+          }
+        }
+      },
+      "fields": {
+        "internalName": {
+          "en-US": "About JII"
+        },
+        "pageTitle": {
+          "de-DE": "About - openJII",
+          "en-US": "About JII"
+        },
+        "pageDescription": {
+          "de-DE": "About",
+          "en-US": "openJII is hosted and supported by the Jan IngenHousz Institute (JII), an open-science research institute working to understand and improve photosynthesis."
+        },
+        "title": {
+          "de-DE": "Über OpenJII",
+          "en-US": "About JII"
+        },
+        "description": {
+          "de-DE": {
+            "data": {},
+            "content": [
+              {
+                "data": {},
+                "content": [
+                  {
+                    "data": {},
+                    "marks": [],
+                    "value": "Das Jan IngenHousz Institut erforscht, wie Pflanzen Sonnenlicht effizienter nutzen können und möchte die Kommunikation und Zusammenarbeit von Ingenieuren, Datenwissenschaftlern, Biochemikern, Biophysikern, Genetikern und Pflanzenzüchtern fördern. Gleichzeitig möchte das Jan IngenHousz Institut ein Ort sein, an dem neue wissenschaftliche Karrieren entstehen können. In den nächsten Jahren werden mehr als 30 Doktoranden und 60 Postdoktoranden an diesem Forschungsprogramm arbeiten. Die Gründung des neuen Instituts erfordert eine Investition von 62 Millionen Euro über einen Zeitraum von zehn Jahren. Der Philanthropische Fonds beteiligt sich mit 50 Millionen Euro. Die WUR steuert 12 Millionen Euro bei, die größtenteils aus der Bereitstellung von Personal und Laboren zu einem reduzierten Satz bestehen.",
+                    "nodeType": "text"
+                  }
+                ],
+                "nodeType": "paragraph"
+              },
+              {
+                "data": {},
+                "content": [
+                  {
+                    "data": {},
+                    "marks": [],
+                    "value": "\n",
+                    "nodeType": "text"
+                  }
+                ],
+                "nodeType": "paragraph"
+              }
+            ],
+            "nodeType": "document"
+          },
+          "en-US": {
+            "nodeType": "document",
+            "data": {},
+            "content": [
+              {
+                "nodeType": "paragraph",
+                "data": {},
+                "content": [
+                  {
+                    "nodeType": "text",
+                    "value": "openJII is hosted and supported by the Jan IngenHousz Institute (JII), an open-science research institute working to understand and improve photosynthesis.",
+                    "marks": [],
+                    "data": {}
+                  }
+                ]
+              },
+              {
+                "nodeType": "paragraph",
+                "data": {},
+                "content": [
+                  {
+                    "nodeType": "hyperlink",
+                    "data": {
+                      "uri": "https://www.jan-ingenhousz-institute.org/"
+                    },
+                    "content": [
+                      {
+                        "nodeType": "text",
+                        "value": "Visit the Jan IngenHousz Institute",
+                        "marks": [],
+                        "data": {}
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "image": {
+          "de-DE": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Asset",
+              "id": "4lqxYpPLHdzfy0f8hONbGq"
+            }
+          }
+        }
+      },
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      }
+    }
+  ]
+}

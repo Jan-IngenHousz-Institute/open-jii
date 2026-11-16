@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,6 +7,7 @@ import { cache } from "react";
 import { ArticleHero } from "~/components/cms/article/article-hero";
 import { ArticleTileGrid } from "~/components/cms/article/article-title-grid";
 import { Container } from "~/components/cms/shared/container";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
@@ -19,15 +21,26 @@ interface LandingPageProps {
   }>;
 }
 
-const getBlogData = cache(async (locale: string, preview: boolean) => {
+async function fetchBlog(locale: string, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const blogData = await gqlClient.pageBlog({
+  return (preview ? previewClient : client).pageBlog({
     locale,
     limit: 7,
     order: PageBlogPostOrder.PublishedDateDesc,
     preview,
   });
+}
+
+const getPublishedBlog = unstable_cache(
+  (locale: string) => fetchBlog(locale, false),
+  ["pageBlog"],
+  {
+    revalidate: PUBLISHED_CONTENT_SECONDS,
+  },
+);
+
+const getBlogData = cache(async (locale: string, preview: boolean) => {
+  const blogData = await (preview ? fetchBlog(locale, true) : getPublishedBlog(locale));
   return {
     page: blogData.pageLandingCollection?.items[0],
     posts: blogData.pageBlogPostCollection?.items,

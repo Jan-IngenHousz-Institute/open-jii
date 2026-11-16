@@ -196,9 +196,9 @@ variable "revalidation_queue_name" {
 }
 
 variable "visibility_timeout_seconds" {
-  description = "SQS message visibility timeout (seconds)"
+  description = "SQS message visibility timeout (seconds). AWS advises six times the consuming function's timeout."
   type        = number
-  default     = 30
+  default     = 180
 }
 
 variable "message_retention_seconds" {
@@ -214,9 +214,9 @@ variable "enable_dlq" {
 }
 
 variable "max_receive_count" {
-  description = "Maximum receive count before message goes to DLQ"
+  description = "Maximum receive count before message goes to DLQ. AWS advises at least 5 for a Lambda consumer."
   type        = number
-  default     = 3
+  default     = 5
 }
 
 # CloudFront Configuration

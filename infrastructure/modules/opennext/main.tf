@@ -112,6 +112,41 @@ resource "aws_s3_bucket_lifecycle_configuration" "assets" {
       expired_object_delete_marker = true
     }
   }
+
+  rule {
+    id     = "expire-replaced-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
+}
+
+# Every regeneration replaces a page here, so replaced versions would otherwise pile up for good.
+resource "aws_s3_bucket_lifecycle_configuration" "cache" {
+  bucket = aws_s3_bucket.cache.id
+
+  rule {
+    id     = "expire-replaced-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "assets" {
@@ -168,6 +203,23 @@ resource "aws_cloudwatch_log_group" "server" {
   name              = "/aws/lambda/${local.server_function_name}"
   retention_in_days = var.log_retention_days
   tags              = local.common_tags
+}
+
+# A cached Contentful read that fails to refresh keeps serving its old value, and Next only logs
+# the failure. Catalog entry 149 counts the line, since the pages otherwise stay up but stale.
+resource "aws_cloudwatch_log_metric_filter" "cms_refresh_failures" {
+  count          = var.enable_cloudwatch_logs ? 1 : 0
+  name           = "${local.name_prefix}-cms-refresh-failures"
+  log_group_name = aws_cloudwatch_log_group.server[0].name
+  pattern        = "\"revalidating cache with key\""
+
+  metric_transformation {
+    name          = "CmsRefreshFailures"
+    namespace     = "OpenJII/Web"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "image" {
@@ -336,18 +388,14 @@ module "warmer_function" {
   lambda_permissions = true
   lambda_function_arns = [
     "${module.server_function.function_arn}:live",
-    module.image_function.function_arn
   ]
 
-  # CloudFront invokes the server through its live alias, and Lambda keeps warm environments per version
+  # CloudFront invokes the server through its live alias, and Lambda keeps warm environments per version.
+  # The image function is left out: it throws on a warmer event.
   environment_variables = {
     WARM_PARAMS = jsonencode([
       {
         function    = "${module.server_function.function_name}:live"
-        concurrency = 1
-      },
-      {
-        function    = module.image_function.function_name
         concurrency = 1
       }
     ])

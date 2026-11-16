@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { publicNavigationHref } from "./public-navigation-links";
@@ -26,7 +27,7 @@ async function fetchNavigation(locale: string, preview: boolean) {
 const getPublishedNavigation = unstable_cache(
   (locale: string) => fetchNavigation(locale, false),
   ["public-navigation"],
-  { revalidate: 300 },
+  { revalidate: PUBLISHED_CONTENT_SECONDS },
 );
 
 export async function PublicNavbar({

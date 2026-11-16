@@ -47,6 +47,10 @@
     "codeNotAvailable": "No code available",
     "detailsTitle": "Details",
     "columns": {
+      "protocolCount_one": "{{count}} protocol",
+      "protocolCount_other": "{{count}} protocols",
+      "protocolCountLabel_one": "{{count}} compatible protocol, show names",
+      "protocolCountLabel_other": "{{count}} compatible protocols, show names",
       "name": "Name",
       "language": "Language",
       "protocols": "Protocols",

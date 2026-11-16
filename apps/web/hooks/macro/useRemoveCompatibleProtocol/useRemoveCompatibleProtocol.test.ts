@@ -70,4 +70,33 @@ describe("useRemoveCompatibleProtocol", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(listedIds()).toEqual(["p-1", "p-2"]);
   });
+
+  it.each([200, 500])(
+    "invalidates every protocol and macro list after status %s",
+    async (status) => {
+      server.mount(contract.macros.removeCompatibleProtocol, { status, body: [] });
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { gcTime: Infinity }, mutations: { retry: false } },
+      });
+      const listKeys = [
+        orpc.protocols.listProtocols.queryKey({ input: {} }),
+        orpc.protocols.listProtocols.queryKey({ input: { page: 2, search: "leaf" } }),
+        orpc.macros.listMacros.queryKey({ input: {} }),
+        orpc.macros.listMacros.queryKey({ input: { page: 2, language: ["python"] } }),
+      ];
+      for (const key of listKeys) queryClient.setQueryData(key, []);
+      const { result } = renderHook(() => useRemoveCompatibleProtocol("macro-1"), { queryClient });
+
+      act(() => {
+        result.current.mutate({ id: "macro-1", protocolId: "protocol-1" });
+      });
+
+      await waitFor(() =>
+        expect(status === 200 ? result.current.isSuccess : result.current.isError).toBe(true),
+      );
+      for (const key of listKeys) {
+        expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+      }
+    },
+  );
 });

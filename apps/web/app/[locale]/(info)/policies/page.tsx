@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { PoliciesContent } from "~/components/cms/policies";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
@@ -11,10 +13,23 @@ interface PoliciesPageProps {
   params: Promise<{ locale: string }>;
 }
 
-const getPoliciesData = cache(async (locale: string, preview: boolean) => {
+async function fetchPolicies(locale: string, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const policiesQuery = await gqlClient.pagePolicies({ locale, preview });
+  return (preview ? previewClient : client).pagePolicies({ locale, preview });
+}
+
+const getPublishedPolicies = unstable_cache(
+  (locale: string) => fetchPolicies(locale, false),
+  ["pagePolicies"],
+  {
+    revalidate: PUBLISHED_CONTENT_SECONDS,
+  },
+);
+
+const getPoliciesData = cache(async (locale: string, preview: boolean) => {
+  const policiesQuery = await (preview
+    ? fetchPolicies(locale, true)
+    : getPublishedPolicies(locale));
   return policiesQuery.pagePoliciesCollection?.items[0] as PagePoliciesFieldsFragment;
 });
 

@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { MacroProtocolList } from "@repo/api/domains/macro/macro.schema";
-import { protocols } from "@repo/database";
+import { eq, macros, protocols, protocolMacros } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
@@ -256,6 +256,40 @@ describe("MacroController", () => {
         .get(testApp.resolveOrpcPath(contract.macros.getMacro, { id: faker.string.uuid() }))
         .expect(StatusCodes.UNAUTHORIZED);
     });
+  });
+
+  it("keeps the default array order without counts and includes counts only for pages", async () => {
+    const alpha = await testApp.createMacro({ name: "Alpha", createdBy: testUserId });
+    const zulu = await testApp.createMacro({ name: "Zulu", createdBy: testUserId });
+    await testApp.database.update(macros).set({ sortOrder: 1 }).where(eq(macros.id, zulu.id));
+    const compatible = await testApp.createProtocol({ name: "Compatible", createdBy: testUserId });
+    await testApp.database.insert(protocolMacros).values({
+      macroId: zulu.id,
+      protocolId: compatible.id,
+    });
+    const path = testApp.resolveOrpcPath(contract.macros.listMacros);
+
+    const array: SuperTestResponse<{ id: string }[]> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(array.body.map((item) => item.id)).toEqual([zulu.id, alpha.id]);
+    for (const item of array.body) {
+      expect(item).not.toHaveProperty("compatibleProtocolCount");
+    }
+
+    const page: SuperTestResponse<{ items: { id: string; compatibleProtocolCount: number }[] }> =
+      await testApp
+        .get(path)
+        .query({ page: 1, fields: "summary" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+    expect(page.body.items.map((item) => [item.id, item.compatibleProtocolCount])).toEqual([
+      [zulu.id, 1],
+      [alpha.id, 0],
+    ]);
   });
 
   describe("listMacros paginated", () => {

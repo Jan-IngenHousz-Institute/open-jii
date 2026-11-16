@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Interval } from "@nestjs/schedule";
 
 import { zExperimentExportErrorCode } from "@repo/api/domains/experiment/exports/experiment-exports.schema";
@@ -30,6 +31,8 @@ import { ExperimentRepository } from "../../core/repositories/experiment.reposit
 
 /** Named so the test harness can keep it off the schedule. */
 export const EXPORT_RECONCILE_INTERVAL = "export-run-reconciler";
+
+export const EXPORT_METRICS_NAMESPACE = "OpenJII/Backend";
 
 const INTERVAL_MS = 30_000;
 
@@ -74,6 +77,7 @@ export class ExportRunReconcilerService {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly notifications: NotificationDispatchService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Interval(EXPORT_RECONCILE_INTERVAL, INTERVAL_MS)
@@ -350,7 +354,50 @@ export class ExportRunReconcilerService {
         exportId: record.id,
         error: failed.error.message,
       });
+      return;
     }
+
+    // Null when another task finished it first, which counts it instead.
+    if (failed.value !== null) {
+      await this.countFailure(errorCode);
+    }
+  }
+
+  /** `unknown` is the platform's own failure; the other codes are the data's or the request's. */
+  private async countFailure(errorCode: ExportErrorCode): Promise<void> {
+    const environment = this.deployedEnvironment();
+    if (environment === null) {
+      return;
+    }
+
+    const published = await this.awsPort.publishMetrics(EXPORT_METRICS_NAMESPACE, [
+      {
+        name: "ExportsFailed",
+        value: 1,
+        unit: "Count",
+        dimensions: {
+          Environment: environment,
+          Cause: errorCode === "unknown" ? "platform" : "user",
+        },
+      },
+    ]);
+
+    if (published.isFailure()) {
+      this.logger.warn({
+        msg: "Could not count a failed export",
+        operation: "reconcileExports",
+        error: published.error.message,
+      });
+    }
+  }
+
+  /** The cluster identifier is a setting only deployed services carry. */
+  private deployedEnvironment(): string | null {
+    if (!this.configService.get<string>("health.databaseClusterIdentifier")) {
+      return null;
+    }
+
+    return this.configService.get<string>("health.environment") ?? "unknown";
   }
 
   /**

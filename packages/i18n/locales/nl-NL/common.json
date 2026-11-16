@@ -110,7 +110,8 @@
     "support": null,
     "documentation": null,
     "breadcrumbs": null,
-    "faq": null
+    "faq": null,
+    "status": "Systeemstatus"
   },
   "experiments": {
     "clearSearch": null,
@@ -1027,6 +1028,7 @@
     "errorTryAgain": "Probeer opnieuw",
     "errorGoHome": "Naar Homepage",
     "errorSupport": "Als dit probleem aanhoudt, neem dan contact op met ons ondersteuningsteam.",
+    "errorStatus": "Controleer op de statuspagina of openJII werkt",
     "checkEmail": null,
     "loginWith-passkey": null,
     "lastUsed": null,
@@ -1300,6 +1302,10 @@
     "detailsTitle": "Details",
     "codePlaceholder": "Voer protocol code in als JSON",
     "columns": {
+      "macroCount_one": "{{count}} macro",
+      "macroCount_other": "{{count}} macro's",
+      "macroCountLabel_one": "{{count}} compatibele macro, namen tonen",
+      "macroCountLabel_other": "{{count}} compatibele macro's, namen tonen",
       "name": "Naam",
       "family": "Familie",
       "macros": "Macro's",

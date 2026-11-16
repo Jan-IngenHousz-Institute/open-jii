@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { PLAY_REVIEW_LOG_LINES, openJiiEmailOTP } from "./email-otp";
+import { PLAY_REVIEW_LOG_LINES, SIGN_IN_EMAIL_FAILED_LOG_LINE, openJiiEmailOTP } from "./email-otp";
 
 const REVIEW_EMAIL = "reviewer@example.com";
 const REVIEW_OTP = "482913";
@@ -27,6 +27,7 @@ const AUTH_URL = "http://localhost:3020/api/v1/auth";
 
 const repoRoot = resolve(__dirname, "../../..");
 const playReviewModulePath = "infrastructure/modules/play-review-sign-in/main.tf";
+const backendEnvPaths = ["infrastructure/env/dev/main.tf", "infrastructure/env/prod/main.tf"];
 
 function createAuth(playReview: PlayReviewSettings) {
   const sendEmail = vi.fn((_message: { email: string; otp: string }) => Promise.resolve());
@@ -101,7 +102,7 @@ function createAuth(playReview: PlayReviewSettings) {
       .join("; ");
   }
 
-  return { requestCode, signIn, request, checkCode, sessionCookie, sendEmail, log, tables };
+  return { auth, requestCode, signIn, request, checkCode, sessionCookie, sendEmail, log, tables };
 }
 
 describe("openJiiEmailOTP", () => {
@@ -311,6 +312,46 @@ describe("openJiiEmailOTP", () => {
     const response = await request(path, { method, cookie, body: { name: "Laptop" } });
 
     expect(response.status).toBe(200);
+  });
+
+  it("logs a code email that failed to send, without the address", async () => {
+    const { auth, sendEmail, log } = createAuth(unconfigured);
+    sendEmail.mockRejectedValueOnce(
+      Object.assign(new Error(`rejected ${OTHER_EMAIL}`), { code: "EAUTH" }),
+    );
+
+    // Better Auth answers success either way, so the person is told a code is on its way.
+    await expect(
+      auth.api.sendVerificationOTP({ body: { email: OTHER_EMAIL, type: "sign-in" } }),
+    ).resolves.toEqual({ success: true });
+
+    expect(log).toHaveBeenCalledWith("error", SIGN_IN_EMAIL_FAILED_LOG_LINE, {
+      type: "sign-in",
+      code: "EAUTH",
+    });
+    expect(
+      log.mock.calls.filter(([, message]) => message === SIGN_IN_EMAIL_FAILED_LOG_LINE),
+    ).toHaveLength(1);
+  });
+
+  it("logs the error's name when the email server gives no code", async () => {
+    const { auth, sendEmail, log } = createAuth(unconfigured);
+    sendEmail.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+    await auth.api.sendVerificationOTP({ body: { email: OTHER_EMAIL, type: "sign-in" } });
+
+    expect(log).toHaveBeenCalledWith("error", SIGN_IN_EMAIL_FAILED_LOG_LINE, {
+      type: "sign-in",
+      code: "TypeError",
+    });
+  });
+
+  it("matches the failed code email in each environment's metric filter", () => {
+    for (const path of backendEnvPaths) {
+      const env = readFileSync(join(repoRoot, path), "utf8");
+
+      expect(env).toContain(`\\"${SIGN_IN_EMAIL_FAILED_LOG_LINE}\\"`);
+    }
   });
 
   it("matches every line it logs in the backend's metric filter", () => {

@@ -110,9 +110,7 @@ function UserMenu({
 
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate font-medium">{displayName}</span>
-            {avatarName && (
-              <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
-            )}
+            <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -155,7 +153,7 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
 
   const { data: userProfile } = useGetUserProfile(session?.user.id ?? "");
   const profile = userProfile;
-  const person = { ...profile, email: session?.user.email };
+  const person = profile ?? {};
   const displayName = personName(person, t);
   const avatarName = ownName(person) ?? "";
 
@@ -376,11 +374,9 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
                       />
                       <div className="flex min-w-0 flex-1 flex-col">
                         <span className="truncate text-sm font-medium">{displayName}</span>
-                        {avatarName && (
-                          <span className="text-muted-foreground truncate text-xs">
-                            {session.user.email}
-                          </span>
-                        )}
+                        <span className="text-muted-foreground truncate text-xs">
+                          {session.user.email}
+                        </span>
                       </div>
                     </div>
                     {/* Account link for mobile */}

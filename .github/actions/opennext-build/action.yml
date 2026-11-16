@@ -40,10 +40,12 @@ runs:
         if [[ "$ENVIRONMENT" == "prod" ]]; then
           echo "NEXT_PUBLIC_API_URL=https://api.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DOCS_URL=https://docs.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_STATUS_URL=https://status.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_BASE_URL=https://${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
         else
           echo "NEXT_PUBLIC_API_URL=https://api.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DOCS_URL=https://docs.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_STATUS_URL=https://status.dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_BASE_URL=https://dev.${WEB_BASE_ORIGIN}" >> $GITHUB_ENV
         fi
         echo "NEXT_PUBLIC_POSTHOG_KEY=${POSTHOG_KEY}" >> $GITHUB_ENV

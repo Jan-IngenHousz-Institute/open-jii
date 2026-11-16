@@ -437,7 +437,9 @@ locals {
       resource = "*"
     }
 
-    # ── SQS: queue management (Terraform — OpenNext revalidation) ──
+    # ── SQS and SNS: queue and topic management (Terraform: OpenNext revalidation, status events) ──
+    # SNS joins this key rather than taking its own, since a new key renumbers every policy part
+    # while this role is applying its own policy.
     sqs = {
       actions = [
         "sqs:CreateQueue",
@@ -449,6 +451,20 @@ locals {
         "sqs:TagQueue",
         "sqs:UntagQueue",
         "sqs:ListQueueTags",
+        # Topics
+        "sns:CreateTopic",
+        "sns:DeleteTopic",
+        "sns:GetTopicAttributes",
+        "sns:SetTopicAttributes",
+        "sns:ListTagsForResource",
+        "sns:TagResource",
+        "sns:UntagResource",
+        # Subscriptions
+        "sns:Subscribe",
+        "sns:Unsubscribe",
+        "sns:GetSubscriptionAttributes",
+        "sns:SetSubscriptionAttributes",
+        "sns:ListSubscriptionsByTopic",
       ]
       resource = "*"
     }
@@ -639,6 +655,9 @@ locals {
         "ses:GetSendQuota",
         # Active receipt rule set (Terraform provider reads)
         "ses:DescribeActiveReceiptRuleSet",
+        # Account suppression list (aws_sesv2_account_suppression_attributes)
+        "ses:PutAccountSuppressionAttributes",
+        "ses:GetAccount",
       ]
       resource = "*"
     }

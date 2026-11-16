@@ -670,6 +670,273 @@ EOT
   }
 }
 
+# Notification email. The backend publishes the outbox's gauges every five minutes from each
+# task, 0 when nothing waits, so no data there means the reporting has stopped and its rule fires.
+# SES publishes the account's reputation only once it has sent enough mail to judge, so no data
+# on those two is quiet, not broken.
+resource "grafana_rule_group" "email_health" {
+  provider         = grafana.amg
+  name             = "Notification Email Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  # Catalog entry 141. Every task publishes the same age, so the highest reads right however many
+  # run. A relay outage holds every row; one email failing on every attempt crosses it too. No
+  # point at all for the query's 15 minutes and the 5 to hold means the job reporting the outbox
+  # has stopped, while email may be stuck, so no data fires as well.
+  rule {
+    name      = "Notification Emails Waiting"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "NotificationEmailOldestWaitingSeconds"
+        statistic  = "Maximum"
+        period     = "300"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 900"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "An email has waited in the outbox for over 15 minutes. Either the mail relay is unreachable and the whole outbox is waiting, or one email is failing on every attempt. It also fires when the backend has stopped reporting the outbox."
+      summary          = "Notification emails are not leaving"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-outbox-waiting.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["email-outbox-waiting"]
+    }
+    labels = {
+      metric_id = "email-outbox-waiting"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
+
+  # Catalog entry 142. SES's account-level figure, without dimensions: each environment is its
+  # own account. SES publishes it only around sends, with gaps of over a day on a quiet account, so
+  # the query looks back three days and the rule reads the newest point.
+  rule {
+    name      = "Email Bounce Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SES"
+        metricName = "Reputation.BounceRate"
+        statistic  = "Average"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 259200
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0.04"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "The account's bounce rate is nearing 5%, where AWS places it under review; at 10% it may pause sending, sign-in codes included."
+      summary          = "Email bounce rate is nearing AWS's review line"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-bounce-rate.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["email-bounce-rate"]
+    }
+    labels = {
+      metric_id = "email-bounce-rate"
+      severity  = "warning"
+      service   = "email"
+    }
+  }
+
+  # Catalog entry 143. The same as the bounce rate, against AWS's 0.1% review line.
+  rule {
+    name      = "Email Complaint Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SES"
+        metricName = "Reputation.ComplaintRate"
+        statistic  = "Average"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 259200
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0.0008"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "The account's complaint rate is nearing 0.1%, where AWS places it under review; at 0.5% it may pause sending, sign-in codes included."
+      summary          = "Email complaint rate is nearing AWS's review line"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-complaint-rate.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["email-complaint-rate"]
+    }
+    labels = {
+      metric_id = "email-complaint-rate"
+      severity  = "warning"
+      service   = "email"
+    }
+  }
+}
+
 # CloudFront Alerts
 resource "grafana_rule_group" "cloudfront_errors" {
   provider         = grafana.amg
@@ -1059,6 +1326,183 @@ EOT
       metric_id = "web-server-throttles"
       severity  = "warning"
       service   = "lambda"
+    }
+  }
+}
+
+resource "grafana_rule_group" "page_regeneration" {
+  count = var.revalidation_dlq_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Page Regeneration"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 145. A page whose regeneration failed five times lands in the DLQ and keeps
+  # serving its old copy, and the DLQ holds it for 14 days, so any message there is the signal.
+  rule {
+    name      = "Page Regeneration Failures"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SQS"
+        metricName = "ApproximateNumberOfMessagesVisible"
+        statistic  = "Maximum"
+        dimensions = {
+          QueueName = var.revalidation_dlq_name
+        }
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Pages failed to regenerate five times and wait in the revalidation DLQ, so visitors see their old copies."
+      summary          = "Web pages are failing to regenerate"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-regeneration-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-regeneration-failures"]
+    }
+    labels = {
+      metric_id = "web-regeneration-failures"
+      severity  = "warning"
+      service   = "frontend"
+    }
+  }
+
+  # Catalog entry 149. Next keeps serving a cached Contentful read whose refresh failed and only
+  # logs it, so a filter counts the line; failures for 15 minutes mean the pages have gone stale.
+  rule {
+    name      = "Public Page Content Not Refreshing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Web"
+        metricName = "CmsRefreshFailures"
+        statistic  = "Sum"
+        dimensions = {}
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "Cached Contentful reads behind the public pages keep failing to refresh, so the pages show old content."
+      summary          = "Public pages have stopped following Contentful"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-cms-refresh-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-cms-refresh-failures"]
+    }
+    labels = {
+      metric_id = "web-cms-refresh-failures"
+      severity  = "warning"
+      service   = "frontend"
     }
   }
 }
@@ -3537,7 +3981,7 @@ resource "grafana_rule_group" "status_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The status publisher threw, so the public status page has stopped updating."
+      description      = "The status publisher keeps failing, so the status page or its incident notes are going stale."
       summary          = "Status publisher is failing to publish"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -3633,6 +4077,272 @@ resource "grafana_rule_group" "status_publisher_health" {
       severity  = "warning"
       service   = "monitoring"
       metric_id = "status-publisher-stopped"
+    }
+  }
+}
+
+resource "grafana_rule_group" "sign_in_and_exports" {
+  provider         = grafana.amg
+  name             = "Sign-in and Exports"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 146. The backend only publishes on a failure, so no data is a quiet hour.
+  rule {
+    name      = "Exports Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "ExportsFailed"
+        statistic  = "Sum"
+        dimensions = {
+          Environment = var.environment
+          Cause       = "platform"
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "An export failed for a reason on our side in the last hour, so the status page shows Exports degraded."
+      summary          = "Exports are failing on our side"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/exports-failed.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["exports-failed"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "backend"
+      metric_id = "exports-failed"
+    }
+  }
+
+  # Catalog entry 147. A log metric filter counts these, so the count has no dimensions.
+  rule {
+    name      = "Sign-in Emails Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "SignInEmailsFailed"
+        statistic  = "Sum"
+        dimensions = {}
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "A sign-in code email failed to send in the last 15 minutes, so the status page shows Sign-in degraded."
+      summary          = "Sign-in code emails are failing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/sign-in-emails-failed.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["sign-in-emails-failed"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "backend"
+      metric_id = "sign-in-emails-failed"
+    }
+  }
+}
+
+resource "grafana_rule_group" "status_slack_health" {
+  count = var.status_slack_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Status Slack Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  rule {
+    name      = "Status Slack Messages Dropped"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "AsyncEventsDropped"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.status_slack_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Lambda dropped an event for the status Slack function after its retries or its maximum event age, so a change on the public status page never reached the status channel."
+      summary          = "Status events were dropped before reaching Slack"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-slack-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["status-slack-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "status-slack-errors"
     }
   }
 }

@@ -15,6 +15,7 @@ import type { ClaimedDelivery } from "../../core/models/notification-delivery.mo
 import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationEmailService } from "./notification-email.service";
+import { NotificationOutboxMetricsService } from "./notification-outbox-metrics.service";
 
 /**
  * `retried` is a counted failure on its way up the ladder; `deferred` is a row put back
@@ -90,6 +91,7 @@ export class NotificationOutboxWorker implements OnApplicationShutdown {
     private readonly deliveries: NotificationDeliveryRepository,
     private readonly notificationRepository: NotificationRepository,
     private readonly notificationEmail: NotificationEmailService,
+    private readonly metrics: NotificationOutboxMetricsService,
   ) {}
 
   @Interval(OUTBOX_INTERVAL, INTERVAL_MS)
@@ -195,6 +197,13 @@ export class NotificationOutboxWorker implements OnApplicationShutdown {
         msg: "Drained the notification outbox",
         operation: "notification-outbox",
         ...counts,
+      });
+      void this.metrics.publishOutcomes(counts).catch((error: unknown) => {
+        this.logger.warn({
+          msg: "Failed to publish the notification outbox's metrics",
+          operation: "notification-outbox",
+          error,
+        });
       });
     }
 

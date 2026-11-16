@@ -4,7 +4,7 @@ The public marketing/info pages (`/`, `/faq`, `/blog`, `/policies`,
 `/terms-and-conditions`, `/cookie-policy`) render content from Contentful. When
 Contentful is unreachable or its access token is stale, those fetches fail with
 an HTTP error (`401 ACCESS_TOKEN_INVALID`, `404 NotFound`, network timeout, …).
-The retired `/{locale}/about` route redirects to the homepage's `#about-jii` section; it does not read the archived About entry.
+The retired `/{locale}/about` route redirects to the homepage's `#about-jii` section; the About entry is no longer in Contentful, and `packages/cms/content-archive/pageAbout.json` keeps a copy.
 
 Previously any such failure surfaced as a bare **HTTP 500** to the visitor.
 Now it degrades to a branded maintenance page instead:
@@ -50,7 +50,10 @@ outage does not affect them.
 
 The public pages are rendered once and regenerated at most every 300 seconds
 (`revalidate` in their routes), and CloudFront serves the stored copy in between.
-That changes how an outage shows:
+The published Contentful reads behind them are cached for an hour on their own
+(`PUBLISHED_CONTENT_SECONDS` in `lib/cms-cache.ts`), so a regeneration reads
+Contentful only for a query whose hour is up. A read that fails then keeps its last value and
+logs the failure, which catalogue entry 149 alerts on. That changes how an outage shows:
 
 - **While a page is cached**, a failed regeneration keeps the last good copy in
   service. Visitors keep seeing real content through the outage.

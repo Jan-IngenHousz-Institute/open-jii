@@ -35,6 +35,7 @@ vi.mock("~/features/profile/widgets/environment-selector", () => ({
 }));
 vi.mock("~/shared/stores/environment-store", () => ({
   getEnvVar: () => "https://example.test",
+  useEnvVar: () => "https://status.example.test",
 }));
 vi.mock("~/shared/i18n", () => ({
   useTranslation: (namespace?: string) => ({

@@ -30,5 +30,9 @@ resource "aws_lambda_event_source_mapping" "revalidation_trigger" {
   batch_size       = 1
   enabled          = true
 
+  # The revalidation function returns the pages it failed to regenerate rather than throwing, so
+  # without this their messages are deleted instead of retried and moved to the DLQ.
+  function_response_types = ["ReportBatchItemFailures"]
+
   depends_on = [aws_sqs_queue.revalidation]
 }

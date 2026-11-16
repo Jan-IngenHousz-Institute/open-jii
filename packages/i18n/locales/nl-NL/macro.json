@@ -47,6 +47,10 @@
     "codeNotAvailable": "Geen code beschikbaar",
     "detailsTitle": "Details",
     "columns": {
+      "protocolCount_one": "{{count}} protocol",
+      "protocolCount_other": "{{count}} protocollen",
+      "protocolCountLabel_one": "{{count}} compatibel protocol, namen tonen",
+      "protocolCountLabel_other": "{{count}} compatibele protocollen, namen tonen",
       "name": "Naam",
       "language": "Taal",
       "protocols": "Protocollen",

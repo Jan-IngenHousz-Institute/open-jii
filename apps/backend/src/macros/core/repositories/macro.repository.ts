@@ -13,6 +13,7 @@ import {
   isNull,
   inArray,
   macros,
+  protocols,
   or,
   profiles,
   protocolMacros,
@@ -72,14 +73,10 @@ export interface MacroFilter {
 // All macro columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _macroSearchVector, ...macroColumns } = getTableColumns(macros);
 
-// Number of protocols a macro is compatible with. The list chips load lazily,
-// so sorting by the count needs it computed in SQL.
-function protocolCountSql() {
-  return sql<number>`(select count(*)::int from ${protocolMacros} where ${protocolMacros.macroId} = ${macros.id})`;
-}
-
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type MacroSearchRow = MacroDto & { score: number };
+
+export type PaginatedMacroRow = MacroSearchRow & { compatibleProtocolCount: number };
 
 export type RecentlyOpenedMacroRow = Pick<
   typeof macros.$inferSelect,
@@ -140,6 +137,20 @@ export class MacroRepository {
         return results;
       });
     });
+  }
+
+  private protocolCountSql(userId?: string) {
+    const accessScope = accessibleResourceCondition({
+      database: this.database,
+      resourceType: "protocol",
+      resourceIdColumn: protocols.id,
+      organizationIdColumn: protocols.organizationId,
+      visibilityColumn: protocols.visibility,
+      userId,
+    });
+    return sql<number>`(select count(*)::int from ${protocolMacros}
+      inner join ${protocols} on ${protocolMacros.protocolId} = ${protocols.id}
+      where ${protocolMacros.macroId} = ${macros.id} and ${accessScope})`;
   }
 
   /**
@@ -222,10 +233,11 @@ export class MacroRepository {
           )
         : sql<number>`0::int`;
 
+      const compatibleProtocolCount = this.protocolCountSql(filter?.userId);
       const sortFields = {
         name: macros.name,
         language: languageText,
-        protocols: protocolCountSql(),
+        protocols: compatibleProtocolCount,
         updated: macros.updatedAt,
         activity: activityTotalSql,
       };
@@ -251,6 +263,7 @@ export class MacroRepository {
         where,
         orderBy,
         score,
+        compatibleProtocolCount,
         activitySource: sortsByActivity(filter?.sort)
           ? activityTotalsSource(activityTotals ?? new Map())
           : null,
@@ -258,13 +271,17 @@ export class MacroRepository {
     }
   }
 
-  private baseQuery(score: SQL<number>) {
+  private baseQuery<T extends Record<string, SQL> = Record<never, never>>(
+    score: SQL<number>,
+    extra: T = {} as T,
+  ) {
     return this.database
       .select({
         macros: macroColumns,
         firstName: getAnonymizedFirstName(),
         lastName: getAnonymizedLastName(),
         score,
+        ...extra,
       })
       .from(macros)
       .innerJoin(profiles, eq(macros.createdBy, profiles.userId))
@@ -350,11 +367,14 @@ export class MacroRepository {
     pageSize: number,
     filter?: MacroFilter,
     activityTotals?: ReadonlyMap<string, number>,
-  ): Promise<Result<{ items: MacroSearchRow[]; totalCount: number }>> {
+  ): Promise<Result<{ items: PaginatedMacroRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, score, activitySource } = this.buildListing(filter, activityTotals);
+      const { where, orderBy, score, activitySource, compatibleProtocolCount } = this.buildListing(
+        filter,
+        activityTotals,
+      );
 
-      let rows = this.baseQuery(score);
+      let rows = this.baseQuery(score, { compatibleProtocolCount });
       if (activitySource) {
         rows = rows.leftJoin(activitySource, sql`${macros.id} = activity_totals.id`);
       }
@@ -377,7 +397,13 @@ export class MacroRepository {
         total,
       ]);
 
-      return { items: items.map(toMacroRow), totalCount: count };
+      return {
+        items: items.map((item) => ({
+          ...toMacroRow(item),
+          compatibleProtocolCount: item.compatibleProtocolCount,
+        })),
+        totalCount: count,
+      };
     });
   }
 

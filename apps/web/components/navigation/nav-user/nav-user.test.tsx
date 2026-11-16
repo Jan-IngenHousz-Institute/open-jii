@@ -118,6 +118,21 @@ describe("NavUser", () => {
     );
   });
 
+  it("links to the status page in a new tab", async () => {
+    useProfileOverride({ firstName: "Test", lastName: "User" });
+    env.NEXT_PUBLIC_STATUS_URL = "https://status.example.com";
+    const user = userEvent.setup();
+    renderNav();
+    await waitFor(() => {
+      expect(screen.getByRole("button")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button"));
+
+    const status = screen.getByRole("menuitem", { name: "navigation.status" });
+    expect(status).toHaveAttribute("href", env.NEXT_PUBLIC_STATUS_URL);
+    expect(status).toHaveAttribute("target", "_blank");
+  });
+
   it("shows menu when dropdown is opened (compact mode)", async () => {
     useProfileOverride({ firstName: "Ada", lastName: "Lovelace" });
     const user = userEvent.setup();

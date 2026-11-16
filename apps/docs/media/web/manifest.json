@@ -271,10 +271,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 97460,
-      "sha256": "8f8dafcb4c915228e3f03f58fae7467959b24b646840fb5c542ff9b7d2370efd",
+      "bytes": 100780,
+      "sha256": "cd77c134ebc5efb3ae2576d73551bf16e9dfcb4c29dbc4fec6318970f4897f12",
       "disposition": "published",
-      "scope": "Protocols overview with Name sorted ascending and the unified Filter menu idle"
+      "scope": "Protocols overview with Name sorted ascending, the Macros column showing each row's compatible count, and the unified Filter menu idle"
     },
     {
       "path": "/img/guide/web/macros-list.webp",
@@ -282,10 +282,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 84942,
-      "sha256": "57c5a061aad5fde298cb6d4f4dab4bde953826378bb184631e50042bc1182a13",
+      "bytes": 88834,
+      "sha256": "39606e3f85c2749474a722a210aa742bdabad8f54d39079fc6b3a0e201e87b25",
       "disposition": "published",
-      "scope": "Macros overview with Name sorted ascending and the unified Filter menu idle"
+      "scope": "Macros overview with Name sorted ascending, the Protocols column showing each row's compatible count, and the unified Filter menu idle"
     },
     {
       "path": "/img/chrome-refresh/sidebar-peek.webp",
@@ -517,6 +517,7 @@
     "TIER 3 - workbook-demo.webm, versioning-demo.webm, multi-device-demo.webm: still pre-refresh, still off-frame (1366x900 and 1600x1000). versioning-demo depends on the version-history blocker above; multi-device-demo needs physical hardware.",
     "TIER 5 - data-first-measurement.png, ambyte-data.png, export-dialog.png, metadata-import.png: every lakehouse-backed surface is deliberately unreachable on the local stack, and the two dialogs open from a populated Data tab.",
     "TIER 6 - quick-start-web.webm: its middle beat is the populated Data tab, so it inherits the tier 5 blocker.",
-    "TIER 7 - /img/mobile/*: the phone UI is untouched by this redesign and re-recording needs a physical device."
+    "TIER 7 - /img/mobile/*: the phone UI is untouched by this redesign and re-recording needs a physical device.",
+    "protocols-list and macros-list retaken on 2026-11-11 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only protocols-list,macros-list. Retaken because the Macros and Protocols columns now show each row's compatible count, such as 2 macros or 1 protocol, instead of an empty cell. Name remains sorted ascending with the Filter menu closed and no chips. Reviewed at full size; only [Seed] names and the seeded identity appear, with no real names, emails, credentials or dev overlays. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine's ffmpeg lacks libwebp."
   ]
 }

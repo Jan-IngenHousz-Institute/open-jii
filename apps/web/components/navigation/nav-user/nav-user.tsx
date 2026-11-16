@@ -5,6 +5,7 @@ import { useDepartureRouter } from "@/components/navigation/list-departure/list-
 import { ownName, personName } from "@/components/people/person-name";
 import { UserAvatar } from "@/components/user-avatar";
 import {
+  Activity,
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
@@ -48,7 +49,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
 
   const { data: userProfile } = useGetUserProfile(user.id);
   const userProfileBody = userProfile;
-  const person = { ...userProfileBody, email: user.email };
+  const person = userProfileBody ?? {};
   const displayName = personName(person, t);
   const own = ownName(person);
   const avatar = (className: string) => (
@@ -90,11 +91,9 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </span>
                 {/* A long address still cannot fit the sidebar; the title makes
                     the truncated part reachable without opening the menu. */}
-                {own && (
-                  <span className="truncate text-xs" title={user.email}>
-                    {user.email}
-                  </span>
-                )}
+                <span className="truncate text-xs" title={user.email}>
+                  {user.email}
+                </span>
               </div>
             </div>
           </DropdownMenuLabel>
@@ -130,6 +129,23 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </AvatarFallback>
               </Avatar>
               {t("navigation.support")}
+            </DepartureLink>
+          </DropdownMenuItem>
+
+          {/* STATUS */}
+          <DropdownMenuItem asChild>
+            <DepartureLink
+              href={env.NEXT_PUBLIC_STATUS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full cursor-default items-center"
+            >
+              <Avatar className="bg-muted mr-2 h-4 w-4">
+                <AvatarFallback className="rounded-lg">
+                  <Activity className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+              {t("navigation.status")}
             </DepartureLink>
           </DropdownMenuItem>
 
@@ -178,11 +194,9 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </span>
                 {/* A long address still cannot fit the sidebar; the title makes
                     the truncated part reachable without opening the menu. */}
-                {own && (
-                  <span className="truncate text-xs" title={user.email}>
-                    {user.email}
-                  </span>
-                )}
+                <span className="truncate text-xs" title={user.email}>
+                  {user.email}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -198,7 +212,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 {avatar("rounded-lg")}
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{displayName}</span>
-                  {own && <span className="truncate text-xs">{user.email}</span>}
+                  <span className="truncate text-xs">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -234,6 +248,23 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                   </AvatarFallback>
                 </Avatar>
                 {t("navigation.support")}
+              </DepartureLink>
+            </DropdownMenuItem>
+
+            {/* STATUS */}
+            <DropdownMenuItem asChild>
+              <DepartureLink
+                href={env.NEXT_PUBLIC_STATUS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full cursor-default items-center"
+              >
+                <Avatar className="bg-muted mr-2 h-4 w-4">
+                  <AvatarFallback className="rounded-lg">
+                    <Activity className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                {t("navigation.status")}
               </DepartureLink>
             </DropdownMenuItem>
 

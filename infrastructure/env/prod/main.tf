@@ -56,6 +56,15 @@ module "logs_bucket" {
   # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
   elb_log_delivery_prefixes = ["backend-alb-logs"]
 
+  lifecycle_rules = [{
+    id                                 = "expire-cloudfront-access-logs"
+    status                             = "Enabled"
+    prefix                             = "cloudfront-logs/"
+    transitions                        = []
+    expiration_days                    = 30
+    noncurrent_version_expiration_days = 30
+  }]
+
   tags = {
     Environment = "prod"
     Project     = "open-jii"
@@ -525,7 +534,9 @@ module "node_cluster_policy" {
 # The macro tasks mostly wait on the sandbox over HTTP, so cores are bought as task
 # slots at the lowest price. Each slot keeps three requests in flight, and the slots
 # stay within the sandbox's reserved concurrency, which is why the worker is fixed. The
-# driver takes four cores for the same startup timeout as Centrum's.
+# driver takes four cores for the same startup timeout as Centrum's. The one worker is
+# on-demand all the same (first_on_demand counts the driver), since a spot reclaim stops
+# every macro until a replacement starts, 8 to 14 minutes each time.
 module "macro_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -555,7 +566,7 @@ module "macro_cluster_policy" {
     }
     "aws_attributes.first_on_demand" = {
       type  = "fixed"
-      value = 1
+      value = 2
     }
     "aws_attributes.zone_id" = {
       type  = "fixed"
@@ -2483,6 +2494,7 @@ module "opennext_waf" {
   enable_bot_control = true
 
   managed_rules_excluded_paths = ["/ingest"]
+  allow_page_regeneration      = true
 
   tags = {
     Environment = var.environment
@@ -2543,7 +2555,7 @@ module "opennext" {
 
   # SQS configuration
   enable_dlq        = true
-  max_receive_count = 3
+  max_receive_count = 5
 
   tags = {
     Project     = "open-jii"
@@ -3085,6 +3097,22 @@ module "backend_ecs" {
   }
 }
 
+# The auth server logs each code email the email server did not take. Catalog entry 147; the status
+# page's Sign-in row reads the same count.
+resource "aws_cloudwatch_log_metric_filter" "sign_in_emails_failed" {
+  name           = "sign-in-emails-failed-${var.environment}"
+  log_group_name = module.backend_ecs.cloudwatch_log_group_name
+  pattern        = "\"Sign-in code email failed\""
+
+  metric_transformation {
+    name          = "SignInEmailsFailed"
+    namespace     = "OpenJII/Backend"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
 # The backend's HMAC guard logs each rejected pipeline call once, with its reason. The alert counts
 # the calls that carried a key id, since anyone can send one without, and reads 0 between
 # rejections while the backend logs anything else. A count with a dimension cannot default to 0,
@@ -3514,6 +3542,8 @@ module "grafana_dashboard" {
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
   status_publisher_function_name   = module.status_publisher.function_name
+  revalidation_dlq_name            = module.opennext.sqs_dlq_name
+  status_slack_function_name       = local.status_slack_enabled ? module.status_slack[0].function_name : ""
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring
@@ -3581,6 +3611,27 @@ module "ingest_healthcheck" {
   publishing_enabled = local.ingest_healthcheck_publishing
 }
 
+# The status publisher's own Contentful credentials: the delivery token only, never the preview ones.
+module "status_contentful_secrets" {
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-status-contentful-${var.environment}"
+  description = "Contentful delivery credentials for the status publisher"
+
+  secret_string = jsonencode({
+    CONTENTFUL_SPACE_ID     = var.contentful_space_id
+    CONTENTFUL_ACCESS_TOKEN = var.contentful_access_token
+  })
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "status-publisher"
+    SecretType  = "contentful"
+  }
+}
+
 module "status_publisher" {
   source = "../../modules/monitoring/status-publisher"
 
@@ -3591,13 +3642,56 @@ module "status_publisher" {
   state_bucket_id  = module.status_state_s3.bucket_id
   state_bucket_arn = module.status_state_s3.bucket_arn
 
-  # A static page that reads nothing from the backend: the home page's public metrics reload
-  # through the SQL warehouse, which a probe every minute would keep starting.
-  web_url             = "https://${module.route53.environment_domain}/en-US/cookie-settings"
+  # The email sign-in confirmation renders on every request and reads Contentful only through
+  # shared caches. A cached page regenerates under the probe, the sign-in page reads its terms
+  # uncached, and the home page's public metrics go through the SQL warehouse.
+  web_url             = "https://${module.route53.environment_domain}/en-US/verify-request?provider=email"
   api_health_url      = "https://${module.route53.api_domain}/health"
   load_balancer_arn   = module.backend_alb.alb_arn
   web_distribution_id = module.opennext.cloudfront_distribution_id
   kinesis_stream_name = module.kinesis.kinesis_stream_name
+
+  # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
+  contentful_secret_arn = nonsensitive(module.status_contentful_secrets.secret_arn)
+  page_url              = "https://${module.route53.status_domain}"
+}
+
+locals {
+  status_slack_enabled = nonsensitive(var.status_slack_webhook_url != "")
+}
+
+# The webhook is the whole secret value, a plain address and not JSON.
+module "status_slack_secrets" {
+  count  = local.status_slack_enabled ? 1 : 0
+  source = "../../modules/secrets-manager"
+
+  name        = "openjii-status-slack-${var.environment}"
+  description = "Slack incoming webhook for the status channel"
+
+  secret_string = var.status_slack_webhook_url
+
+  # A name scheduled for deletion cannot be created again, so clearing the variable and setting it
+  # within the default week would fail. The value is only a copy of the GitHub secret.
+  recovery_window_in_days = 0
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "status-slack"
+    SecretType  = "slack-webhook"
+  }
+}
+
+module "status_slack" {
+  count  = local.status_slack_enabled ? 1 : 0
+  source = "../../modules/monitoring/status-slack"
+
+  environment      = var.environment
+  events_topic_arn = module.status_publisher.events_topic_arn
+
+  # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
+  webhook_secret_arn = nonsensitive(module.status_slack_secrets[0].secret_arn)
 }
 
 module "heartbeat_metrics_s3" {

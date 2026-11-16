@@ -919,11 +919,13 @@ export class ExperimentDataRepository {
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
 
     let effectiveOrdering = ordering;
-    if (ordering && !ordering.mode && this.isStringQuestion(shape, ordering.column)) {
+    const questionType =
+      ordering && !ordering.mode ? this.questionType(shape, ordering.column) : undefined;
+    if (ordering && (questionType === "STRING" || questionType === "DOUBLE")) {
       effectiveOrdering = {
         ...ordering,
         mode: {
-          kind: "numericString",
+          kind: questionType === "STRING" ? "numericString" : "number",
           rowId: reservedColumns.includes(ROW_ID) ? ROW_ID : undefined,
         },
       };
@@ -981,11 +983,10 @@ export class ExperimentDataRepository {
     });
   }
 
-  private isStringQuestion(shape: TableShape, columnName: string): boolean {
-    return this.flattenedFields(shape).some(
-      ({ key, column, field }) =>
-        key === columnName && column === "questions_data" && field.type.toUpperCase() === "STRING",
-    );
+  private questionType(shape: TableShape, columnName: string): string | undefined {
+    return this.flattenedFields(shape)
+      .find(({ key, column }) => key === columnName && column === "questions_data")
+      ?.field.type.toUpperCase();
   }
 
   private flattenedFields(shape: TableShape): FlattenedField<VariantColumn>[] {

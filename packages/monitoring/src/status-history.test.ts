@@ -28,7 +28,7 @@ function day(date: string, counts: Counts = {}): DayRecord {
     maintenanceMinutes: counts.maintenance ?? 0,
     unknownMinutes: counts.unknown ?? 0,
   };
-  return { date, ...record, state: dayState(record), incidentIds: [] };
+  return { date, ...record, state: dayState(record) };
 }
 
 function minute(iso: string): number {
@@ -101,7 +101,7 @@ describe("dayState", () => {
 
 describe("recordMinute", () => {
   it("starts a day at one recorded minute", () => {
-    const days = recordMinute([], minute("2026-11-03T12:00:00Z"), "operational", []);
+    const days = recordMinute([], minute("2026-11-03T12:00:00Z"), "operational");
 
     expect(days).toEqual([
       {
@@ -112,7 +112,6 @@ describe("recordMinute", () => {
         degradedMinutes: 0,
         maintenanceMinutes: 0,
         unknownMinutes: 0,
-        incidentIds: [],
       },
     ]);
   });
@@ -122,7 +121,7 @@ describe("recordMinute", () => {
     ["degraded", "degradedMinutes", "operational"],
     ["maintenance", "maintenanceMinutes", "maintenance"],
   ] as const)("counts a %s minute in %s and colours the day %s", (outcome, field, state) => {
-    const record = recordMinute([], minute("2026-11-03T12:00:00Z"), outcome, []).at(0);
+    const record = recordMinute([], minute("2026-11-03T12:00:00Z"), outcome).at(0);
 
     expect(record?.[field]).toBe(1);
     expect(record?.state).toBe(state);
@@ -135,9 +134,9 @@ describe("recordMinute", () => {
     "counts %s of degraded minutes on a day and colours it %s",
     (_name, degradedMinutes, state) => {
       const start = minute("2026-11-03T12:00:00Z");
-      let days = recordMinute([], start, "operational", []);
+      let days = recordMinute([], start, "operational");
       for (let offset = 1; offset <= degradedMinutes; offset += 1) {
-        days = recordMinute(days, start + offset, "degraded", []);
+        days = recordMinute(days, start + offset, "degraded");
       }
 
       expect(days).toHaveLength(1);
@@ -150,24 +149,17 @@ describe("recordMinute", () => {
   );
 
   it("adds to the same day and keeps the worst state", () => {
-    let days = recordMinute([], minute("2026-11-03T12:00:00Z"), "operational", []);
-    days = recordMinute(days, minute("2026-11-03T12:01:00Z"), "outage", []);
-    days = recordMinute(days, minute("2026-11-03T12:02:00Z"), "operational", []);
+    let days = recordMinute([], minute("2026-11-03T12:00:00Z"), "operational");
+    days = recordMinute(days, minute("2026-11-03T12:01:00Z"), "outage");
+    days = recordMinute(days, minute("2026-11-03T12:02:00Z"), "operational");
 
     expect(days).toHaveLength(1);
     expect(days[0]).toMatchObject({ recordedMinutes: 3, downMinutes: 1, state: "outage" });
   });
 
-  it("keeps each incident id once", () => {
-    let days = recordMinute([], minute("2026-11-03T12:00:00Z"), "outage", ["a", "b"]);
-    days = recordMinute(days, minute("2026-11-03T12:01:00Z"), "outage", ["b", "c"]);
-
-    expect(days[0]?.incidentIds).toEqual(["a", "b", "c"]);
-  });
-
   it("opens a new day after midnight, oldest first", () => {
-    let days = recordMinute([], minute("2026-11-03T00:00:00Z"), "operational", []);
-    days = recordMinute(days, minute("2026-11-02T23:59:00Z"), "operational", []);
+    let days = recordMinute([], minute("2026-11-03T00:00:00Z"), "operational");
+    days = recordMinute(days, minute("2026-11-02T23:59:00Z"), "operational");
 
     expect(datesOf(days)).toEqual(["2026-11-02", "2026-11-03"]);
   });
@@ -176,7 +168,7 @@ describe("recordMinute", () => {
     const start = minute("2026-01-01T00:00:00Z");
     let days: DayRecord[] = [];
     for (let offset = 0; offset < 91; offset += 1) {
-      days = recordMinute(days, start + offset * DAY_MINUTES, "operational", []);
+      days = recordMinute(days, start + offset * DAY_MINUTES, "operational");
     }
 
     expect(days).toHaveLength(90);
@@ -185,7 +177,7 @@ describe("recordMinute", () => {
   });
 
   it("produces records the contract accepts", () => {
-    const days = recordMinute([], minute("2026-11-03T12:00:00Z"), "degraded", ["incident-1"]);
+    const days = recordMinute([], minute("2026-11-03T12:00:00Z"), "degraded");
 
     expect(days.map((record) => dayRecordSchema.parse(record))).toEqual(days);
   });
@@ -227,7 +219,7 @@ describe("recordUnknown", () => {
   });
 
   it("adds to a day that already has minutes", () => {
-    const before = recordMinute([], minute("2026-11-03T12:00:00Z"), "operational", []);
+    const before = recordMinute([], minute("2026-11-03T12:00:00Z"), "operational");
     const days = recordUnknown(
       before,
       minute("2026-11-03T12:01:00Z"),

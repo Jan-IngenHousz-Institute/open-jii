@@ -40,7 +40,7 @@ describe("<PersonIdentity />", () => {
     expect(screen.getByText("C")).toBeInTheDocument();
   });
 
-  it("leaves the avatar blank and shows the email once for a person with no name of their own", () => {
+  it("leaves the avatar blank and shows the email under the name line for a person with no name of their own", () => {
     const { container, rerender } = render(<PersonIdentity person={{ id: "u-1", email: null }} />);
     const avatar = () => container.querySelector(".rounded-full");
 
@@ -48,7 +48,9 @@ describe("<PersonIdentity />", () => {
     expect(avatar()).toHaveTextContent(/^$/u);
 
     rerender(<PersonIdentity person={{ id: "u-1", email: "lin@uni.edu" }} />);
+    const nameLine = screen.getByText("common.unnamedAccount").parentElement?.parentElement;
     expect(screen.getAllByText("lin@uni.edu")).toHaveLength(1);
+    expect(nameLine).not.toContainElement(screen.getByText("lin@uni.edu"));
     expect(avatar()).toHaveTextContent(/^$/u);
   });
 

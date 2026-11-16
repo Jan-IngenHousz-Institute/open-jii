@@ -3,7 +3,7 @@ title: "Alert banners"
 description: "Publishing scheduled CMS alerts to the web and mobile apps."
 ---
 
-{/* verified: code@c8ef7231850a 2026-10-06 */}
+{/* verified: code@ff062791b0a9 2026-11-06 */}
 
 Alert banners are Contentful-managed notices shown in the web and mobile apps without an application deploy. The GraphQL query returns only active entries whose audience and schedule match the request.
 
@@ -18,7 +18,7 @@ Alert banners are Contentful-managed notices shown in the web and mobile apps wi
 | `severity`          | Visual priority: `critical`, `warning`, or `info`.                                                                                         |
 | `dismissible`       | Whether the close action is rendered.                                                                                                      |
 | `link`              | Optional `ComponentButton` call to action.                                                                                                 |
-| `audience`          | `web`, `mobile`, or `both`.                                                                                                                |
+| `audience`          | `web`, `mobile`, `both`, or `status`. `status` is for the public status page only and never shows in web or mobile.                        |
 | `startAt` / `endAt` | Required start and optional exclusive end of the display window.                                                                           |
 | `active`            | Immediate kill switch.                                                                                                                     |
 

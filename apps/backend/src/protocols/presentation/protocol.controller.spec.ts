@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
 import type { ProtocolMacroList } from "@repo/api/domains/protocol/protocol.schema";
-import { macros } from "@repo/database";
+import { eq, protocols, macros, protocolMacros } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
@@ -127,6 +127,36 @@ describe("ProtocolController - read and update endpoints", () => {
     });
 
     await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+  });
+
+  it("keeps the default array order without counts and includes counts only for pages", async () => {
+    const alpha = await testApp.createProtocol({ name: "Alpha", createdBy: testUserId });
+    const zulu = await testApp.createProtocol({ name: "Zulu", createdBy: testUserId });
+    await testApp.database.update(protocols).set({ sortOrder: 1 }).where(eq(protocols.id, zulu.id));
+    const compatible = await testApp.createMacro({ name: "Compatible", createdBy: testUserId });
+    await testApp.database.insert(protocolMacros).values({
+      protocolId: zulu.id,
+      macroId: compatible.id,
+    });
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
+
+    const array: SuperTestResponse<{ id: string }[]> = await testApp
+      .get(path)
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(array.body.map((item) => item.id)).toEqual([zulu.id, alpha.id]);
+    for (const item of array.body) {
+      expect(item).not.toHaveProperty("compatibleMacroCount");
+    }
+
+    const page: SuperTestResponse<{ items: { id: string; compatibleMacroCount: number }[] }> =
+      await testApp.get(path).query({ page: 1 }).withAuth(testUserId).expect(StatusCodes.OK);
+
+    expect(page.body.items.map((item) => [item.id, item.compatibleMacroCount])).toEqual([
+      [zulu.id, 1],
+      [alpha.id, 0],
+    ]);
   });
 
   it("listProtocols returns 200 including the created protocol", async () => {

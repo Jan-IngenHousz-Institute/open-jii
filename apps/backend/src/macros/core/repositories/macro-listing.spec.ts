@@ -210,6 +210,84 @@ describe("MacroRepository explicit sorting", () => {
     expect(first.value.totalCount).toBe(created.length);
   });
 
+  it("returns only accessible protocols in paginated counts and count sorting", async () => {
+    const privateOwner = await testApp.createTestUser({});
+    const hiddenLinks = await testApp.createMacro({
+      name: "Alpha hidden links",
+      createdBy: owner,
+      visibility: "public",
+    });
+    const publicLink = await testApp.createMacro({
+      name: "Bravo public link",
+      createdBy: owner,
+      visibility: "public",
+    });
+    const unlinked = await testApp.createMacro({
+      name: "Charlie unlinked",
+      createdBy: owner,
+      visibility: "public",
+    });
+    for (let index = 0; index < 2; index += 1) {
+      const linked = await testApp.createProtocol({
+        name: `Private linked protocol ${index}`,
+        createdBy: privateOwner,
+        visibility: "private",
+      });
+      await testApp.database.insert(protocolMacros).values({
+        macroId: hiddenLinks.id,
+        protocolId: linked.id,
+      });
+    }
+    const visible = await testApp.createProtocol({
+      name: "Public linked protocol",
+      createdBy: privateOwner,
+      visibility: "public",
+    });
+    await testApp.database.insert(protocolMacros).values({
+      macroId: publicLink.id,
+      protocolId: visible.id,
+    });
+
+    for (const userId of [owner, undefined, privateOwner]) {
+      for (const direction of ["asc", "desc"] as const) {
+        const result = await repository.findPage(1, 20, {
+          userId,
+          sort: [{ field: "protocols", direction }],
+        });
+        assertSuccess(result);
+        const ascending =
+          userId === privateOwner
+            ? [
+                [unlinked.id, 0],
+                [publicLink.id, 1],
+                [hiddenLinks.id, 2],
+              ]
+            : [
+                [hiddenLinks.id, 0],
+                [unlinked.id, 0],
+                [publicLink.id, 1],
+              ];
+        const descending =
+          userId === privateOwner
+            ? [
+                [hiddenLinks.id, 2],
+                [publicLink.id, 1],
+                [unlinked.id, 0],
+              ]
+            : [
+                [publicLink.id, 1],
+                [hiddenLinks.id, 0],
+                [unlinked.id, 0],
+              ];
+        const expected = direction === "asc" ? ascending : descending;
+        expect(result.value.items.map((item) => [item.id, item.compatibleProtocolCount])).toEqual(
+          expected,
+        );
+        expect(result.value.totalCount).toBe(3);
+      }
+    }
+  });
+
   describe("activity sort", () => {
     it("puts a macro with no activity total last in both directions", async () => {
       const active = await testApp.createMacro({

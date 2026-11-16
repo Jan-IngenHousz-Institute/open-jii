@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, eq, notificationDeliveries, notifications, sql } from "@repo/database";
+import { and, eq, inArray, notificationDeliveries, notifications, sql } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -28,6 +28,11 @@ type ClaimedDeliveryRow = Omit<ClaimedDelivery, "status" | "claimedAt"> & {
 type OutcomeValues = Partial<Omit<typeof notificationDeliveries.$inferInsert, "nextAttemptAt">> & {
   nextAttemptAt?: Date | SQL;
 };
+
+export interface WaitingDeliveries {
+  waiting: number;
+  oldestWaitingSeconds: number;
+}
 
 /** What a later write has to still hold for it to land: a row, and the claim on it. */
 export type DeliveryClaim = Pick<ClaimedDelivery, "id" | "claimedAt">;
@@ -141,6 +146,24 @@ export class NotificationDeliveryRepository {
             claimedAt: new Date(claim.claimedAt),
           }
         : null;
+    });
+  }
+
+  /**
+   * The emails not yet sent or given up on, and how long the oldest of them has been
+   * owed. Aged on the database clock, the one `created_at` was stamped by.
+   */
+  async countWaiting(): Promise<Result<WaitingDeliveries>> {
+    return tryCatch(async () => {
+      const [row] = await this.database
+        .select({
+          waiting: sql<number>`count(*)::int`,
+          oldestWaitingSeconds: sql<number>`coalesce(extract(epoch from (now() AT TIME ZONE 'UTC') - min(${notificationDeliveries.createdAt})), 0)::float8`,
+        })
+        .from(notificationDeliveries)
+        .where(inArray(notificationDeliveries.status, ["pending", "sending"]));
+
+      return row;
     });
   }
 

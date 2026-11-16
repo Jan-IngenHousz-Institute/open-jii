@@ -287,6 +287,49 @@ describe("NotificationDeliveryRepository", () => {
     });
   });
 
+  describe("counting the emails still owed", () => {
+    /** Aged by the database's own clock, so the reading owes nothing to this process's. */
+    const createdAgo = (id: string, interval: string) =>
+      testApp.database
+        .update(notificationDeliveries)
+        .set({ createdAt: sqlRaw`(now() AT TIME ZONE 'UTC') - ${interval}::interval` })
+        .where(eq(notificationDeliveries.id, id));
+
+    it("reads zero for both when nothing is waiting", async () => {
+      const counted = await repository.countWaiting();
+
+      assertSuccess(counted);
+      expect(counted.value).toEqual({ waiting: 0, oldestWaitingSeconds: 0 });
+    });
+
+    it("counts pending and sending rows and ages the oldest by the database clock", async () => {
+      await seedDelivery();
+      const old = await seedDelivery();
+      await createdAgo(old.delivery.id, "10 minutes");
+      await seedDelivery({ status: "sending", claimedAt: new Date() });
+
+      const counted = await repository.countWaiting();
+
+      assertSuccess(counted);
+      expect(counted.value.waiting).toBe(3);
+      expect(counted.value.oldestWaitingSeconds).toBeGreaterThanOrEqual(600);
+      expect(counted.value.oldestWaitingSeconds).toBeLessThan(630);
+    });
+
+    it("leaves out rows that were sent or given up on", async () => {
+      const sent = await seedDelivery({ status: "sent" });
+      const failed = await seedDelivery({ status: "failed" });
+      for (const { delivery } of [sent, failed]) {
+        await createdAgo(delivery.id, "1 hour");
+      }
+
+      const counted = await repository.countWaiting();
+
+      assertSuccess(counted);
+      expect(counted.value).toEqual({ waiting: 0, oldestWaitingSeconds: 0 });
+    });
+  });
+
   it("steps over a row another task is already holding", async () => {
     const held = await seedDelivery();
     const free = await seedDelivery();

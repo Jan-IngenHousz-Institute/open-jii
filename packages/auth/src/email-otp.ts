@@ -28,7 +28,20 @@ export const PLAY_REVIEW_LOG_LINES = {
   newSignInMethodRefused: "Play review account refused a new sign-in method",
 };
 
+/** Logged when a code email fails to send. The backend's metric filter counts it. */
+export const SIGN_IN_EMAIL_FAILED_LOG_LINE = "Sign-in code email failed";
+
 const zSignInBody = z.object({ email: z.string(), otp: z.string() });
+
+// Nodemailer names the failure in `code`, such as EAUTH or ECONNECTION; its message can quote the
+// recipient, so only the code is logged.
+function sendFailureCode(error: unknown): string {
+  if (error instanceof Error && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+
+  return error instanceof Error ? error.name : "unknown";
+}
 
 interface OTPMessage {
   email: string;
@@ -68,7 +81,15 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
         return;
       }
 
-      await sendEmail(request);
+      try {
+        await sendEmail(request);
+      } catch (error) {
+        ctx?.context.logger.error(SIGN_IN_EMAIL_FAILED_LOG_LINE, {
+          type: request.type,
+          code: sendFailureCode(error),
+        });
+        throw error;
+      }
     },
   });
 

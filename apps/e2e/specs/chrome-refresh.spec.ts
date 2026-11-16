@@ -91,7 +91,7 @@ test("notifications and account navigation remain usable", async ({ page }) => {
   await expect(notificationsHeading).not.toBeVisible();
 
   // Direct-load coverage stays isolated in the fixme below while the hydration bug remains.
-  await page.getByRole("button", { name: /SE|JII/ }).click();
+  await page.getByRole("button", { name: /Seed User/ }).click();
   await page.getByRole("menuitem", { name: "Account" }).click();
   await page.waitForURL(`**/${locale}/platform/account`);
   await page.getByRole("tab", { name: "Security" }).click();
@@ -109,14 +109,14 @@ test("platform footer stays compact and organizations use the shared table", asy
   await expect(sidebar.locator('[data-sidebar="trigger"]')).toBeHidden();
   const footer = sidebar.locator('[data-sidebar="footer"]');
   const theme = footer.getByRole("button", { name: /Switch to (dark|light) mode/i });
-  const account = footer.getByRole("button", { name: /SE|JII/ });
+  const account = footer.getByRole("button", { name: /Seed User/ });
   await expect(theme).toBeVisible();
   await expect(account).toBeVisible();
   // One row, identity first so the avatar keeps the icon rail every other
   // sidebar row sits on and the theme action trails it.
   await expect(footer.locator("> *")).toHaveCount(1);
   await expect(
-    theme.locator("xpath=preceding-sibling::*[1]").getByRole("button", { name: /SE|JII/ }),
+    theme.locator("xpath=preceding-sibling::*[1]").getByRole("button", { name: /Seed User/ }),
   ).toBeVisible();
 
   await page.goto(`/${locale}/platform/organizations`, { waitUntil: "networkidle" });

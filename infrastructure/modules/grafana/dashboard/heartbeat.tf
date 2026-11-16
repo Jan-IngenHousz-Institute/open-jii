@@ -37,11 +37,12 @@ locals {
   # stands out. Solid, because the panel's fill opacity replaces any alpha a colour carries.
   heartbeat_ok_colour = "#2c4a33"
 
-  # Reading order: can people use the platform, is data arriving, is it processed, do
-  # macros run, and is what it costs still being counted.
+  # Reading order: can people use the platform, does its email leave, is data arriving, is
+  # it processed, do macros run, and is what it costs still being counted.
   heartbeat_daily_areas = [
     { key = "web", title = "Web" },
     { key = "api", title = "API and database" },
+    { key = "email", title = "Email" },
     { key = "ingest", title = "Ingest" },
     { key = "lakehouse", title = "Lakehouse" },
     { key = "sandboxes", title = "Sandboxes" },
@@ -315,9 +316,10 @@ locals {
             )
           }
           decimals = local.heartbeat_facts[m.id].decimals
-          # A share of time spans 0 to 100%, whatever the data does.
+          # A share of time spans 0 to 100%, whatever the data does; a rate with a limit keeps the
+          # limit's soft max instead, which a hard max would override.
           min = local.heartbeat_facts[m.id].unit == "percentunit" ? 0 : null
-          max = local.heartbeat_facts[m.id].unit == "percentunit" ? 1 : null
+          max = local.heartbeat_facts[m.id].unit == "percentunit" && local.heartbeat_facts[m.id].red_from == null ? 1 : null
         }
         overrides = []
       }
@@ -849,6 +851,8 @@ locals {
     METRICS_PUBLISHER_FUNCTION_NAME  = var.metrics_publisher_function_name
     INGEST_HEALTHCHECK_FUNCTION_NAME = var.ingest_healthcheck_function_name
     STATUS_PUBLISHER_FUNCTION_NAME   = var.status_publisher_function_name
+    REVALIDATION_DLQ_NAME            = var.revalidation_dlq_name
+    STATUS_SLACK_FUNCTION_NAME       = var.status_slack_function_name
   }
 
   # Grafana's unit ids for the units the catalog declares.

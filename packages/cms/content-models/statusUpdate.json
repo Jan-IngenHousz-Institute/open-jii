@@ -1,0 +1,59 @@
+{
+  "name": "Status update",
+  "description": "One dated message on a status incident or maintenance window.",
+  "displayField": "stage",
+  "fields": [
+    {
+      "id": "stage",
+      "name": "Stage",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [
+        {
+          "in": [
+            "investigating",
+            "identified",
+            "monitoring",
+            "resolved",
+            "scheduled",
+            "in-progress",
+            "completed"
+          ]
+        }
+      ],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "postedAt",
+      "name": "Posted at",
+      "type": "Date",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "text",
+      "name": "Text",
+      "type": "Text",
+      "localized": true,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "nextUpdateBy",
+      "name": "Next update by",
+      "type": "Date",
+      "localized": false,
+      "required": false,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    }
+  ]
+}
