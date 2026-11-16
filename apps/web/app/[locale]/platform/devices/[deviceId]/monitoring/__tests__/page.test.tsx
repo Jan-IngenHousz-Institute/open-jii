@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceMonitoring, IotDevice } from "@repo/api/domains/iot/iot.schema";
 
 import DeviceMonitoringContent from "../device-monitoring-content";
 import { generateMetadata } from "../page";
@@ -62,10 +62,14 @@ const monitoring: DeviceMonitoring = {
   recentMeasurements: [],
 };
 
-function mountAll(overrides?: Partial<DeviceMonitoring>) {
+function mountAll(
+  overrides?: Partial<DeviceMonitoring>,
+  deviceType: IotDevice["deviceType"] = "ambyte",
+) {
   server.mount(contract.iot.getIotDevice, {
     body: createIotDeviceDetail({
       id: DEVICE_ID,
+      deviceType,
       connectivity: { connected: true, lastSeenAt: "2026-08-13T08:00:00.000Z" },
     }),
   });
@@ -83,6 +87,10 @@ function mountAll(overrides?: Partial<DeviceMonitoring>) {
     ],
   });
   server.mount(contract.iot.getDeviceMonitoring, { body: { ...monitoring, ...overrides } });
+  server.mount(contract.experiments.listExperiments, { body: [] });
+  server.mount(contract.protocols.listProtocols, { body: [] });
+  server.mount(contract.workbooks.listWorkbooks, { body: [] });
+  server.mount(contract.macros.listMacros, { body: [] });
 }
 
 beforeEach(() => {
@@ -117,13 +125,58 @@ describe("DeviceMonitoringPage", () => {
     expect(screen.getAllByText("MQTT_KEEP_ALIVE_TIMEOUT").length).toBeGreaterThan(0);
   });
 
-  it("explains missing battery data instead of hiding the panel", async () => {
+  it("keeps missing battery and unavailable power visible for an Ambyte", async () => {
     mountAll({ battery: [] });
 
     render(<DeviceMonitoringContent />);
 
     await screen.findByText("iot.devices.monitoring.availabilityTitle");
     expect(screen.getByText("iot.devices.monitoring.batteryTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.batteryUnavailable")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.powerUnavailable")).toBeInTheDocument();
+  });
+
+  it.each([
+    { battery: [] },
+    {
+      battery: [
+        {
+          bucketStart: "2026-08-13T01:00:00Z",
+          averageBattery: null,
+          sampleCount: 0,
+          reportedCount: 0,
+        },
+      ],
+    },
+    { battery: [{ bucketStart: "2026-08-13T01:00:00Z", averageBattery: null }] },
+  ])(
+    "hides battery and gives events full width for a non-Ambyte without reports",
+    async ({ battery }) => {
+      mountAll({ battery }, "mobile");
+      render(<DeviceMonitoringContent />);
+      const eventTitle = await screen.findByText("iot.devices.monitoring.eventLogTitle");
+      expect(screen.queryByText("iot.devices.monitoring.batteryTitle")).not.toBeInTheDocument();
+      expect(screen.queryByText("iot.devices.monitoring.powerTitle")).not.toBeInTheDocument();
+      expect(eventTitle.closest(".bg-card")?.parentElement).toHaveClass("grid-cols-1");
+    },
+  );
+
+  it("keeps received null reports visible for a non-Ambyte", async () => {
+    mountAll(
+      {
+        battery: [
+          {
+            bucketStart: "2026-08-13T01:00:00Z",
+            averageBattery: null,
+            sampleCount: 1,
+            reportedCount: 0,
+          },
+        ],
+      },
+      "multispeq",
+    );
+    render(<DeviceMonitoringContent />);
+    expect(await screen.findByText("iot.devices.monitoring.batteryTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.batteryUnavailable")).toBeInTheDocument();
   });
 

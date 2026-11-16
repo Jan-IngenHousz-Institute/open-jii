@@ -89,6 +89,8 @@ describe("BatteryPanel", () => {
   it("does not present a bucket average as the newest missing report", () => {
     render(
       <BatteryPanel
+        from="2026-08-13T00:00:00Z"
+        to="2026-08-13T04:59:59Z"
         monitoring={monitoringWith([
           {
             bucketStart: "2026-08-13T01:00:00.000Z",
@@ -109,6 +111,54 @@ describe("BatteryPanel", () => {
       screen.getByText("iot.devices.monitoring.batteryLastReport").parentElement,
     ).toHaveTextContent(new Date("2026-08-13T01:15:00Z").toLocaleString("en-US"));
     expect(screen.getByText("iot.devices.monitoring.batteryProvenance")).toBeInTheDocument();
+  });
+
+  it("keeps the newest received report when later axis buckets have no messages", () => {
+    render(
+      <BatteryPanel
+        from="2026-08-13T00:00:00Z"
+        to="2026-08-13T04:59:59Z"
+        monitoring={monitoringWith([
+          {
+            bucketStart: "2026-08-13T01:00:00Z",
+            averageBattery: 3.75,
+            latestBattery: 3.8,
+            sampleCount: 2,
+            reportedCount: 2,
+          },
+          {
+            bucketStart: "2026-08-13T03:00:00Z",
+            averageBattery: null,
+            latestBattery: null,
+            sampleCount: 0,
+            reportedCount: 0,
+          },
+        ])}
+      />,
+    );
+    expect(
+      screen.getByText("iot.devices.monitoring.batteryLatest").parentElement,
+    ).toHaveTextContent("3.80");
+    expect(vi.mocked(LineChart).mock.lastCall?.[0].data[0].y).toEqual([
+      null,
+      3.75,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("labels the newest received legacy mean when the requested range continues", () => {
+    render(
+      <BatteryPanel
+        from="2026-08-13T00:00:00Z"
+        to="2026-08-13T04:59:59Z"
+        monitoring={monitoringWith([{ bucketStart: "2026-08-13T01:00:00Z", averageBattery: 85 }])}
+      />,
+    );
+    expect(
+      screen.getByText("iot.devices.monitoring.batteryFinalMean").parentElement,
+    ).toHaveTextContent("85.00");
   });
 
   it("charts the series with a table view behind the toggle", async () => {

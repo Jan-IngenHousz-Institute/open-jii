@@ -79,6 +79,43 @@ describe("PowerPanel", () => {
     expect(screen.queryByText("3.80 V")).not.toBeInTheDocument();
   });
 
+  it.each([0, 3600, 1577836799])(
+    "treats an unsynced protection start %s as unavailable",
+    (sinceUtc) => {
+      render(
+        <PowerPanel
+          power={{
+            latest: reading({
+              protection: {
+                state: "no_flash",
+                reason: "low_voltage",
+                sinceUtc,
+                skipped: { flashRuns: 0, ambitRuns: 0, ota: 0 },
+              },
+            }),
+            lastValidBattery: null,
+          }}
+        />,
+      );
+      expect(screen.getByText("iot.devices.monitoring.powerSince").parentElement).toHaveTextContent(
+        "iot.devices.monitoring.batteryMissing",
+      );
+    },
+  );
+
+  it.each([
+    [0, "powerNotCharging"],
+    [1, "powerTrickle"],
+    [2, "powerConstantCurrent"],
+    [3, "powerChargeDone"],
+    [4, "powerUnknown"],
+  ] as const)("labels charge state %s", (chargeStatus, label) => {
+    render(<PowerPanel power={{ latest: reading({ chargeStatus }), lastValidBattery: null }} />);
+    expect(
+      screen.getByText("iot.devices.monitoring.powerChargeState").parentElement,
+    ).toHaveTextContent(`iot.devices.monitoring.${label}`);
+  });
+
   it("retains a reported hold when power and skipped counters are missing", () => {
     const latest = extractAmbytePower(
       { schema: "ambyte.telemetry/1", health: { power_protect: { state: "hold" } } },
