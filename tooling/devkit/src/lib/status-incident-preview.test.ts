@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import type { Incident, IncidentUpdate } from "@repo/monitoring/status-document";
+import { STATUS_FEED_STATE_VERSION } from "@repo/monitoring/status-feed";
+import type { StatusFeedState } from "@repo/monitoring/status-feed";
 
-import { renderPreview, slackPosts } from "./status-incident-preview.js";
+import {
+  announcedFrom,
+  publisherView,
+  renderPreview,
+  slackPosts,
+} from "./status-incident-preview.js";
 
 const NOW = new Date("2026-11-04T10:00:00.000Z");
 
@@ -49,7 +56,7 @@ function typesOf(posts: ReturnType<typeof slackPosts>): string[] {
 
 describe("slackPosts", () => {
   it("opens an incident that was never announced", () => {
-    const posts = slackPosts({ before: undefined, after: incident(), told: [], now: NOW });
+    const posts = slackPosts({ announced: undefined, after: incident(), now: NOW });
 
     expect(typesOf(posts)).toEqual(["incident.opened"]);
     expect(posts[0]?.message.text).toContain("Incident opened: Sign-in is slow");
@@ -59,9 +66,8 @@ describe("slackPosts", () => {
     const first = update();
     const second = update({ id: "upd-2", stage: "identified", text: "We know what is wrong." });
     const posts = slackPosts({
-      before: incident({ updates: [first] }),
+      announced: announcedFrom(incident({ updates: [first] }), ["upd-1"], NOW),
       after: incident({ updates: [first, second] }),
-      told: ["upd-1"],
       now: NOW,
     });
 
@@ -74,12 +80,11 @@ describe("slackPosts", () => {
     const first = update();
     const last = update({ id: "upd-2", stage: "resolved", text: "The problem is fixed." });
     const posts = slackPosts({
-      before: incident({ updates: [first] }),
+      announced: announcedFrom(incident({ updates: [first] }), ["upd-1"], NOW),
       after: incident({
         updates: [first, last],
         resolvedAt: "2026-11-04T09:50:00.000Z",
       }),
-      told: ["upd-1"],
       now: NOW,
     });
 
@@ -88,7 +93,7 @@ describe("slackPosts", () => {
   });
 
   it("schedules maintenance that has not started", () => {
-    const posts = slackPosts({ before: undefined, after: window(), told: [], now: NOW });
+    const posts = slackPosts({ announced: undefined, after: window(), now: NOW });
 
     expect(typesOf(posts)).toEqual(["maintenance.scheduled"]);
   });
@@ -97,9 +102,8 @@ describe("slackPosts", () => {
     const first = update({ id: "upd-m1", stage: "scheduled" });
     const second = update({ id: "upd-m2", stage: "scheduled", text: "The window moved." });
     const posts = slackPosts({
-      before: window({ updates: [first] }),
+      announced: announcedFrom(window({ updates: [first] }), ["upd-m1"], NOW),
       after: window({ updates: [first, second] }),
-      told: ["upd-m1"],
       now: NOW,
     });
 
@@ -111,13 +115,12 @@ describe("slackPosts", () => {
     const last = update({ id: "upd-m2", stage: "completed", text: "The work is finished." });
     const started = { startsAt: "2026-11-04T08:00:00.000Z", endsAt: "2026-11-04T12:00:00.000Z" };
     const posts = slackPosts({
-      before: window({ ...started, updates: [first] }),
+      announced: announcedFrom(window({ ...started, updates: [first] }), ["upd-m1"], NOW),
       after: window({
         ...started,
         resolvedAt: "2026-11-04T09:55:00.000Z",
         updates: [first, last],
       }),
-      told: ["upd-m1"],
       now: NOW,
     });
 
@@ -129,9 +132,8 @@ describe("slackPosts", () => {
     const draftOne = update({ id: "upd-2", stage: "identified", text: "We know what is wrong." });
     const draftTwo = update({ id: "upd-3", stage: "monitoring", text: "A fix is in place." });
     const posts = slackPosts({
-      before: incident({ updates: [told] }),
+      announced: announcedFrom(incident({ updates: [told] }), ["upd-1"], NOW),
       after: incident({ updates: [told, draftOne, draftTwo] }),
-      told: ["upd-1"],
       now: NOW,
     });
 
@@ -141,11 +143,10 @@ describe("slackPosts", () => {
 
 describe("renderPreview", () => {
   const rendered = renderPreview({
-    before: undefined,
+    announced: undefined,
     after: incident({
       updates: [update({ nextUpdateBy: "2026-11-04T12:00:00.000Z" })],
     }),
-    told: [],
     now: NOW,
   });
 
@@ -181,9 +182,8 @@ describe("renderPreview", () => {
       text: "A fix is in place.",
     });
     const card = renderPreview({
-      before: undefined,
+      announced: undefined,
       after: incident({ updates: [newer, older] }),
-      told: [],
       now: NOW,
     }).split("Slack (exact")[0];
 
@@ -191,7 +191,7 @@ describe("renderPreview", () => {
   });
 
   it("shows a maintenance window instead of a start", () => {
-    const card = renderPreview({ before: undefined, after: window(), told: [], now: NOW });
+    const card = renderPreview({ announced: undefined, after: window(), now: NOW });
 
     expect(card).toContain("Maintenance: Database upgrade");
     expect(card).toContain("Window: Nov 5, 2026, 09:00 UTC to Nov 5, 2026, 11:00 UTC");
@@ -200,12 +200,11 @@ describe("renderPreview", () => {
 
   it("shows when the incident was resolved", () => {
     const card = renderPreview({
-      before: undefined,
+      announced: undefined,
       after: incident({
         resolvedAt: "2026-11-04T09:40:00.000Z",
         updates: [update({ stage: "resolved", text: "The problem is fixed." })],
       }),
-      told: [],
       now: NOW,
     });
 
@@ -214,7 +213,7 @@ describe("renderPreview", () => {
   });
 
   describe("the target", () => {
-    const input = { before: undefined, after: incident(), told: [], now: NOW };
+    const input = { announced: undefined, after: incident(), now: NOW };
 
     it("defaults to production, whose footer has no environment line", () => {
       const text = renderPreview(input);
@@ -244,7 +243,7 @@ describe("renderPreview", () => {
 
   describe("a maintenance window at the edge of now", () => {
     function nearly(change: Partial<Incident>): string {
-      return renderPreview({ before: undefined, after: window(change), told: [], now: NOW });
+      return renderPreview({ announced: undefined, after: window(change), now: NOW });
     }
 
     it("notes that the real message may be the started one", () => {
@@ -266,20 +265,103 @@ describe("renderPreview", () => {
     });
 
     it("says nothing about an incident", () => {
-      expect(
-        renderPreview({ before: undefined, after: incident(), told: [], now: NOW }),
-      ).not.toContain("Note:");
+      expect(renderPreview({ announced: undefined, after: incident(), now: NOW })).not.toContain(
+        "Note:",
+      );
     });
   });
 
   it("says when the publisher has nothing new to announce", () => {
     const text = renderPreview({
-      before: incident(),
+      announced: announcedFrom(incident(), ["upd-1"], NOW),
       after: incident(),
-      told: ["upd-1"],
       now: NOW,
     });
 
     expect(text).toContain("No message: the publisher has nothing new to announce.");
+  });
+});
+
+describe("publisherView", () => {
+  const record = announcedFrom(incident(), ["upd-1"], NOW);
+  const caughtUp = { isPublished: true, updateIds: ["upd-1"] };
+
+  function feed(change: Partial<StatusFeedState> = {}): StatusFeedState {
+    return {
+      version: STATUS_FEED_STATE_VERSION,
+      announced: { at: NOW.toISOString(), incidents: [record], components: {}, notices: [] },
+      content: { fetchedAt: "2026-11-04T09:58:00.000Z", incidents: [], notices: [] },
+      pending: [],
+      ...change,
+    };
+  }
+
+  it("takes the publisher's own record of the incident", () => {
+    expect(publisherView(feed(), "inc-1", caughtUp, "prod")).toEqual({
+      announced: record,
+      notes: [],
+    });
+  });
+
+  it("says when Contentful holds a published update the publisher has not read", () => {
+    const published = { isPublished: true, updateIds: ["upd-1", "upd-2"] };
+    const view = publisherView(feed(), "inc-1", published, "prod");
+
+    expect(view.announced).toEqual(record);
+    expect(view.notes).toEqual([
+      expect.stringContaining("The prod publisher last read Contentful at Nov 4, 2026, 09:58 UTC"),
+    ]);
+  });
+
+  it("previews an opening for a published incident the publisher has not announced", () => {
+    const unread = feed({ announced: { ...feed().announced, incidents: [] } });
+    const view = publisherView(unread, "inc-1", caughtUp, "dev");
+
+    expect(view.announced).toBeUndefined();
+    expect(view.notes).toEqual([expect.stringContaining("has not seen everything")]);
+    expect(typesOf(slackPosts({ ...view, after: incident(), now: NOW }))).toEqual([
+      "incident.opened",
+    ]);
+  });
+
+  it("says nothing unread for a draft the publisher cannot see yet", () => {
+    const unread = feed({ announced: { ...feed().announced, incidents: [] } });
+
+    expect(
+      publisherView(unread, "inc-1", { isPublished: false, updateIds: [] }, "prod").notes,
+    ).toEqual([]);
+  });
+
+  it("counts the messages it still owes about this incident only", () => {
+    const [owed] = slackPosts({ announced: undefined, after: incident(), now: NOW });
+    const [other] = slackPosts({ announced: undefined, after: window(), now: NOW });
+    const view = publisherView(
+      feed({ pending: [owed.event, other.event] }),
+      "inc-1",
+      caughtUp,
+      "prod",
+    );
+
+    expect(view.notes).toEqual([
+      "The prod publisher still owes Slack 1 earlier message about this incident, sent before these.",
+    ]);
+  });
+
+  it("says a publisher with no saved state sends nothing yet", () => {
+    expect(publisherView(undefined, "inc-1", caughtUp, "prod")).toEqual({
+      announced: undefined,
+      notes: [expect.stringContaining("has no saved state yet")],
+    });
+  });
+
+  it("prints the notes under the messages", () => {
+    const text = renderPreview({
+      announced: undefined,
+      after: incident(),
+      now: NOW,
+      notes: ["Mind the gap."],
+    });
+
+    expect(text).toContain("Note: Mind the gap.");
   });
 });

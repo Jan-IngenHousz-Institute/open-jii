@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import type { Incident } from "@repo/monitoring/status-document";
+import { STATUS_FEED_STATE_VERSION } from "@repo/monitoring/status-feed";
+import type { StatusFeedState } from "@repo/monitoring/status-feed";
+
 import type { ContentfulConfig } from "../lib/contentful-management.js";
+import { announcedFrom } from "../lib/status-incident-preview.js";
 import { parseCommandLine, preflight, statusIncident } from "./status-incident.js";
 import type { Deps, Options, Result } from "./status-incident.js";
 
@@ -233,13 +238,68 @@ function createContentful(initial: Stored[]) {
   };
 }
 
-function setup(initial: Stored[] = [], settings: ContentfulConfig = config) {
+const fixtureSchema = z.object({
+  kind: z.object({ "en-US": z.enum(["incident", "maintenance"]) }),
+  startsAt: z.object({ "en-US": z.string() }),
+  endsAt: z.optional(z.object({ "en-US": z.string() })),
+  resolvedAt: z.optional(z.object({ "en-US": z.string() })),
+  updates: z.object({ "en-US": z.array(z.object({ sys: z.object({ id: z.string() }) })) }),
+});
+
+function isPublished(entry: Stored | undefined): boolean {
+  return entry?.sys.publishedVersion !== undefined;
+}
+
+// A published incident with later changes was announced before them, so without their resolvedAt.
+function recordOf(entry: Stored, entries: Map<string, Stored>) {
+  const fields = fixtureSchema.parse(entry.fields);
+  const hasChanged = entry.sys.version > (entry.sys.publishedVersion ?? 0) + 1;
+  const resolvedAt = hasChanged ? undefined : fields.resolvedAt?.["en-US"];
+  const endsAt = fields.endsAt?.["en-US"];
+  const seen: Incident = {
+    id: entry.sys.id,
+    kind: fields.kind["en-US"],
+    title: "Announced",
+    impact: "degraded",
+    components: ["platform"],
+    startsAt: fields.startsAt["en-US"],
+    ...(endsAt === undefined ? {} : { endsAt }),
+    ...(resolvedAt === undefined ? {} : { resolvedAt }),
+    updates: [],
+  };
+  const told = fields.updates["en-US"]
+    .map((linked) => linked.sys.id)
+    .filter((id) => isPublished(entries.get(id)));
+
+  return announcedFrom(seen, told, NOW);
+}
+
+/** A publisher that has read and announced everything published, which most tests assume. */
+function caughtUp(entries: Map<string, Stored>): StatusFeedState {
+  const incidents = [...entries.values()]
+    .filter((entry) => entry.sys.contentType.sys.id === "statusIncident" && isPublished(entry))
+    .map((entry) => recordOf(entry, entries));
+
+  return {
+    version: STATUS_FEED_STATE_VERSION,
+    announced: { at: NOW.toISOString(), incidents, components: {}, notices: [] },
+    content: { fetchedAt: NOW.toISOString(), incidents: [], notices: [] },
+    pending: [],
+  };
+}
+
+function setup(
+  initial: Stored[] = [],
+  settings: ContentfulConfig = config,
+  feedOf: (entries: Map<string, Stored>) => StatusFeedState | undefined = caughtUp,
+) {
   const cms = createContentful(initial);
   const chunks: string[] = [];
   const deps: Deps = {
     request: cms.request,
     write: (text) => void chunks.push(text),
     now: () => NOW,
+    readFeed: vi.fn(() => Promise.resolve(feedOf(cms.entries))),
   };
   const run = (options: Options): Promise<Result> => statusIncident(options, settings, deps);
 
@@ -1435,13 +1495,82 @@ describe("publish", () => {
         liveUpdate("upd-2", { stage: "resolved", nextUpdateBy: undefined }, draftState),
         liveIncident(
           { updates: [link("upd-1"), link("upd-2")], resolvedAt: "2026-11-04T09:30:00Z" },
-          { version: 3, publishedVersion: 2 },
+          { version: 4, publishedVersion: 2 },
         ),
       ]);
 
       await run({ action: "publish", entryId: "inc-1", dryRun: true });
 
       expect(printed()).toContain("Message 1 of 1 (incident.resolved)");
+    });
+
+    it("previews an opening while the publisher has not read the published incident", async () => {
+      const unread = (entries: Map<string, Stored>): StatusFeedState => {
+        const feed = caughtUp(entries);
+        return {
+          ...feed,
+          announced: { ...feed.announced, incidents: [] },
+          content: { ...feed.content, fetchedAt: "2026-11-04T09:56:00.000Z" },
+        };
+      };
+      const { run, printed } = setup(
+        [
+          liveUpdate(),
+          liveUpdate("upd-2", { stage: "identified", nextUpdateBy: undefined }, draftState),
+          liveIncident(
+            { updates: [link("upd-1"), link("upd-2")] },
+            { version: 4, publishedVersion: 2 },
+          ),
+        ],
+        config,
+        unread,
+      );
+
+      await run({ action: "publish", entryId: "inc-1", dryRun: true });
+
+      expect(printed()).toContain("Message 1 of 1 (incident.opened)");
+      expect(printed()).toContain(
+        "The prod publisher last read Contentful at Nov 4, 2026, 09:56 UTC and has not seen everything already published",
+      );
+    });
+
+    it("previews the resolution on a retry after the final update was published alone", async () => {
+      const toldFirstOnly = (entries: Map<string, Stored>): StatusFeedState => {
+        const feed = caughtUp(entries);
+        const incidents = feed.announced.incidents.map((incident) => ({
+          ...incident,
+          updates: ["upd-1"],
+        }));
+        return { ...feed, announced: { ...feed.announced, incidents } };
+      };
+      const { run, printed } = setup(
+        [
+          liveUpdate(),
+          liveUpdate("upd-2", { stage: "resolved", nextUpdateBy: undefined }),
+          liveIncident(
+            { updates: [link("upd-1"), link("upd-2")], resolvedAt: "2026-11-04T09:30:00Z" },
+            { version: 4, publishedVersion: 2 },
+          ),
+        ],
+        config,
+        toldFirstOnly,
+      );
+
+      await run({ action: "publish", entryId: "inc-1", dryRun: true });
+
+      expect(printed()).toContain("Message 1 of 1 (incident.resolved)");
+      expect(printed()).not.toContain("No message");
+    });
+
+    it("reads the target publisher's state for the preview", async () => {
+      const { deps, run } = setup([
+        liveUpdate(),
+        liveIncident({}, { version: 4, publishedVersion: 2 }),
+      ]);
+
+      await run({ action: "publish", entryId: "inc-1", dryRun: true, target: "dev" });
+
+      expect(deps.readFeed).toHaveBeenCalledExactlyOnceWith("dev");
     });
 
     it("says so when the publisher has nothing new to announce", async () => {

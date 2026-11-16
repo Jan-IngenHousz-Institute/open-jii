@@ -478,6 +478,13 @@ with the final stage `resolved` or `completed`. A dry run cannot read the incide
 so it needs an `incident` block in the file, copied from `inspect`, to preview offline. A real run
 ignores that block and reads the live entry.
 
+A real `update` or `resolve`, and `publish` with or without `--dry-run`, also read the target
+publisher's `status-feed.json` from `open-jii-status-state-<target>` with the AWS profile
+`openjii-<target>`, so the preview starts from what Slack was actually told rather than from what
+Contentful has published. Sign in with `aws sso login --sso-session openjii` first. The preview notes
+when the publisher has not read everything published for the incident yet, or still owes Slack
+earlier messages about it.
+
 Every action validates first, by parsing the incident with the contract the publisher uses and by the
 guide's rules: an incident never starts in the future, maintenance needs a planned end, the stage fits
 the kind, and an update has text. A title and text are not blank and the title fits Contentful's

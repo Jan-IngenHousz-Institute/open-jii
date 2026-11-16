@@ -6,7 +6,8 @@ import type {
   StatusDocument,
 } from "@repo/monitoring/status-document";
 import { announcedIncidentOf, statusEvents } from "@repo/monitoring/status-events";
-import type { Announced, StatusEvent } from "@repo/monitoring/status-events";
+import type { Announced, AnnouncedIncident, StatusEvent } from "@repo/monitoring/status-events";
+import type { StatusFeedState } from "@repo/monitoring/status-feed";
 import { STATUS_COMPONENT_NAMES, slackMessage } from "@repo/monitoring/status-slack";
 import type { SlackMessage } from "@repo/monitoring/status-slack";
 
@@ -31,14 +32,25 @@ const TIME = new Intl.DateTimeFormat("en-US", {
 });
 
 export interface PreviewInput {
-  /** The incident as the publisher last announced it, or nothing if it never saw it. */
-  before: Incident | undefined;
+  /** What the publisher last announced of the incident, or nothing if it never announced it. */
+  announced: AnnouncedIncident | undefined;
   after: Incident;
-  /** Ids of the updates the publisher has already announced. */
-  told: string[];
   now: Date;
   /** Which deployment's publisher reads the space. Defaults to prod. */
   target?: Target;
+  /** What the publisher's saved state leaves open, printed under the messages. */
+  notes?: string[];
+}
+
+/** What Contentful has published of an incident, which the publisher may not have read yet. */
+export interface PublishedIncident {
+  isPublished: boolean;
+  updateIds: string[];
+}
+
+export interface PublisherView {
+  announced: AnnouncedIncident | undefined;
+  notes: string[];
 }
 
 export interface SlackPost {
@@ -50,8 +62,57 @@ function time(iso: string): string {
   return `${TIME.format(Date.parse(iso))} UTC`;
 }
 
-function announcedOf(before: Incident, told: string[], atMs: number): Announced["incidents"] {
-  return [{ ...announcedIncidentOf(before, atMs), updates: told }];
+/** The record the publisher keeps of an incident it announced as `before`, having told `told`. */
+export function announcedFrom(before: Incident, told: string[], now: Date): AnnouncedIncident {
+  return { ...announcedIncidentOf(before, now.getTime()), updates: told };
+}
+
+function subjectOf(event: StatusEvent): string | undefined {
+  if ("incident" in event) {
+    return event.incident.id;
+  }
+  return "maintenance" in event ? event.maintenance.id : undefined;
+}
+
+/**
+ * What the target's publisher last told subscribers about an incident, from its saved state, and
+ * what that state leaves open: content published since its last read, and messages it still owes.
+ */
+export function publisherView(
+  feed: StatusFeedState | undefined,
+  incidentId: string,
+  published: PublishedIncident,
+  target: Target,
+): PublisherView {
+  if (feed === undefined) {
+    return {
+      announced: undefined,
+      notes: [
+        `The ${target} publisher has no saved state yet. Its first run only records where things stand and sends nothing.`,
+      ],
+    };
+  }
+
+  const announced = feed.announced.incidents.find((incident) => incident.id === incidentId);
+  const told = new Set(announced?.updates ?? []);
+  const hasUnread =
+    published.isPublished &&
+    (announced === undefined || published.updateIds.some((id) => !told.has(id)));
+  const owed = feed.pending.filter((event) => subjectOf(event) === incidentId).length;
+  const notes: string[] = [];
+
+  if (hasUnread) {
+    notes.push(
+      `The ${target} publisher last read Contentful at ${time(feed.content.fetchedAt)} and has not seen everything already published for this incident. If it reads again before this is published, it announces that on its own first, and Slack gets more messages than shown above.`,
+    );
+  }
+  if (owed > 0) {
+    notes.push(
+      `The ${target} publisher still owes Slack ${owed} earlier ${owed === 1 ? "message" : "messages"} about this incident, sent before these.`,
+    );
+  }
+
+  return { announced, notes };
 }
 
 function componentOf(id: StatusComponent["id"]): StatusComponent {
@@ -60,7 +121,7 @@ function componentOf(id: StatusComponent["id"]): StatusComponent {
 
 /** Runs the publisher's own event logic, so the messages are the ones it will send. */
 export function slackPosts(input: PreviewInput): SlackPost[] {
-  const { before, after, told, now, target = "prod" } = input;
+  const { announced, after, now, target = "prod" } = input;
 
   const document: StatusDocument = {
     version: STATUS_DOCUMENT_VERSION,
@@ -72,7 +133,7 @@ export function slackPosts(input: PreviewInput): SlackPost[] {
   // Only the event ids read the snapshot's time, and a preview shows none.
   const previous: Announced = {
     at: now.toISOString(),
-    incidents: before === undefined ? [] : announcedOf(before, told, now.getTime()),
+    incidents: announced === undefined ? [] : [announced],
     components: {},
     notices: [],
   };
@@ -186,7 +247,7 @@ export function renderPreview(input: PreviewInput): string {
     posts.length === 0
       ? ["No message: the publisher has nothing new to announce."]
       : posts.flatMap((post, index) => messageLines(post, `${index + 1} of ${posts.length}`));
-  const notes = edgeNotes(input);
+  const notes = [...(input.notes ?? []), ...edgeNotes(input)];
 
   return [
     `Target: ${target} (${PAGE_URLS[target]})`,

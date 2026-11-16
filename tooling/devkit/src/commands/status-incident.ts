@@ -10,6 +10,8 @@ import {
 } from "@repo/monitoring/status-content";
 import { STATUS_HISTORY_DAYS } from "@repo/monitoring/status-document";
 import type { Incident } from "@repo/monitoring/status-document";
+import type { AnnouncedIncident } from "@repo/monitoring/status-events";
+import type { StatusFeedState } from "@repo/monitoring/status-feed";
 
 import { pathFromRoot, repositoryRoot } from "../lib/config.js";
 import { publicationState } from "../lib/content-model.js";
@@ -24,12 +26,11 @@ import type {
   Entry,
   Preflight as ClientPreflight,
 } from "../lib/contentful-management.js";
-import { renderPreview } from "../lib/status-incident-preview.js";
-import type { Target } from "../lib/status-incident-preview.js";
+import { announcedFrom, publisherView, renderPreview } from "../lib/status-incident-preview.js";
+import type { PublishedIncident, PublisherView, Target } from "../lib/status-incident-preview.js";
 import { Review } from "../lib/status-incident-review.js";
 import type { ReviewSummary } from "../lib/status-incident-review.js";
 import {
-  FINAL_STAGES,
   NEW_UPDATE_ID,
   checkIncident,
   draftFileSchema,
@@ -40,12 +41,15 @@ import {
   updateFileSchema,
 } from "../lib/status-incident-rules.js";
 import type { RawIncident, RawUpdate, UpdateInput } from "../lib/status-incident-rules.js";
+import { readPublisherFeed } from "../lib/status-publisher-feed.js";
 
 export interface Deps {
   request: typeof fetch;
   audit?: ContentfulAudit;
   write: (text: string) => void;
   now: () => Date;
+  /** The target publisher's saved state, which says what Slack was already told. */
+  readFeed: (target: Target) => Promise<StatusFeedState | undefined>;
 }
 
 export type Action = "preflight" | "inspect" | "draft" | "update" | "resolve" | "publish";
@@ -406,13 +410,13 @@ interface PreviewContext {
 }
 
 function preview(
-  before: Incident | undefined,
+  announced: AnnouncedIncident | undefined,
   after: Incident,
-  told: string[],
   { now, warnings, target }: PreviewContext,
+  notes: string[] = [],
 ): string {
   const heading = warnings.map((warning) => `Warning: ${warning}`);
-  const body = renderPreview({ before, after, told, now, target });
+  const body = renderPreview({ announced, after, now, target, notes });
 
   return `${[...heading, ...(heading.length > 0 ? [""] : []), body].join("\n")}\n`;
 }
@@ -494,7 +498,7 @@ async function draft(
     client.requireConfig();
   }
 
-  deps.write(preview(undefined, incident, [], { now, warnings, target: options.target ?? "prod" }));
+  deps.write(preview(undefined, incident, { now, warnings, target: options.target ?? "prod" }));
 
   if (options.dryRun) {
     return { dryRun: true, networkRequests: 0, action: "draft", warnings };
@@ -562,8 +566,8 @@ function previousOf(after: Incident, action: "update" | "resolve"): Incident {
 
 interface Basis {
   before: RawIncident;
-  told: string[];
-  wasAnnounced: boolean;
+  /** The publisher's record; a dry run, which reads nothing, assumes it announced `before`. */
+  publisher: PublisherView | undefined;
 }
 
 interface AmendFile {
@@ -572,12 +576,16 @@ interface AmendFile {
   update: UpdateInput;
 }
 
-function basisOfLoaded(loaded: Loaded): Basis {
+function publishedOf(loaded: Loaded): PublishedIncident {
   return {
-    before: loaded.raw,
-    told: loaded.updates.filter(isAnnounced).map((update) => update.sys.id),
-    wasAnnounced: loaded.entry.sys.publishedVersion !== undefined,
+    isPublished: loaded.entry.sys.publishedVersion !== undefined,
+    updateIds: loaded.updates.filter(isAnnounced).map((update) => update.sys.id),
   };
+}
+
+async function publisherOf(loaded: Loaded, target: Target, deps: Deps): Promise<PublisherView> {
+  const feed = await deps.readFeed(target);
+  return publisherView(feed, loaded.entry.sys.id, publishedOf(loaded), target);
 }
 
 function planAmend(
@@ -595,13 +603,16 @@ function planAmend(
   };
   const check = checkIncident(after, now, { action, before: basis.before });
   const incident = requireValid(check);
-  const previous = basis.wasAnnounced ? previousOf(incident, action) : undefined;
+  const { announced, notes } = basis.publisher ?? {
+    announced: announcedFrom(previousOf(incident, action), [], now),
+    notes: [],
+  };
   const warnings = [...context.warnings, ...check.warnings];
 
   return {
     added,
     warnings,
-    text: preview(previous, incident, basis.told, { ...context, warnings }),
+    text: preview(announced, incident, { ...context, warnings }, notes),
   };
 }
 
@@ -635,7 +646,8 @@ async function amend(
   }
 
   const loaded = await loadIncident(client, options.entryId);
-  const plan = planAmend(options.action, basisOfLoaded(loaded), file, context);
+  const publisher = await publisherOf(loaded, context.target, deps);
+  const plan = planAmend(options.action, { before: loaded.raw, publisher }, file, context);
 
   deps.write(plan.text);
 
@@ -680,8 +692,7 @@ function amendOffline(
 
   const basis: Basis = {
     before: { id: entryId, ...file.incident, updates: [] },
-    told: [],
-    wasAnnounced: true,
+    publisher: undefined,
   };
   const plan = planAmend(action, basis, file, context);
 
@@ -708,21 +719,6 @@ function publishFailure(error: unknown, subject: string, published: Published["u
   return new Error(
     `${reason}. Publishing ${subject} failed. Updates published so far: ${done}. A rerun is safe: it skips what is published and publishes the rest, the incident last, and the same review token still applies unless someone edits an entry. If the rerun says there is nothing to publish, the publish that stopped had gone through.`,
   );
-}
-
-// Of the updates the publisher has not announced, a final one means this publish ends the incident.
-function announcedView(after: Incident, loaded: Loaded, told: string[]): Incident | undefined {
-  if (loaded.entry.sys.publishedVersion === undefined) {
-    return undefined;
-  }
-
-  const updates = after.updates.filter((update) => told.includes(update.id));
-  const isEnding = after.updates.some(
-    (update) => !told.includes(update.id) && FINAL_STAGES.includes(update.stage),
-  );
-  const { resolvedAt: _resolvedAt, ...open } = after;
-
-  return isEnding ? { ...open, updates } : { ...after, updates };
 }
 
 function movedMessage(reviewed: string, review: Review): string {
@@ -782,13 +778,10 @@ async function publish(
   }
 
   const review = Review.of(entry, loaded.updates);
-  const { told } = basisOfLoaded(loaded);
   const warnings = environmentWarnings(client.environment);
-  const text = preview(announcedView(check.incident, loaded, told), check.incident, told, {
-    now,
-    warnings,
-    target: options.target ?? "prod",
-  });
+  const target = options.target ?? "prod";
+  const { announced, notes } = await publisherOf(loaded, target, deps);
+  const text = preview(announced, check.incident, { now, warnings, target }, notes);
 
   if (options.dryRun) {
     deps.write(`${PUBLISH_DRY_RUN_NOTE}\n\n${text}`);
@@ -999,6 +992,7 @@ async function run(): Promise<void> {
     audit: createContentfulAudit(root),
     write: (text) => process.stdout.write(text),
     now: () => new Date(),
+    readFeed: readPublisherFeed,
   });
 
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
