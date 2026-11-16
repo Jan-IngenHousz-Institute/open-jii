@@ -2,7 +2,7 @@
 # Each store table's feed, once a minute: rows it took in the last minute and, over the last five,
 # rows it refused and the p95 from gold's commit to the store's insert. Refused rows are counted
 # over five minutes so that a run that fails or comes late cannot leave them unreported. A table
-# nothing reached reports zero rows. The backend's reads follow.
+# nothing reached reports zero rows. The backend's reads and the platform metrics' views follow.
 set -euo pipefail
 
 query="
@@ -74,6 +74,27 @@ if read_stats=$(clickhouse-client --user openjii_monitor --format TSV --query "
   fi
 else
   echo "Read metrics not sent: the query log did not answer" >&2
+fi
+
+# The platform metrics' views: minutes since the stalest one last refreshed, counted from the
+# server's start for one that has not since, and how many failed their last refresh. A failed view
+# keeps its last figures and holds back every view after it. Nothing is sent before the views exist.
+refresh_query="
+  SELECT max(intDiv(dateDiff('second', ifNull(last_success_time, now() - uptime()), now()), 60)),
+    countIf(exception != '')
+  FROM system.view_refreshes
+  WHERE database = 'store' AND startsWith(view, 'metrics_')
+  HAVING count() > 0
+"
+if refresh_stats=$(clickhouse-client --user openjii_monitor --format TSV --query "$refresh_query"); then
+  if [ -n "$refresh_stats" ]; then
+    IFS=$'\t' read -r age failing <<<"$refresh_stats"
+    dimensions="[{\"Name\":\"Environment\",\"Value\":\"${environment}\"}]"
+    metrics+="{\"MetricName\":\"MetricsRefreshAgeMinutes\",\"Dimensions\":$dimensions,\"Value\":$age,\"Unit\":\"None\"},"
+    metrics+="{\"MetricName\":\"MetricsRefreshFailures\",\"Dimensions\":$dimensions,\"Value\":$failing,\"Unit\":\"Count\"},"
+  fi
+else
+  echo "Refresh metrics not sent: the view refreshes did not answer" >&2
 fi
 
 aws cloudwatch put-metric-data --region "${region}" --namespace "${namespace}" --metric-data "[$${metrics%,}]"

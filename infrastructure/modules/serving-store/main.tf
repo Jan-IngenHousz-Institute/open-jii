@@ -53,13 +53,13 @@ locals {
   ]
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
-  # The platform metrics' hourly views (packages/database/clickhouse/migrations), which hold figures
-  # and never rows, the metrics user's only grants.
+  # The platform metrics' hourly views (packages/database/clickhouse/migrations), in the order they
+  # refresh: the metrics user's only grants, and views no other user may write to.
   metrics_views = [
     "metrics_platform_totals", "metrics_daily_activity", "metrics_client_totals",
-    "metrics_hourly_activity", "metrics_activity_windows", "metrics_parameter_stats",
-    "metrics_pool_facts", "metrics_daily_activity_by_experiment", "metrics_daily_activity_by_resource",
-    "metrics_experiment_contributors_window", "metrics_experiment_devices_window",
+    "metrics_hourly_activity", "metrics_activity_windows", "metrics_daily_activity_by_experiment",
+    "metrics_daily_activity_by_resource", "metrics_experiment_contributors_window",
+    "metrics_experiment_devices_window", "metrics_pool_facts", "metrics_parameter_stats",
   ]
 
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
@@ -72,10 +72,10 @@ locals {
     writer = {
       name    = "openjii_writer"
       profile = "ingest"
-      grants = [
-        "GRANT SELECT, INSERT ON store.*",
-        "REVOKE INSERT ON store._migrations",
-      ]
+      grants = concat(
+        ["GRANT SELECT, INSERT ON store.*", "REVOKE INSERT ON store._migrations"],
+        [for view in local.metrics_views : "REVOKE INSERT ON store.${view}"],
+      )
     }
     reloader = {
       name    = "openjii_reloader"
@@ -84,6 +84,7 @@ locals {
         ["GRANT SELECT, INSERT ON store.*"],
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
         ["REVOKE INSERT ON store._migrations"],
+        [for view in local.metrics_views : "REVOKE INSERT ON store.${view}"],
       )
     }
     reader = {

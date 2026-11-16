@@ -65,6 +65,7 @@
                 <query>GRANT SELECT ON store.*</query>
                 <!-- The reads' timings and outcomes, never their text, which holds their parameters. -->
                 <query>GRANT SELECT(event_time, type, user, query_duration_ms) ON system.query_log</query>
+                <query>GRANT SELECT ON system.view_refreshes</query>
             </grants>
         </openjii_monitor>
     </users>
