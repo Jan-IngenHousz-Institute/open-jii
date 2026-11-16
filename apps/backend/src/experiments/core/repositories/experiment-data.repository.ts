@@ -235,6 +235,15 @@ export class ExperimentDataRepository {
     }
 
     let shape = shapeResult.value;
+    const isStoreRawByDevice =
+      shape.source === "store" && this.groupsEveryRowByDevice(shape, aggregation);
+    if (isStoreRawByDevice && shape.metadata.rowCount > ceiling) {
+      const warehouse = await this.tableShape(experimentId, tableName, "warehouse");
+      if (warehouse.isFailure()) {
+        return warehouse;
+      }
+      shape = warehouse.value;
+    }
     read.source = shape.source;
     if (join) {
       const joined = await this.joinedShape(experimentId, tableName, shape, join);
@@ -956,6 +965,22 @@ export class ExperimentDataRepository {
         },
       },
     });
+  }
+
+  /**
+   * Whether a chart groups by a whole device and a raw x, which leaves about one group per row.
+   * The store spends longer than its 30 s on that over 37 million rows, so a table past the cap
+   * reads it from the warehouse.
+   */
+  private groupsEveryRowByDevice(shape: TableShape, aggregation?: AggregationSpec): boolean {
+    const groups = aggregation?.groupBy ?? [];
+    const hasDevice =
+      shape.metadata.tableType !== "upload" && groups.some(({ column }) => column === "device");
+    const hasRawX = groups.some(
+      ({ column, timeBucket, widthBucket }) =>
+        column !== "device" && timeBucket === undefined && widthBucket === undefined,
+    );
+    return hasDevice && hasRawX;
   }
 
   private reads(shape: TableShape): ExperimentTableReads {

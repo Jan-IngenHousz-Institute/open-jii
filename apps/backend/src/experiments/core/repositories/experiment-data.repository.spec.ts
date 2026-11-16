@@ -3187,6 +3187,40 @@ describe("ExperimentDataRepository", () => {
       expect(build.mock.calls.every(([params]) => params.plotsValues === true)).toBe(true);
     });
 
+    it("groups a raw x by device in the warehouse once the table passes the cap", async () => {
+      const rows = { columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false };
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(rows));
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+      const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(success(rows));
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
+      const charts: ExperimentDataSources = { pages: WAREHOUSE, charts: "store" };
+      const read = (groupBy: AggregationSpec["groupBy"], limit?: number) =>
+        repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          aggregation: { groupBy, functions: [{ column: "*", function: "count" }] },
+          limit,
+          sources: charts,
+        });
+
+      const pastTheCap = await read([{ column: "timestamp" }, { column: "device" }]);
+      const storeCalls = store.mock.calls.length;
+      const withinTheCap = await read([{ column: "timestamp" }, { column: "device" }], 1_000_000);
+      const byDay = await read([{ column: "timestamp", timeBucket: "day" }, { column: "device" }]);
+
+      assertSuccess(pastTheCap);
+      assertSuccess(withinTheCap);
+      assertSuccess(byDay);
+      expect(storeCalls).toBe(0);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY"))).toBe(true);
+      expect(store.mock.calls.filter(([query]) => query.sql.includes("GROUP BY"))).toHaveLength(2);
+    });
+
     it("keeps charts on the warehouse while pages read the store and the charts' flag is off", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([largeTable]),
