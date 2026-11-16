@@ -1,3 +1,5 @@
+import { ConfigService } from "@nestjs/config";
+
 import { eq, experimentExports, notifications } from "@repo/database";
 
 import type { DatabricksJobRunStatusResponse } from "../../../common/modules/databricks/services/jobs/jobs.types";
@@ -15,7 +17,10 @@ import { DATABRICKS_PORT } from "../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../core/ports/databricks.port";
 import { ExperimentDataExportsRepository } from "../../core/repositories/experiment-data-exports.repository";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
-import { ExportRunReconcilerService } from "./export-run-reconciler.service";
+import {
+  EXPORT_METRICS_NAMESPACE,
+  ExportRunReconcilerService,
+} from "./export-run-reconciler.service";
 
 const RUN_ID = 4242;
 
@@ -88,6 +93,17 @@ describe("ExportRunReconcilerService", () => {
 
   const manifest = (exportId: string, rowCount?: number) =>
     JSON.stringify(manifestOf(exportId, rowCount));
+
+  function reconcilerWith(config: ConfigService) {
+    return new ExportRunReconcilerService(
+      exportsRepository,
+      testApp.module.get(ExperimentRepository),
+      databricksPort,
+      awsPort,
+      testApp.module.get(NotificationDispatchService),
+      config,
+    );
+  }
 
   beforeAll(async () => {
     await testApp.setup();
@@ -397,18 +413,84 @@ describe("ExportRunReconcilerService", () => {
       success(run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS)),
     );
     vi.spyOn(awsPort, "readExportObject").mockResolvedValue(success(manifest(exportId)));
-    const otherTask = new ExportRunReconcilerService(
-      exportsRepository,
-      testApp.module.get(ExperimentRepository),
-      databricksPort,
-      awsPort,
-      testApp.module.get(NotificationDispatchService),
-    );
+    const otherTask = reconcilerWith(testApp.module.get(ConfigService));
 
     await Promise.all([reconciler.reconcile(), otherTask.reconcile()]);
 
     expect((await stored(exportId)).status).toBe("completed");
     expect(await notificationsFor(userId)).toHaveLength(1);
+  });
+
+  describe("counting failed exports", () => {
+    const deployed = new ConfigService({
+      health: { databaseClusterIdentifier: "cluster-1", environment: "dev" },
+    });
+
+    function failedWithin(cause: string) {
+      return [
+        EXPORT_METRICS_NAMESPACE,
+        [
+          {
+            name: "ExportsFailed",
+            value: 1,
+            unit: "Count",
+            dimensions: { Environment: "dev", Cause: cause },
+          },
+        ],
+      ];
+    }
+
+    async function exportStuckForTwoDays() {
+      const exportId = await exportInFlight();
+      await testApp.database
+        .update(experimentExports)
+        .set({ createdAt: new Date(Date.now() - 49 * 60 * 60_000) })
+        .where(eq(experimentExports.id, exportId));
+      return exportId;
+    }
+
+    it("counts a failure on our side as the platform's", async () => {
+      await exportStuckForTwoDays();
+      const publish = vi.spyOn(awsPort, "publishMetrics").mockResolvedValue(success(undefined));
+
+      await reconcilerWith(deployed).reconcile();
+
+      expect(publish).toHaveBeenCalledExactlyOnceWith(...failedWithin("platform"));
+    });
+
+    it("counts a failure from the data as the user's", async () => {
+      const exportId = await exportInFlight();
+      vi.spyOn(databricksPort, "getJobRunStatus").mockResolvedValue(
+        success(run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS)),
+      );
+      vi.spyOn(awsPort, "readExportObject").mockResolvedValue(success(manifest(exportId, 0)));
+      const publish = vi.spyOn(awsPort, "publishMetrics").mockResolvedValue(success(undefined));
+
+      await reconcilerWith(deployed).reconcile();
+
+      expect(publish).toHaveBeenCalledExactlyOnceWith(...failedWithin("user"));
+    });
+
+    it("counts once when two backend tasks fail the same export", async () => {
+      await exportStuckForTwoDays();
+      const publish = vi.spyOn(awsPort, "publishMetrics").mockResolvedValue(success(undefined));
+
+      await Promise.all([
+        reconcilerWith(deployed).reconcile(),
+        reconcilerWith(deployed).reconcile(),
+      ]);
+
+      expect(publish).toHaveBeenCalledOnce();
+    });
+
+    it("counts nothing outside a deployed service", async () => {
+      await exportStuckForTwoDays();
+      const publish = vi.spyOn(awsPort, "publishMetrics");
+
+      await reconciler.reconcile();
+
+      expect(publish).not.toHaveBeenCalled();
+    });
   });
 
   it("tries again on the next pass when the run cannot be read", async () => {
