@@ -1,5 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
 
+import type { ColumnTerm } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
+import type { StudyRecord } from "@repo/api/domains/experiment/study/experiment-study.schema";
+
 import { experimentId } from "../docs-media/seed-entities.js";
 import type { Box } from "./change-marker.js";
 import { ChangeMarker } from "./change-marker.js";
@@ -56,12 +59,71 @@ async function markStudySection(page: Page): Promise<Box> {
   return marker.frame([cardHeading, section], 24);
 }
 
+// NCBI Taxonomy and ENVO terms as the Ontology Lookup Service gives them, checked on 9 November 2026.
+const GLYCINE_MAX: ColumnTerm = {
+  id: "NCBITaxon:3847",
+  label: "Glycine max",
+  vocabulary: "NCBI Taxonomy",
+  iri: "http://purl.obolibrary.org/obo/NCBITaxon_3847",
+};
+const AGRICULTURAL_FIELD: ColumnTerm = {
+  id: "ENVO:00000114",
+  label: "agricultural field",
+  vocabulary: "Environment Ontology (ENVO)",
+  iri: "http://purl.obolibrary.org/obo/ENVO_00000114",
+  definition:
+    "A field which is located on land and used for agricultural purposes, such as the grazing of livestock or the cultivation of crops.",
+};
+
+/** The drought trial's subjects and related work, which the scaffold reads from its own route. */
+export const EXAMPLE_STUDY_RECORD: StudyRecord = {
+  subjects: [
+    { label: "Glycine max", term: GLYCINE_MAX },
+    { label: "agricultural field", term: AGRICULTURAL_FIELD },
+    { label: "drought stress", term: null },
+  ],
+  relatedWork: [{ identifier: "10.5072/example-paper", relationType: "IsDescribedBy" }],
+};
+
+/** Answers the study record route, which has no backend yet, for one experiment. */
+export class ExampleStudyRecord implements Fixture {
+  constructor(
+    private readonly experiment: Resolvable,
+    private readonly record: StudyRecord,
+  ) {}
+
+  async install(page: Page): Promise<void> {
+    const path = `/api/v1/experiments/${await resolve(this.experiment)}/study-record`;
+    await page.route(
+      (url) => url.pathname === path,
+      (route) => route.fulfill({ status: 200, json: this.record }),
+    );
+  }
+}
+
+/** A term search that matches nothing, so the picker offers the typed words as a keyword. */
+class NoMatchingTerms implements Fixture {
+  async install(page: Page): Promise<void> {
+    await page.route(
+      (url) => url.pathname === "/api/v1/column-terms/search",
+      (route) => route.fulfill({ status: 200, json: { terms: [] } }),
+    );
+  }
+}
+
+export const droughtTrialStudyRecord = new ExampleStudyRecord(DROUGHT_TRIAL, EXAMPLE_STUDY_RECORD);
+
+export async function waitForStudyRecord(scope: Page | Locator): Promise<void> {
+  await scope.getByText(GLYCINE_MAX.id).first().waitFor();
+}
+
 const studyDetailsOnOverview: TicketShot = {
   slug: "a1-study-details",
   route: overviewRoute,
+  fixtures: [droughtTrialStudyRecord],
   viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
-    await page.getByText("Glycine max").waitFor();
+    await waitForStudyRecord(page);
     await hideOtherChanges(page);
     return markStudySection(page);
   },
@@ -70,62 +132,34 @@ const studyDetailsOnOverview: TicketShot = {
 const studyDetailsNotSet: TicketShot = {
   slug: "a1-study-details-not-set",
   route: draftOverviewRoute,
+  fixtures: [new ExampleStudyRecord(DRAFT_TRIAL, { subjects: [], relatedWork: [] })],
   viewport: { width: 1440, height: 1000 },
   prepare: async (page) => {
     await page.getByRole("heading", { name: "Study details", exact: true }).waitFor();
+    await page.waitForLoadState("networkidle");
     await hideOtherChanges(page);
     return markStudySection(page);
   },
 };
 
-/** NCBI Taxonomy's answer for soybean, since the scaffold's organism search has no backend. */
-class SoybeanTaxonomy implements Fixture {
-  async install(page: Page): Promise<void> {
-    await page.route(
-      (url) => url.pathname === "/api/v1/organisms/search",
-      (route) =>
-        route.fulfill({
-          status: 200,
-          json: {
-            organisms: [
-              { taxonId: "3847", name: "Glycine max", commonName: "soybean" },
-              { taxonId: "3848", name: "Glycine soja", commonName: "wild soybean" },
-            ],
-          },
-        }),
-    );
-  }
-}
-
-async function chooseOrganism(page: Page, dialog: Locator, name: string): Promise<void> {
-  await dialog.getByRole("combobox").filter({ hasText: "Glycine max" }).click();
-  await page.getByPlaceholder("Scientific or common name").fill("soybean");
-  await page.getByRole("option", { name: new RegExp(name) }).click();
-}
-
-/** The seeded facility predates the type, so the shots give it one and a description. */
-export async function setOpenField(page: Page, dialog: Locator): Promise<void> {
-  await dialog.getByRole("combobox").filter({ hasText: "Not set" }).click();
-  await page.getByRole("option", { name: "Open field" }).click();
-  await dialog.getByPlaceholder("e.g. Greenhouse 2, compartment 3").fill("Field 4, north block");
+async function openStudyDialog(page: Page): Promise<Locator> {
+  await waitForStudyRecord(page);
+  await studySection(page).getByRole("button", { name: "Edit" }).click();
+  const dialog = page.getByRole("dialog");
+  await waitForStudyRecord(dialog);
+  return dialog;
 }
 
 const studyDetailsDialog: TicketShot = {
   slug: "a1-study-details-dialog",
   route: overviewRoute,
-  fixtures: [new SoybeanTaxonomy()],
-  viewport: { width: 1440, height: 1000 },
+  fixtures: [droughtTrialStudyRecord],
+  viewport: { width: 1440, height: 1200 },
   prepare: async (page) => {
-    await page.getByText("Glycine max").waitFor();
-    await studySection(page).getByRole("button", { name: "Edit" }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.waitFor();
+    const dialog = await openStudyDialog(page);
 
     // The Funding section is A2's change, so A1's dialog is shown without it.
     await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
-
-    await chooseOrganism(page, dialog, "Glycine max");
-    await setOpenField(page, dialog);
     await blurFocus(page);
 
     const marker = new ChangeMarker(page);
@@ -136,17 +170,15 @@ const studyDetailsDialog: TicketShot = {
 const discardChanges: TicketShot = {
   slug: "a1-discard-changes",
   route: overviewRoute,
-  fixtures: [new SoybeanTaxonomy()],
-  viewport: { width: 1440, height: 1000 },
+  fixtures: [droughtTrialStudyRecord, new NoMatchingTerms()],
+  viewport: { width: 1440, height: 1200 },
   prepare: async (page) => {
-    await page.getByText("Glycine max").waitFor();
-    await studySection(page).getByRole("button", { name: "Edit" }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.waitFor();
+    const dialog = await openStudyDialog(page);
 
     await dialog.getByRole("region", { name: "Funding" }).evaluate((section) => section.remove());
-    await setOpenField(page, dialog);
-    await chooseOrganism(page, dialog, "Glycine soja");
+    await dialog.getByRole("button", { name: "Add a subject" }).click();
+    await page.getByPlaceholder("Search terms, or type a keyword").fill("soil moisture");
+    await page.getByRole("option", { name: /as a keyword/ }).click();
     await dialog.getByRole("button", { name: "Cancel" }).click();
     const prompt = page.getByRole("alertdialog");
     await prompt.waitFor();
@@ -154,7 +186,7 @@ const discardChanges: TicketShot = {
     // The prompt hides the dialog from the accessibility tree, so the dialog is found by its markup.
     const behind = page.locator('[role="dialog"]');
     const marker = new ChangeMarker(page);
-    await marker.mark(prompt, "New", "above");
+    await marker.mark(prompt, "New", "inside-top-right");
     return marker.frame([behind, prompt], 16);
   },
 };

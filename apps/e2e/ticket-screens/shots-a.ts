@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Request } from "@playwright/test";
 
 import type {
   ColumnDescription,
@@ -18,7 +18,7 @@ import { FixtureWarehouse } from "./fixture-warehouse.js";
 import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
 import type { TicketShot } from "./shots.js";
-import { setOpenField } from "./study-metadata-shots.js";
+import { droughtTrialStudyRecord, waitForStudyRecord } from "./study-metadata-shots.js";
 
 const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
 
@@ -45,19 +45,18 @@ async function blurFocus(page: Page): Promise<void> {
 const funding: TicketShot = {
   slug: "a2-funding",
   route: overviewRoute,
-  viewport: { width: 1440, height: 1000 },
+  fixtures: [droughtTrialStudyRecord],
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    await page.getByText("Glycine max").waitFor();
-    await page.waitForLoadState("networkidle");
+    await waitForStudyRecord(page);
     await studySection(page).getByRole("button", { name: "Edit" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.waitFor();
-    await setOpenField(page, dialog);
+    await waitForStudyRecord(dialog);
 
     const section = dialog.getByRole("region", { name: "Funding" });
     await section.getByRole("button", { name: "Add funding" }).click();
-    await section.getByLabel("Funder").fill("Example Research Council");
-    await section.getByLabel("Grant or award number").fill("EX-2026-001");
+    await section.getByLabel("Funder", { exact: true }).fill("Example Research Council");
+    await section.getByLabel("Award number").fill("EX-2026-001");
     await blurFocus(page);
     await section.scrollIntoViewIfNeeded();
 
@@ -67,61 +66,155 @@ const funding: TicketShot = {
   },
 };
 
+// Every term below was opened on its source on 9 November 2026: the CF standard name table version
+// 95, the EBI Ontology Lookup Service for ENVO, TO and PATO, and cropontology.org for rice.
+const CF = "CF standard names";
+const ENVO = "Environment Ontology (ENVO)";
+const TO = "Plant Trait Ontology (TO)";
+const PATO = "Phenotype And Trait Ontology (PATO)";
+const RICE = "Crop Ontology, rice (CO_320)";
+
+const CF_AIR_TEMPERATURE: ColumnTerm = {
+  id: "air_temperature",
+  label: "Air temperature",
+  vocabulary: CF,
+  iri: "https://vocab.nerc.ac.uk/standard_name/air_temperature/",
+  definition:
+    "Air temperature is the bulk temperature of the air, not the surface (skin) temperature.",
+};
+const CF_RELATIVE_HUMIDITY: ColumnTerm = {
+  id: "relative_humidity",
+  label: "Relative humidity",
+  vocabulary: CF,
+  iri: "https://vocab.nerc.ac.uk/standard_name/relative_humidity/",
+};
+const CF_SPECIFIC_HUMIDITY: ColumnTerm = {
+  id: "specific_humidity",
+  label: "Specific humidity",
+  vocabulary: CF,
+  iri: "https://vocab.nerc.ac.uk/standard_name/specific_humidity/",
+  definition: "Specific humidity is the mass fraction of water vapor in (moist) air.",
+};
+const CF_CANOPY_TEMPERATURE: ColumnTerm = {
+  id: "canopy_temperature",
+  label: "Canopy temperature",
+  vocabulary: CF,
+  iri: "https://vocab.nerc.ac.uk/standard_name/canopy_temperature/",
+  definition:
+    '"Canopy temperature" is the bulk temperature of the canopy, not the surface (skin) temperature.',
+};
+const ENVO_AIR: ColumnTerm = {
+  id: "ENVO:00002005",
+  label: "air",
+  vocabulary: ENVO,
+  iri: "http://purl.obolibrary.org/obo/ENVO_00002005",
+};
+const ENVO_HUMID_AIR: ColumnTerm = {
+  id: "ENVO:01000828",
+  label: "humid air",
+  vocabulary: ENVO,
+  iri: "http://purl.obolibrary.org/obo/ENVO_01000828",
+  definition: "Air which has increased levels of water vapour.",
+};
+const ENVO_PPFD: ColumnTerm = {
+  id: "ENVO:06105204",
+  label: "photosynthetic photon flux density",
+  vocabulary: ENVO,
+  iri: "http://purl.obolibrary.org/obo/ENVO_06105204",
+  definition:
+    "Often represented in micromoles of photons associated with photosynthetically active radiation per square meter per second.",
+};
+const TO_LEAF_TEMPERATURE: ColumnTerm = {
+  id: "TO:0000504",
+  label: "leaf temperature",
+  vocabulary: TO,
+  iri: "http://purl.obolibrary.org/obo/TO_0000504",
+  definition: "A leaf morphology trait (TO:0000748) which is the leaf surface temperature.",
+};
+const PATO_HUMIDITY: ColumnTerm = {
+  id: "PATO:0015009",
+  label: "humidity",
+  vocabulary: PATO,
+  iri: "http://purl.obolibrary.org/obo/PATO_0015009",
+  definition:
+    "A quality inhering in air by virtue of the partial pressure exerted by the bearer's water vapour content.",
+};
+const RICE_LEAF_TEMPERATURE: ColumnTerm = {
+  id: "CO_320:0001118",
+  label: "Leaf temperature",
+  vocabulary: RICE,
+  definition: "Leaf surface temperature",
+};
+
+const HUMIDITY_TERMS: readonly ColumnTerm[] = [
+  CF_RELATIVE_HUMIDITY,
+  CF_SPECIFIC_HUMIDITY,
+  PATO_HUMIDITY,
+  ENVO_HUMID_AIR,
+];
+const LEAF_TEMPERATURE_TERMS: readonly ColumnTerm[] = [
+  TO_LEAF_TEMPERATURE,
+  RICE_LEAF_TEMPERATURE,
+  CF_CANOPY_TEMPERATURE,
+];
+
 const MACRO_ID = "00000000-0000-4000-8000-0000000000a5";
 const WORKBOOK_NAME = "Field readings";
 
-const WORKBOOK_4: ColumnProducer = {
+const AMBIT_4: ColumnProducer = {
   kind: "instrument",
   workbookVersion: 4,
   workbookName: WORKBOOK_NAME,
+  instrumentFamily: "Ambit",
 };
-const WORKBOOK_5: ColumnProducer = {
-  kind: "instrument",
-  workbookVersion: 5,
-  workbookName: WORKBOOK_NAME,
-};
+const AMBIT_5: ColumnProducer = { ...AMBIT_4, workbookVersion: 5 };
+const AMBYTE_UPLOAD: ColumnProducer = { kind: "upload", parserName: "Ambyte", parserVersion: "2" };
 const DAILY_MEANS: ColumnProducer = { kind: "macro", macroId: MACRO_ID, macroName: "Daily means" };
 const FROM_LAYOUT: ColumnProducer = { kind: "layout" };
 
-const READING = "Sensor reading taken with each measurement";
-const MEASURED_NUMBER = "Measured number";
-const DAILY_MEAN = "Mean of one day's readings for one plot";
+const AMBIT_METHOD = "Reading from the Ambit, Field readings version 4";
+const DAILY_MEAN_METHOD = "Computed by the Daily means macro";
+const PAR = "photosynthetically active radiation";
 
 function described(
-  trait: string,
-  traitTerm: ColumnTerm | null,
-  method: string,
-  scale: string,
-  unit: string | null,
-  noTermFits = false,
+  parts: Pick<ColumnDescription, "definition" | "property" | "propertyTerm" | "unit"> &
+    Partial<ColumnDescription>,
 ): ColumnDescription {
   return {
-    trait,
-    traitTerm,
-    noTermFits,
-    method,
-    methodTerm: null,
-    scale,
-    scaleTerm: null,
-    unit,
+    noTermFits: false,
+    objectOfInterest: null,
+    objectOfInterestTerm: null,
+    context: null,
+    contextTerm: null,
+    method: AMBIT_METHOD,
+    valueKind: "number",
+    processingLevel: "measured",
+    ...parts,
   };
 }
 
-const LEAF_TEMPERATURE = described(
-  "Leaf temperature",
-  { id: "CO_336:0000561", label: "Leaf temperature" },
-  READING,
-  MEASURED_NUMBER,
-  "°C",
-);
-const LIGHT_INTENSITY = described(
-  "Light intensity",
-  null,
-  READING,
-  MEASURED_NUMBER,
-  "µmol m⁻² s⁻¹",
-  true,
-);
+const AIR_TEMPERATURE = described({
+  definition: "Temperature of the air around the Ambit at each reading",
+  property: "Temperature",
+  propertyTerm: CF_AIR_TEMPERATURE,
+  objectOfInterest: "air",
+  objectOfInterestTerm: ENVO_AIR,
+  unit: "Cel",
+});
+const LIGHT = described({
+  definition: "Photosynthetically active radiation reaching the Ambit's light sensor",
+  property: "Photon flux density",
+  propertyTerm: ENVO_PPFD,
+  objectOfInterest: PAR,
+  unit: "umol/(m2.s)",
+});
+const LEAF_TEMPERATURE = described({
+  definition: "Surface temperature of the leaf the Ambit's infrared sensor faces",
+  property: "Temperature",
+  propertyTerm: TO_LEAF_TEMPERATURE,
+  objectOfInterest: "leaf",
+  unit: "Cel",
+});
 
 interface ExampleColumn {
   name: string;
@@ -130,94 +223,69 @@ interface ExampleColumn {
   description: ColumnDescription | null;
 }
 
-/** The same three readings under two workbook versions, so the counts split between them. */
-function workbookReadings(rowCounts: readonly [number, number, number]): ExampleColumn[] {
-  return [
-    { name: "leaf_temperature", type: "DOUBLE", rowCount: rowCounts[0], description: null },
-    { name: "light_intensity", type: "DOUBLE", rowCount: rowCounts[1], description: null },
-    { name: "relative_humidity", type: "DOUBLE", rowCount: rowCounts[2], description: null },
-  ];
-}
+type AmbitColumn =
+  | "air_temperature_c"
+  | "relative_humidity_pct"
+  | "par_umol_m2_s"
+  | "contactless_temperature_c";
 
-const DESCRIBED_AT_VERSION_4: Record<string, ColumnDescription> = {
-  leaf_temperature: LEAF_TEMPERATURE,
-  light_intensity: LIGHT_INTENSITY,
+/** The Ambit's computed outputs, as the pipeline's derived-parameter allowlist names them. */
+const AMBIT_COLUMNS: readonly AmbitColumn[] = [
+  "air_temperature_c",
+  "relative_humidity_pct",
+  "par_umol_m2_s",
+  "contactless_temperature_c",
+];
+
+const DESCRIBED_AT_VERSION_4: Partial<Record<AmbitColumn, ColumnDescription>> = {
+  air_temperature_c: AIR_TEMPERATURE,
+  par_umol_m2_s: LIGHT,
+  contactless_temperature_c: LEAF_TEMPERATURE,
 };
+
+/** The trace temperature and the leaf temperature, which the split Ambyte parser keeps apart. */
+const AMBYTE_COLUMNS: readonly ExampleColumn[] = [
+  { name: "Temp", type: "DOUBLE", rowCount: 8640, description: null },
+  { name: "LeafT", type: "DOUBLE", rowCount: 1440, description: null },
+];
 
 const MACRO_COLUMNS: readonly ExampleColumn[] = [
   {
-    name: "daily_mean_temperature",
+    name: "daily_mean_air_temperature_c",
     type: "DOUBLE",
     rowCount: 96,
-    description: described(
-      "Daily mean leaf temperature",
-      null,
-      DAILY_MEAN,
-      MEASURED_NUMBER,
-      "°C",
-      true,
-    ),
+    description: described({
+      ...AIR_TEMPERATURE,
+      definition: "Mean of one day's air temperature readings for one plot",
+      context: "daily mean",
+      method: DAILY_MEAN_METHOD,
+      processingLevel: "computed",
+    }),
   },
   {
-    name: "daily_mean_light",
+    name: "daily_mean_par_umol_m2_s",
     type: "DOUBLE",
     rowCount: 96,
-    description: described(
-      "Daily mean light intensity",
-      null,
-      DAILY_MEAN,
-      MEASURED_NUMBER,
-      "µmol m⁻² s⁻¹",
-      true,
-    ),
-  },
-  { name: "quality_flag", type: "STRING", rowCount: 96, description: null },
-];
-
-const HUMIDITY_TERMS: readonly ColumnTerm[] = [
-  {
-    id: "CO_336:0000301",
-    label: "Air relative humidity",
-    definition: "How much water vapor the air holds, as a percentage of the most it could hold.",
-  },
-  {
-    id: "CO_336:0000302",
-    label: "Canopy relative humidity",
-    definition: "Relative humidity measured inside the plant canopy rather than above it.",
-  },
-  {
-    id: "CO_336:0000303",
-    label: "Relative humidity at sowing",
-    definition: "Relative humidity of the air on the day the seeds were sown.",
+    description: described({
+      ...LIGHT,
+      definition: "Mean of one day's light readings for one plot",
+      context: "daily mean",
+      method: DAILY_MEAN_METHOD,
+      processingLevel: "computed",
+    }),
   },
 ];
-
-const QUALITY_SUGGESTION: ColumnSuggestion = {
-  description: {
-    trait: "Measurement quality",
-    traitTerm: null,
-    noTermFits: true,
-    method: "Automatic check of each day's readings",
-    methodTerm: null,
-    scale: "Pass or fail",
-    scaleTerm: null,
-    unit: null,
-  },
-  experimentCount: 3,
-};
 
 const HUMIDITY_SUGGESTION: ColumnSuggestion = {
-  description: {
-    trait: "Relative humidity of the air",
-    traitTerm: HUMIDITY_TERMS[0],
-    noTermFits: false,
-    method: READING,
-    methodTerm: null,
-    scale: MEASURED_NUMBER,
-    scaleTerm: null,
+  description: described({
+    definition: "Relative humidity of the air around the Ambit at each reading",
+    property: "Relative humidity",
+    propertyTerm: CF_RELATIVE_HUMIDITY,
+    objectOfInterest: "air",
+    objectOfInterestTerm: ENVO_AIR,
     unit: "%",
-  },
-  experimentCount: 5,
+  }),
+  experimentCount: 3,
 };
 
 const INSTRUMENT_ROWS = 1240;
@@ -228,18 +296,18 @@ function instrumentRows(): FixtureRow[] {
     const isHumidityMissing = index % 20 === 0 && index < 1200;
     return {
       plot: plots[index % plots.length].identifier,
-      leaf_temperature: Number((24 + ((index * 7) % 60) / 10).toFixed(1)),
-      light_intensity: 400 + ((index * 37) % 900),
-      relative_humidity: isHumidityMissing ? null : 40 + ((index * 13) % 40),
+      air_temperature_c: Number((24 + ((index * 7) % 60) / 10).toFixed(1)),
+      relative_humidity_pct: isHumidityMissing ? null : 40 + ((index * 13) % 40),
+      par_umol_m2_s: 400 + ((index * 37) % 900),
+      contactless_temperature_c: Number((23 + ((index * 11) % 50) / 10).toFixed(1)),
     };
   });
 }
 
 function macroRows(): FixtureRow[] {
   return Array.from({ length: 96 }, (_, index) => ({
-    daily_mean_temperature: Number((25 + ((index * 3) % 40) / 10).toFixed(1)),
-    daily_mean_light: 650 + ((index * 29) % 300),
-    quality_flag: index % 9 === 4 ? "fail" : "pass",
+    daily_mean_air_temperature_c: Number((25 + ((index * 3) % 40) / 10).toFixed(1)),
+    daily_mean_par_umol_m2_s: 650 + ((index * 29) % 300),
   }));
 }
 
@@ -260,12 +328,7 @@ function fixtureTable(
 const INSTRUMENT_TABLE = fixtureTable(
   "raw_data",
   "Raw Data",
-  [
-    { name: "plot", type: "STRING" },
-    { name: "leaf_temperature", type: "DOUBLE" },
-    { name: "light_intensity", type: "DOUBLE" },
-    { name: "relative_humidity", type: "DOUBLE" },
-  ],
+  [{ name: "plot", type: "STRING" }, ...AMBIT_COLUMNS.map((name) => ({ name, type: "DOUBLE" }))],
   instrumentRows(),
 );
 const MACRO_TABLE = fixtureTable(
@@ -274,6 +337,16 @@ const MACRO_TABLE = fixtureTable(
   MACRO_COLUMNS,
   macroRows(),
 );
+
+/** Every Ambit column holds a value on each reading except humidity, which the sensor sometimes skips. */
+function ambitRowCounts(readings: number, humidity: number): Record<AmbitColumn, number> {
+  return {
+    air_temperature_c: readings,
+    relative_humidity_pct: humidity,
+    par_umol_m2_s: readings,
+    contactless_temperature_c: readings,
+  };
+}
 
 interface DictionaryState {
   /** Another experiment or an earlier workbook version described the column, so it reads Suggested. */
@@ -285,33 +358,35 @@ interface DictionaryState {
 }
 
 /**
- * The drought trial's columns from one workbook, one macro and the layout. Answers the tables list
- * with the right table types and the scaffold's dictionary, term search and suggestion routes,
- * which have no backend yet.
+ * The drought trial's columns from an Ambit workbook, an Ambyte upload, one macro and the layout.
+ * Answers the tables list with the right table types and the scaffold's dictionary, describe, term
+ * search and suggestion routes, which have no backend yet.
  */
 class ExampleColumnDictionary implements Fixture {
   constructor(private readonly state: DictionaryState = {}) {}
 
   async install(page: Page): Promise<void> {
     const prefix = `/api/v1/experiments/${await resolve(DROUGHT_TRIAL)}`;
-    const answers = new Map<string, (url: URL) => unknown>([
+    const answers = new Map<string, (url: URL, request: Request) => unknown>([
       [`${prefix}/tables`, () => this.tables()],
       [`${prefix}/columns`, () => this.dictionary()],
+      [`${prefix}/columns/description`, (_, request) => this.saved(request)],
       [`${prefix}/columns/suggestion`, (url) => this.suggestion(url)],
-      ["/api/v1/column-terms/search", () => ({ terms: HUMIDITY_TERMS })],
+      ["/api/v1/column-terms/search", (url) => this.terms(url)],
     ]);
     const failing = `${prefix}/columns`;
 
     await page.route(
       (url) => answers.has(url.pathname),
       async (route) => {
-        const url = new URL(route.request().url());
+        const request = route.request();
+        const url = new URL(request.url());
         if (this.state.isFailing && url.pathname === failing) {
           await route.fulfill({ status: 500, json: { message: "The warehouse did not answer." } });
           return;
         }
         const answer = answers.get(url.pathname);
-        await route.fulfill({ status: 200, json: answer ? answer(url) : null });
+        await route.fulfill({ status: 200, json: answer ? answer(url, request) : null });
       },
     );
   }
@@ -336,18 +411,19 @@ class ExampleColumnDictionary implements Fixture {
 
   private dictionary(): ColumnDictionary {
     const { hasNewVersion } = this.state;
-    const version4 = this.workbookColumns(
+    const version4 = this.ambitColumns(
       "workbook-4",
-      hasNewVersion ? [840, 840, 790] : [1240, 1240, 1180],
+      hasNewVersion ? ambitRowCounts(840, 790) : ambitRowCounts(INSTRUMENT_ROWS, 1180),
     );
     const groups: ColumnDictionary["groups"] = [];
 
     if (hasNewVersion) {
-      const version5 = this.workbookColumns("workbook-5", [400, 400, 390], "workbook-4");
-      groups.push({ producer: WORKBOOK_5, columns: version5 });
+      const version5 = this.ambitColumns("workbook-5", ambitRowCounts(400, 390), "workbook-4");
+      groups.push({ producer: AMBIT_5, columns: version5 });
     }
-    groups.push({ producer: WORKBOOK_4, columns: version4 });
-    groups.push({ producer: DAILY_MEANS, columns: this.macroColumns() });
+    groups.push({ producer: AMBIT_4, columns: version4 });
+    groups.push({ producer: AMBYTE_UPLOAD, columns: this.columns("ambyte-2", AMBYTE_COLUMNS) });
+    groups.push({ producer: DAILY_MEANS, columns: this.columns(MACRO_ID, MACRO_COLUMNS) });
     groups.push({
       producer: FROM_LAYOUT,
       columns: [
@@ -364,49 +440,53 @@ class ExampleColumnDictionary implements Fixture {
     return { groups };
   }
 
-  private workbookColumns(
+  private ambitColumns(
     producerKey: string,
-    rowCounts: readonly [number, number, number],
+    rowCounts: Record<AmbitColumn, number>,
     previousKey?: string,
   ): DictionaryColumn[] {
     const isOldVersion = producerKey === "workbook-4";
 
-    return workbookReadings(rowCounts).map(({ name, type, rowCount }) => ({
+    return AMBIT_COLUMNS.map((name) => ({
       identity: `${producerKey}:${name}`,
       name,
-      type,
-      rowCount,
+      type: "DOUBLE",
+      rowCount: rowCounts[name],
       description: isOldVersion ? (DESCRIBED_AT_VERSION_4[name] ?? null) : null,
       previous: previousKey ? `${previousKey}:${name}` : null,
       isSuggested: this.isSuggested(name, isOldVersion),
     }));
   }
 
-  private macroColumns(): DictionaryColumn[] {
-    return MACRO_COLUMNS.map(({ name, type, rowCount, description }) => ({
-      identity: `${MACRO_ID}:${name}`,
+  private columns(producerKey: string, columns: readonly ExampleColumn[]): DictionaryColumn[] {
+    return columns.map(({ name, type, rowCount, description }) => ({
+      identity: `${producerKey}:${name}`,
       name,
       type,
       rowCount,
       description,
       previous: null,
-      isSuggested: this.state.hasSuggestions === true && name === "quality_flag",
+      isSuggested: false,
     }));
   }
 
   private isSuggested(name: string, isOldVersion: boolean): boolean {
-    return this.state.hasSuggestions === true && isOldVersion && name === "relative_humidity";
+    return this.state.hasSuggestions === true && isOldVersion && name === "relative_humidity_pct";
   }
 
   private suggestion(url: URL): ColumnSuggestion | null {
-    if (this.state.hasSuggestions !== true) {
-      return null;
-    }
-    const column = url.searchParams.get("column");
-    if (column === `${MACRO_ID}:quality_flag`) {
-      return QUALITY_SUGGESTION;
-    }
-    return column === "workbook-4:relative_humidity" ? HUMIDITY_SUGGESTION : null;
+    const isHumidity = url.searchParams.get("column") === "workbook-4:relative_humidity_pct";
+    return this.state.hasSuggestions === true && isHumidity ? HUMIDITY_SUGGESTION : null;
+  }
+
+  /** Echoes the saved description, as the backend will. */
+  private saved(request: Request): unknown {
+    return request.postDataJSON();
+  }
+
+  private terms(url: URL): { terms: readonly ColumnTerm[] } {
+    const query = (url.searchParams.get("query") ?? "").toLowerCase();
+    return { terms: query.includes("humid") ? HUMIDITY_TERMS : LEAF_TEMPERATURE_TERMS };
   }
 }
 
@@ -417,6 +497,8 @@ function warehouse(): Fixture {
 function dictionaryFixtures(state: DictionaryState = {}): readonly Fixture[] {
   return [warehouse(), new ExampleColumnDictionary(state)];
 }
+
+const DESCRIBED_COUNT = "5 of 8 columns described";
 
 async function openDictionary(page: Page, countText: string): Promise<void> {
   const viewSwitch = page.getByRole("tablist", { name: "Data view" });
@@ -436,6 +518,8 @@ async function openColumn(page: Page, accessibleName: string, countText: string)
   await page.getByRole("button", { name: accessibleName, exact: true }).click();
   const drawer = page.getByRole("dialog");
   await drawer.waitFor();
+  // The pointer stays where the row was and would leave a hover on whatever the drawer opens over it.
+  await page.mouse.move(0, 0);
   return drawer;
 }
 
@@ -464,13 +548,20 @@ async function hideWalkThrough(page: Page): Promise<void> {
   });
 }
 
+async function describeHumidity(drawer: Locator): Promise<void> {
+  await drawer
+    .getByRole("textbox", { name: /^Definition/ })
+    .fill("Relative humidity of the air around the Ambit at each reading");
+  await drawer.getByRole("textbox", { name: /^Property/ }).fill("Relative humidity");
+}
+
 const dataDictionary: TicketShot = {
   slug: "a4-data-dictionary",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
-  viewport: { width: 1440, height: 1260 },
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    await openDictionary(page, "4 of 6 columns described");
+    await openDictionary(page, DESCRIBED_COUNT);
     await hideLaterChanges(page);
     const viewSwitch = page.getByRole("tablist", { name: "Data view" });
     const root = dictionaryRoot(page);
@@ -506,12 +597,12 @@ const drawerReadOnly: TicketShot = {
   slug: "a5-drawer-read-only",
   route: async () => `${await dataRoute()}?access=view`,
   fixtures: dictionaryFixtures(),
-  viewport: { width: 1440, height: 1000 },
+  viewport: { width: 1440, height: 1300 },
   prepare: async (page) => {
     const drawer = await openColumn(
       page,
-      "View the description of leaf_temperature",
-      "4 of 6 columns described",
+      "View the description of air_temperature_c",
+      DESCRIBED_COUNT,
     );
     await drawer
       .getByText("Only people who can edit this experiment can describe its columns.")
@@ -528,13 +619,12 @@ const describeDrawer: TicketShot = {
   slug: "a5-describe-drawer",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
-  viewport: { width: 1440, height: 1400 },
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    const drawer = await openColumn(page, "Describe relative_humidity", "4 of 6 columns described");
-    await drawer.getByRole("textbox", { name: /^Trait/ }).fill("Relative humidity of the air");
-    await drawer.getByLabel("Method", { exact: true }).fill(READING);
-    await drawer.getByLabel("Scale", { exact: true }).fill(MEASURED_NUMBER);
-    await drawer.getByLabel("Unit", { exact: true }).fill("%");
+    const drawer = await openColumn(page, "Describe relative_humidity_pct", DESCRIBED_COUNT);
+    await describeHumidity(drawer);
+    await drawer.getByRole("textbox", { name: "Object of interest" }).fill("air");
+    await drawer.getByRole("textbox", { name: "Unit" }).fill("%");
     await blurFocus(page);
     await hideWalkThrough(page);
 
@@ -549,11 +639,14 @@ const termPicker: TicketShot = {
   fixtures: dictionaryFixtures(),
   viewport: { width: 1440, height: 1100 },
   prepare: async (page) => {
-    const drawer = await openColumn(page, "Describe relative_humidity", "4 of 6 columns described");
-    await drawer.getByRole("textbox", { name: /^Trait/ }).fill("Relative humidity of the air");
-    await drawer.getByRole("combobox", { name: "Crop Ontology term for the trait" }).click();
-    await page.getByPlaceholder("Search terms by name").fill("humidity");
-    await page.getByText("CO_336:0000303").waitFor();
+    const drawer = await openColumn(page, "Describe LeafT", DESCRIBED_COUNT);
+    await drawer
+      .getByRole("textbox", { name: /^Definition/ })
+      .fill("Leaf temperature from the Ambyte's leaf sensor");
+    await drawer.getByRole("textbox", { name: /^Property/ }).fill("Temperature");
+    await drawer.getByRole("combobox", { name: "Term for the property" }).click();
+    await page.getByPlaceholder("Search terms by name").fill("leaf temperature");
+    await page.getByText(RICE_LEAF_TEMPERATURE.id).waitFor();
     await hideWalkThrough(page);
 
     const popover = page.locator("[data-radix-popper-content-wrapper]");
@@ -567,11 +660,11 @@ const suggestion: TicketShot = {
   slug: "a6-suggestion",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasSuggestions: true }),
-  viewport: { width: 1440, height: 980 },
+  viewport: { width: 1440, height: 1300 },
   prepare: async (page) => {
-    const drawer = await openColumn(page, "Describe quality_flag", "4 of 6 columns described");
+    const drawer = await openColumn(page, "Describe relative_humidity_pct", DESCRIBED_COUNT);
     const banner = drawer.getByRole("status").filter({ hasText: "Suggested description" });
-    await banner.getByText("Same macro field in 3 other experiments").waitFor();
+    await banner.getByText("Same instrument field in 3 other experiments").waitFor();
     await blurFocus(page);
 
     const marker = new ChangeMarker(page);
@@ -584,9 +677,9 @@ const suggestionApplied: TicketShot = {
   slug: "a6-suggestion-applied",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasSuggestions: true }),
-  viewport: { width: 1440, height: 980 },
+  viewport: { width: 1440, height: 1300 },
   prepare: async (page) => {
-    const drawer = await openColumn(page, "Describe quality_flag", "4 of 6 columns described");
+    const drawer = await openColumn(page, "Describe relative_humidity_pct", DESCRIBED_COUNT);
     await drawer.getByRole("button", { name: "Use this description" }).click();
     const banner = drawer.getByRole("status");
     await banner.getByText("Filled in from the suggestion").waitFor();
@@ -605,9 +698,9 @@ const reviewSuggestions: TicketShot = {
   slug: "a6-review-suggestions",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasSuggestions: true }),
-  viewport: { width: 1440, height: 1260 },
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    await openDictionary(page, "4 of 6 columns described");
+    await openDictionary(page, DESCRIBED_COUNT);
     const review = page.getByRole("button", { name: "Review suggestions" });
     const viewSwitch = page.getByRole("tablist", { name: "Data view" });
     const root = dictionaryRoot(page);
@@ -625,19 +718,25 @@ const reviewSuggestions: TicketShot = {
   },
 };
 
+async function openNotYetDescribed(page: Page, column: string): Promise<Locator> {
+  await openDictionary(page, DESCRIBED_COUNT);
+  await page.getByRole("combobox", { name: "Show" }).click();
+  await page.getByRole("option", { name: "Not yet described" }).click();
+  await page.getByRole("button", { name: `Describe ${column}`, exact: true }).click();
+  const drawer = page.getByRole("dialog");
+  await drawer.getByRole("button", { name: "Save and next" }).waitFor();
+  await page.mouse.move(0, 0);
+  return drawer;
+}
+
 const saveAndNext: TicketShot = {
   slug: "a7-save-and-next",
   route: dataRoute,
   fixtures: dictionaryFixtures(),
-  viewport: { width: 1440, height: 1100 },
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    await openDictionary(page, "4 of 6 columns described");
-    await page.getByRole("combobox", { name: "Show" }).click();
-    await page.getByRole("option", { name: "Not yet described" }).click();
-    await page.getByRole("button", { name: "Describe relative_humidity", exact: true }).click();
-    const drawer = page.getByRole("dialog");
-    await drawer.getByRole("button", { name: "Save and next" }).waitFor();
-    await drawer.getByRole("textbox", { name: /^Trait/ }).fill("Relative humidity of the air");
+    const drawer = await openNotYetDescribed(page, "relative_humidity_pct");
+    await describeHumidity(drawer);
     await blurFocus(page);
 
     // The scrim hides the filter from the accessibility tree, so it is found by its markup.
@@ -653,9 +752,13 @@ const earlierVersion: TicketShot = {
   slug: "a8-earlier-version",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasNewVersion: true }),
-  viewport: { width: 1440, height: 1000 },
+  viewport: { width: 1440, height: 1500 },
   prepare: async (page) => {
-    const drawer = await openColumn(page, "Describe leaf_temperature", "4 of 9 columns described");
+    const drawer = await openColumn(
+      page,
+      "Describe air_temperature_c",
+      "5 of 12 columns described",
+    );
     const banner = drawer
       .getByRole("status")
       .filter({ hasText: "Described in an earlier version" });
@@ -673,9 +776,9 @@ const newVersionList: TicketShot = {
   slug: "a8-new-version-list",
   route: dataRoute,
   fixtures: dictionaryFixtures({ hasNewVersion: true }),
-  viewport: { width: 1440, height: 1500 },
+  viewport: { width: 1440, height: 1900 },
   prepare: async (page) => {
-    await openDictionary(page, "4 of 9 columns described");
+    await openDictionary(page, "5 of 12 columns described");
     await hideWalkThrough(page);
     const viewSwitch = page.getByRole("tablist", { name: "Data view" });
     const root = dictionaryRoot(page);

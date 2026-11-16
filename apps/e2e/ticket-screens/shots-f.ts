@@ -4,7 +4,13 @@ import { experimentId } from "../docs-media/seed-entities.js";
 import { ChangeMarker } from "./change-marker.js";
 import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
-import { miappeFields, noLinkedWorkbook, standards, trialTables } from "./shots-b.js";
+import {
+  EXAMPLE_DESIGN,
+  miappeFields,
+  noLinkedWorkbook,
+  standards,
+  trialTables,
+} from "./shots-b.js";
 import type { TicketShot } from "./shots.js";
 
 const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
@@ -25,90 +31,191 @@ const VERSION_2_DOI = "10.5281/zenodo.0000001";
 const SANDBOX_DOI = "10.5072/zenodo.0000000";
 const PUBLISHER = "Jan IngenHousz Institute";
 const FUNDING = [{ funderName: "Example Research Council", awardNumber: "EX-2026-001" }];
+/** An organism from NCBI Taxonomy, in the study record's subject shape. */
+function organism(label: string, taxonId: string) {
+  return {
+    label,
+    term: {
+      id: `NCBITaxon:${taxonId}`,
+      label,
+      vocabulary: "NCBI Taxonomy",
+      iri: `http://purl.obolibrary.org/obo/NCBITaxon_${taxonId}`,
+    },
+  };
+}
+
 const STUDY_DETAILS = {
-  organism: "Glycine max",
+  subjects: [organism("Glycine max", "3847")],
   startDate: "2026-05-04",
   endDate: "2026-09-25",
-  experimentalDesign: "Randomized complete blocks, three treatments in three blocks",
+  experimentalDesign: EXAMPLE_DESIGN,
   growthFacility: "Open field",
 };
 
-// Version 1 froze before the last phone synced a field day of 46 plots, which version 2 adds.
+// The experiment holds 922 readings. Version 1 leaves out the 2 flagged in Curate, and version 2,
+// a correction, also leaves out the 20 readings of one plot.
+const EXPERIMENT_READINGS = 922;
 const VERSION_1_READINGS = 920;
-const READING_COUNT = 966;
+const VERSION_2_READINGS = 900;
 const PLOT_COUNT = 46;
 
+// Readings are taken on Wednesdays, 46 plots a day, and the 14 August session adds the two plots
+// measured twice.
+const SESSION_DAY = "2026-08-14";
+const FIRST_FIELD_DAY = "2026-05-13";
+const LAST_FIELD_DAY = "2026-09-16";
+const FIELD_DAYS = 19;
+
+function fieldDays() {
+  const weekly = Array.from({ length: FIELD_DAYS }, (_, week) => ({
+    date: new Date(Date.UTC(2026, 4, 13 + week * 7)).toISOString().slice(0, 10),
+    readingCount: PLOT_COUNT,
+  }));
+  const days = [...weekly, { date: SESSION_DAY, readingCount: PLOT_COUNT + 2 }];
+  return days.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+const RAW_TABLE = { name: "raw_data", displayName: "Raw Data" };
+const DAILY_MEANS_TABLE = {
+  name: "00000000-0000-4000-8000-0000000000a5",
+  displayName: "Daily means",
+};
+
+// The daily means are a check the team keeps for itself, so the dataset holds the readings alone.
+const SCOPE_CHOICE = { tables: [RAW_TABLE], from: FIRST_FIELD_DAY, to: LAST_FIELD_DAY };
+
+const SCOPE = {
+  version: 1,
+  tables: [
+    { ...RAW_TABLE, readingCount: EXPERIMENT_READINGS, days: fieldDays() },
+    { ...DAILY_MEANS_TABLE, readingCount: 96, days: null },
+  ],
+  firstReadingOn: FIRST_FIELD_DAY,
+  lastReadingOn: LAST_FIELD_DAY,
+  countedAt: "2026-09-30T09:00:00.000Z",
+  previous: null,
+};
+
+type Request = "pending" | "accepted" | null;
+type Origin = "member" | "organization" | "email";
+
+interface Person {
+  userId: string | null;
+  givenName: string;
+  familyName: string;
+  orcid: string | null;
+  affiliation: string | null;
+}
+
+const SEED_USER: Person = {
+  userId: "00000000-0000-4000-a000-000000000001",
+  givenName: "Seed",
+  familyName: "User",
+  orcid: "0000-0002-1825-0097",
+  affiliation: "Example University",
+};
+const ALEX: Person = {
+  userId: "00000000-0000-4000-a000-000000000002",
+  givenName: "Alex",
+  familyName: "Example",
+  orcid: null,
+  affiliation: "Example University",
+};
+const ROBIN: Person = {
+  userId: "00000000-0000-4000-a000-000000000003",
+  givenName: "Robin",
+  familyName: "Example",
+  orcid: null,
+  affiliation: "Example University",
+};
+const JORDAN: Person = {
+  userId: "00000000-0000-4000-a000-000000000004",
+  givenName: "Jordan",
+  familyName: "Example",
+  orcid: null,
+  affiliation: "Example University",
+};
+const KIM: Person = {
+  userId: "00000000-0000-4000-a000-000000000005",
+  givenName: "Kim",
+  familyName: "Example",
+  orcid: "0000-0001-5109-3700",
+  affiliation: "Example University",
+};
+// Sam was invited by email and has an account once the invitation is accepted.
+const SAM: Person = {
+  userId: "00000000-0000-4000-a000-000000000006",
+  givenName: "Sam",
+  familyName: "Example",
+  orcid: null,
+  affiliation: null,
+};
+const SAM_EMAIL = "sam@example.org";
+
+/** Everyone in the experiment, whom Describe lists as an author, a contributor or neither. */
+const MEMBERS = [SEED_USER, ALEX, ROBIN, JORDAN, KIM];
+
+function named(person: Person, origin: Origin, request: Request) {
+  return { ...person, origin, email: null, request };
+}
+
+/** Seed User freezes, so only the others were asked, and everyone has accepted. */
 const AUTHORS = [
-  {
-    userId: "00000000-0000-4000-a000-000000000001",
-    givenName: "Seed",
-    familyName: "User",
-    orcid: "0000-0002-1825-0097",
-    affiliation: "Example University",
-    request: null,
-  },
-  {
-    userId: "00000000-0000-4000-a000-000000000002",
-    givenName: "Alex",
-    familyName: "Example",
-    orcid: null,
-    affiliation: "Example University",
-    request: "accepted",
-  },
-  {
-    userId: "00000000-0000-4000-a000-000000000003",
-    givenName: "Robin",
-    familyName: "Example",
-    orcid: null,
-    affiliation: "Example University",
-    request: "accepted",
-  },
-  {
-    userId: null,
-    givenName: "Sam",
-    familyName: "Example",
-    orcid: null,
-    affiliation: null,
-    request: null,
-  },
+  named(SEED_USER, "member", null),
+  named(ALEX, "member", "accepted"),
+  named(ROBIN, "member", "accepted"),
+  named(SAM, "email", "accepted"),
 ];
 
-/** The draft before Alex has answered: Seed User publishes, so only Alex and Robin were asked. */
-const DRAFT_AUTHORS = AUTHORS.map((author) =>
-  author.givenName === "Alex" ? { ...author, request: "pending" } : author,
-);
-
-/** Jordan measured but is no author, so Jordan starts as a data collector. */
-const CONTRIBUTORS = [
-  {
-    userId: "00000000-0000-4000-a000-000000000004",
-    givenName: "Jordan",
-    familyName: "Example",
-    orcid: null,
-    contributorType: "DataCollector",
-  },
-  {
-    userId: "00000000-0000-4000-a000-000000000005",
-    givenName: "Kim",
-    familyName: "Example",
-    orcid: "0000-0001-5109-3700",
-    contributorType: "DataCurator",
-  },
+/** The draft before Alex has answered and before Sam has signed up. */
+const DRAFT_AUTHORS = [
+  named(SEED_USER, "member", null),
+  named(ALEX, "member", "pending"),
+  named(ROBIN, "member", "accepted"),
+  { ...SAM, userId: null, origin: "email", email: SAM_EMAIL, request: "pending" },
 ];
+
+/** Jordan measured but is no author, so Jordan is a data collector. Kim is neither. */
+function contributors(request: Request) {
+  const { affiliation: _affiliation, ...jordan } = JORDAN;
+  return [{ ...jordan, origin: "member", email: null, request, contributorType: "DataCollector" }];
+}
+
+function file(kind: string, name: string, sizeBytes: number, report: object | null = null) {
+  return {
+    kind,
+    name,
+    sizeBytes,
+    sha256: "3f1c9a52e0b84d7c6a1e2f9b0d4c8a7e5b3f2a1c0d9e8f7a6b5c4d3e2f1a0b9c",
+    report,
+  };
+}
 
 const FILES = [
-  {
-    kind: "snapshot",
-    name: "readings.csv",
-    sizeBytes: 193_240,
-    sha256: "3f1c9a52e0b84d7c6a1e2f9b0d4c8a7e5b3f2a1c0d9e8f7a6b5c4d3e2f1a0b9c",
-  },
-  {
-    kind: "dataDictionary",
-    name: "data-dictionary.csv",
-    sizeBytes: 4_812,
-    sha256: "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b",
-  },
+  file("snapshot", "readings.csv", 193_240),
+  file("snapshot", "readings.parquet", 61_408),
+  file("dataDictionary", "data-dictionary.csv", 4_812),
+];
+
+// The standard packages of a frozen dataset whose experiment follows the plant phenotyping
+// checklist. Freeze waited for every required field, so none is missing.
+const PACKAGE_FILES = [
+  ...FILES,
+  file("analysisTable", "analysis-table.csv", 241_906),
+  file("analysisTable", "analysis-table.parquet", 72_115),
+  file("analysisTable", "codebook.csv", 3_906),
+  file("roCrate", "ro-crate-metadata.json", 9_480, {
+    type: "conformsTo",
+    profiles: ["RO-Crate 1.2", "MIAPPE 1.1"],
+  }),
+  file("miappe", "miappe-isa-tab.zip", 38_212, {
+    type: "validated",
+    passed: true,
+    required: 21,
+    filled: 12,
+    derived: 9,
+    missing: 0,
+  }),
 ];
 
 const PUBLICATION = {
@@ -121,13 +228,20 @@ const PUBLICATION = {
   year: 2026,
 };
 
-type DatasetState = "draft" | "published" | "superseded" | "withdrawn";
+type DatasetState = "draft" | "inReview" | "published" | "superseded" | "withdrawn";
 
 interface DatasetDeposit {
   status: "uploading" | "registering" | "verifying" | "deposited" | "failed";
   environment: "sandbox" | "production";
   attempts: number;
   failedStep: "upload" | "register" | "verify" | null;
+}
+
+interface DatasetReview {
+  frozenAt: string;
+  frozenByName: string;
+  returnedAt: string | null;
+  returnReason: string | null;
 }
 
 interface DatasetOverrides {
@@ -141,20 +255,28 @@ interface DatasetOverrides {
   zenodoCopy?: "requestPrepared" | "removed" | null;
   access?: "open" | "embargoed";
   embargoUntil?: string | null;
-  license?: "CC0-1.0" | "CC-BY-4.0" | null;
+  license?: "CC0-1.0" | "CC-BY-4.0" | "CC-BY-SA-4.0" | null;
+  scope?: typeof SCOPE_CHOICE | null;
   excludedReadings?: { rowId: string; reason: string }[];
   title?: string;
   description?: string;
   limitations?: string | null;
-  authors?: { request: string | null }[];
-  files?: typeof FILES;
+  authors?: object[];
+  contributors?: object[];
+  files?: object[];
   relatedPublications?: (typeof PUBLICATION)[];
-  studyDetails?: typeof STUDY_DETAILS | null;
+  studyDetails?: object | null;
   readingCount?: number | null;
   plotCount?: number | null;
   viewCount?: number | null;
+  review?: DatasetReview | null;
   createdAt?: string;
 }
+
+const EXCLUDED = [
+  { rowId: "reading-c4-2026-08-12", reason: "Leaf was wet" },
+  { rowId: "reading-d1-2026-08-19", reason: "Border row" },
+];
 
 function dataset(id: string, experiment: string, version: number, overrides: DatasetOverrides) {
   return {
@@ -166,17 +288,19 @@ function dataset(id: string, experiment: string, version: number, overrides: Dat
     description: DATASET_DESCRIPTION,
     limitations: DATASET_LIMITATIONS,
     authors: AUTHORS,
-    contributors: CONTRIBUTORS,
+    contributors: contributors("accepted"),
     license: "CC-BY-4.0",
     access: "open",
     embargoUntil: null,
     funding: FUNDING,
     relatedPublications: [PUBLICATION],
-    excludedReadings: [],
+    scope: SCOPE_CHOICE,
+    excludedReadings: EXCLUDED,
     studyDetails: STUDY_DETAILS,
-    readingCount: READING_COUNT,
+    readingCount: VERSION_1_READINGS,
     plotCount: PLOT_COUNT,
     viewCount: null,
+    review: null,
     doi: null,
     deposit: null,
     supersedesId: null,
@@ -190,10 +314,15 @@ function dataset(id: string, experiment: string, version: number, overrides: Dat
   };
 }
 
-/** Version 1 as milestone 1 publishes it: frozen and public, with no DOI yet. */
+/** Version 1 as milestone 1 publishes it: frozen, approved and public, with no DOI yet. */
 function versionOne(experiment: string, overrides: DatasetOverrides = {}) {
   return dataset(VERSION_1_ID, experiment, 1, {
-    readingCount: VERSION_1_READINGS,
+    review: {
+      frozenAt: "2026-09-29T15:00:00.000Z",
+      frozenByName: "Seed User",
+      returnedAt: null,
+      returnReason: null,
+    },
     publishedAt: "2026-09-30T10:00:00.000Z",
     ...overrides,
   });
@@ -203,17 +332,38 @@ function deposited(environment: "sandbox" | "production"): DatasetDeposit {
   return { status: "deposited", environment, attempts: 1, failedStep: null };
 }
 
+/** Version 2, the correction, before it is frozen. */
 function draftVersionTwo(experiment: string, overrides: DatasetOverrides = {}) {
   return dataset(VERSION_2_ID, experiment, 2, {
     state: "draft",
     license: null,
     limitations: null,
+    excludedReadings: [],
     files: [],
     studyDetails: null,
     readingCount: null,
     plotCount: null,
     createdAt: "2026-10-18T09:30:00.000Z",
     ...overrides,
+  });
+}
+
+/** Version 2 frozen and waiting for a data steward, which only the experiment's members see. */
+function versionTwoInReview(experiment: string) {
+  return draftVersionTwo(experiment, {
+    state: "inReview",
+    license: "CC-BY-4.0",
+    limitations: DATASET_LIMITATIONS,
+    files: FILES,
+    studyDetails: STUDY_DETAILS,
+    readingCount: VERSION_2_READINGS,
+    plotCount: PLOT_COUNT,
+    review: {
+      frozenAt: "2026-10-20T09:40:00.000Z",
+      frozenByName: "Seed User",
+      returnedAt: null,
+      returnReason: null,
+    },
   });
 }
 
@@ -352,35 +502,49 @@ const READINESS = {
   standards: [],
 };
 
-/** Version 2 as a Draft partway through the publish flow, with what it has saved so far. */
-function publishFlowFixture(plotChecks: typeof PLOT_CHECKS | typeof NO_PLOT_CHECKS): Fixture {
+/** Version 1 as a Draft partway through the publish flow of the first milestone. */
+function draftVersionOne(experiment: string, overrides: DatasetOverrides) {
+  return dataset(VERSION_1_ID, experiment, 1, {
+    state: "draft",
+    license: null,
+    limitations: null,
+    files: [],
+    studyDetails: null,
+    readingCount: null,
+    plotCount: null,
+    ...overrides,
+  });
+}
+
+interface FlowState {
+  plotChecks?: typeof PLOT_CHECKS | typeof NO_PLOT_CHECKS;
+  /** What the draft has saved so far. */
+  draft?: DatasetOverrides;
+}
+
+function publishFlowFixture({ plotChecks = NO_PLOT_CHECKS, draft = {} }: FlowState = {}): Fixture {
   return pathsFixture((experiment) => ({
-    [`/api/v1/datasets/${VERSION_2_ID}`]: draftVersionTwo(experiment, {
+    [`/api/v1/datasets/${VERSION_1_ID}`]: draftVersionOne(experiment, {
       authors: DRAFT_AUTHORS,
-      access: "embargoed",
-      embargoUntil: "2027-03-01T12:00:00.000Z",
-      excludedReadings: [
-        { rowId: "reading-c4-2026-08-12", reason: "Leaf was wet" },
-        { rowId: "reading-d1-2026-08-19", reason: "Border row" },
-      ],
+      contributors: contributors("accepted"),
+      ...draft,
     }),
-    [`/api/v1/datasets/${VERSION_2_ID}/scope`]: {
-      version: 2,
-      readingCount: READING_COUNT,
-      countedAt: "2026-10-20T09:00:00.000Z",
-      previous: { version: 1, readingCount: VERSION_1_READINGS },
-    },
-    [`/api/v1/datasets/${VERSION_2_ID}/flagged-readings`]: FLAGGED_READINGS,
-    [`/api/v1/datasets/${VERSION_2_ID}/plot-checks`]: plotChecks,
-    [`/api/v1/datasets/${VERSION_2_ID}/readiness`]: READINESS,
+    [`/api/v1/datasets/${VERSION_1_ID}/scope`]: SCOPE,
+    [`/api/v1/datasets/${VERSION_1_ID}/members`]: MEMBERS,
+    [`/api/v1/datasets/${VERSION_1_ID}/flagged-readings`]: FLAGGED_READINGS,
+    [`/api/v1/datasets/${VERSION_1_ID}/plot-checks`]: plotChecks,
+    [`/api/v1/datasets/${VERSION_1_ID}/readiness`]: READINESS,
   }));
 }
+
+/** By Freeze everyone named has accepted. */
+const READY_TO_FREEZE: FlowState = { draft: { authors: AUTHORS, license: "CC-BY-4.0" } };
 
 // The standards block from B8 comes later than most of these tickets, so their shots leave it out.
 const BEFORE_STANDARDS = "?standards=off";
 
 async function publishPath(): Promise<string> {
-  return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}/datasets/${VERSION_2_ID}/publish`;
+  return `/platform/experiments/${await resolve(DROUGHT_TRIAL)}/datasets/${VERSION_1_ID}/publish`;
 }
 
 async function publishRoute(): Promise<string> {
@@ -398,7 +562,7 @@ function nextButton(page: Page): Locator {
 
 /** Goes forward through the flow with Next, as a researcher would, ticking what a step needs. */
 async function goToStep(page: Page, stepTitle: string): Promise<void> {
-  await page.getByText("What this dataset will hold").waitFor();
+  await page.getByTestId("dataset-scope").waitFor();
   for (;;) {
     const current = await page.locator("[aria-current='step']").innerText();
     if (current.includes(stepTitle)) return;
@@ -430,20 +594,20 @@ async function hideLaterPart(page: Page, testId: string): Promise<void> {
   await page.addStyleTag({ content: `[data-testid='${testId}'] { display: none !important; }` });
 }
 
+/** The daily means are switched off and the dates are the whole season. */
 const scopeStepShot: TicketShot = {
   slug: "f2-scope-step",
   route: publishRoute,
-  viewport: VIEWPORT,
-  fixtures: [publishFlowFixture(NO_PLOT_CHECKS)],
+  viewport: { width: 1440, height: 1500 },
+  fixtures: [publishFlowFixture({ draft: { scope: SCOPE_CHOICE } })],
   prepare: async (page) => {
     await goToStep(page, "Scope");
-    await page.getByText(`${READING_COUNT} so far`, { exact: false }).first().waitFor();
+    const choice = page.getByTestId("dataset-scope");
+    await choice.getByText(`holds ${EXPERIMENT_READINGS} readings`, { exact: false }).waitFor();
     const heading = page.getByRole("heading", { name: "Publish a dataset" });
-    const note = page.getByText("Making the experiment public", { exact: false });
-    const scopeCard = page.getByText("What this dataset will hold");
 
     const marker = new ChangeMarker(page);
-    await marker.mark([scopeCard, note], "New", "outside-left");
+    await marker.mark(choice, "New", "outside-left");
     return marker.frame([tabStrip(page), heading, nextButton(page)], 24);
   },
 };
@@ -452,7 +616,7 @@ const curateStepShot: TicketShot = {
   slug: "f4-curate-step",
   route: publishRoute,
   viewport: VIEWPORT,
-  fixtures: [publishFlowFixture(PLOT_CHECKS)],
+  fixtures: [publishFlowFixture({ plotChecks: PLOT_CHECKS })],
   prepare: async (page) => {
     await goToStep(page, "Curate");
     const table = page.getByTestId("flagged-readings");
@@ -469,7 +633,7 @@ const measuredTwiceShot: TicketShot = {
   slug: "f19-measured-twice",
   route: publishRoute,
   viewport: { width: 1440, height: 1600 },
-  fixtures: [publishFlowFixture(PLOT_CHECKS)],
+  fixtures: [publishFlowFixture({ plotChecks: PLOT_CHECKS })],
   prepare: async (page) => {
     await goToStep(page, "Curate");
     const checks = page.getByTestId("plot-checks");
@@ -481,41 +645,42 @@ const measuredTwiceShot: TicketShot = {
   },
 };
 
+/** Alex has not answered, Sam was invited by email, Jordan contributes and Kim is neither. */
 const describeStepShot: TicketShot = {
   slug: "f2-describe-step",
   route: publishRoute,
-  viewport: { width: 1440, height: 2500 },
-  fixtures: [publishFlowFixture(NO_PLOT_CHECKS)],
+  viewport: { width: 1440, height: 2100 },
+  fixtures: [publishFlowFixture()],
   prepare: async (page) => {
     await goToStep(page, "Describe");
-    const authors = page.getByTestId("dataset-authors");
-    await authors.getByText("Sam Example").waitFor();
-    await authors.getByRole("button", { name: "Add an author" }).click();
-    await page.getByRole("menuitem", { name: "By name" }).click();
-    await authors.getByTestId("add-author-by-name").waitFor();
+    const people = page.getByTestId("dataset-people");
+    await people.getByText(SAM_EMAIL).waitFor();
+    await people.getByTestId("dataset-not-named").getByText("Kim Example").waitFor();
     await blurFocus(page);
 
     const marker = new ChangeMarker(page);
-    await marker.mark(authors, "New", "outside-left");
-    await marker.mark(page.getByTestId("dataset-contributors"), "New", "outside-left");
+    await marker.mark(people, "New", "outside-left");
     return marker.frame([tabStrip(page), nextButton(page)], 24);
   },
 };
 
+/** CC BY-SA is chosen to show its warning; the example's own license is CC BY. */
 const licenseStepShot: TicketShot = {
   slug: "f3-license-step",
   route: publishRoute,
   viewport: { width: 1440, height: 1600 },
-  fixtures: [publishFlowFixture(NO_PLOT_CHECKS)],
+  fixtures: [publishFlowFixture(READY_TO_FREEZE)],
   prepare: async (page) => {
     await goToStep(page, "License and access");
+    await page.getByRole("radio", { name: /CC BY-SA 4\.0/ }).check();
+    await page.getByTestId("share-alike-warning").waitFor();
     await page.getByRole("checkbox").check();
     await blurFocus(page);
-    const body = page.getByTestId("license-and-access");
+    const license = page.getByTestId("dataset-license");
 
     const marker = new ChangeMarker(page);
-    await marker.mark(body, "New", "outside-left");
-    return marker.frame([tabStrip(page), nextButton(page)], 24);
+    await marker.mark(license, "New", "outside-left");
+    return marker.frame([license], 24);
   },
 };
 
@@ -525,7 +690,7 @@ const checkStepShot: TicketShot = {
   slug: "f5-check-step",
   route: publishPath,
   viewport: { width: 1440, height: 1700 },
-  fixtures: [publishFlowFixture(PLOT_CHECKS), standards, miappeFields],
+  fixtures: [publishFlowFixture({ plotChecks: PLOT_CHECKS }), standards, miappeFields],
   prepare: async (page) => {
     await goToStep(page, "Check");
     const check = page.getByTestId("dataset-check");
@@ -552,21 +717,23 @@ async function goToFreeze(page: Page): Promise<Locator> {
 }
 
 function freezeButton(page: Page): Locator {
-  return page.getByRole("button", { name: "Freeze version 2", exact: true });
+  return page.getByRole("button", { name: "Freeze version 1", exact: true });
 }
 
 const freezeStepShot: TicketShot = {
   slug: "f18-freeze-step",
   route: publishRoute,
   viewport: { width: 1440, height: 1600 },
-  fixtures: [publishFlowFixture(NO_PLOT_CHECKS)],
+  fixtures: [publishFlowFixture(READY_TO_FREEZE)],
   prepare: async (page) => {
     const summary = await goToFreeze(page);
+    await summary.getByText(`${EXPERIMENT_READINGS} readings`, { exact: false }).waitFor();
     const commits = page.getByTestId("freeze-commits");
 
+    // From the summary down to the button, so the step fits a printed page beside another figure.
     const marker = new ChangeMarker(page);
     await marker.mark([summary, commits], "New", "outside-left");
-    return marker.frame([tabStrip(page), freezeButton(page)], 24);
+    return marker.frame([summary, freezeButton(page)], 24);
   },
 };
 
@@ -574,7 +741,7 @@ const freezeConfirmShot: TicketShot = {
   slug: "f18-freeze-confirm",
   route: publishRoute,
   viewport: { width: 1440, height: 1600 },
-  fixtures: [publishFlowFixture(NO_PLOT_CHECKS)],
+  fixtures: [publishFlowFixture(READY_TO_FREEZE)],
   prepare: async (page) => {
     await goToFreeze(page);
     await freezeButton(page).click();
@@ -584,14 +751,14 @@ const freezeConfirmShot: TicketShot = {
     await blurFocus(page);
 
     const marker = new ChangeMarker(page);
-    await marker.mark(dialog, "New", "above");
+    await marker.mark(dialog, "New", "outside-left");
     return marker.frame([tabStrip(page), page.getByTestId("freeze-summary"), dialog], 24);
   },
 };
 
 const citation = (doi: string | null) =>
   `User, S., Example, A., Example, R., & Example, S. (2026). ${DATASET_TITLE} (Version 1) [Data set]. ${PUBLISHER}. ${
-    doi === null ? `https://openjii.org/datasets/${VERSION_1_ID}` : `https://doi.org/${doi}`
+    doi === null ? `https://data.openjii.org/datasets/${VERSION_1_ID}` : `https://doi.org/${doi}`
   }`;
 
 interface PublicOverrides extends DatasetOverrides {
@@ -610,10 +777,12 @@ function publicVersionOneFixture(overrides: PublicOverrides = {}): Fixture {
   } = overrides;
 
   return pathsFixture((experiment) => {
-    // A signed-out read never carries the exclusions or the deposit, only how many were left out.
+    // A signed-out read never carries the exclusions, the deposit or the review, only how many
+    // readings were left out.
     const {
       excludedReadings: _excludedReadings,
       deposit: _deposit,
+      review: _review,
       ...record
     } = versionOne(experiment, datasetOverrides);
     return {
@@ -623,7 +792,7 @@ function publicVersionOneFixture(overrides: PublicOverrides = {}): Fixture {
         publisher: PUBLISHER,
         supersededById,
         supersededByVersion,
-        excludedCount: 2,
+        excludedCount: EXCLUDED.length,
         depositEnvironment,
       },
     };
@@ -713,6 +882,28 @@ const embargoedPageShot: TicketShot = {
   },
 };
 
+/** The Files section of version 1 once the standard packages are written at freeze. */
+const datasetFilesShot: TicketShot = {
+  slug: "b5-dataset-files",
+  route: `/datasets/${VERSION_1_ID}`,
+  anonymous: true,
+  viewport: { width: 1280, height: 2600 },
+  fixtures: [publicVersionOneFixture({ files: PACKAGE_FILES })],
+  prepare: async (page) => {
+    const files = page.getByTestId("dataset-files");
+    await files.getByTestId("dataset-file-miappe").waitFor();
+    const packages = [
+      files.getByTestId("dataset-file-analysisTable"),
+      files.getByTestId("dataset-file-roCrate"),
+      files.getByTestId("dataset-file-miappe"),
+    ];
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(packages, "New", "outside-left");
+    return marker.frame([files], 24);
+  },
+};
+
 const supersededNoticeShot: TicketShot = {
   slug: "f12-superseded-notice",
   route: `/datasets/${VERSION_1_ID}`,
@@ -777,7 +968,7 @@ function catalogueFixture(experiment: string) {
         description: "Soil moisture and air temperature from a fleet of field sensors.",
         authors: [AUTHORS[1], AUTHORS[0]],
         license: "CC0-1.0",
-        studyDetails: { ...STUDY_DETAILS, organism: "Zea mays" },
+        studyDetails: { ...STUDY_DETAILS, subjects: [organism("Zea mays", "4577")] },
         publishedAt: "2026-08-14T10:00:00.000Z",
       }),
       dataset("00000000-0000-4000-9000-000000000004", "00000000-0000-4000-b000-000000000003", 2, {
@@ -877,21 +1068,50 @@ function datasetsList(page: Page): Locator {
   return page.getByTestId("experiment-datasets");
 }
 
+/** Version 2, the correction, frozen and waiting for a data steward while version 1 stays public. */
 const datasetsTabShot: TicketShot = {
   slug: "f1-datasets-tab",
   route: datasetsRoute,
   viewport: VIEWPORT,
   fixtures: [
-    datasetListFixture((experiment) => [draftVersionTwo(experiment), versionOne(experiment)]),
+    datasetListFixture((experiment) => [versionTwoInReview(experiment), versionOne(experiment)]),
   ],
   prepare: async (page) => {
-    await page.getByText(DATASET_TITLE).first().waitFor();
+    await page.getByText("In review").waitFor();
     const tab = datasetsTab(page);
 
     const marker = new ChangeMarker(page);
     await marker.mark(tab, "New", "above");
     await marker.mark(datasetsList(page), "New", "below");
     return marker.frame([experimentTitle(page), tab, datasetsList(page)], 24);
+  },
+};
+
+/** A data steward returned version 2, which is a Draft again with the reason on its row. */
+const returnedDraftShot: TicketShot = {
+  slug: "f1-returned-draft",
+  route: datasetsRoute,
+  viewport: VIEWPORT,
+  fixtures: [
+    datasetListFixture((experiment) => [
+      draftVersionTwo(experiment, {
+        review: {
+          frozenAt: "2026-10-20T09:40:00.000Z",
+          frozenByName: "Seed User",
+          returnedAt: "2026-10-21T14:05:00.000Z",
+          returnReason: "Say in the limitations why one plot is left out (example)",
+        },
+      }),
+      versionOne(experiment),
+    ]),
+  ],
+  prepare: async (page) => {
+    const reason = page.getByTestId("dataset-returned");
+    await reason.waitFor();
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(versionRow(page, 2), "New", "inside-right");
+    return marker.frame([experimentTitle(page), datasetsTab(page), datasetsList(page)], 24);
   },
 };
 
@@ -999,14 +1219,15 @@ const versionChainShot: TicketShot = {
       draftVersionTwo(experiment, {
         state: "published",
         license: "CC-BY-4.0",
+        limitations: DATASET_LIMITATIONS,
         files: FILES,
         studyDetails: STUDY_DETAILS,
-        readingCount: READING_COUNT,
+        readingCount: VERSION_2_READINGS,
         plotCount: PLOT_COUNT,
         doi: VERSION_2_DOI,
         deposit: deposited("production"),
         supersedesId: VERSION_1_ID,
-        publishedAt: "2026-10-20T10:00:00.000Z",
+        publishedAt: "2026-10-22T10:00:00.000Z",
       }),
       versionOne(experiment, {
         state: "superseded",
@@ -1017,6 +1238,7 @@ const versionChainShot: TicketShot = {
   ],
   prepare: async (page) => {
     await page.getByText("Superseded").waitFor();
+    await page.getByText(`${VERSION_2_READINGS} readings`).waitFor();
     const rows = [versionRow(page, 2), versionRow(page, 1)];
 
     const marker = new ChangeMarker(page);
@@ -1052,8 +1274,118 @@ const withdrawDialogShot: TicketShot = {
   },
 };
 
+// Version 1 the afternoon after it was frozen, beside two other generic examples waiting longer.
+const REVIEW_CLOCK = new Date("2026-09-30T08:00:00.000Z");
+
+const reviewFixture = pathsFixture((experiment) => {
+  const {
+    excludedReadings: _excludedReadings,
+    deposit: _deposit,
+    review: _review,
+    ...record
+  } = versionOne(experiment, { state: "inReview", publishedAt: null });
+
+  return {
+    "/api/v1/dataset-reviews": [
+      {
+        id: "00000000-0000-4000-9000-000000000003",
+        title: "Sensor fleet, spring 2026 (example data)",
+        version: 1,
+        experimentName: "Sensor fleet (example data)",
+        organizationName: "Example University",
+        frozenByName: "Alex Example",
+        frozenAt: "2026-09-25T14:20:00.000Z",
+      },
+      {
+        id: "00000000-0000-4000-9000-000000000004",
+        title: "Pot trial, summer 2026 (example data)",
+        version: 2,
+        experimentName: "Pot trial (example data)",
+        organizationName: "Example University",
+        frozenByName: "Robin Example",
+        frozenAt: "2026-09-28T10:05:00.000Z",
+      },
+      {
+        id: VERSION_1_ID,
+        title: DATASET_TITLE,
+        version: 1,
+        experimentName: "Drought trial (example data)",
+        organizationName: null,
+        frozenByName: "Seed User",
+        frozenAt: "2026-09-29T15:00:00.000Z",
+      },
+    ],
+    [`/api/v1/dataset-reviews/${VERSION_1_ID}`]: {
+      dataset: {
+        ...record,
+        citation: citation(null),
+        publisher: PUBLISHER,
+        supersededById: null,
+        supersededByVersion: null,
+        excludedCount: EXCLUDED.length,
+        depositEnvironment: null,
+      },
+      experimentName: "Drought trial (example data)",
+      frozenByName: "Seed User",
+      frozenAt: "2026-09-29T15:00:00.000Z",
+      checklist: [
+        {
+          item: "personalData",
+          finding: "no column or value looks like a name, an email address or a phone number",
+        },
+        { item: "rightToLicense", finding: null },
+        { item: "authors", finding: null },
+        { item: "description", finding: null },
+      ],
+    },
+  };
+});
+
+const reviewQueueShot: TicketShot = {
+  slug: "n2-review-queue",
+  route: "/platform/datasets/review",
+  viewport: VIEWPORT,
+  clock: REVIEW_CLOCK,
+  fixtures: [reviewFixture],
+  prepare: async (page) => {
+    const queue = page.getByTestId("review-queue");
+    await queue.getByText(DATASET_TITLE).waitFor();
+    const heading = page.getByRole("heading", { name: "Review datasets" });
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(queue, "New", "below");
+    return marker.frame([heading, queue], 24);
+  },
+};
+
+/** Two points confirmed, so Approve still waits for the other two. */
+const reviewPageShot: TicketShot = {
+  slug: "n2-review-page",
+  route: `/platform/datasets/review/${VERSION_1_ID}`,
+  viewport: { width: 1440, height: 1300 },
+  clock: REVIEW_CLOCK,
+  fixtures: [reviewFixture],
+  prepare: async (page) => {
+    const checklist = page.getByTestId("review-checklist");
+    await checklist.getByText("openJII found", { exact: false }).waitFor();
+    await checklist.getByRole("checkbox").nth(0).check();
+    await checklist.getByRole("checkbox").nth(1).check();
+    await blurFocus(page);
+    const heading = page.getByRole("heading", { name: "Review a dataset" });
+    const preview = page.getByTestId("review-preview");
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(checklist, "New", "inside-top-right");
+    await marker.mark(page.getByTestId("dataset-preview"), "New", "above");
+    return marker.frame([heading, checklist, preview], 24);
+  },
+};
+
 export const SHOTS_F: readonly TicketShot[] = [
+  reviewQueueShot,
+  reviewPageShot,
   datasetsTabShot,
+  returnedDraftShot,
   scopeStepShot,
   curateStepShot,
   describeStepShot,
@@ -1062,6 +1394,7 @@ export const SHOTS_F: readonly TicketShot[] = [
   embargoRowShot,
   datasetPageShot,
   embargoedPageShot,
+  datasetFilesShot,
   catalogueShot,
   publicCatalogueShot,
   depositStatusShot,

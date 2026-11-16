@@ -11,6 +11,9 @@ import type { TicketShot } from "./shots.js";
 
 export const DROUGHT_TRIAL: Resolvable = () => experimentId("Drought trial (example data)");
 
+/** Treatments follow a fixed pattern over the field in `example-field.md`, so none is randomized. */
+export const EXAMPLE_DESIGN = "Three treatments in three blocks of two rows";
+
 /** Answers one experiment sub-path, whatever the experiment id, with a fixed body. */
 function experimentRoute(subPath: string, body: unknown): Fixture {
   return {
@@ -89,7 +92,14 @@ const DAILY_MEANS_TABLE: FixtureTable = {
 
 export const trialTables = new FixtureWarehouse(DROUGHT_TRIAL, [RAW_DATA_TABLE, DAILY_MEANS_TABLE]);
 
-type FieldSource = "experiment" | "study-details" | "layout" | "data-dictionary" | "profile";
+type FieldSource =
+  | "experiment"
+  | "study-details"
+  | "layout"
+  | "data-dictionary"
+  | "profile"
+  | "author-list"
+  | "standard";
 
 function filled(field: string, value: string, source: FieldSource) {
   return { field, status: "filled", value, source };
@@ -103,44 +113,42 @@ function missing(field: string, reason: object) {
 const UNDESCRIBED = ["relative_humidity", "quality_flag"];
 const WITHOUT_TERM = ["light_intensity", "daily_mean_temperature", "daily_mean_light"];
 const WITHOUT_ORCID = ["Alex Example", "Robin Example"];
+// The layout's plot attributes, from the c6 sheet, none of which has a role yet.
+const WITHOUT_ROLE = ["Treatment", "Genotype", "Block"];
 
 const NO_LOCATION = { code: "no-location" };
 const NOT_DESCRIBED = { code: "columns-not-described", subjects: UNDESCRIBED };
+const NO_ROLE = { code: "attributes-without-role", subjects: WITHOUT_ROLE };
 const NO_ORCID = { code: "members-without-orcid", subjects: WITHOUT_ORCID, includesViewer: false };
 
-// Every field the package fills or leaves empty, so the empty ones are the 8 the export menu names.
+// MIAPPE's 21 always-required fields, the basis of every count of the checklist: 15 filled or
+// derived, and 6 missing under the three steps of the checklist that hold Freeze.
+const REQUIRED_FIELDS = 21;
+const MISSING_FIELDS = 6;
+
 const MIAPPE_FIELDS = {
   standard: "miappe",
-  filled: 14,
-  total: 22,
+  filled: REQUIRED_FIELDS - MISSING_FIELDS,
+  total: REQUIRED_FIELDS,
   validator: null,
   fields: [
-    filled("title", "Drought trial (example data)", "experiment"),
-    filled(
-      "description",
-      "Soybean lines under three irrigation treatments, measured weekly through the season.",
-      "experiment",
-    ),
-    filled("license", "CC BY 4.0", "study-details"),
-    filled("start-date", "4 May 2026", "study-details"),
-    filled("end-date", "25 September 2026", "study-details"),
-    filled(
-      "experimental-design",
-      "Randomized complete blocks, three treatments in three blocks",
-      "study-details",
-    ),
-    filled("growth-facility", "Open field", "study-details"),
-    filled("observation-unit-level", "Plot", "layout"),
-    missing("site-name", NO_LOCATION),
-    missing("country", NO_LOCATION),
-    missing("latitude", NO_LOCATION),
-    missing("longitude", NO_LOCATION),
+    filled("investigation-title", "Drought trial (example data)", "experiment"),
+    filled("study-title", "Drought trial (example data)", "experiment"),
+    filled("miappe-version", "1.1", "standard"),
     filled("person-name", "Seed User, Alex Example, Robin Example", "profile"),
-    missing("orcid", NO_ORCID),
+    filled("person-role", "Author or contributor type, set as you publish", "author-list"),
+    filled("affiliation", "Example University", "profile"),
+    filled("contact-institution", "Example University", "profile"),
+    filled("start-date", "4 May 2026", "study-details"),
+    filled("experimental-design", EXAMPLE_DESIGN, "study-details"),
+    filled("growth-facility", "Open field", "study-details"),
+    missing("country", NO_LOCATION),
+    missing("site-name", NO_LOCATION),
     filled("organism", "Glycine max", "study-details"),
-    filled("biological-material-id", "Line A, Line B", "layout"),
-    filled("experimental-factor", "Treatment: Control, Drought, Severe drought", "layout"),
+    missing("biological-material-id", NO_ROLE),
     filled("observation-unit-id", "46 plots, A1 to F8", "layout"),
+    filled("observation-unit-type", "Plot", "layout"),
+    filled("observation-unit-description", "Six rows by eight columns, two gaps", "layout"),
     filled("variable-name", "6 columns", "data-dictionary"),
     missing("trait", NOT_DESCRIBED),
     missing("method", NOT_DESCRIBED),
@@ -149,34 +157,19 @@ const MIAPPE_FIELDS = {
 };
 
 export const miappeFields = experimentRoute("/standards/miappe/fields", MIAPPE_FIELDS);
-const noExports = experimentRoute("/data/exports", { exports: [] });
 
-// The experiment chose the checklist and crop trait names. Four steps hold Freeze: three from
-// those standards and plots D6 and D7, measured twice in d9, which hold every dataset. The ORCID step
-// waits on two members and the skipped plots from e10 only inform.
+// The experiment follows the plant phenotyping checklist. Four steps hold Freeze: three from the
+// checklist and plots D6 and D7, measured twice in d9, which hold every dataset. Terms, ORCID and
+// the skipped plots from e10 only inform.
 const STANDARDS = {
-  followed: ["miappe", "crop-ontology"],
+  followed: ["miappe"],
   standards: [
     {
       standard: "miappe",
       state: "partial",
-      filled: 14,
-      total: 22,
-      status: { code: "fields-missing", count: 8 },
-    },
-    {
-      standard: "crop-ontology",
-      state: "partial",
-      filled: 1,
-      total: 4,
-      status: { code: "columns-without-term", count: 3 },
-    },
-    {
-      standard: "common-greenhouse-ontology",
-      state: "not-applicable",
-      filled: null,
-      total: null,
-      status: { code: "applies-to-greenhouses" },
+      filled: REQUIRED_FIELDS - MISSING_FIELDS,
+      total: REQUIRED_FIELDS,
+      status: { code: "fields-missing", count: MISSING_FIELDS, total: REQUIRED_FIELDS },
     },
     {
       standard: "openaire",
@@ -184,6 +177,13 @@ const STANDARDS = {
       filled: null,
       total: null,
       status: { code: "filled-while-publishing" },
+    },
+    {
+      standard: "ro-crate",
+      state: "met",
+      filled: null,
+      total: null,
+      status: { code: "every-frozen-dataset" },
     },
     {
       standard: "brapi",
@@ -210,15 +210,16 @@ const STANDARDS = {
   steps: [
     { reason: NO_LOCATION, holdsFreeze: true, standards: ["miappe"] },
     { reason: NOT_DESCRIBED, holdsFreeze: true, standards: ["miappe"] },
-    {
-      reason: { code: "columns-without-term", subjects: WITHOUT_TERM },
-      holdsFreeze: true,
-      standards: ["crop-ontology"],
-    },
+    { reason: NO_ROLE, holdsFreeze: true, standards: ["miappe"] },
     {
       reason: { code: "plots-measured-twice", subjects: ["D6", "D7"] },
       holdsFreeze: true,
       standards: [],
+    },
+    {
+      reason: { code: "columns-without-term", subjects: WITHOUT_TERM },
+      holdsFreeze: false,
+      standards: ["miappe"],
     },
     { reason: NO_ORCID, holdsFreeze: false, standards: ["miappe"] },
     {
@@ -252,6 +253,9 @@ const AUTHORS = [
     familyName: "User",
     orcid: "0000-0002-1825-0097",
     affiliation: "Example University",
+    origin: "member",
+    email: null,
+    request: null,
   },
   {
     userId: "00000000-0000-4000-a000-000000000002",
@@ -259,6 +263,9 @@ const AUTHORS = [
     familyName: "Example",
     orcid: null,
     affiliation: "Example University",
+    origin: "member",
+    email: null,
+    request: "accepted",
   },
   {
     userId: "00000000-0000-4000-a000-000000000003",
@@ -266,6 +273,9 @@ const AUTHORS = [
     familyName: "Example",
     orcid: null,
     affiliation: "Example University",
+    origin: "member",
+    email: null,
+    request: "accepted",
   },
 ];
 
@@ -280,16 +290,19 @@ function exampleDataset(id: string, experiment: string, version: number, isDraft
       "Soybean lines under three irrigation treatments, measured weekly through the season.",
     limitations: null,
     authors: AUTHORS,
+    contributors: [],
     license: isDraft ? null : "CC-BY-4.0",
     access: "open",
     embargoUntil: null,
     funding: [{ funderName: "Example Research Council", awardNumber: "EX-2026-001" }],
     relatedPublications: [],
+    scope: null,
     excludedReadings: [],
     studyDetails: null,
     readingCount: isDraft ? null : 920,
     plotCount: isDraft ? null : 46,
     viewCount: null,
+    review: null,
     doi: isDraft ? null : "10.5281/zenodo.0000000",
     deposit: null,
     supersedesId: null,
@@ -337,11 +350,6 @@ async function datasetsRoute(): Promise<string> {
   return `${await overviewRoute()}/datasets`;
 }
 
-/** Radix marks the page outside an open menu aria-hidden, so menu parts are found by CSS. */
-function openMenu(page: Page) {
-  return page.locator("[role='menu']");
-}
-
 /** Found by CSS, since an open dialog hides the page from role queries. */
 function tabStrip(page: Page): Locator {
   return page.locator("[role='tablist']").first();
@@ -368,62 +376,6 @@ async function blurFocus(page: Page): Promise<void> {
   });
 }
 
-async function openExportMenu(page: Page): Promise<Locator> {
-  await page.getByText("Line A").first().waitFor();
-  await page.getByRole("button", { name: "Download table" }).first().click();
-
-  const dialog = page.locator("[role='dialog']", { hasText: "Export table" });
-  await dialog.getByRole("button", { name: "Create Export" }).click();
-  await openMenu(page).getByText("8 fields will be empty").waitFor();
-  await settled(openMenu(page));
-  return dialog;
-}
-
-/** The Whole experiment group: its label and the package item under it. */
-function packageGroup(page: Page): Locator[] {
-  return [
-    openMenu(page).getByText("Whole experiment", { exact: true }),
-    openMenu(page).locator("[role='menuitem']", { hasText: "Plant phenotyping checklist" }),
-  ];
-}
-
-const exportMiappe: TicketShot = {
-  slug: "b5-export-miappe",
-  route: async () => `${await overviewRoute()}/data`,
-  fixtures: [trialTables, noExports, miappeFields],
-  viewport: { width: 1440, height: 1100 },
-  prepare: async (page) => {
-    const dialog = await openExportMenu(page);
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(packageGroup(page), "New", "outside-left");
-    await marker.mark(dialog.locator("h2"), "New", "inside-right");
-    return marker.frame([dialog, openMenu(page)], 24);
-  },
-};
-
-const exportConfirm: TicketShot = {
-  slug: "b5-export-confirm",
-  route: async () => `${await overviewRoute()}/data`,
-  fixtures: [trialTables, noExports, miappeFields],
-  viewport: { width: 1440, height: 1300 },
-  prepare: async (page) => {
-    const dialog = await openExportMenu(page);
-    await openMenu(page)
-      .locator("[role='menuitem']", { hasText: "Plant phenotyping checklist" })
-      .click();
-
-    const confirm = dialog.getByTestId("miappe-export-confirm");
-    await confirm.getByText("Export anyway").waitFor();
-    await settled(dialog);
-    await blurFocus(page);
-
-    const marker = new ChangeMarker(page);
-    await marker.mark(confirm, "New", "outside-left");
-    return marker.frame([dialog], 24);
-  },
-};
-
 /** The Datasets tab with the steps block and the dataset list loaded. */
 async function waitForDatasets(page: Page): Promise<Locator> {
   const block = page.getByTestId("standards-steps");
@@ -432,21 +384,43 @@ async function waitForDatasets(page: Page): Promise<Locator> {
   return block;
 }
 
+/** The steps block alone, at full width, so its text stays readable in print. */
 const standardsSteps: TicketShot = {
   slug: "b8-standards-steps",
   route: datasetsRoute,
   fixtures: [datasetList, standards, miappeFields],
-  viewport: { width: 1440, height: 1500 },
+  viewport: { width: 1280, height: 1300 },
   prepare: async (page) => {
     const block = await waitForDatasets(page);
-    const list = page.getByTestId("experiment-datasets");
+    const heading = page.getByRole("heading", { name: "Datasets", level: 2 });
 
     const marker = new ChangeMarker(page);
     await marker.mark(block, "New", "above");
-    return marker.frame([tabStrip(page), block, list], 24);
+    return marker.frame([heading, block], 24);
   },
 };
 
+const SEEDED_DESIGN = "Randomized complete blocks, three treatments in three blocks";
+
+/**
+ * The seeded study details still carry the earlier design wording, rendered on the server, so the
+ * text is swapped for the example field's in the page.
+ */
+async function showExampleDesign(page: Page): Promise<void> {
+  await page.evaluate(
+    ([from, to]) => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        if (node.textContent?.trim() === from) {
+          node.textContent = to;
+        }
+      }
+    },
+    [SEEDED_DESIGN, EXAMPLE_DESIGN],
+  );
+}
+
+// The crop ends at the line, above the collaborators and the creator, who show as the seed account.
 const detailsLine: TicketShot = {
   slug: "b8-details-line",
   route: overviewRoute,
@@ -456,10 +430,11 @@ const detailsLine: TicketShot = {
     const line = page.getByTestId("standards-line");
     await line.getByText("4 steps before freezing.", { exact: false }).waitFor();
     await page.getByText("Glycine max").waitFor();
+    await showExampleDesign(page);
 
     const marker = new ChangeMarker(page);
     await marker.mark(line, "New", "outside-left");
-    return marker.frame([tabStrip(page), detailsCard(page)], 24);
+    return marker.frame([tabStrip(page), detailsCard(page).locator("h3").first(), line], 24);
   },
 };
 
@@ -488,14 +463,17 @@ const fieldPanel: TicketShot = {
   route: datasetsRoute,
   fixtures: [datasetList, standards, miappeFields],
   // As tall as the panel's content, since the sheet runs the viewport's full height.
-  viewport: { width: 1440, height: 1000 },
+  viewport: { width: 1440, height: 1660 },
   prepare: async (page) => {
     const block = await waitForDatasets(page);
     await block.getByRole("button", { name: /^Plant phenotyping checklist/ }).click();
 
-    const sheet = page.locator("[role='dialog']", { hasText: "14 of 22 fields filled" });
+    const sheet = page.locator("[role='dialog']", { hasText: "15 of 21 required fields filled" });
     const fields = sheet.getByTestId("standard-fields");
     await fields.getByText("Still missing").waitFor();
+    // Opened, so the person roles show as filled from the author list while publishing.
+    await fields.getByRole("button", { name: "15 filled fields" }).click();
+    await fields.getByText("Person roles").waitFor();
     await settled(sheet);
     await blurFocus(page);
 
@@ -508,8 +486,6 @@ const fieldPanel: TicketShot = {
 };
 
 export const SHOTS_B: readonly TicketShot[] = [
-  exportMiappe,
-  exportConfirm,
   standardsSteps,
   detailsLine,
   chooseStandards,

@@ -54,27 +54,59 @@ export const WALK = [
   "E1", "D1", "C1", "C2", "A3", "A1", "B2", "A2", "B1", "B3", "A6", "A7", "A8", "B8",
 ] as const;
 
-const PLOT_ATTRIBUTES = PLOTS.map(({ id, treatment, genotype, block }) => ({
-  unitId: id,
-  treatment,
-  genotype,
-  block,
-}));
+/**
+ * The walk the spike's construction builds from field-7Q2 on the example field
+ * (`.claude/drafts/routing-sessions/spike/walking-order.js`, the running guard with the next plot
+ * of the drawn treatment along a serpentine). Plots 13 to 24 hold 3 Control, 4 Drought and 5 Severe
+ * drought. The order preview shows it, since a hand-drawn walk understates how far a measurer walks.
+ */
+// prettier-ignore
+const BUILT_WALK = [
+  "A1", "A2", "A3", "A4", "A6", "B8", "A5", "A8", "A7", "B7", "B5", "B6", "B3", "B2", "B1", "C2",
+  "C1", "C4", "C3", "C5", "C6", "C8", "C7", "D7", "D8", "D6", "D3", "D4", "E2", "D5", "D1", "E5",
+  "D2", "E3", "E8", "E6", "E1", "F7", "E4", "F8", "F4", "F5", "F6", "F1", "F3", "F2",
+] as const;
 
-/** No strategy saved yet, so the phones still walk in layout order. */
+// prettier-ignore
+const SERPENTINE_WALK = [
+  "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "B8", "B7", "B6", "B5", "B3", "B2", "B1", "C1",
+  "C2", "C3", "C4", "C5", "C6", "C7", "C8", "D8", "D7", "D6", "D5", "D4", "D3", "D2", "D1", "E1",
+  "E2", "E3", "E4", "E5", "E6", "E8", "F8", "F7", "F6", "F5", "F4", "F3", "F2", "F1",
+] as const;
+
+/** The example sheet's columns, which the walking order reads as plot attributes by name. */
+const ATTRIBUTES = {
+  attributes: ["Treatment", "Genotype", "Block"],
+  plots: PLOTS.map(({ id, treatment, genotype, block }) => ({
+    unitId: id,
+    values: { Treatment: treatment, Genotype: genotype, Block: block },
+  })),
+};
+
+/** No strategy saved yet, so the phones still walk in layout order and the headers suggest roles. */
 export const unsavedWalkingOrder = new ExperimentPathFixture("walking-order", {
   strategy: null,
   orderCode: null,
   order: [],
-  plots: PLOT_ATTRIBUTES,
+  balanceOn: null,
+  blocksFrom: null,
+  ...ATTRIBUTES,
 });
 
-export const savedWalkingOrder = new ExperimentPathFixture("walking-order", {
-  strategy: "treatmentBalanced",
-  orderCode: "field-7Q2",
-  order: unitIds(WALK),
-  plots: PLOT_ATTRIBUTES,
-});
+function walkingOrder(strategy: string, orderCode: string | null, walk: readonly string[]) {
+  return new ExperimentPathFixture("walking-order", {
+    strategy,
+    orderCode,
+    order: unitIds(walk),
+    balanceOn: "Treatment",
+    blocksFrom: "Block",
+    ...ATTRIBUTES,
+  });
+}
+
+export const savedWalkingOrder = walkingOrder("treatmentBalanced", "field-7Q2", WALK);
+const builtWalkingOrder = walkingOrder("treatmentBalanced", "field-7Q2", BUILT_WALK);
+const serpentineWalkingOrder = walkingOrder("serpentine", null, SERPENTINE_WALK);
 
 /**
  * The example's field day, 14 August 2026. The live screens show it mid-morning and the overview
@@ -97,7 +129,8 @@ function daysBefore(moment: Date, days: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-export const SEED_USER = { userId: "00000000-0000-4000-8000-0000000000a1", name: "Seed User" };
+// The seed user's stand-in, so no screen shows the test account's name.
+export const SEED_USER = { userId: "00000000-0000-4000-8000-0000000000a1", name: "Sam Example" };
 export const ALEX = { userId: "00000000-0000-4000-8000-0000000000a2", name: "Alex Example" };
 
 export const measurers = new ExperimentPathFixture("measurers", [SEED_USER, ALEX]);
@@ -398,13 +431,66 @@ const layoutOrder: TicketShot = {
   },
 };
 
+async function showPath(page: Page): Promise<void> {
+  await page.getByRole("switch", { name: "Show path" }).click();
+}
+
+/** Turns Show path on and slides the stretch to start at the given walk position. */
+async function showStretchFrom(page: Page, first: number): Promise<Locator> {
+  await page.getByText("field-7Q2", { exact: true }).waitFor();
+  await showPath(page);
+  const thumb = page.locator("[data-walk-stretch] [role=slider]");
+  await thumb.focus();
+  for (let position = 1; position < first; position++) {
+    await thumb.press("ArrowRight");
+  }
+  const holds = page.getByText(`Plots ${first} to ${first + 11} of the walk hold`);
+  await holds.waitFor();
+  await settle(page);
+  return holds;
+}
+
 const orderPreview: TicketShot = {
   slug: "e4-order-preview",
   route: () => layoutTabRoute("order-preview"),
-  fixtures: [exampleLayoutFixture, savedWalkingOrder],
+  fixtures: [exampleLayoutFixture, builtWalkingOrder],
   viewport: VIEWPORT,
   prepare: async (page) => {
-    await page.getByText("field-7Q2", { exact: true }).waitFor();
+    await showStretchFrom(page, 13);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(gridCard(page), "New", "below");
+    return marker.frame(
+      [layoutTab(page), viewSwitch(page), gridCard(page), strategyCard(page)],
+      24,
+    );
+  },
+};
+
+/** The proposal's figure: only the grid, the slider and what the stretch holds, sharp enough to print. */
+const orderStretch: TicketShot = {
+  slug: "r5-stretch",
+  route: () => layoutTabRoute("order-preview"),
+  fixtures: [exampleLayoutFixture, builtWalkingOrder],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await showStretchFrom(page, 13);
+
+    const grid = page.locator("[data-session-grid]");
+    const stretch = page.locator("[data-walk-stretch]");
+    const marker = new ChangeMarker(page);
+    return marker.frame([grid, stretch], 16);
+  },
+};
+
+const orderSerpentine: TicketShot = {
+  slug: "e4-order-serpentine",
+  route: () => layoutTabRoute("order-preview"),
+  fixtures: [exampleLayoutFixture, serpentineWalkingOrder],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await gridCard(page).getByText("End", { exact: true }).waitFor();
+    await showPath(page);
     await settle(page);
 
     const marker = new ChangeMarker(page);
@@ -645,10 +731,48 @@ const measuredTwice: TicketShot = {
   },
 };
 
+/** The proposal's figure: the live progress card alone, with its whole outline, sharp enough to print. */
+const liveProgressFigure: TicketShot = {
+  ...liveMonitor,
+  slug: "r5-live-progress",
+  prepare: async (page) => {
+    await page.getByText("Live progress", { exact: true }).waitFor();
+    // The counts for attributes other than the balance one would make the card too tall to print
+    // beside its neighbour; the ticket's own screen keeps them.
+    const otherCounts = liveCard(page).getByText("Genotype", { exact: true }).locator("xpath=..");
+    await otherCounts.evaluate((element) => {
+      if (element instanceof HTMLElement) element.style.display = "none";
+    });
+    await settle(page);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(liveCard(page), "New", "below");
+    return marker.frame([liveCard(page)], 12);
+  },
+};
+
+/** The proposal's figure: one plot measured twice, outlined as new, sharp enough to print. */
+const measuredTwiceFigure: TicketShot = {
+  ...measuredTwice,
+  slug: "r5-measured-twice",
+  prepare: async (page) => {
+    const title = measuredTwicePanel(page).getByText("Plot D6", { exact: true });
+    await title.waitFor();
+    await settle(page);
+
+    const item = title.locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]");
+    const marker = new ChangeMarker(page);
+    await marker.mark(item, "New", "inside-top-right");
+    return marker.frame([item], 12);
+  },
+};
+
 export const SHOTS_E: readonly TicketShot[] = [
   strategyPicker,
   layoutOrder,
   orderPreview,
+  orderStretch,
+  orderSerpentine,
   divideField,
   inviteMeasurer,
   paintShare,
@@ -658,4 +782,6 @@ export const SHOTS_E: readonly TicketShot[] = [
   sessionOverview,
   waiting,
   measuredTwice,
+  liveProgressFigure,
+  measuredTwiceFigure,
 ];

@@ -77,7 +77,7 @@ const noPlacements = new ExperimentPath("layout/placements", []);
 // Each ticket builds on C2's Plots view alone, so a shot hides the toolbar controls other tickets add.
 const TOOLBAR_BUTTONS = {
   search: "[data-plot-search]",
-  addAttributes: "Add treatments and genotypes",
+  addAttributes: "Add plot attributes",
   markGaps: "Mark gaps",
   anchor: "Anchor on map",
 } as const;
@@ -251,21 +251,79 @@ const loadError: TicketShot = {
   },
 };
 
-function plotAttributes(plot: ExamplePlot) {
+const RESEARCHER = "Sam Example";
+const SHEET_SAVED_AT = "2026-05-02T08:40:00.000Z";
+
+/** The plot's row in the pasted plot map, which lists every grid position, gaps included. */
+function sheetRow(plot: ExamplePlot): number {
+  return (plot.row - 1) * FIELD_COLUMNS + plot.column;
+}
+
+/** A value from the first sheet, which applies from the experiment's start. */
+function fromSheet(plot: ExamplePlot, value: string) {
+  return {
+    value,
+    appliesFrom: null,
+    source: { type: "sheet", sheetName: PLOT_MAP_SHEET, row: sheetRow(plot) },
+    recordedBy: RESEARCHER,
+    recordedAt: SHEET_SAVED_AT,
+    correctionReason: null,
+  };
+}
+
+/** Each plot's attributes as the first sheet set them. */
+function sheetAttributes(plot: ExamplePlot) {
+  return [
+    { name: "Treatment", versions: [fromSheet(plot, plot.treatment)] },
+    { name: "Genotype", versions: [fromSheet(plot, plot.genotype)] },
+    { name: "Block", versions: [fromSheet(plot, plot.block)] },
+  ];
+}
+
+/**
+ * C4 as the proposal tells it: the treatment changes to Severe drought from 1 July, planned on
+ * 20 June, and the genotype is corrected to Line B because seed lots were swapped at sowing.
+ */
+function changedAttributes(plot: ExamplePlot) {
+  if (plot.identifier !== "C4") return sheetAttributes(plot);
   return [
     {
       name: "Treatment",
-      value: plot.treatment,
-      source: { type: "sheet", sheetName: PLOT_MAP_SHEET },
+      versions: [
+        {
+          value: "Severe drought",
+          appliesFrom: "2026-07-01",
+          source: { type: "edit" },
+          recordedBy: RESEARCHER,
+          recordedAt: "2026-06-20T09:12:00.000Z",
+          correctionReason: null,
+        },
+        fromSheet(plot, plot.treatment),
+      ],
     },
-    { name: "Genotype", value: plot.genotype, source: { type: "edit", sheetName: PLOT_MAP_SHEET } },
-    { name: "Block", value: plot.block, source: { type: "sheet", sheetName: PLOT_MAP_SHEET } },
+    {
+      name: "Genotype",
+      versions: [
+        {
+          value: "Line B",
+          appliesFrom: null,
+          source: { type: "edit" },
+          recordedBy: RESEARCHER,
+          recordedAt: "2026-07-03T14:05:00.000Z",
+          correctionReason: "Seed lots swapped at sowing",
+        },
+        fromSheet(plot, plot.genotype),
+      ],
+    },
+    { name: "Block", versions: [fromSheet(plot, plot.block)] },
   ];
 }
 
 /** Answers one plot's route with its position and attributes, which no table holds yet. */
-const plotInspectorFixture: Fixture = {
-  install: async (page) => {
+class PlotPanelFixture implements Fixture {
+  constructor(private readonly attributesOf: (plot: ExamplePlot) => unknown[]) {}
+
+  async install(page: Page): Promise<void> {
     const plots = examplePlots();
     await page.route(
       (url) => /^\/api\/v1\/experiments\/[^/]+\/layout\/plots\/[^/]+$/.test(url.pathname),
@@ -279,39 +337,132 @@ const plotInspectorFixture: Fixture = {
           json: {
             unit: { id, parentId, identifier, row, column, active },
             levelName: "Plot",
-            attributes: plotAttributes(plot),
+            attributes: this.attributesOf(plot),
           },
         });
       },
     );
-  },
-};
+  }
+}
+
+const plotInspectorFixture = new PlotPanelFixture(changedAttributes);
+const firstSheetFixture = new PlotPanelFixture(sheetAttributes);
+
+const ATTRIBUTE_NAMES = ["Treatment", "Genotype", "Block"];
+
+const plotAttributesFixture = new ExperimentPath("layout/attributes", {
+  names: ATTRIBUTE_NAMES,
+  shownToMeasurers: [],
+  plots: examplePlots().map((plot) => ({
+    unitId: plot.id,
+    values: { Treatment: plot.treatment, Genotype: plot.genotype, Block: plot.block },
+  })),
+});
+
+/** No strategy saved yet, so the walk's roles come from the headers named treatment and block. */
+const walkingOrderRoles = new ExperimentPath("walking-order", {
+  strategy: null,
+  orderCode: null,
+  order: [],
+  attributes: ATTRIBUTE_NAMES,
+  balanceOn: null,
+  blocksFrom: null,
+  plots: [],
+});
+
+function plotPanel(page: Page): Locator {
+  return card(page.getByText("Plot C4", { exact: true }));
+}
+
+/** Opens C4's panel and takes out the parts other tickets add to it. */
+async function openPlotC4(page: Page, keep: readonly string[] = []): Promise<Locator> {
+  await plotGrid(page).waitFor();
+  await hideToolbar(page, ["search"]);
+  const cell = plotCell(page, "C4");
+  await cell.click();
+  await plotPanel(page).getByText("Block", { exact: true }).first().waitFor();
+
+  // Place sensor here arrives with placing sensors, and the switches with OJD-2507. The switches
+  // render only once the attributes route answers.
+  const others = ["[data-place-sensor]", "[data-measurer-visibility]"]
+    .filter((selector) => !keep.includes(selector))
+    .map((selector) => page.locator(selector));
+  const present = [];
+  for (const other of others) {
+    if ((await other.count()) > 0) present.push(other);
+  }
+  await hideElements(present);
+  await page.mouse.move(0, 0);
+  return cell;
+}
 
 const plotInspector: TicketShot = {
   slug: "c3-plot-inspector",
   route: () => layoutRoute(),
   fixtures: [exampleLayoutFixture, plotInspectorFixture],
-  viewport: VIEWPORT,
+  // Taller than the others, so the panel holds every attribute and its history unscrolled.
+  viewport: { width: VIEWPORT.width, height: 1300 },
   prepare: async (page) => {
-    await plotGrid(page).waitFor();
-    await hideToolbar(page, ["search"]);
+    const cell = await openPlotC4(page);
+    await page.getByText("Seed lots swapped at sowing", { exact: false }).waitFor();
 
-    const cell = plotCell(page, "C4");
-    await cell.click();
-    await page.getByText('From the sheet "Plot map", edited after upload').waitFor();
-    // Place sensor here arrives with placing sensors, in milestone 3.
-    await hideElements([page.locator("[data-place-sensor]")]);
-    await page.mouse.move(0, 0);
-
-    const panel = card(page.getByText("Plot C4", { exact: true }));
+    const histories = page.locator("[data-attribute-history]");
     const marker = new ChangeMarker(page);
-    await marker.mark(panel, "New", "above");
+    // The panel is narrow and its lines run full width, so the tag sits by the outline's left edge.
+    await marker.mark(histories.first(), "New", "outside-left");
+    await outline(page, histories.nth(1));
     await outline(page, cell);
-    await outline(page, toolbarControl(page, "search"));
     return marker.frame(
-      [layoutTab(page), viewSwitch(page), setupSummary(page), plotGrid(page), panel],
+      [layoutTab(page), viewSwitch(page), setupSummary(page), plotGrid(page), plotPanel(page)],
       24,
     );
+  },
+};
+
+/** 20 June, the day the researcher plans the change, so the dialog's date starts there. */
+const PLANNING_DAY = new Date("2026-06-20T10:00:00+02:00");
+
+const attributeChange: TicketShot = {
+  slug: "c3-attribute-change",
+  clock: PLANNING_DAY,
+  route: () => layoutRoute(),
+  fixtures: [exampleLayoutFixture, firstSheetFixture],
+  viewport: VIEWPORT,
+  prepare: async (page) => {
+    await openPlotC4(page);
+    await page.getByRole("button", { name: "Change Treatment" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText("Change Treatment on plot C4").waitFor();
+    await dialog.getByLabel("New value").fill("Severe drought");
+
+    await dialog.locator("[data-attribute-change] button", { hasText: "2026" }).click();
+    await page.getByRole("button", { name: /next month/i }).click();
+    await page.locator("[role=grid] button", { hasText: /^1$/ }).first().click();
+    await dialog.getByText("Jul 1, 2026", { exact: false }).first().waitFor();
+    await page.mouse.move(0, 0);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(dialog.locator("[data-attribute-change]"), "New", "inside-right");
+    return marker.frame([dialog], 24);
+  },
+};
+
+const measurerSwitches: TicketShot = {
+  slug: "d10-measurer-switches",
+  route: () => layoutRoute(),
+  fixtures: [exampleLayoutFixture, firstSheetFixture, plotAttributesFixture, walkingOrderRoles],
+  // Taller than the others, so the switches under the attributes fit unscrolled.
+  viewport: { width: VIEWPORT.width, height: 1500 },
+  prepare: async (page) => {
+    await openPlotC4(page, ["[data-measurer-visibility]"]);
+    const switches = page.locator("[data-measurer-visibility]");
+    await switches.getByText("Genotype", { exact: true }).waitFor();
+    // Color by is OJD-2473's.
+    await hideElements([page.locator("[data-color-by]")]);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(switches, "New", "inside-top-right");
+    return marker.frame([layoutTab(page), viewSwitch(page), plotGrid(page), plotPanel(page)], 24);
   },
 };
 
@@ -518,6 +669,34 @@ const sheetByPlot: TicketShot = {
     const select = page.locator("#metadata-match-target");
     const marker = new ChangeMarker(page);
     await marker.mark([select, preview], "New", "inside-right");
+    return marker.frame([page.locator("[role=dialog]", { hasText: "Import Metadata" })], 16);
+  },
+};
+
+/** A second sheet attached while plots already carry the first one's values. */
+const sheetFromDate: TicketShot = {
+  slug: "c6-sheet-from-date",
+  // 1 July, so the date the sheet applies from starts on the day the July plot map is attached.
+  clock: new Date("2026-07-01T09:00:00+02:00"),
+  route: () => layoutRoute(),
+  fixtures: [exampleLayoutFixture, noSheetsFixture, sheetPreviewFixture, plotAttributesFixture],
+  viewport: { width: VIEWPORT.width, height: 1300 },
+  prepare: async (page) => {
+    await plotGrid(page).waitFor();
+    await toolbarControl(page, "addAttributes").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByText("Import your metadata").waitFor();
+    await pasteText(page, plotMapSheet());
+    await dialog.getByText("48 rows imported").waitFor();
+    await dialog.getByLabel("Name").fill("Plot map, July");
+
+    const choice = page.locator("[data-sheet-application]");
+    await choice.waitFor();
+    await choice.evaluate((element) => element.scrollIntoView({ block: "end" }));
+    await page.mouse.move(0, 0);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(choice, "New", "inside-top-right");
     return marker.frame([page.locator("[role=dialog]", { hasText: "Import Metadata" })], 16);
   },
 };
@@ -950,18 +1129,10 @@ const removeConfirm: TicketShot = {
   },
 };
 
-const plotAttributesFixture = new ExperimentPath("layout/attributes", {
-  names: ["Treatment", "Genotype", "Block"],
-  plots: examplePlots().map((plot) => ({
-    unitId: plot.id,
-    values: { Treatment: plot.treatment, Genotype: plot.genotype, Block: plot.block },
-  })),
-});
-
 const colorBy: TicketShot = {
   slug: "c13-color-by",
   route: () => layoutRoute(),
-  fixtures: [exampleLayoutFixture, plotAttributesFixture],
+  fixtures: [exampleLayoutFixture, plotAttributesFixture, walkingOrderRoles],
   viewport: VIEWPORT,
   prepare: async (page) => {
     const select = page.locator("[data-color-by]");
@@ -1020,9 +1191,12 @@ export const SHOTS_C: readonly TicketShot[] = [
   plotLegend,
   loadError,
   plotInspector,
+  attributeChange,
+  measurerSwitches,
   levelTerm,
   geoAnchor,
   sheetByPlot,
+  sheetFromDate,
   addAttributes,
   plotColumns,
   placeSensor,
