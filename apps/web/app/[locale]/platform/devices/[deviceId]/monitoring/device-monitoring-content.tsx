@@ -15,6 +15,7 @@ import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/moni
 import { MonitoringTiles } from "@/components/iot-devices/monitoring/monitoring-tiles";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { PayloadProfile } from "@/components/iot-devices/monitoring/payload-profile";
+import { PowerPanel } from "@/components/iot-devices/monitoring/power-panel";
 import { ThroughputPanel } from "@/components/iot-devices/monitoring/throughput-panel";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useDeviceMonitoring } from "@/hooks/iot/useDeviceMonitoring/useDeviceMonitoring";
@@ -26,20 +27,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { cn } from "@repo/ui/lib/utils";
 
 const CONNECTIVITY_POLL_MS = 15_000;
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
-
-function hasBatteryReadings(monitoring: DeviceMonitoring): boolean {
-  return monitoring.battery.some((point) => point.averageBattery !== null);
-}
 
 interface RangeSelection {
   range: MonitoringRange;
@@ -144,6 +139,14 @@ export default function DeviceMonitoringPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          {(device?.deviceType === "ambyte" || monitoring.power?.latest) && (
+            <PanelCard
+              title={t("iot.devices.monitoring.powerTitle")}
+              description={t("iot.devices.monitoring.powerHint")}
+            >
+              <PowerPanel power={monitoring.power} />
+            </PanelCard>
+          )}
           <PanelCard
             title={t("iot.devices.monitoring.availabilityTitle")}
             description={t("iot.devices.monitoring.availabilityHint")}
@@ -200,19 +203,14 @@ export default function DeviceMonitoringPage() {
             <MeasurementValuesTable measurements={monitoring.recentMeasurements} />
           </PanelCard>
 
-          {/* Families that never report battery get the log at full width
-              rather than an empty half. */}
-          <div
-            className={cn(
-              "grid min-w-0 gap-6",
-              hasBatteryReadings(monitoring) ? "lg:grid-cols-2" : "grid-cols-1",
-            )}
-          >
-            {hasBatteryReadings(monitoring) && (
-              <PanelCard title={t("iot.devices.monitoring.batteryTitle")}>
-                <BatteryPanel monitoring={monitoring} />
-              </PanelCard>
-            )}
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+            <PanelCard title={t("iot.devices.monitoring.batteryTitle")}>
+              <BatteryPanel
+                monitoring={monitoring}
+                from={selection.range.from}
+                to={selection.range.to}
+              />
+            </PanelCard>
 
             <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
               <EventLog

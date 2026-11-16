@@ -22,7 +22,7 @@ export function bucketAxis(from: string, to: string, bucket: MonitoringBucket): 
   return axis;
 }
 
-// Hour buckets label an instant, so the viewer's zone is right. Day buckets
+// Hour buckets default to the viewer's zone; a UTC plot can request matching labels. Day buckets
 // are UTC days (date_trunc and the axis both use UTC midnights), so they are
 // rendered in UTC; formatting those locally would shift every label a day back
 // in negative-offset timezones.
@@ -30,6 +30,7 @@ export function formatBucketLabel(
   bucketStart: string,
   bucket: MonitoringBucket,
   locale: string,
+  timeZone?: string,
 ): string {
   const at = new Date(bucketStart);
 
@@ -39,6 +40,7 @@ export function formatBucketLabel(
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone,
     });
   }
 
