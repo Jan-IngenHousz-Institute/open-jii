@@ -18,6 +18,7 @@ from collections.abc import Iterator
 
 import pytest
 import requests
+from openjii.serving_store import writer as writer_module
 from openjii.serving_store.tables import (
     DEVICE_EVENTS,
     MACRO_RESULTS,
@@ -617,6 +618,51 @@ def test_measurements_the_writer_sends_reach_the_copy_ordered_by_device(
         ("c1", 3, 87.5),
     ]
     assert rows[0]["macros"] == [{"id": "m1", "name": "Phi2", "filename": "phi2.js"}]
+
+
+def _measurement_lines(spark: SparkSession, experiment: str) -> list[str]:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", f"'{experiment}' AS experiment_id")
+    return [row.line for row in MEASUREMENTS.lines(spark.sql(changes)).collect()]
+
+
+def _held(store: _Store, table: str, experiment: str) -> list[int]:
+    rows = store.rows(f"SELECT id FROM {_DATABASE}.{table} WHERE experiment_id = '{experiment}' ORDER BY id")
+    return [row["id"] for row in rows]
+
+
+@pytest.mark.clickhouse
+def test_a_chunk_sent_again_after_a_reloads_delete_stays_out_of_the_device_copy(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    lines = _measurement_lines(spark, "resent")
+    writer.insert(MEASUREMENTS.name, lines)
+    for table in (MEASUREMENTS.name, *MEASUREMENTS.copies):
+        store.run(f"DELETE FROM {_DATABASE}.{table} WHERE _commit_version < 8 AND experiment_id = 'resent'")
+
+    assert writer.insert(MEASUREMENTS.name, lines) == Written(inserted=3)
+
+    assert _held(store, "measurements", "resent") == []
+    assert _held(store, "measurements_by_device", "resent") == []
+
+
+@pytest.mark.clickhouse
+def test_a_chunk_the_device_copy_refused_reaches_it_when_sent_again(
+    spark: SparkSession, store: _Store, writer: StoreWriter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(writer_module, "EXECUTOR_RETRY_DELAYS", ())
+    lines = _measurement_lines(spark, "retried")
+    store.run(
+        f"ALTER TABLE {_DATABASE}.measurements_by_device ADD CONSTRAINT refused CHECK experiment_id != 'retried'"
+    )
+    try:
+        assert writer.insert(MEASUREMENTS.name, lines) == Written(unfinished=3)
+    finally:
+        store.run(f"ALTER TABLE {_DATABASE}.measurements_by_device DROP CONSTRAINT refused")
+
+    assert writer.insert(MEASUREMENTS.name, lines) == Written(inserted=3)
+
+    assert _held(store, "measurements", "retried") == [1, 2, 3]
+    assert _held(store, "measurements_by_device", "retried") == [1, 2, 3]
 
 
 @pytest.mark.clickhouse

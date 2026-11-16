@@ -188,6 +188,7 @@ def test_a_device_view_refuses_a_read_that_names_no_device(reader: _User, view: 
     response = reader.run(f"SELECT * FROM {_DATABASE}.{view}")
 
     assert not response.ok
+    assert "device" in response.text
 
 
 @pytest.mark.parametrize(
@@ -377,7 +378,7 @@ def test_the_reader_reads_devices_rows_across_experiments_through_the_device_vie
     ]
 
 
-def test_a_devices_newest_rows_in_a_window_read_whole_with_their_payload(admin: _User, reader: _User) -> None:
+def test_a_devices_newest_rows_in_a_window_read_with_their_payload(admin: _User, reader: _User) -> None:
     admin.ok(
         f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, client_id, data, {_COMMIT}) VALUES "
         "('e2', 5, '2026-10-19 13:00:00', 'c1', '{\"par\": 120}', 3, '2026-10-19 13:00:01'), "
@@ -394,6 +395,16 @@ def test_a_devices_newest_rows_in_a_window_read_whole_with_their_payload(admin: 
         ("e1", 6, '{"par": 130}'),
         ("e2", 5, '{"par": 120}'),
     ]
+
+
+@pytest.mark.parametrize("column", ["user_id", "questions_data", "annotations", "client_model"])
+def test_a_devices_newest_rows_carry_only_what_a_device_page_shows(reader: _User, column: str) -> None:
+    response = reader.run(
+        f"SELECT {column} FROM {_DATABASE}.device_newest_measurements(device = 'c1', "
+        "from = '2026-10-19 00:00:00', to = '2026-10-19 23:59:59', rows = 2)"
+    )
+
+    assert response.headers.get("X-ClickHouse-Exception-Code") == "47"
 
 
 def test_last_activity_is_each_devices_newest_row_and_newest_event(reader: _User) -> None:
@@ -487,12 +498,22 @@ def test_the_device_copy_starts_with_the_rows_measurements_held_before_it(
             f"INSERT INTO {database}.measurements (experiment_id, id, timestamp, client_id, device_battery, "
             f"{_COMMIT}) VALUES ('e1', 1, '2026-10-19 10:00:00', 'c1', 81, 4, '2026-10-19 10:00:09')"
         )
+        store_admin.ok(
+            f"INSERT INTO {database}.measurements (experiment_id, id, timestamp, client_id, {_COMMIT}) "
+            "SELECT 'months', number, toDateTime64('1900-01-01 00:00:00', 6, 'UTC') + toIntervalMonth(number), "
+            "'c2', 3, '2026-10-19 10:00:01' FROM numbers(101) "
+            "SETTINGS throw_on_max_partitions_per_insert_block = 0"
+        )
 
         for statement in store_migration_files[_DEVICE_MIGRATION]:
             store_admin.ok(statement, database=database)
 
         rows = store_admin.rows(
-            f"SELECT client_id, id, device_battery, _commit_version FROM {database}.measurements_by_device FINAL"
+            f"SELECT client_id, id, device_battery, _commit_version FROM {database}.measurements_by_device FINAL "
+            "WHERE client_id = 'c1'"
+        )
+        [months] = store_admin.rows(
+            f"SELECT count() AS months FROM {database}.measurements_by_device WHERE client_id = 'c2'"
         )
     finally:
         store_admin.ok(f"DROP DATABASE {database} SYNC")
@@ -500,3 +521,4 @@ def test_the_device_copy_starts_with_the_rows_measurements_held_before_it(
     assert [
         (row["client_id"], int(row["id"]), row["device_battery"], int(row["_commit_version"])) for row in rows
     ] == [("c1", 1, 81, 4)]
+    assert int(months["months"]) == 101

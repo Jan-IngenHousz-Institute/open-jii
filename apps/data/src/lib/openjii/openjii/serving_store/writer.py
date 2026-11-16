@@ -284,6 +284,8 @@ class StoreWriter:
             "query": f"INSERT INTO {self.database}.{table} FORMAT JSONEachRow",
             # A replayed batch sends the same bodies, and the table drops a token it has seen.
             "insert_deduplication_token": hashlib.sha256(body).hexdigest(),
+            # Otherwise a materialized view still copies a chunk its source table dropped.
+            "deduplicate_blocks_in_dependent_materialized_views": "1",
             # Rows from many months in one insert are normal after an outage.
             "throw_on_max_partitions_per_insert_block": "0",
             # A field the table lacks is refused rather than dropped, and holds the feed back until a
