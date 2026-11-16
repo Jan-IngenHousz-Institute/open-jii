@@ -385,12 +385,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       ({ id, match, alias }) =>
         `LEFT JOIN (SELECT identifier, fields, 1 AS matched FROM experiment_metadata_rows(experiment = ${this.experiment}) WHERE sheet_id = ${this.escapeValue(id)}) AS ${alias} ON ${alias}.identifier = ${match}`,
     );
-    const merged = sheets
-      .map(({ alias }) => this.sheetFields(alias))
-      .reduce<
-        string | null
-      >((earlier, later) => (earlier === null ? later : this.laterWins(earlier, later)), null);
-    const json = merged === null ? "'{}'" : this.jsonObject(merged);
+    const fields = sheets.map(({ alias }) => this.sheetFields(alias));
+    const json =
+      fields.length === 0
+        ? "'{}'"
+        : this.jsonObject(fields.reduce((earlier, later) => `mapUpdate(${earlier}, ${later})`));
 
     const rows = this.joinClauses([`SELECT * FROM ${this.fromClause}`, rowFilter]);
     const joined = this.joinClauses([
@@ -422,13 +421,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return `CAST(${readable}, 'Map(String, String)')`;
   }
 
-  private laterWins(earlier: string, later: string): string {
-    return `mapConcat(mapFilter((k, v) -> NOT has(mapKeys(${later}), k), ${earlier}), ${later})`;
-  }
-
-  /** A map of JSON values as one JSON object, its keys sorted. */
+  /**
+   * A map of JSON values as one JSON object, built from its pairs: a lambda that looks keys up in
+   * the map copies it once per key, and the JSON type keeps no order a sort would buy.
+   */
   private jsonObject(map: string): string {
-    const members = `arrayMap(k -> concat(toJSONString(k), ':', ${map}[k]), arraySort(mapKeys(${map})))`;
+    const members = `arrayMap((k, v) -> concat(toJSONString(k), ':', v), mapKeys(${map}), mapValues(${map}))`;
     return `concat('{', arrayStringConcat(${members}, ','), '}')`;
   }
 

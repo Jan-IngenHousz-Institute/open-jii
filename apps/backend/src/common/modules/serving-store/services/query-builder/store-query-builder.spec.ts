@@ -426,6 +426,15 @@ describe("StoreQueryBuilder", () => {
       expect(sql).not.toContain("'s3'");
     });
 
+    it("merges the sheets and writes their JSON in time linear in a row's keys", () => {
+      const sql = withMetadata().select(["soil"]).build();
+
+      expect(sql).toMatch(/CAST\(concat\('\{', arrayStringConcat\(arrayMap\(\(k, v\) -> /);
+      expect(sql).toContain("mapKeys(mapUpdate(CAST(");
+      expect(sql).not.toContain("arraySort(");
+      expect(sql).not.toContain("mapFilter(");
+    });
+
     it("joins the whole table's metadata to pick a page by a metadata field", () => {
       const sql = withMetadata()
         .select(["id"])
