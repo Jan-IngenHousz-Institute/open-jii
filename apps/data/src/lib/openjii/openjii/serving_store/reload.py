@@ -117,6 +117,7 @@ class StoreReload:
 
         written = self._write(table, changes)
         schemas = self._write_schemas(table, changes)
+        fills_id_tables = any(table.name in sources for _, sources in ID_SOURCES.values())
         if not written.rejected:
             if not allow_removal:
                 self._check_removal(table, version, experiment_id)
@@ -126,7 +127,7 @@ class StoreReload:
                 # A table type's schemas carry its gold table's versions, so the older ones are
                 # those only rows from before the load had.
                 self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
-            if any(table.name in sources for _, sources in ID_SOURCES.values()):
+            if fills_id_tables:
                 self._prune_ids(experiment_id)
 
         counted_by = table.counted_by
