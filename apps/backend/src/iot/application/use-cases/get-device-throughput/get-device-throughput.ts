@@ -1,28 +1,28 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { DeviceThroughputBucket, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 /**
  * Measurement counts per time bucket and experiment for one thing over a range.
  */
 @Injectable()
 export class GetDeviceThroughputUseCase {
-  constructor(
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
-  ) {}
+  constructor(private readonly dataSource: DeviceDataSourceService) {}
 
   async execute(
     thingName: string,
     from: string,
     to: string,
     bucket: MonitoringBucket,
+    source: DeviceDataSource,
   ): Promise<Result<DeviceThroughputBucket[]>> {
-    const result = await this.databricksPort.getDeviceThroughput(thingName, from, to, bucket);
+    const result = await this.dataSource
+      .reads(source)
+      .getDeviceThroughput(thingName, from, to, bucket);
     if (result.isFailure()) {
       return failure(result.error);
     }

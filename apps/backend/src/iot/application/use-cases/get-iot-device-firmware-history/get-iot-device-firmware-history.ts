@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { DeviceFirmwareVersion, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
 
@@ -25,6 +26,7 @@ export class GetIotDeviceFirmwareHistoryUseCase {
     from: string,
     to: string,
     bucket: MonitoringBucket,
+    source: DeviceDataSource,
   ): Promise<Result<DeviceFirmwareVersion[]>> {
     this.logger.log({
       msg: "Getting device firmware history",
@@ -41,6 +43,12 @@ export class GetIotDeviceFirmwareHistoryUseCase {
       return failure(AppError.notFound(`IotDevice with ID ${deviceId} not found`));
     }
 
-    return this.getDeviceFirmwareHistory.execute(deviceResult.value.thingName, from, to, bucket);
+    return this.getDeviceFirmwareHistory.execute(
+      deviceResult.value.thingName,
+      from,
+      to,
+      bucket,
+      source,
+    );
   }
 }

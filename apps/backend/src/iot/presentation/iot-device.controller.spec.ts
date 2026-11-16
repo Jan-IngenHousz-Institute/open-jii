@@ -16,9 +16,14 @@ import { DatabricksAdapter } from "../../common/modules/databricks/databricks.ad
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { DeviceDataSourceService } from "../application/services/device-data-source.service";
+import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
 import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
+import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
+import { IOT_SERVING_STORE_PORT } from "../core/ports/serving-store.port";
+import type { ServingStorePort } from "../core/ports/serving-store.port";
 
 const RETURNED_THING = {
   thingName: "ambyte_TEST-SERIAL",
@@ -778,6 +783,95 @@ describe("IotDeviceController", () => {
 
       await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.FORBIDDEN);
     });
+  });
+
+  describe("read source", () => {
+    const WINDOW = { from: "2026-08-13T00:00:00.000Z", to: "2026-08-13T12:00:00.000Z" };
+    const notFound = failure(AppError.notFound("No device"));
+
+    const routes = [
+      {
+        name: "last activity",
+        route: contract.iot.getIotDeviceActivity,
+        query: {},
+        read: "getDeviceLastActivity",
+        mockUseCase: () =>
+          vi
+            .spyOn(testApp.module.get(GetIotDeviceActivityUseCase), "execute")
+            .mockResolvedValue(notFound),
+      },
+      {
+        name: "observed experiments",
+        route: contract.iot.listDeviceObservedExperiments,
+        query: WINDOW,
+        read: "getDeviceThroughput",
+        mockUseCase: () =>
+          vi
+            .spyOn(testApp.module.get(GetDeviceObservedExperimentsUseCase), "execute")
+            .mockResolvedValue(notFound),
+      },
+      {
+        name: "firmware history",
+        route: contract.iot.getDeviceFirmwareHistory,
+        query: { ...WINDOW, bucket: "day" },
+        read: "getDeviceFirmwareHistory",
+        mockUseCase: () =>
+          vi
+            .spyOn(testApp.module.get(GetIotDeviceFirmwareHistoryUseCase), "execute")
+            .mockResolvedValue(notFound),
+      },
+      {
+        name: "monitoring",
+        route: contract.iot.getDeviceMonitoring,
+        query: { ...WINDOW, bucket: "hour" },
+        read: "getDeviceThroughput",
+        mockUseCase: () =>
+          vi
+            .spyOn(testApp.module.get(GetDeviceMonitoringUseCase), "execute")
+            .mockResolvedValue(notFound),
+      },
+    ] as const;
+
+    it.each(routes)(
+      "reads a device's $name from the source the store flag picks",
+      async ({ route, query, mockUseCase }) => {
+        const device = await testApp.createIotDevice({ createdBy: userId });
+        const sourceFor = vi
+          .spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor")
+          .mockResolvedValue("store");
+        const execute = mockUseCase();
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.NOT_FOUND);
+
+        expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: userId }));
+        expect(execute.mock.lastCall?.at(-1)).toBe("store");
+      },
+    );
+
+    it.each(routes)(
+      "refuses a device's $name to a viewer without access before reading the store",
+      async ({ route, query, read }) => {
+        const owner = await testApp.createTestUser({ name: "Other" });
+        const device = await testApp.createIotDevice({ createdBy: owner });
+        vi.spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor").mockResolvedValue(
+          "store",
+        );
+        const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
+        const storeRead = vi.spyOn(servingStore, read);
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.FORBIDDEN);
+
+        expect(storeRead).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("credential endpoints", () => {

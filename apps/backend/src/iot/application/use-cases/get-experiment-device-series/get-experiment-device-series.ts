@@ -1,11 +1,11 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import type { ExperimentDeviceSeriesDto } from "../../../core/models/experiment-device.model";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 /**
  * Authorized on the experiment, never the device: the tab lists publishers the
@@ -19,8 +19,7 @@ export class GetExperimentDeviceSeriesUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly authorizationService: AuthorizationService,
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly dataSource: DeviceDataSourceService,
   ) {}
 
   async execute(
@@ -30,6 +29,7 @@ export class GetExperimentDeviceSeriesUseCase {
     to: string,
     bucket: "hour" | "day",
     userId: string,
+    source: DeviceDataSource,
   ): Promise<Result<ExperimentDeviceSeriesDto>> {
     this.logger.log({
       msg: "Reading an experiment device series",
@@ -57,13 +57,9 @@ export class GetExperimentDeviceSeriesUseCase {
       );
     }
 
-    const result = await this.databricksPort.getExperimentDeviceSeries(
-      experimentId,
-      clientId,
-      from,
-      to,
-      bucket,
-    );
+    const result = await this.dataSource
+      .reads(source)
+      .getExperimentDeviceSeries(experimentId, clientId, from, to, bucket);
     if (result.isFailure()) {
       this.logger.warn({
         msg: "Experiment device series lookup failed; the chart renders as unavailable",

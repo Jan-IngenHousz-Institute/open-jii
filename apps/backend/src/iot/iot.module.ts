@@ -8,11 +8,14 @@ import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapt
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { GithubAdapter } from "../common/modules/github/github.adapter";
 import { GithubModule } from "../common/modules/github/github.module";
+import { ServingStoreAdapter } from "../common/modules/serving-store/serving-store.adapter";
+import { ServingStoreModule } from "../common/modules/serving-store/serving-store.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { SharingModule } from "../sharing/sharing.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { CalibrationRunNotifier } from "./application/services/calibration-run-notifier";
+import { DeviceDataSourceService } from "./application/services/device-data-source.service";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { ApproveCalibrationRunUseCase } from "./application/use-cases/approve-calibration-run/approve-calibration-run";
 import { BulkRegisterIotDevicesUseCase } from "./application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
@@ -75,6 +78,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { GITHUB_PORT } from "./core/ports/github.port";
+import { IOT_SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 import { ExperimentDeviceRepository } from "./core/repositories/experiment-device.repository";
 import { IotCalibrationDefinitionRepository } from "./core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "./core/repositories/iot-calibration-run.repository";
@@ -94,6 +98,7 @@ import { IotController } from "./presentation/iot.controller";
     AwsModule,
     AnalyticsModule,
     DatabricksModule,
+    ServingStoreModule,
     ExperimentModule,
     WorkbookModule,
     GithubModule,
@@ -174,6 +179,7 @@ import { IotController } from "./presentation/iot.controller";
     ListDeviceCalibrationsUseCase,
     ReportDeviceCalibrationWriteUseCase,
     CalibrationRunNotifier,
+    DeviceDataSourceService,
     IotDeviceRepository,
     IotDeviceGroupRepository,
     ExperimentDeviceRepository,
@@ -190,6 +196,10 @@ import { IotController } from "./presentation/iot.controller";
     {
       provide: IOT_DATABRICKS_PORT,
       useExisting: DatabricksAdapter,
+    },
+    {
+      provide: IOT_SERVING_STORE_PORT,
+      useExisting: ServingStoreAdapter,
     },
   ],
   // Exported for the organization showcase, scoped by the shared read predicate.

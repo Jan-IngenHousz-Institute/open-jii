@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { DeviceMonitoring, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { GetDeviceBatteryUseCase } from "../get-device-battery/get-device-battery";
 import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
@@ -35,6 +36,7 @@ export class GetDeviceMonitoringUseCase {
     to: string,
     bucket: MonitoringBucket,
     userId: string,
+    source: DeviceDataSource,
   ): Promise<Result<DeviceMonitoring>> {
     this.logger.log({
       msg: "Getting device monitoring data",
@@ -61,12 +63,12 @@ export class GetDeviceMonitoringUseCase {
       measurementsResult,
       firmwareResult,
     ] = await Promise.all([
-      this.getDeviceSessions.execute(thingName, from, to),
-      this.getDeviceThroughput.execute(thingName, from, to, bucket),
-      this.getDeviceBattery.execute(thingName, from, to, bucket),
-      this.getDevicePayloadStats.execute(thingName, from, to),
-      this.getDeviceMeasurements.execute(thingName, from, to),
-      this.getDeviceFirmwareHistory.execute(thingName, from, to, bucket),
+      this.getDeviceSessions.execute(thingName, from, to, source),
+      this.getDeviceThroughput.execute(thingName, from, to, bucket, source),
+      this.getDeviceBattery.execute(thingName, from, to, bucket, source),
+      this.getDevicePayloadStats.execute(thingName, from, to, source),
+      this.getDeviceMeasurements.execute(thingName, from, to, source),
+      this.getDeviceFirmwareHistory.execute(thingName, from, to, bucket, source),
     ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);

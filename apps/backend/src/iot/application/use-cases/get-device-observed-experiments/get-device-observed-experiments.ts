@@ -1,12 +1,12 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type { ObservedExperiment } from "@repo/api/domains/iot/iot.schema";
 import { foldObservedExperiments } from "@repo/api/transforms/observed-experiments";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 /**
  * The experiments a device's stored rows claim: one day-bucketed throughput
@@ -21,11 +21,15 @@ export class GetDeviceObservedExperimentsUseCase {
 
   constructor(
     private readonly deviceRepository: IotDeviceRepository,
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly dataSource: DeviceDataSourceService,
   ) {}
 
-  async execute(deviceId: string, from: string, to: string): Promise<Result<ObservedExperiment[]>> {
+  async execute(
+    deviceId: string,
+    from: string,
+    to: string,
+    source: DeviceDataSource,
+  ): Promise<Result<ObservedExperiment[]>> {
     this.logger.log({
       msg: "Getting observed experiments",
       operation: "listDeviceObservedExperiments",
@@ -40,12 +44,9 @@ export class GetDeviceObservedExperimentsUseCase {
       return failure(AppError.notFound(`IotDevice with ID ${deviceId} not found`));
     }
 
-    const throughputResult = await this.databricksPort.getDeviceThroughput(
-      deviceResult.value.thingName,
-      from,
-      to,
-      "day",
-    );
+    const throughputResult = await this.dataSource
+      .reads(source)
+      .getDeviceThroughput(deviceResult.value.thingName, from, to, "day");
     if (throughputResult.isFailure()) {
       return failure(throughputResult.error);
     }

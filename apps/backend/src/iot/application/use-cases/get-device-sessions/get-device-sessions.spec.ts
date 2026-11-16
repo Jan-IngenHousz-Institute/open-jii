@@ -7,6 +7,8 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDeviceSessionsUseCase } from "./get-device-sessions";
 
 const THING = "AMBYTE_A";
@@ -26,6 +28,7 @@ describe("GetDeviceSessionsUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetDeviceSessionsUseCase;
   let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -35,6 +38,7 @@ describe("GetDeviceSessionsUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(GetDeviceSessionsUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
     vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(success([]));
   });
 
@@ -55,7 +59,7 @@ describe("GetDeviceSessionsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toEqual([
@@ -74,7 +78,7 @@ describe("GetDeviceSessionsUseCase", () => {
       success([event("disconnected", "2026-08-13T02:00:00.000Z", "CONNECTION_LOST")]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toEqual([
@@ -93,7 +97,7 @@ describe("GetDeviceSessionsUseCase", () => {
       success([event("connected", "2026-08-13T05:00:00.000Z")]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toHaveLength(1);
@@ -111,7 +115,7 @@ describe("GetDeviceSessionsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toHaveLength(1);
@@ -130,7 +134,7 @@ describe("GetDeviceSessionsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toEqual([
@@ -153,7 +157,7 @@ describe("GetDeviceSessionsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toHaveLength(1);
@@ -162,7 +166,7 @@ describe("GetDeviceSessionsUseCase", () => {
   });
 
   it("reports unknown uptime for a range without events", async () => {
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.sessions).toEqual([]);
@@ -181,7 +185,7 @@ describe("GetDeviceSessionsUseCase", () => {
       .spyOn(databricksAdapter, "getDeviceLifecycleEvents")
       .mockResolvedValue(success(events));
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     // One row past the cap is what makes truncation detectable without a
@@ -199,8 +203,32 @@ describe("GetDeviceSessionsUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertFailure(result);
+  });
+
+  it("answers the same from the store as from the warehouse", async () => {
+    const events = [
+      event("connected", "2026-08-13T01:00:00.000Z"),
+      event("disconnected", "2026-08-13T03:00:00.000Z", "CONNECTION_LOST"),
+      event("connected", "2026-08-13T04:00:00.000Z", null, "s-2"),
+    ];
+    const warehouse = vi
+      .spyOn(databricksAdapter, "getDeviceLifecycleEvents")
+      .mockResolvedValue(success(events));
+    const store = vi
+      .spyOn(servingStore, "getDeviceLifecycleEvents")
+      .mockResolvedValue(success(events));
+
+    const fromWarehouse = await useCase.execute(THING, FROM, TO, "warehouse");
+    const fromStore = await useCase.execute(THING, FROM, TO, "store");
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(warehouse).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledWith(THING, FROM, TO, 1001);
   });
 });

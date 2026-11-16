@@ -1,11 +1,11 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 interface MixEntry {
   key: string | null;
@@ -20,15 +20,20 @@ interface MixEntry {
 @Injectable()
 export class GetDevicePayloadStatsUseCase {
   constructor(
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly dataSource: DeviceDataSourceService,
     private readonly workbookVersionRepository: WorkbookVersionRepository,
   ) {}
 
-  async execute(thingName: string, from: string, to: string): Promise<Result<DevicePayloadStats>> {
+  async execute(
+    thingName: string,
+    from: string,
+    to: string,
+    source: DeviceDataSource,
+  ): Promise<Result<DevicePayloadStats>> {
+    const reads = this.dataSource.reads(source);
     const [result, macroResult] = await Promise.all([
-      this.databricksPort.getDevicePayloadBreakdown(thingName, from, to),
-      this.databricksPort.getDeviceMacroBreakdown(thingName, from, to),
+      reads.getDevicePayloadBreakdown(thingName, from, to),
+      reads.getDeviceMacroBreakdown(thingName, from, to),
     ]);
     if (result.isFailure()) {
       return failure(result.error);

@@ -7,6 +7,8 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDeviceThroughputUseCase } from "./get-device-throughput";
 
 const THING = "AMBYTE_A";
@@ -18,6 +20,7 @@ describe("GetDeviceThroughputUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetDeviceThroughputUseCase;
   let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -27,6 +30,7 @@ describe("GetDeviceThroughputUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(GetDeviceThroughputUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
   });
 
   afterEach(() => {
@@ -45,7 +49,7 @@ describe("GetDeviceThroughputUseCase", () => {
         success([{ bucketStart: "2026-08-13T01:00:00.000Z", experimentId: EXPERIMENT, count: 12 }]),
       );
 
-    const result = await useCase.execute(THING, FROM, TO, "hour");
+    const result = await useCase.execute(THING, FROM, TO, "hour", "warehouse");
 
     assertSuccess(result);
     expect(result.value).toEqual([
@@ -62,7 +66,7 @@ describe("GetDeviceThroughputUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, "hour");
+    const result = await useCase.execute(THING, FROM, TO, "hour", "warehouse");
 
     assertSuccess(result);
     expect(result.value).toEqual([
@@ -75,8 +79,29 @@ describe("GetDeviceThroughputUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, "day");
+    const result = await useCase.execute(THING, FROM, TO, "day", "warehouse");
 
     assertFailure(result);
+  });
+
+  it("answers the same from the store as from the warehouse", async () => {
+    const rows = [
+      { bucketStart: "2026-08-13T01:00:00.000Z", experimentId: EXPERIMENT, count: 12 },
+      { bucketStart: null, experimentId: EXPERIMENT, count: 3 },
+    ];
+    const warehouse = vi
+      .spyOn(databricksAdapter, "getDeviceThroughput")
+      .mockResolvedValue(success(rows));
+    const store = vi.spyOn(servingStore, "getDeviceThroughput").mockResolvedValue(success(rows));
+
+    const fromWarehouse = await useCase.execute(THING, FROM, TO, "hour", "warehouse");
+    const fromStore = await useCase.execute(THING, FROM, TO, "hour", "store");
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(warehouse).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledWith(THING, FROM, TO, "hour");
   });
 });

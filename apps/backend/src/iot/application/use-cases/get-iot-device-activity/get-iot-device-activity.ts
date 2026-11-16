@@ -1,23 +1,26 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type { IotDeviceActivity } from "@repo/api/domains/iot/iot.schema";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 @Injectable()
 export class GetIotDeviceActivityUseCase {
   private readonly logger = new Logger(GetIotDeviceActivityUseCase.name);
 
   constructor(
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly dataSource: DeviceDataSourceService,
     private readonly deviceRepository: IotDeviceRepository,
   ) {}
 
-  async execute(deviceId: string, userId: string): Promise<Result<IotDeviceActivity>> {
+  async execute(
+    deviceId: string,
+    userId: string,
+    source: DeviceDataSource,
+  ): Promise<Result<IotDeviceActivity>> {
     this.logger.log({
       msg: "Getting device activity",
       operation: "getIotDeviceActivity",
@@ -35,9 +38,9 @@ export class GetIotDeviceActivityUseCase {
 
     // Enrichment, never a gate: a failure is reported as unavailable so
     // "never sent data" and "warehouse down" stay distinguishable.
-    const activityResult = await this.databricksPort.getDeviceLastActivity(
-      deviceResult.value.thingName,
-    );
+    const activityResult = await this.dataSource
+      .reads(source)
+      .getDeviceLastActivity(deviceResult.value.thingName);
     if (activityResult.isFailure()) {
       this.logger.warn({
         msg: "Device last-activity lookup failed; rendering as unknown",

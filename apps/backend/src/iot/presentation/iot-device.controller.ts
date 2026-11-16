@@ -11,6 +11,7 @@ import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { resolveResourceCapabilities } from "../../authorization/resource-capabilities";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { DeviceDataSourceService } from "../application/services/device-data-source.service";
 import { BulkRegisterIotDevicesUseCase } from "../application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
@@ -50,6 +51,7 @@ export class IotDeviceController {
     private readonly retireIotDeviceUseCase: RetireIotDeviceUseCase,
     private readonly reinstateIotDeviceUseCase: ReinstateIotDeviceUseCase,
     private readonly authz: AuthorizationService,
+    private readonly dataSource: DeviceDataSourceService,
   ) {}
 
   @Implement(iotContract.listIotDevices)
@@ -166,9 +168,11 @@ export class IotDeviceController {
   @Implement(iotContract.getIotDeviceActivity)
   getIotDeviceActivity(@Session() session: UserSession) {
     return implement(iotContract.getIotDeviceActivity).handler(async ({ input }) => {
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getIotDeviceActivityUseCase.execute(
         input.deviceId,
         session.user.id,
+        source,
       );
 
       if (result.isSuccess()) {
@@ -181,12 +185,14 @@ export class IotDeviceController {
 
   @CanAccess({ resource: "device", action: "read", param: "deviceId" })
   @Implement(iotContract.listDeviceObservedExperiments)
-  listDeviceObservedExperiments() {
+  listDeviceObservedExperiments(@Session() session: UserSession) {
     return implement(iotContract.listDeviceObservedExperiments).handler(async ({ input }) => {
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.listDeviceObservedExperimentsUseCase.execute(
         input.deviceId,
         input.from,
         input.to,
+        source,
       );
 
       if (result.isSuccess()) {
@@ -199,13 +205,15 @@ export class IotDeviceController {
 
   @CanAccess({ resource: "device", action: "read", param: "deviceId" })
   @Implement(iotContract.getDeviceFirmwareHistory)
-  getDeviceFirmwareHistory() {
+  getDeviceFirmwareHistory(@Session() session: UserSession) {
     return implement(iotContract.getDeviceFirmwareHistory).handler(async ({ input }) => {
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getIotDeviceFirmwareHistoryUseCase.execute(
         input.deviceId,
         input.from,
         input.to,
         input.bucket,
+        source,
       );
 
       if (result.isSuccess()) {
@@ -220,12 +228,14 @@ export class IotDeviceController {
   @Implement(iotContract.getDeviceMonitoring)
   getDeviceMonitoring(@Session() session: UserSession) {
     return implement(iotContract.getDeviceMonitoring).handler(async ({ input }) => {
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getDeviceMonitoringUseCase.execute(
         input.deviceId,
         input.from,
         input.to,
         input.bucket,
         session.user.id,
+        source,
       );
 
       if (result.isSuccess()) {

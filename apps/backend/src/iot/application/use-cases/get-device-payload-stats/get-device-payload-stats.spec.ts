@@ -8,6 +8,8 @@ import {
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookVersionRepository } from "../../../../workbooks/core/repositories/workbook-version.repository";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDevicePayloadStatsUseCase } from "./get-device-payload-stats";
 
 const THING = "AMBYTE_A";
@@ -21,6 +23,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetDevicePayloadStatsUseCase;
   let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
   let workbookVersionRepository: WorkbookVersionRepository;
 
   beforeAll(async () => {
@@ -31,6 +34,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(GetDevicePayloadStatsUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
     workbookVersionRepository = testApp.module.get(WorkbookVersionRepository);
     vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
@@ -88,7 +92,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.totalMeasurements).toBe(100);
@@ -126,7 +130,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.protocolMix).toEqual([{ protocolId: "proto-1", count: 12 }]);
@@ -140,7 +144,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.macroMix).toEqual([
@@ -167,7 +171,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
       success([{ id: VERSION_ID, workbookId: WORKBOOK_ID, version: 4 }]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     // The version id alone matches no workbook the caller can list, so the
@@ -193,7 +197,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
     );
     vi.spyOn(workbookVersionRepository, "findWorkbookRefsByIds").mockResolvedValue(success([]));
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value.workbookMix).toEqual([
@@ -219,7 +223,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
       failure(AppError.internal("registry down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertFailure(result);
   });
@@ -229,7 +233,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertFailure(result);
   });
@@ -239,8 +243,58 @@ describe("GetDevicePayloadStatsUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, FROM, TO, "warehouse");
 
     assertFailure(result);
+  });
+
+  it("answers the same from the store as from the warehouse", async () => {
+    const breakdown = [
+      {
+        deviceVersion: "2.1",
+        protocolId: "p1",
+        workbookVersionId: null,
+        workbookRunId: "wr1",
+        count: 4,
+        withGps: 2,
+        withBattery: 3,
+      },
+      {
+        deviceVersion: "2.2",
+        protocolId: null,
+        workbookVersionId: null,
+        workbookRunId: null,
+        count: 1,
+        withGps: 0,
+        withBattery: 1,
+      },
+    ];
+    const macros = [
+      { macroId: "m1", count: 2 },
+      { macroId: "m2", count: 5 },
+    ];
+    const warehouseBreakdown = vi
+      .spyOn(databricksAdapter, "getDevicePayloadBreakdown")
+      .mockResolvedValue(success(breakdown));
+    const warehouseMacros = vi
+      .spyOn(databricksAdapter, "getDeviceMacroBreakdown")
+      .mockResolvedValue(success(macros));
+    const storeBreakdown = vi
+      .spyOn(servingStore, "getDevicePayloadBreakdown")
+      .mockResolvedValue(success(breakdown));
+    const storeMacros = vi
+      .spyOn(servingStore, "getDeviceMacroBreakdown")
+      .mockResolvedValue(success(macros));
+
+    const fromWarehouse = await useCase.execute(THING, FROM, TO, "warehouse");
+    const fromStore = await useCase.execute(THING, FROM, TO, "store");
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(warehouseBreakdown).toHaveBeenCalledOnce();
+    expect(warehouseMacros).toHaveBeenCalledOnce();
+    expect(storeBreakdown).toHaveBeenCalledWith(THING, FROM, TO);
+    expect(storeMacros).toHaveBeenCalledWith(THING, FROM, TO);
   });
 });

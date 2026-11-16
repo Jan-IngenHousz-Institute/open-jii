@@ -9,6 +9,7 @@ import { iotContract } from "@repo/api/domains/iot/iot.contract";
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { DeviceDataSourceService } from "../application/services/device-data-source.service";
 import { GetExperimentDeviceSeriesUseCase } from "../application/use-cases/get-experiment-device-series/get-experiment-device-series";
 import { ListDeviceExperimentsUseCase } from "../application/use-cases/list-device-experiments/list-device-experiments";
 import { ListExperimentDevicesUseCase } from "../application/use-cases/list-experiment-devices/list-experiment-devices";
@@ -25,6 +26,7 @@ export class ExperimentDeviceController {
     private readonly listExperimentDevicesUseCase: ListExperimentDevicesUseCase,
     private readonly getExperimentDeviceSeriesUseCase: GetExperimentDeviceSeriesUseCase,
     private readonly removeExperimentDeviceUseCase: RemoveExperimentDeviceUseCase,
+    private readonly dataSource: DeviceDataSourceService,
   ) {}
 
   @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
@@ -82,6 +84,7 @@ export class ExperimentDeviceController {
   getExperimentDeviceSeries(@Session() session: UserSession) {
     return implement(experimentDevicesContract.getExperimentDeviceSeries).handler(
       async ({ input }) => {
+        const source = await this.dataSource.sourceFor(session.user);
         const result = await this.getExperimentDeviceSeriesUseCase.execute(
           input.id,
           input.clientId,
@@ -89,6 +92,7 @@ export class ExperimentDeviceController {
           input.to,
           input.bucket,
           session.user.id,
+          source,
         );
 
         if (result.isSuccess()) {

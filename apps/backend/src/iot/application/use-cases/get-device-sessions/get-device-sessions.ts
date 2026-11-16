@@ -1,11 +1,11 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { DeviceLifecycleEvent, DeviceSession } from "@repo/api/domains/iot/iot.schema";
 import { deriveDeviceConnectivity } from "@repo/api/transforms/device-connectivity";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/ports/device-reads.port";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 // One more row than the cap detects truncation without a count query.
 const EVENT_QUERY_CAP = 1000;
@@ -23,22 +23,17 @@ export interface DeviceSessionsResult {
  */
 @Injectable()
 export class GetDeviceSessionsUseCase {
-  constructor(
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
-  ) {}
+  constructor(private readonly dataSource: DeviceDataSourceService) {}
 
   async execute(
     thingName: string,
     from: string,
     to: string,
+    source: DeviceDataSource,
   ): Promise<Result<DeviceSessionsResult>> {
-    const eventsResult = await this.databricksPort.getDeviceLifecycleEvents(
-      thingName,
-      from,
-      to,
-      EVENT_QUERY_CAP + 1,
-    );
+    const eventsResult = await this.dataSource
+      .reads(source)
+      .getDeviceLifecycleEvents(thingName, from, to, EVENT_QUERY_CAP + 1);
     if (eventsResult.isFailure()) {
       return failure(eventsResult.error);
     }

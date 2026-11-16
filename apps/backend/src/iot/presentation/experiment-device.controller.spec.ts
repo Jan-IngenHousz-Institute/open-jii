@@ -13,9 +13,11 @@ import { eq, experiments } from "@repo/database";
 
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
-import { success } from "../../common/utils/fp-utils";
+import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { DeviceDataSourceService } from "../application/services/device-data-source.service";
+import { GetExperimentDeviceSeriesUseCase } from "../application/use-cases/get-experiment-device-series/get-experiment-device-series";
 
 const ENDPOINT = "abc123-ats.iot.eu-central-1.amazonaws.com";
 
@@ -339,6 +341,33 @@ describe("ExperimentDeviceController", () => {
       .expect(StatusCodes.OK);
 
     expect(response.body.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]);
+  });
+
+  it("reads a device series from the source the store flag picks", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const sourceFor = vi
+      .spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor")
+      .mockResolvedValue("store");
+    const execute = vi
+      .spyOn(testApp.module.get(GetExperimentDeviceSeriesUseCase), "execute")
+      .mockResolvedValue(failure(AppError.notFound("No experiment")));
+
+    const path = testApp.resolveOrpcPath(contract.experiments.getExperimentDeviceSeries, {
+      id: experiment.id,
+    });
+    await testApp
+      .get(path)
+      .query({
+        clientId: "AMBYTE_A",
+        from: "2026-08-04T12:00:00.000Z",
+        to: "2026-09-03T12:00:00.000Z",
+        bucket: "day",
+      })
+      .withAuth(userId)
+      .expect(StatusCodes.NOT_FOUND);
+
+    expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: userId }));
+    expect(execute.mock.lastCall?.at(-1)).toBe("store");
   });
 
   it("rejects a series range longer than the contract allows (400)", async () => {

@@ -7,6 +7,8 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetExperimentDeviceSeriesUseCase } from "./get-experiment-device-series";
 
 const FROM = "2026-08-04T12:00:00.000Z";
@@ -16,6 +18,7 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetExperimentDeviceSeriesUseCase;
   let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
   let userId: string;
 
   beforeAll(async () => {
@@ -27,6 +30,7 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
     userId = await testApp.createTestUser({ name: "Owner" });
     useCase = testApp.module.get(GetExperimentDeviceSeriesUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
     vi.spyOn(databricksAdapter, "getExperimentDeviceSeries").mockResolvedValue(success([]));
   });
 
@@ -45,7 +49,15 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
       success([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 12 }]),
     );
 
-    const result = await useCase.execute(experiment.id, "AMBYTE_A", FROM, TO, "day", userId);
+    const result = await useCase.execute(
+      experiment.id,
+      "AMBYTE_A",
+      FROM,
+      TO,
+      "day",
+      userId,
+      "warehouse",
+    );
 
     assertSuccess(result);
     expect(result.value.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 12 }]);
@@ -59,7 +71,15 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
     );
 
     // A Cognito publisher: no device to authorize against, only the experiment.
-    const result = await useCase.execute(experiment.id, "cognito-abc", FROM, TO, "day", userId);
+    const result = await useCase.execute(
+      experiment.id,
+      "cognito-abc",
+      FROM,
+      TO,
+      "day",
+      userId,
+      "warehouse",
+    );
 
     assertSuccess(result);
     expect(result.value.buckets).toHaveLength(1);
@@ -71,7 +91,15 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(experiment.id, "AMBYTE_A", FROM, TO, "day", userId);
+    const result = await useCase.execute(
+      experiment.id,
+      "AMBYTE_A",
+      FROM,
+      TO,
+      "day",
+      userId,
+      "warehouse",
+    );
 
     assertSuccess(result);
     expect(result.value.buckets).toEqual([]);
@@ -86,6 +114,7 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
       TO,
       "day",
       userId,
+      "warehouse",
     );
 
     assertFailure(result);
@@ -100,9 +129,67 @@ describe("GetExperimentDeviceSeriesUseCase", () => {
     });
     const stranger = await testApp.createTestUser({ name: "Stranger" });
 
-    const result = await useCase.execute(experiment.id, "AMBYTE_A", FROM, TO, "day", stranger);
+    const result = await useCase.execute(
+      experiment.id,
+      "AMBYTE_A",
+      FROM,
+      TO,
+      "day",
+      stranger,
+      "warehouse",
+    );
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
+  });
+
+  it("answers the same from the store as from the warehouse", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const rows = [
+      { bucketStart: "2026-09-01T00:00:00.000Z", count: 12 },
+      { bucketStart: "2026-09-02T00:00:00.000Z", count: 4 },
+    ];
+    const warehouse = vi
+      .spyOn(databricksAdapter, "getExperimentDeviceSeries")
+      .mockResolvedValue(success(rows));
+    const store = vi
+      .spyOn(servingStore, "getExperimentDeviceSeries")
+      .mockResolvedValue(success(rows));
+
+    const read = (source: "warehouse" | "store") =>
+      useCase.execute(experiment.id, "AMBYTE_A", FROM, TO, "day", userId, source);
+    const fromWarehouse = await read("warehouse");
+    const fromStore = await read("store");
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(warehouse).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledWith(experiment.id, "AMBYTE_A", FROM, TO, "day");
+  });
+
+  it("refuses a public-only stranger before reading the store", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Public",
+      userId,
+      visibility: "public",
+    });
+    const stranger = await testApp.createTestUser({ name: "Stranger" });
+    const store = vi.spyOn(servingStore, "getExperimentDeviceSeries");
+
+    const result = await useCase.execute(
+      experiment.id,
+      "AMBYTE_A",
+      FROM,
+      TO,
+      "day",
+      stranger,
+      "store",
+    );
+
+    assertFailure(result);
+    expect(result.error.statusCode).toBe(403);
+    expect(store).not.toHaveBeenCalled();
   });
 });
