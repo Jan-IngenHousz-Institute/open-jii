@@ -29,86 +29,6 @@ locals {
     namespace   = var.metrics_namespace
   })
 
-  # The system logs that ship without a TTL. opentelemetry_span_log defines its own engine and stays
-  # empty unless tracing is on.
-  system_log_tables = [
-    "query_log", "trace_log", "query_thread_log", "query_views_log", "part_log", "text_log",
-    "metric_log", "asynchronous_metric_log", "error_log", "query_metric_log", "crash_log",
-    "backup_log", "s3queue_log",
-  ]
-
-  config_xml = templatefile("${path.module}/templates/config.xml.tftpl", {
-    http_port                 = var.http_port
-    prometheus_port           = local.prometheus_port
-    system_log_tables         = local.system_log_tables
-    system_log_retention_days = var.system_log_retention_days
-  })
-
-  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
-  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
-  reader_views = [
-    "experiment_measurements", "experiment_macro_results", "experiment_uploads",
-    "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
-    "experiment_metadata_rows", "experiment_metadata_sheets",
-  ]
-  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
-
-  # The tables under the row views, which a chart reads to name only the payload paths it plots;
-  # through a view the store reads every payload whole. The reader's row policy on each keeps a read
-  # to the experiment it sends as a setting, and fails a read that sends none.
-  reader_tables     = ["measurements", "macro_results", "uploads"]
-  reader_row_filter = "experiment_id = getSetting('custom_experiment')"
-
-  # No grants means the admin, which manages access and applies the schema. The writer only inserts,
-  # and keeps out of the migration ledger, which records what the schema already holds. The reloader
-  # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
-  # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
-  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
-  users = {
-    admin = { name = "openjii_admin", profile = "default", grants = [], row_filters = {} }
-    writer = {
-      name    = "openjii_writer"
-      profile = "ingest"
-      grants = [
-        "GRANT SELECT, INSERT ON store.*",
-        "REVOKE INSERT ON store._migrations",
-      ]
-      row_filters = {}
-    }
-    reloader = {
-      name    = "openjii_reloader"
-      profile = "ingest"
-      grants = concat(
-        ["GRANT SELECT, INSERT ON store.*"],
-        [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
-        ["REVOKE INSERT ON store._migrations"],
-      )
-      row_filters = {}
-    }
-    reader = {
-      name    = "openjii_reader"
-      profile = "reader"
-      grants = concat(
-        [for view in local.reader_views : "GRANT SELECT ON store.${view}"],
-        [for table in local.reader_tables : "GRANT SELECT ON store.${table}"],
-      )
-      row_filters = { for table in local.reader_tables : table => local.reader_row_filter }
-    }
-  }
-
-  # The hashes of 32 random characters, shown in plans so a replacement says what changed.
-  users_xml = templatefile("${path.module}/templates/users.xml.tftpl", {
-    users = [
-      for role, user in local.users : {
-        name            = user.name
-        profile         = user.profile
-        grants          = user.grants
-        row_filters     = user.row_filters
-        password_sha256 = nonsensitive(sha256(random_password.user[role].result))
-      }
-    ]
-  })
-
   cloudwatch_agent_config_path = "/opt/aws/amazon-cloudwatch-agent/etc/openjii.json"
 
   cloudwatch_agent_config = jsonencode({
@@ -174,8 +94,18 @@ data "aws_subnet" "this" {
   id = var.subnet_id
 }
 
+module "clickhouse_config" {
+  source = "./clickhouse-config"
+
+  http_port                 = var.http_port
+  prometheus_port           = local.prometheus_port
+  system_log_retention_days = var.system_log_retention_days
+  # The hashes of 32 random characters, shown in plans so a replacement says what changed.
+  password_sha256 = { for role, password in random_password.user : role => nonsensitive(sha256(password.result)) }
+}
+
 resource "random_password" "user" {
-  for_each = local.users
+  for_each = module.clickhouse_config.users
 
   length  = 32
   special = false
@@ -184,7 +114,7 @@ resource "random_password" "user" {
 # One secret per role, in the shape Aurora's secrets have, so each consumer reads only its own.
 module "credentials" {
   source   = "../secrets-manager"
-  for_each = local.users
+  for_each = module.clickhouse_config.users
 
   name        = "${local.name}-${each.key}"
   description = "Serving store ${each.key} user"
@@ -313,8 +243,8 @@ resource "aws_instance" "store" {
     clickhouse_version           = var.clickhouse_version
     clickhouse_id                = local.clickhouse_id
     data_device                  = local.data_device
-    config_xml                   = local.config_xml
-    users_xml                    = local.users_xml
+    config_xml                   = module.clickhouse_config.config_xml
+    users_xml                    = module.clickhouse_config.users_xml
     prometheus_config_path       = local.prometheus_config_path
     prometheus_config            = local.prometheus_config
     cloudwatch_agent_config_path = local.cloudwatch_agent_config_path

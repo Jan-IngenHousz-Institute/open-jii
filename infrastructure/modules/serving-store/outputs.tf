@@ -10,13 +10,13 @@ output "url" {
 
 output "writer_credentials" {
   description = "Username and password the pipelines' feed inserts with"
-  value       = { username = local.users.writer.name, password = random_password.user["writer"].result }
+  value       = { username = module.clickhouse_config.users.writer.name, password = random_password.user["writer"].result }
   sensitive   = true
 }
 
 output "reloader_credentials" {
   description = "Username and password the reload job inserts and deletes with"
-  value       = { username = local.users.reloader.name, password = random_password.user["reloader"].result }
+  value       = { username = module.clickhouse_config.users.reloader.name, password = random_password.user["reloader"].result }
   sensitive   = true
 }
 
