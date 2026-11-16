@@ -13,11 +13,12 @@ import { eq, experiments } from "@repo/database";
 
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
-import { AppError, failure, success } from "../../common/utils/fp-utils";
+import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { DeviceDataSourceService } from "../application/services/device-data-source.service";
-import { GetExperimentDeviceSeriesUseCase } from "../application/use-cases/get-experiment-device-series/get-experiment-device-series";
+import { IOT_SERVING_STORE_PORT } from "../core/ports/serving-store.port";
+import type { ServingStorePort } from "../core/ports/serving-store.port";
 
 const ENDPOINT = "abc123-ats.iot.eu-central-1.amazonaws.com";
 
@@ -343,19 +344,19 @@ describe("ExperimentDeviceController", () => {
     expect(response.body.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]);
   });
 
-  it("reads a device series from the source the store flag picks", async () => {
+  it("keeps a device series on the warehouse with the store flag on, like the list beside it", async () => {
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
-    const sourceFor = vi
-      .spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor")
-      .mockResolvedValue("store");
-    const execute = vi
-      .spyOn(testApp.module.get(GetExperimentDeviceSeriesUseCase), "execute")
-      .mockResolvedValue(failure(AppError.notFound("No experiment")));
+    vi.spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor").mockResolvedValue("store");
+    const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
+    const store = vi.spyOn(servingStore, "getExperimentDeviceSeries");
+    vi.spyOn(databricksAdapter, "getExperimentDeviceSeries").mockResolvedValue(
+      success([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]),
+    );
 
     const path = testApp.resolveOrpcPath(contract.experiments.getExperimentDeviceSeries, {
       id: experiment.id,
     });
-    await testApp
+    const response: SuperTestResponse<ExperimentDeviceSeries> = await testApp
       .get(path)
       .query({
         clientId: "AMBYTE_A",
@@ -364,10 +365,10 @@ describe("ExperimentDeviceController", () => {
         bucket: "day",
       })
       .withAuth(userId)
-      .expect(StatusCodes.NOT_FOUND);
+      .expect(StatusCodes.OK);
 
-    expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: userId }));
-    expect(execute.mock.lastCall?.at(-1)).toBe("store");
+    expect(response.body.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]);
+    expect(store).not.toHaveBeenCalled();
   });
 
   it("rejects a series range longer than the contract allows (400)", async () => {
