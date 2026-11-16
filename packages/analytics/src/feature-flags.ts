@@ -15,6 +15,8 @@ export const FEATURE_FLAGS = {
   // An experiment's tables, pages, filter values and columns read from the serving store together,
   // so a page never mixes the store's columns with the warehouse's cells.
   STORE_EXPERIMENT_READS: "store-experiment-reads",
+  // Charts, and the device picker whose labels filter them, read from the serving store.
+  STORE_CHART_READS: "store-chart-reads",
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
@@ -32,6 +34,7 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.CALIBRATION]: false, // Hidden until targeted in PostHog
   [FEATURE_FLAGS.STORE_EXPERIMENT_READS]: false, // The warehouse until a clean comparison
+  [FEATURE_FLAGS.STORE_CHART_READS]: false, // The warehouse until charts' own comparison
 };
 
 /** The signed-in user a flag is evaluated for. */

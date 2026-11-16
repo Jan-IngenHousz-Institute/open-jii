@@ -57,7 +57,7 @@
     "filters": { "groups": [{ "rollout_percentage": 0 }] }
   },
   "store-experiment-reads": {
-    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts stay on the warehouse. On for one organisation's members while both read paths are compared, off for everyone else.",
+    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts and the device picker follow store-chart-reads. On for one organisation's members while both read paths are compared, off for everyone else.",
     "active": true,
     "continuity": false,
     "tags": ["backend", "serving-store"],
@@ -76,5 +76,12 @@
         }
       ]
     }
+  },
+  "store-chart-reads": {
+    "name": "Charts, and the device picker whose labels filter them, read from the serving store. Off until charts' own comparison of both read paths.",
+    "active": true,
+    "continuity": false,
+    "tags": ["backend", "serving-store"],
+    "filters": { "groups": [{ "rollout_percentage": 0 }] }
   }
 }
