@@ -8,6 +8,7 @@ import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experim
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
+import type { ExperimentDataSources } from "../core/models/experiment-data.model";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
@@ -127,7 +128,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data", page: 1, pageSize: 10 }),
-        "warehouse",
+        { pages: "warehouse", charts: "warehouse" },
       );
     });
 
@@ -175,7 +176,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data", column: "site", limit: 50 }),
-        "warehouse",
+        { pages: "warehouse", charts: "warehouse" },
       );
     });
 
@@ -209,7 +210,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data" }),
-        "warehouse",
+        { pages: "warehouse", charts: "warehouse" },
       );
     });
 
@@ -226,14 +227,24 @@ describe("ExperimentDataController", () => {
   });
 
   describe("read source", () => {
+    it("reads tables from the source the pages' flag picks", async () => {
+      const sourceFor = vi
+        .spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor")
+        .mockResolvedValue("store");
+      const execute = vi
+        .spyOn(getExperimentTablesUseCase, "execute")
+        .mockResolvedValue(failure(AppError.notFound("No tables")));
+
+      await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(404);
+
+      expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
+      expect(execute.mock.lastCall?.at(-1)).toBe("store");
+    });
+
     it.each([
-      {
-        path: "tables",
-        mockUseCase: () =>
-          vi
-            .spyOn(getExperimentTablesUseCase, "execute")
-            .mockResolvedValue(failure(AppError.notFound("No tables"))),
-      },
       {
         path: "data?tableName=raw_data",
         mockUseCase: () =>
@@ -255,20 +266,24 @@ describe("ExperimentDataController", () => {
             .spyOn(getExperimentTableColumnsUseCase, "execute")
             .mockResolvedValue(failure(AppError.notFound("No columns"))),
       },
-    ])("reads $path from the source the store flag picks", async ({ path, mockUseCase }) => {
-      const sourceFor = vi
-        .spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor")
-        .mockResolvedValue("store");
-      const execute = mockUseCase();
+    ])(
+      "reads $path from the sources the pages' and charts' flags pick",
+      async ({ path, mockUseCase }) => {
+        const sources = { pages: "store", charts: "warehouse" } satisfies ExperimentDataSources;
+        const sourcesFor = vi
+          .spyOn(testApp.module.get(ExperimentDataSourceService), "sourcesFor")
+          .mockResolvedValue(sources);
+        const execute = mockUseCase();
 
-      await testApp
-        .get(`/api/v1/experiments/${readableExperimentId}/${path}`)
-        .withAuth(testUserId)
-        .expect(404);
+        await testApp
+          .get(`/api/v1/experiments/${readableExperimentId}/${path}`)
+          .withAuth(testUserId)
+          .expect(404);
 
-      expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
-      expect(execute.mock.lastCall?.at(-1)).toBe("store");
-    });
+        expect(sourcesFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
+        expect(execute.mock.lastCall?.at(-1)).toEqual(sources);
+      },
+    );
   });
 
   describe("authorization", () => {

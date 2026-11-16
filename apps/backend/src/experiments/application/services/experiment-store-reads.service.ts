@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import { hasAggregationContent } from "../../../common/modules/databricks/services/query-builder/expressions/aggregation";
 import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
@@ -138,7 +139,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       ...params,
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
-      deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
+      deviceSerials: devices === undefined ? undefined : this.registeredDevices(devices),
       metadataSheets: sheetsResult.value,
     });
     if (built.isFailure()) {
@@ -173,8 +174,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   /**
-   * The rows in the warehouse's cells, marked truncated, as the warehouse marks a result it cuts,
-   * when those cells pass the limit one read may return, so the same pages are refused.
+   * The rows in the warehouse's cells that fit the limit one read may return, marked truncated
+   * when some did not, as the warehouse cuts a result: a page so cut is refused, and a chart shows
+   * what fits.
    */
   async runQuery(query: TableQuery): Promise<Result<SchemaData>> {
     const result = await this.store.executeQuery(query);
@@ -234,7 +236,10 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return registered.map(({ clientId }) => clientId);
   }
 
-  /** Whether the read filters, sorts or lists by a device's label, which needs its serial. */
+  /**
+   * Whether the read filters, sorts or lists by a device's label, which needs its serial, or
+   * aggregates over devices, which the warehouse tells apart by their registry rows.
+   */
   private readsLabels(params: ExperimentQueryParams, idColumns: IdColumns): boolean {
     const columns = [
       ...(params.filters ?? []).map(({ column }) => column),
@@ -245,7 +250,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       const [name, field] = this.structPath(column);
       return idColumns.get(name) === "device" && field === "serial_number";
     });
-    return namesLabel || this.sortsWholeDevice(params, idColumns);
+    const hasDevices = [...idColumns.values()].includes("device");
+    const aggregatesDevices = hasDevices && hasAggregationContent(params.aggregation);
+    return namesLabel || aggregatesDevices || this.sortsWholeDevice(params, idColumns);
   }
 
   /**
@@ -277,10 +284,10 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return (isEveryColumnShown && fields.size > 0) || named.some((name) => fields.has(name));
   }
 
-  /** Only a serial a label shows enters the query; any other device reads none from the list. */
-  private serialsShown(devices: Map<string, DeviceCell>): [string, string][] {
-    return [...devices.entries()].flatMap(([clientId, { serial_number }]) =>
-      this.showsSerial(serial_number) ? [[clientId, serial_number]] : [],
+  /** Every registered device, with only a serial a label shows; any other device reads none. */
+  private registeredDevices(devices: Map<string, DeviceCell>): [string, string | null][] {
+    return [...devices.entries()].flatMap(([clientId, { id, serial_number }]) =>
+      id === null ? [] : [[clientId, this.showsSerial(serial_number) ? serial_number : null]],
     );
   }
 
@@ -364,13 +371,17 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return success(data);
     }
 
+    // A matched table's device is null where no row matched.
     const pairs = data.rows.map((row) =>
-      deviceIndexes.map((index) => zDevicePair.parse(JSON.parse(String(row[index])))),
+      deviceIndexes.map((index) => {
+        const cell = row[index];
+        return cell === null ? null : zDevicePair.parse(JSON.parse(cell));
+      }),
     );
     const contributorIds = new Set(
       data.rows.flatMap((row) => contributorIndexes.flatMap((index) => row[index] ?? [])),
     );
-    const clientIds = new Set(pairs.flat().flatMap(([clientId]) => clientId ?? []));
+    const clientIds = new Set(pairs.flat().flatMap((pair) => pair?.[0] ?? []));
     const [contributors, devices] = await Promise.all([
       this.contributors([...contributorIds]),
       this.devices([...clientIds]),
@@ -384,7 +395,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
 
     const contributorCell = (id: string | null) =>
       id === null ? null : JSON.stringify(contributors.value.get(id));
-    const deviceCell = ([clientId, label]: [string | null, string | null]) => {
+    const deviceCell = (pair: [string | null, string | null] | null) => {
+      if (pair === null) {
+        return null;
+      }
+      const [clientId, label] = pair;
       const known = clientId === null ? undefined : devices.value.get(clientId);
       const registered = known ?? UNKNOWN_DEVICE;
       const serial = registered.serial_number;

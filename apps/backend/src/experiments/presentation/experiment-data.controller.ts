@@ -47,12 +47,12 @@ export class ExperimentDataController {
   getExperimentData(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const source = await this.dataSource.sourceFor(session.user);
+      const sources = await this.dataSource.sourcesFor(session.user);
       const result = await this.getExperimentDataUseCase.execute(
         id,
         session.user.id,
         query,
-        source,
+        sources,
       );
       if (result.isSuccess()) {
         return result.value;
@@ -66,12 +66,12 @@ export class ExperimentDataController {
   getDistinctColumnValues(@Session() session: UserSession) {
     return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const source = await this.dataSource.sourceFor(session.user);
+      const sources = await this.dataSource.sourcesFor(session.user);
       const result = await this.getDistinctColumnValuesUseCase.execute(
         id,
         session.user.id,
         query,
-        source,
+        sources,
       );
       if (result.isSuccess()) {
         return result.value;
@@ -86,12 +86,12 @@ export class ExperimentDataController {
     return implement(experimentDataContract.getExperimentTableColumns).handler(
       async ({ input }) => {
         const { id, ...query } = input;
-        const source = await this.dataSource.sourceFor(session.user);
+        const sources = await this.dataSource.sourcesFor(session.user);
         const result = await this.getExperimentTableColumnsUseCase.execute(
           id,
           session.user.id,
           query,
-          source,
+          sources,
         );
         if (result.isSuccess()) {
           return result.value;

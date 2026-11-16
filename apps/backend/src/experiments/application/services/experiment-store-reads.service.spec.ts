@@ -224,7 +224,7 @@ describe("ExperimentStoreReadsService", () => {
     expect(ids).not.toHaveBeenCalled();
   });
 
-  it("hands the store only the serial numbers a label shows, for a filter on one", async () => {
+  it("hands the store only the serial numbers a label shows, for a filter on one, a blank one as none", async () => {
     const owner = await testApp.createTestUser({});
     await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-7", thingName: "thing-7" });
     await testApp.createIotDevice({ createdBy: owner, serialNumber: "  ", thingName: "thing-8" });
@@ -238,7 +238,12 @@ describe("ExperimentStoreReadsService", () => {
 
     assertSuccess(query);
     expect(build).toHaveBeenCalledWith(
-      expect.objectContaining({ deviceSerials: [["thing-7", "SN-7"]] }),
+      expect.objectContaining({
+        deviceSerials: [
+          ["thing-7", "SN-7"],
+          ["thing-8", null],
+        ],
+      }),
     );
   });
 
@@ -368,6 +373,72 @@ describe("ExperimentStoreReadsService", () => {
     expect(result.value.rows).toEqual([["a"], ["b"], [half]]);
     expect(result.value.totalRows).toBe(3);
     expect(result.value.truncated).toBe(true);
+  });
+
+  it("keeps a chart's rows that fit once filled in and marks the rest cut, as the warehouse cuts it", async () => {
+    const name = { name: "device_name", type_name: "STRING", type_text: "STRING", position: 0 };
+    const query = await reads.buildQuery({ ...page, columns: ["device_name"], plotsValues: true });
+    assertSuccess(query);
+    storeRows([name], [["a"], ["x".repeat(PAGE_BYTE_LIMIT)], ["c"]]);
+
+    const result = await reads.runQuery(query.value);
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["a"]]);
+    expect(result.value).toMatchObject({ totalRows: 1, truncated: true });
+  });
+
+  it("gives an aggregation over devices every registered device, a blank serial as none", async () => {
+    const owner = await testApp.createTestUser({});
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-1", thingName: "thing-1" });
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: " ", thingName: "thing-2" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(
+      success(["thing-1", "thing-2", "phone-a"]),
+    );
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    await reads.buildQuery({
+      ...page,
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "count" }],
+      },
+    });
+
+    expect(build.mock.calls[0][0].deviceSerials).toEqual([
+      ["thing-1", "SN-1"],
+      ["thing-2", null],
+    ]);
+  });
+
+  it("fills a matched table's device, and leaves it null where no row matched", async () => {
+    const owner = await testApp.createTestUser({});
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-1", thingName: "thing-1" });
+    vi.spyOn(store, "executeQuery").mockResolvedValue(
+      success({
+        columns: [
+          {
+            name: "device_m2",
+            type_name: "STRUCT",
+            type_text: WellKnownColumnTypes.DEVICE,
+            position: 0,
+          },
+        ],
+        rows: [['["thing-1","thing-1 (d1)"]'], [null]],
+        totalRows: 2,
+        truncated: false,
+      }),
+    );
+
+    const result = await reads.runQuery({
+      sql: "SELECT …",
+      columns: [{ name: "device_m2", type: WellKnownColumnTypes.DEVICE, idOf: "device" }],
+      distinct: false,
+    });
+
+    assertSuccess(result);
+    expect(JSON.parse(String(result.value.rows[0][0]))).toMatchObject({ serial_number: "SN-1" });
+    expect(result.value.rows[1][0]).toBeNull();
   });
 
   it("measures a read's contributors filled in, as the warehouse sends them", async () => {

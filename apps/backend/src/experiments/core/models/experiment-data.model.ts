@@ -23,7 +23,6 @@ export type ExperimentTableType = "static" | "macro" | "upload";
 /** Where a read of experiment data goes: the warehouse's views, or the serving store. */
 export type ExperimentDataSource = "warehouse" | "store";
 
-/** Each flag switches its own reads: a table's pages, and the charts drawn from it. */
 export interface ExperimentDataSources {
   pages: ExperimentDataSource;
   charts: ExperimentDataSource;
@@ -161,8 +160,7 @@ export interface ExperimentQueryParams {
   offset?: number;
   /** Only the store reads by flags; a flagged read is refused before it could reach the warehouse. */
   flagged?: FlaggedRows;
-  /** A chart plots values, so the store reads a payload field from its JSON, not the text a page
-   *  shows, which every row would otherwise carry whole. */
+  /** Payload fields read from the store's JSON, not from the text every row would carry whole. */
   plotsValues?: boolean;
 }
 

@@ -7,7 +7,7 @@ import type {
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import type { ExperimentDataSource } from "../../../core/models/experiment-data.model";
+import type { ExperimentDataSources } from "../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentDataRepository } from "../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -29,7 +29,7 @@ export class GetExperimentTableColumnsUseCase {
     experimentId: string,
     userId: string,
     query: ExperimentTableColumnsQuery,
-    source: ExperimentDataSource,
+    sources: ExperimentDataSources,
   ): Promise<Result<ExperimentTableColumnsResponse>> {
     this.logger.log({
       msg: "Looking up table columns",
@@ -54,11 +54,12 @@ export class GetExperimentTableColumnsUseCase {
         return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
       }
 
+      // Only a chart matches a second table by time, so a joined table's columns are its reads'.
       const columnsResult = await this.experimentDataRepository.getTableColumns({
         experimentId,
         tableName: query.tableName,
         join: query.join,
-        source,
+        source: query.join === undefined ? sources.pages : sources.charts,
       });
       if (columnsResult.isFailure()) {
         return columnsResult;

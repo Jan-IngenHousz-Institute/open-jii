@@ -40,6 +40,7 @@ import {
 import type {
   ExperimentAsOfJoin,
   ExperimentDataSource,
+  ExperimentDataSources,
   ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
@@ -156,8 +157,8 @@ export class ExperimentDataRepository {
    *   - none of the above: plain paginated read using the cached row count.
    *
    * The two one-page reads stop at `limit`, or `DATA_QUERY_MAX_LIMIT` when it is omitted, and
-   * say when they stopped short. They feed charts, which read from the warehouse until the store
-   * aggregates, whatever `source` says, as does a read joined to a second table.
+   * say when they stopped short. They feed charts, which read from the charts' source, as does a
+   * read joined to a second table.
    */
   async getTableData(params: {
     experimentId: string;
@@ -173,7 +174,7 @@ export class ExperimentDataRepository {
     pageSize?: number;
     limit?: number;
     flagged?: ExperimentDataFlagged;
-    source: ExperimentDataSource;
+    sources: ExperimentDataSources;
   }): Promise<Result<TableDataDto[]>> {
     const {
       experimentId,
@@ -189,7 +190,7 @@ export class ExperimentDataRepository {
       pageSize,
       limit,
       flagged,
-      source,
+      sources,
     } = params;
 
     const hasAggregation =
@@ -200,10 +201,9 @@ export class ExperimentDataRepository {
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
     const isChartRead = hasAggregation || ((hasFilters || hasColumns) && !hasPaging);
-    const readSource = isChartRead || join !== undefined ? "warehouse" : source;
+    const readSource = isChartRead || join !== undefined ? sources.charts : sources.pages;
 
-    // Charts, joined reads and tables the store does not hold read from the warehouse, and only
-    // the store's read builds the flag filter.
+    // Only the store's read builds the flag filter, so a read the warehouse would answer is refused.
     const isFlaggedReadUnsupported =
       flagged !== undefined &&
       (readSource !== "store" || !this.sourceReads(readSource).readsTable(tableName));
@@ -275,6 +275,7 @@ export class ExperimentDataRepository {
         aggregation,
         ordering,
         limit: ceiling + 1,
+        plotsValues: true,
       });
       if (queryResult.isFailure()) {
         return queryResult;
@@ -282,6 +283,7 @@ export class ExperimentDataRepository {
       const countSubqueryResult = await this.buildQuery(experimentId, shape, {
         filters: effectiveFilters,
         aggregation,
+        plotsValues: true,
       });
       if (countSubqueryResult.isFailure()) {
         return countSubqueryResult;
@@ -359,6 +361,7 @@ export class ExperimentDataRepository {
         filters: effectiveFilters,
         ordering,
         limit: ceiling + 1,
+        plotsValues: true,
       });
       if (queryResult.isFailure()) {
         return queryResult;
@@ -366,6 +369,7 @@ export class ExperimentDataRepository {
       const countSubqueryResult = await this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
+        plotsValues: true,
       });
       if (countSubqueryResult.isFailure()) {
         return countSubqueryResult;
@@ -424,14 +428,24 @@ export class ExperimentDataRepository {
     tableName: string;
     column: string;
     limit: number;
-    source: ExperimentDataSource;
+    sources: ExperimentDataSources;
     offset?: number;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, experiment, tableName, column, limit, offset, source } = params;
+    const { experimentId, experiment, tableName, column, limit, offset, sources } = params;
 
-    const shapeResult = await this.tableShape(experimentId, tableName, source);
+    let shapeResult = await this.tableShape(experimentId, tableName, sources.pages);
     if (shapeResult.isFailure()) {
       return shapeResult;
+    }
+
+    // The device picker's labels filter charts, so it reads where they do.
+    const isDevicePicker = column === "device" && shapeResult.value.metadata.tableType !== "upload";
+    const isChartsElsewhere = isDevicePicker && sources.charts !== sources.pages;
+    if (isChartsElsewhere) {
+      shapeResult = await this.tableShape(experimentId, tableName, sources.charts);
+      if (shapeResult.isFailure()) {
+        return shapeResult;
+      }
     }
 
     const shape = shapeResult.value;
@@ -442,11 +456,10 @@ export class ExperimentDataRepository {
     if (anonymizedResult.isFailure()) {
       return anonymizedResult;
     }
-    const deviceColumn = column === "device" && shape.metadata.tableType !== "upload";
-    if (!deviceColumn && (offset ?? 0) > 0) {
+    if (!isDevicePicker && (offset ?? 0) > 0) {
       return failure(AppError.badRequest("Offset paging is supported only for device columns"));
     }
-    const queryResult = await (deviceColumn
+    const queryResult = await (isDevicePicker
       ? this.deviceValuesSql(experimentId, shape, limit, offset)
       : this.buildQuery(experimentId, shape, {
           columns: [column],
@@ -510,7 +523,7 @@ export class ExperimentDataRepository {
   }): Promise<Result<SchemaDataDto["columns"]>> {
     const { experimentId, tableName, join, source } = params;
     if (join) {
-      const shape = await this.tableShape(experimentId, tableName, "warehouse");
+      const shape = await this.tableShape(experimentId, tableName, source);
       if (shape.isFailure()) return shape;
       const joined = await this.joinedShape(experimentId, tableName, shape.value, join);
       if (joined.isFailure()) return joined;
@@ -889,18 +902,24 @@ export class ExperimentDataRepository {
   ): Promise<Result<TableShape & { columns: SchemaDataDto["columns"] }>> {
     if (join.tableName === tableName)
       return failure(AppError.badRequest("Choose a different second table"));
-    const secondary = await this.tableShape(experimentId, join.tableName, "warehouse");
+    // Both tables read from one source; a table the store lacks takes the join to the warehouse.
+    const secondary = await this.tableShape(experimentId, join.tableName, shape.source);
     if (secondary.isFailure()) return secondary;
+    if (secondary.value.source !== shape.source) {
+      const warehouse = await this.tableShape(experimentId, tableName, "warehouse");
+      if (warehouse.isFailure()) return warehouse;
+      return this.joinedShape(experimentId, tableName, warehouse.value, join);
+    }
     const primaryColumns = await this.getTableColumns({
       experimentId,
       tableName,
-      source: "warehouse",
+      source: shape.source,
     });
     if (primaryColumns.isFailure()) return primaryColumns;
     const secondaryColumns = await this.getTableColumns({
       experimentId,
       tableName: join.tableName,
-      source: "warehouse",
+      source: shape.source,
     });
     if (secondaryColumns.isFailure()) return secondaryColumns;
     const left = primaryColumns.value;
@@ -966,10 +985,17 @@ export class ExperimentDataRepository {
     shape: TableShape,
     options: Pick<
       ExperimentQueryParams,
-      "columns" | "filters" | "aggregation" | "distinct" | "ordering" | "limit" | "offset"
+      | "columns"
+      | "filters"
+      | "aggregation"
+      | "distinct"
+      | "ordering"
+      | "limit"
+      | "offset"
+      | "plotsValues"
     > = {},
   ): Promise<Result<TableQuery>> {
-    const { filters, aggregation, distinct, ordering, limit, offset } = options;
+    const { filters, aggregation, distinct, ordering, limit, offset, plotsValues } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
     // Only a read of rows is merged, so only it needs the phone's annotations beside the column.
     const readsRows = !distinct && aggregation === undefined;
@@ -1038,6 +1064,7 @@ export class ExperimentDataRepository {
       limit,
       offset,
       flagged: shape.flagged,
+      plotsValues,
     });
   }
 

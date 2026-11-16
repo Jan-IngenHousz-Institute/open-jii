@@ -10,7 +10,7 @@ import {
 import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../../common/utils/fp-utils";
 import type {
-  ExperimentDataSource,
+  ExperimentDataSources,
   TableDataDto,
 } from "../../../../core/models/experiment-data.model";
 import { ExperimentDto } from "../../../../core/models/experiment.model";
@@ -36,7 +36,7 @@ export class GetExperimentDataUseCase {
     experimentId: string,
     userId: string,
     query: ExperimentDataQuery,
-    source: ExperimentDataSource,
+    sources: ExperimentDataSources,
   ): Promise<Result<ExperimentDataDto>> {
     this.logger.log({
       msg: "Getting experiment data",
@@ -106,7 +106,7 @@ export class GetExperimentDataUseCase {
         pageSize,
         limit,
         flagged,
-        source,
+        sources,
       });
       if (result.isFailure()) return result;
       const tables = result.value;

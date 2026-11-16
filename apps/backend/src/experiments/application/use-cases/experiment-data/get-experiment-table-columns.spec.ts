@@ -56,7 +56,7 @@ describe("GetExperimentTableColumnsUseCase", () => {
       experiment.id,
       testUserId,
       { tableName: "raw_data" },
-      "warehouse",
+      { pages: "warehouse", charts: "warehouse" },
     );
 
     assertSuccess(result);
@@ -75,7 +75,7 @@ describe("GetExperimentTableColumnsUseCase", () => {
       nonExistentId,
       testUserId,
       { tableName: "raw_data" },
-      "warehouse",
+      { pages: "warehouse", charts: "warehouse" },
     );
 
     assertFailure(result);
@@ -97,7 +97,7 @@ describe("GetExperimentTableColumnsUseCase", () => {
       experiment.id,
       testUserId,
       { tableName: "raw_data" },
-      "warehouse",
+      { pages: "warehouse", charts: "warehouse" },
     );
 
     assertFailure(result);
