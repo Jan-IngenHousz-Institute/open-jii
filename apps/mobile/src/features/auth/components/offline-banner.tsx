@@ -1,7 +1,8 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import React from "react";
-import { Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 import { useTranslation } from "~/shared/i18n";
+import { useEnvVar } from "~/shared/stores/environment-store";
 import { Button } from "~/shared/ui/Button";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
@@ -14,7 +15,11 @@ interface OfflineBannerProps {
 export function OfflineBanner({ online, checking, onRetry }: OfflineBannerProps) {
   const { warningFg } = useThemeColors();
   const { t } = useTranslation();
+  const statusUri = useEnvVar("STATUS_URI");
   if (online !== false) return null;
+
+  const openStatusPage = () => void Linking.openURL(statusUri);
+
   return (
     <View className="bg-warning/10 mb-6 w-full gap-3 rounded-lg p-4">
       <View className="flex-row items-start gap-3" accessibilityLiveRegion="polite">
@@ -31,6 +36,13 @@ export function OfflineBanner({ online, checking, onRetry }: OfflineBannerProps)
           {t("checkingConnection")}
         </Text>
       )}
+      <Text
+        className="text-sm text-amber-800 underline dark:text-amber-200"
+        onPress={openStatusPage}
+        accessibilityRole="link"
+      >
+        {t("checkStatusPage")}
+      </Text>
       <Button
         title={t("retry")}
         variant="surface"

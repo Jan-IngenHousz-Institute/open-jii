@@ -31,6 +31,7 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
       CONTENTFUL_ACCESS_TOKEN: process.env.EXPO_PUBLIC_CONTENTFUL_ACCESS_TOKEN ?? "",
       CONTENTFUL_SPACE_ENVIRONMENT:
         process.env.EXPO_PUBLIC_CONTENTFUL_SPACE_ENVIRONMENT ?? "master",
+      STATUS_URI: "https://status.openjii.org",
     },
 
     dev: {
@@ -52,6 +53,7 @@ export function loadEnvVariablesFromExpo(): EnvVariablesMap {
       CONTENTFUL_ACCESS_TOKEN: process.env.EXPO_PUBLIC_CONTENTFUL_ACCESS_TOKEN ?? "",
       CONTENTFUL_SPACE_ENVIRONMENT:
         process.env.EXPO_PUBLIC_CONTENTFUL_SPACE_ENVIRONMENT ?? "master",
+      STATUS_URI: "https://status.dev.openjii.org",
     },
   };
 }
