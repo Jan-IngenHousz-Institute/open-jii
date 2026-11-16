@@ -449,6 +449,15 @@ describe("CacheAdapter", () => {
       expect(await adapter.refresh("stale", () => Promise.resolve("new"))).toBe("new");
     });
 
+    it("rejects with a failed load and keeps the stored value for the next read", async () => {
+      await cacheManager.set("refresh:kept", { value: "old", freshUntil: Date.now() + 60_000 });
+
+      await expect(
+        adapter.refresh("kept", () => Promise.reject(new Error("store unreachable"))),
+      ).rejects.toThrow("store unreachable");
+      expect(await adapter.tryCache("kept", () => Promise.resolve("new"))).toBe("old");
+    });
+
     it("joins a load already running for the key", async () => {
       let release: (() => void) | undefined;
       const fetchFn = vi.fn(

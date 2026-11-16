@@ -3426,6 +3426,31 @@ describe("ExperimentDataRepository", () => {
       expect(storeListing).toHaveBeenCalledTimes(2);
     });
 
+    it("keeps the last snapshot for page reads when a store listing fails", async () => {
+      vi.spyOn(servingStore, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([largeTable]))
+        .mockResolvedValue(failure(AppError.internal("store unreachable")));
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+      );
+
+      const listed = await repository.listedTablesMetadata(experimentId, "store");
+      const failed = await repository.listedTablesMetadata(experimentId, "store");
+      const page = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(listed);
+      assertFailure(failed);
+      assertSuccess(page);
+      expect(page.value[0].totalRows).toBe(1_000_000);
+    });
+
     it("lists the warehouse's tables from the cached snapshot", async () => {
       const warehouseListing = vi
         .spyOn(databricksPort, "getExperimentTableMetadata")
