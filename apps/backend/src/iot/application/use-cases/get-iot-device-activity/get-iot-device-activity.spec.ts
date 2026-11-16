@@ -93,23 +93,26 @@ describe("GetIotDeviceActivityUseCase", () => {
   it.each([
     { name: "a last arrival", answer: success({ lastDataAt: "2026-08-13T09:00:00.000Z" }) },
     { name: "a failed read", answer: failure(AppError.internal("down")) },
-  ])("answers $name the same from the store as from the warehouse", async ({ answer }) => {
-    const device = await testApp.createIotDevice({ createdBy: userId });
-    const warehouse = vi
-      .spyOn(databricksAdapter, "getDeviceLastActivity")
-      .mockResolvedValue(answer);
-    const store = vi.spyOn(servingStore, "getDeviceLastActivity").mockResolvedValue(answer);
+  ])(
+    "reads $name from the store, not the warehouse, when the source is the store",
+    async ({ answer }) => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const warehouse = vi
+        .spyOn(databricksAdapter, "getDeviceLastActivity")
+        .mockResolvedValue(answer);
+      const store = vi.spyOn(servingStore, "getDeviceLastActivity").mockResolvedValue(answer);
 
-    const fromWarehouse = await useCase.execute(device.id, userId, "warehouse");
-    const fromStore = await useCase.execute(device.id, userId, "store");
+      const fromWarehouse = await useCase.execute(device.id, userId, "warehouse");
+      const fromStore = await useCase.execute(device.id, userId, "store");
 
-    assertSuccess(fromWarehouse);
-    assertSuccess(fromStore);
-    expect(fromStore.value).toEqual(fromWarehouse.value);
-    expect(warehouse).toHaveBeenCalledOnce();
-    expect(store).toHaveBeenCalledOnce();
-    expect(store).toHaveBeenCalledWith(device.thingName);
-  });
+      assertSuccess(fromWarehouse);
+      assertSuccess(fromStore);
+      expect(fromStore.value).toEqual(fromWarehouse.value);
+      expect(warehouse).toHaveBeenCalledOnce();
+      expect(store).toHaveBeenCalledOnce();
+      expect(store).toHaveBeenCalledWith(device.thingName);
+    },
+  );
 
   it("reads nothing from the store for a device that does not exist", async () => {
     const store = vi.spyOn(servingStore, "getDeviceLastActivity");

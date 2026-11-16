@@ -208,7 +208,7 @@ describe("GetDeviceSessionsUseCase", () => {
     assertFailure(result);
   });
 
-  it("answers the same from the store as from the warehouse", async () => {
+  it("reads the store, not the warehouse, when the source is the store", async () => {
     const events = [
       event("connected", "2026-08-13T01:00:00.000Z"),
       event("disconnected", "2026-08-13T03:00:00.000Z", "CONNECTION_LOST"),

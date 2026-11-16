@@ -84,7 +84,7 @@ describe("GetDeviceThroughputUseCase", () => {
     assertFailure(result);
   });
 
-  it("answers the same from the store as from the warehouse", async () => {
+  it("reads the store, not the warehouse, when the source is the store", async () => {
     const rows = [
       { bucketStart: "2026-08-13T01:00:00.000Z", experimentId: EXPERIMENT, count: 12 },
       { bucketStart: null, experimentId: EXPERIMENT, count: 3 },

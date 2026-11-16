@@ -170,7 +170,7 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
     assertFailure(result);
   });
 
-  it("answers the same from the store as from the warehouse", async () => {
+  it("reads the store, not the warehouse, when the source is the store", async () => {
     const rows = [
       {
         version: "2.1",

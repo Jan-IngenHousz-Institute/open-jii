@@ -248,7 +248,7 @@ describe("GetDevicePayloadStatsUseCase", () => {
     assertFailure(result);
   });
 
-  it("answers the same from the store as from the warehouse", async () => {
+  it("reads the store, not the warehouse, when the source is the store", async () => {
     const breakdown = [
       {
         deviceVersion: "2.1",

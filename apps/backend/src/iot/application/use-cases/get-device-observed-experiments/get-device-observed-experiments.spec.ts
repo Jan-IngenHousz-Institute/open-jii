@@ -102,7 +102,7 @@ describe("GetDeviceObservedExperimentsUseCase", () => {
     assertFailure(result);
   });
 
-  it("answers the same from the store as from the warehouse", async () => {
+  it("reads the store, not the warehouse, when the source is the store", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
     const rows = [
       { bucketStart: "2026-08-20T00:00:00.000Z", experimentId: EXPERIMENT_A, count: 5 },

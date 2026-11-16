@@ -149,7 +149,7 @@ describe("GetDeviceMonitoringUseCase", () => {
     expect(result.error.statusCode).toBe(404);
   });
 
-  it("answers the same from the store as from the warehouse", async () => {
+  it("reads every section from the store, not the warehouse, when the source is the store", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
     const experimentId = faker.string.uuid();
     const events = [
