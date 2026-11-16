@@ -717,6 +717,28 @@
         "Name sorted ascending; Filter menu closed with no chips.",
         "Only [Seed] names and the seeded account are visible."
       ]
+    },
+    {
+      "asset": "status-page.webp",
+      "sha256": "4597cfcce5dcfcce9f8a66cfab0c4dc23cfdab89833bd4d240b58ec55fa507ac",
+      "script": "one-off Playwright capture of the public page, not scripted",
+      "environment": "status.dev.openjii.org",
+      "route": "/",
+      "captured_at": "2026-11-16T05:26:00+00:00",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-11-16T05:30:00+00:00",
+      "reviewer": "status-links",
+      "review_notes": "The public status page with every component operational. It shows no account, email or location.",
+      "redactions": [],
+      "live_checks_observed": [
+        "status.dev.openjii.org was checked 05:25 UTC with all five components operational."
+      ]
     }
   ]
 }
