@@ -51,7 +51,7 @@ describe("GetExperimentMetadataUseCase", () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     const second = await save(experiment.id, "GH 8.4");
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
     assertSuccess(result);
     expect(result.value.map(({ metadataId }) => metadataId)).toEqual([
@@ -91,7 +91,7 @@ describe("GetExperimentMetadataUseCase", () => {
       .where(storeRowOf(failed.metadataId));
     await testApp.database.delete(experimentDataOutbox).where(storeRowOf(loaded.metadataId));
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, testUserId, "store");
 
     assertSuccess(result);
     expect(
@@ -103,6 +103,23 @@ describe("GetExperimentMetadataUseCase", () => {
     });
   });
 
+  it("says nothing of a store copy to a user whose pages read the warehouse", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Warehouse reader",
+      userId: testUserId,
+    });
+    vi.spyOn(
+      testApp.module.get<ServingStoreCopiesPort>(SERVING_STORE_COPIES_PORT),
+      "isConfigured",
+    ).mockReturnValue(true);
+    await save(experiment.id, "GH 1");
+
+    const result = await useCase.execute(experiment.id, testUserId, "warehouse");
+
+    assertSuccess(result);
+    expect(result.value[0].storeCopy).toBeNull();
+  });
+
   it("says nothing of a store copy where there is no store", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "No store",
@@ -110,7 +127,7 @@ describe("GetExperimentMetadataUseCase", () => {
     });
     await save(experiment.id, "GH 1");
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, testUserId, "store");
 
     assertSuccess(result);
     expect(result.value[0].storeCopy).toBeNull();
@@ -122,7 +139,7 @@ describe("GetExperimentMetadataUseCase", () => {
       userId: testUserId,
     });
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
     assertSuccess(result);
     expect(result.value).toEqual([]);
@@ -137,14 +154,18 @@ describe("GetExperimentMetadataUseCase", () => {
     const saved = await save(experiment.id, "GH 8.3");
     const otherUserId = await testApp.createTestUser({});
 
-    const result = await useCase.execute(experiment.id, otherUserId);
+    const result = await useCase.execute(experiment.id, otherUserId, "warehouse");
 
     assertSuccess(result);
     expect(result.value.map(({ metadataId }) => metadataId)).toEqual([saved.metadataId]);
   });
 
   it("refuses an experiment that does not exist", async () => {
-    const result = await useCase.execute("00000000-0000-0000-0000-000000000000", testUserId);
+    const result = await useCase.execute(
+      "00000000-0000-0000-0000-000000000000",
+      testUserId,
+      "warehouse",
+    );
 
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
@@ -162,7 +183,7 @@ describe("GetExperimentMetadataUseCase", () => {
       failure(AppError.internal("Postgres did not answer the metadata sheets query")),
     );
 
-    const result = await useCase.execute(experiment.id, testUserId);
+    const result = await useCase.execute(experiment.id, testUserId, "warehouse");
 
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");

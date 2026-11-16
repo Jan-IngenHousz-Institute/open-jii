@@ -8,6 +8,7 @@ import { experimentMetadataContract } from "@repo/api/domains/experiment/metadat
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { ExperimentDataSourceService } from "../application/services/experiment-data-source.service";
 import { CopyExperimentMetadataToStoreUseCase } from "../application/use-cases/experiment-metadata/copy-experiment-metadata-to-store";
 import { CreateExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/delete-experiment-metadata";
@@ -24,6 +25,7 @@ export class ExperimentMetadataController {
     private readonly updateExperimentMetadataUseCase: UpdateExperimentMetadataUseCase,
     private readonly deleteExperimentMetadataUseCase: DeleteExperimentMetadataUseCase,
     private readonly copyExperimentMetadataToStoreUseCase: CopyExperimentMetadataToStoreUseCase,
+    private readonly dataSource: ExperimentDataSourceService,
   ) {}
 
   @CanAccess({ resource: "experiment", action: "read" })
@@ -31,7 +33,12 @@ export class ExperimentMetadataController {
   listExperimentMetadata(@Session() session: UserSession) {
     return implement(experimentMetadataContract.listExperimentMetadata).handler(
       async ({ input }) => {
-        const result = await this.getExperimentMetadataUseCase.execute(input.id, session.user.id);
+        const source = await this.dataSource.sourceFor(session.user);
+        const result = await this.getExperimentMetadataUseCase.execute(
+          input.id,
+          session.user.id,
+          source,
+        );
         if (result.isSuccess()) {
           return result.value.map(formatDates);
         }

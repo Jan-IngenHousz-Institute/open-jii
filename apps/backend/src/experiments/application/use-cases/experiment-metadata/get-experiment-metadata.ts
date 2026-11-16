@@ -5,6 +5,7 @@ import type { MetadataStoreCopy } from "@repo/api/domains/experiment/metadata/ex
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import { COPY_FAILED_AFTER_ATTEMPTS } from "../../../core/models/experiment-data-outbox.model";
+import type { ExperimentDataSource } from "../../../core/models/experiment-data.model";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
 import { SERVING_STORE_COPIES_PORT } from "../../../core/ports/serving-store-copies.port";
 import type { ServingStoreCopiesPort } from "../../../core/ports/serving-store-copies.port";
@@ -23,7 +24,12 @@ export class GetExperimentMetadataUseCase {
     @Inject(SERVING_STORE_COPIES_PORT) private readonly storeCopies: ServingStoreCopiesPort,
   ) {}
 
-  async execute(experimentId: string, userId: string): Promise<Result<ExperimentMetadataDto[]>> {
+  /** `source` is where the user's data reads come from; only a store reader is told the store's state. */
+  async execute(
+    experimentId: string,
+    userId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentMetadataDto[]>> {
     this.logger.log({
       msg: "Fetching experiment metadata",
       operation: "getExperimentMetadata",
@@ -61,7 +67,7 @@ export class GetExperimentMetadataUseCase {
       return result;
     }
 
-    const attempts = await this.storeAttempts(experimentId);
+    const attempts = await this.storeAttempts(experimentId, source);
     if (attempts.isFailure()) {
       return attempts;
     }
@@ -75,9 +81,16 @@ export class GetExperimentMetadataUseCase {
     );
   }
 
-  /** Each sheet still owed to the store, with its failed attempts; null where there is no store. */
-  private async storeAttempts(experimentId: string): Promise<Result<Map<string, number> | null>> {
-    if (!this.storeCopies.isConfigured()) {
+  /**
+   * Each sheet still owed to the store, with its failed attempts. Null where there is no copier, or
+   * for a user whose pages read the warehouse, whom the store's state does not concern.
+   */
+  private async storeAttempts(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<Map<string, number> | null>> {
+    const readsTheStore = source === "store" && this.storeCopies.isConfigured();
+    if (!readsTheStore) {
       return success(null);
     }
     return this.outbox.findAttempts(experimentId, "metadata_sheet", "serving_store");
