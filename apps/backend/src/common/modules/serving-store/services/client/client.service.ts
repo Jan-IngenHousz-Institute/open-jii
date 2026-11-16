@@ -27,9 +27,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
 
   /**
    * The backend refuses a page by its cells as the warehouse writes them, as the rows arrive; this
-   * limit guards the store's memory. An empty text cell, 9 bytes there against 3 as JSON text, is
-   * the widest ratio a page can have, so the guard sits 4 times above the page limit and never
-   * refuses first.
+   * limit guards the store's memory, 4 times the page limit, above an empty text cell's 9 bytes
+   * there against 3 as JSON text. It refuses first only for a page that shows a few fields of large
+   * payloads, since each row carries its payload's whole text.
    */
   private static readonly RESULT_BYTES_GUARD = 4 * PAGE_BYTE_LIMIT;
 
