@@ -3,6 +3,10 @@ import type { OnApplicationShutdown } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
+import {
+  COPY_FAILED_AFTER_ATTEMPTS,
+  COPY_RETRY_WAITS_S,
+} from "../../core/models/experiment-data-outbox.model";
 import type {
   ClaimedOutboxRow,
   ExperimentDataDestination,
@@ -36,9 +40,6 @@ export const ATTEMPT_DEADLINE_MS = 2 * 60_000;
  * warehouse took 10,000 parameters in one statement; sheets go a statement's worth at a time.
  */
 const BATCH_SIZE = 200;
-
-/** Seconds before each retry. The last repeats: a copy that keeps failing is never dropped. */
-const RETRY_WAITS_S = [10, 60, 5 * 60, 15 * 60, 60 * 60];
 
 const INTERVAL_MS = 15_000;
 
@@ -288,13 +289,13 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     };
     // Past the last step of the ladder the copy is stuck rather than waiting out a cold warehouse,
     // and error tracking reads errors.
-    if (attempts >= RETRY_WAITS_S.length) {
+    if (attempts >= COPY_FAILED_AFTER_ATTEMPTS) {
       this.logger.error({ ...failed, errorCode: ErrorCodes.INTERNAL_SERVER_ERROR });
     } else {
       this.logger.warn(failed);
     }
 
-    const retried = await this.outbox.markRetry(rows, RETRY_WAITS_S, error);
+    const retried = await this.outbox.markRetry(rows, COPY_RETRY_WAITS_S, error);
     if (retried.isFailure()) {
       this.logger.error({
         msg: "Could not put experiment data copies back to wait; the lease will offer them again",

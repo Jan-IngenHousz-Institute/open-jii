@@ -34,4 +34,13 @@ export const experimentMetadataContract = {
     })
     .input(zExperimentMetadataPathParam)
     .output(z.void()),
+  copyExperimentMetadataToStore: oc
+    .route({
+      method: "POST",
+      path: "/api/v1/experiments/{id}/metadata/{metadataId}/store-copy",
+      successStatus: 202,
+      description: "Copies the sheet's rows to the serving store again, at once",
+    })
+    .input(zExperimentMetadataPathParam)
+    .output(z.void()),
 };

@@ -1,8 +1,14 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+
+import type { MetadataStoreCopy } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
+import { COPY_FAILED_AFTER_ATTEMPTS } from "../../../core/models/experiment-data-outbox.model";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
+import { SERVING_STORE_COPIES_PORT } from "../../../core/ports/serving-store-copies.port";
+import type { ServingStoreCopiesPort } from "../../../core/ports/serving-store-copies.port";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -13,6 +19,8 @@ export class GetExperimentMetadataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly metadataRepository: ExperimentMetadataRepository,
+    private readonly outbox: ExperimentDataOutboxRepository,
+    @Inject(SERVING_STORE_COPIES_PORT) private readonly storeCopies: ServingStoreCopiesPort,
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentMetadataDto[]>> {
@@ -53,6 +61,39 @@ export class GetExperimentMetadataUseCase {
       return result;
     }
 
-    return success(result.value.map(({ id, ...sheet }) => ({ ...sheet, metadataId: id })));
+    const attempts = await this.storeAttempts(experimentId);
+    if (attempts.isFailure()) {
+      return attempts;
+    }
+
+    return success(
+      result.value.map(({ id, ...sheet }) => ({
+        ...sheet,
+        metadataId: id,
+        storeCopy: this.storeCopyOf(attempts.value, id),
+      })),
+    );
+  }
+
+  /** Each sheet still owed to the store, with its failed attempts; null where there is no store. */
+  private async storeAttempts(experimentId: string): Promise<Result<Map<string, number> | null>> {
+    if (!this.storeCopies.isConfigured()) {
+      return success(null);
+    }
+    return this.outbox.findAttempts(experimentId, "metadata_sheet", "serving_store");
+  }
+
+  private storeCopyOf(
+    attempts: Map<string, number> | null,
+    sheetId: string,
+  ): MetadataStoreCopy | null {
+    if (attempts === null) {
+      return null;
+    }
+    const failedAttempts = attempts.get(sheetId);
+    if (failedAttempts === undefined) {
+      return "loaded";
+    }
+    return failedAttempts >= COPY_FAILED_AFTER_ATTEMPTS ? "failed" : "pending";
   }
 }

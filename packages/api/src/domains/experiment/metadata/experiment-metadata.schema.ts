@@ -149,6 +149,8 @@ export const zExperimentCustomMetadataPayload = z
     }
   });
 
+export const zMetadataStoreCopy = z.enum(["loaded", "pending", "failed"]);
+
 export const zExperimentMetadata = z.object({
   metadataId: z.string().guid(),
   experimentId: z.string().guid(),
@@ -158,6 +160,12 @@ export const zExperimentMetadata = z.object({
   createdBy: z.string().guid(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  storeCopy: zMetadataStoreCopy
+    .nullable()
+    .optional()
+    .describe(
+      "Whether the serving store has taken the sheet's rows; failed after its retries ran out. Null where there is no serving store",
+    ),
 });
 
 /**
@@ -203,6 +211,7 @@ export const zExperimentMetadataPathParam = z.object({
 });
 
 export type ExperimentMetadata = z.infer<typeof zExperimentMetadata>;
+export type MetadataStoreCopy = z.infer<typeof zMetadataStoreCopy>;
 export type CreateExperimentMetadataBody = z.infer<typeof zCreateExperimentMetadataBody>;
 export type UpdateExperimentMetadataBody = z.infer<typeof zUpdateExperimentMetadataBody>;
 export type ExperimentCustomMetadataPayload = z.infer<typeof zExperimentCustomMetadataPayload>;

@@ -8,6 +8,7 @@ import { experimentMetadataContract } from "@repo/api/domains/experiment/metadat
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { CopyExperimentMetadataToStoreUseCase } from "../application/use-cases/experiment-metadata/copy-experiment-metadata-to-store";
 import { CreateExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "../application/use-cases/experiment-metadata/get-experiment-metadata";
@@ -22,6 +23,7 @@ export class ExperimentMetadataController {
     private readonly createExperimentMetadataUseCase: CreateExperimentMetadataUseCase,
     private readonly updateExperimentMetadataUseCase: UpdateExperimentMetadataUseCase,
     private readonly deleteExperimentMetadataUseCase: DeleteExperimentMetadataUseCase,
+    private readonly copyExperimentMetadataToStoreUseCase: CopyExperimentMetadataToStoreUseCase,
   ) {}
 
   @CanAccess({ resource: "experiment", action: "read" })
@@ -83,6 +85,24 @@ export class ExperimentMetadataController {
     return implement(experimentMetadataContract.deleteExperimentMetadata).handler(
       async ({ input }) => {
         const result = await this.deleteExperimentMetadataUseCase.execute(
+          input.id,
+          input.metadataId,
+          session.user.id,
+        );
+        if (result.isSuccess()) {
+          return undefined;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
+  }
+
+  @CanAccess({ resource: "experiment", action: "manage" })
+  @Implement(experimentMetadataContract.copyExperimentMetadataToStore)
+  copyExperimentMetadataToStore(@Session() session: UserSession) {
+    return implement(experimentMetadataContract.copyExperimentMetadataToStore).handler(
+      async ({ input }) => {
+        const result = await this.copyExperimentMetadataToStoreUseCase.execute(
           input.id,
           input.metadataId,
           session.user.id,

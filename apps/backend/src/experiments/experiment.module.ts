@@ -78,6 +78,7 @@ import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locat
 import { GetExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/get-experiment-locations";
 import { SearchPlacesUseCase } from "./application/use-cases/experiment-locations/search-places";
 import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/update-experiment-locations";
+import { CopyExperimentMetadataToStoreUseCase } from "./application/use-cases/experiment-metadata/copy-experiment-metadata-to-store";
 import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/get-experiment-metadata";
@@ -360,6 +361,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     CreateExperimentMetadataUseCase,
     UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
+    CopyExperimentMetadataToStoreUseCase,
   ],
   exports: [ExperimentRepository, ExperimentDashboardRepository, ExperimentVisualizationRepository],
 })

@@ -1,7 +1,11 @@
+import { and, eq, experimentDataOutbox } from "@repo/database";
+
 import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { SERVING_STORE_COPIES_PORT } from "../../../core/ports/serving-store-copies.port";
+import type { ServingStoreCopiesPort } from "../../../core/ports/serving-store-copies.port";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { CreateExperimentMetadataUseCase } from "./create-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "./get-experiment-metadata";
@@ -62,6 +66,54 @@ describe("GetExperimentMetadataUseCase", () => {
       }),
     );
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it("says whether the serving store has each sheet's rows, where there is a store", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Store copies",
+      userId: testUserId,
+    });
+    vi.spyOn(
+      testApp.module.get<ServingStoreCopiesPort>(SERVING_STORE_COPIES_PORT),
+      "isConfigured",
+    ).mockReturnValue(true);
+    const pending = await save(experiment.id, "GH 1");
+    const failed = await save(experiment.id, "GH 2");
+    const loaded = await save(experiment.id, "GH 3");
+    const storeRowOf = (sheetId: string) =>
+      and(
+        eq(experimentDataOutbox.recordId, sheetId),
+        eq(experimentDataOutbox.destination, "serving_store"),
+      );
+    await testApp.database
+      .update(experimentDataOutbox)
+      .set({ attempts: 5 })
+      .where(storeRowOf(failed.metadataId));
+    await testApp.database.delete(experimentDataOutbox).where(storeRowOf(loaded.metadataId));
+
+    const result = await useCase.execute(experiment.id, testUserId);
+
+    assertSuccess(result);
+    expect(
+      Object.fromEntries(result.value.map(({ metadataId, storeCopy }) => [metadataId, storeCopy])),
+    ).toEqual({
+      [pending.metadataId]: "pending",
+      [failed.metadataId]: "failed",
+      [loaded.metadataId]: "loaded",
+    });
+  });
+
+  it("says nothing of a store copy where there is no store", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "No store",
+      userId: testUserId,
+    });
+    await save(experiment.id, "GH 1");
+
+    const result = await useCase.execute(experiment.id, testUserId);
+
+    assertSuccess(result);
+    expect(result.value[0].storeCopy).toBeNull();
   });
 
   it("returns an empty list when the experiment has no sheets", async () => {
