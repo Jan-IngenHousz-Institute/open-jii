@@ -71,10 +71,11 @@ pickers show the same tag.
 ## New rows arrive on their own
 
 You do not need to reload the page to see new measurements. While the browser
-tab is visible, the Data page checks for new rows every 30 seconds and refreshes
-the table when the dataset in front of you changes. After ten minutes without
-mouse, keyboard or scroll input it stops checking and the line says **Paused**;
-the next input catches up at once. A row that arrives this way is
+tab is visible, the Data page checks for new rows every five seconds and refreshes
+the table when the dataset in front of you changes. Experiments the platform has
+not yet moved to its faster data reads are checked every 30 seconds instead.
+After ten minutes without mouse, keyboard or scroll input the page stops checking
+and the line says **Paused**; the next input catches up at once. A row that arrives this way is
 tinted for a moment so you can spot it. Your sort, filters, page and selected rows
 stay where they were.
 
