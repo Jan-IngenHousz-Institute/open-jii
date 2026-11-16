@@ -9,7 +9,6 @@ import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
 import type { AggregateExpression, AggregationSpec, QueryOrdering } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
-import { buildRowWindowExpression } from "./window";
 
 /** True when the spec has any grouping or aggregate functions to apply. */
 export function hasAggregationContent(spec: AggregationSpec | undefined): boolean {
@@ -135,6 +134,8 @@ function sortTarget(
  * The window-only path activates only with no groupBy entries and no
  * row-aggregating functions, so raw series can coexist with running totals
  * and raw-row windows.
+ *
+ * `builder` writes the dialect: Spark's by default, the store's for its reads.
  */
 export function wrapWithAggregation(
   innerSql: string,
@@ -145,8 +146,8 @@ export function wrapWithAggregation(
     limit?: number;
     offset?: number;
   },
+  builder: BaseQueryBuilder = new SqlQueryBuilder(opts.columnNames),
 ): string {
-  const builder = new SqlQueryBuilder(opts.columnNames);
   const outputNames = new Set<string>();
   const quoteAlias = (name: string) =>
     opts.columnNames === undefined ? builder.escapeIdentifier(name) : builder.quoteName(name);
@@ -202,7 +203,7 @@ export function wrapWithAggregation(
       }
 
       if (aggregateKind(item.function) === "rowWindow") {
-        const expr = buildRowWindowExpression(item, builder);
+        const expr = builder.buildRowWindowExpression(item);
         outputNames.add(expr.alias);
         windowProjections.push(`${expr.sql} AS ${builder.quoteName(expr.alias)}`);
         continue;
@@ -248,7 +249,7 @@ export function wrapWithAggregation(
       outputNames.has(opts.ordering.column)
         ? builder.quoteName(opts.ordering.column)
         : orderSql;
-    sql += ` ORDER BY ${outputOrder} ${direction}`;
+    sql += ` ORDER BY ${outputOrder} ${builder.sortDirection(direction)}`;
   }
 
   if (opts.limit !== undefined) {

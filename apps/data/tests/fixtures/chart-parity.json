@@ -1,0 +1,227 @@
+{
+  "schema": "OBJECT<n: BIGINT, v: DOUBLE>",
+  "rows": [
+    { "id": 1, "timestamp": "2026-09-06 23:30:00.000", "device_name": "A", "latitude": 1.0, "output": "{\"n\":1,\"v\":1.5}" },
+    { "id": 2, "timestamp": "2026-09-07 00:30:00.000", "device_name": "A", "latitude": 2.0, "output": "{\"n\":2,\"v\":2.5}" },
+    { "id": 3, "timestamp": "2026-09-07 00:30:00.000", "device_name": "A", "latitude": 3.0, "output": "{\"n\":2,\"v\":null}" },
+    { "id": 4, "timestamp": "2026-09-08 10:15:30.250", "device_name": "B", "latitude": 4.5, "output": "{\"v\":4.0}" },
+    { "id": 5, "timestamp": "2026-10-01 12:00:00.000", "device_name": "C", "latitude": 1.0, "output": "{\"n\":5,\"v\":8.0}" },
+    { "id": 6, "timestamp": "2026-12-31 23:59:59.000", "device_name": null, "latitude": null, "output": "{\"n\":3,\"v\":-0.5}" },
+    { "id": 7, "timestamp": "2027-01-01 00:00:00.000", "device_name": "D", "latitude": 2.0, "output": "{\"n\":7}" },
+    { "id": 8, "timestamp": "2026-09-08 10:15:00.000", "device_name": "B", "latitude": 5.5, "output": "{\"n\":4,\"v\":6.0}" }
+  ],
+  "cases": {
+    "groupedStats": {
+      "aggregation": {
+        "groupBy": [{ "column": "device_name" }],
+        "functions": [
+          { "column": "v", "function": "sum" },
+          { "column": "n", "function": "sum" },
+          { "column": "v", "function": "avg" },
+          { "column": "n", "function": "avg" },
+          { "column": "*", "function": "count" },
+          { "column": "v", "function": "count" },
+          { "column": "n", "function": "count_distinct" },
+          { "column": "v", "function": "min" },
+          { "column": "n", "function": "max" },
+          { "column": "v", "function": "std" },
+          { "column": "v", "function": "var" }
+        ]
+      },
+      "ordering": { "column": "device_name", "direction": "ASC" }
+    },
+    "nullKeysLast": {
+      "aggregation": {
+        "groupBy": [{ "column": "device_name" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "device_name", "direction": "DESC" }
+    },
+    "weeks": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "week" }],
+        "functions": [
+          { "column": "*", "function": "count" },
+          { "column": "v", "function": "avg" }
+        ]
+      },
+      "ordering": { "column": "timestamp_week", "direction": "ASC" }
+    },
+    "minutes": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "minute" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "timestamp_minute", "direction": "ASC" }
+    },
+    "hours": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "hour" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "timestamp_hour", "direction": "ASC" }
+    },
+    "days": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "day" }],
+        "functions": [{ "column": "v", "function": "max" }]
+      },
+      "ordering": { "column": "timestamp_day", "direction": "ASC" }
+    },
+    "months": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "month" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "timestamp_month", "direction": "ASC" }
+    },
+    "quarters": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "quarter" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "timestamp_quarter", "direction": "ASC" }
+    },
+    "years": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "year" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "timestamp_year", "direction": "ASC" }
+    },
+    "dateDays": {
+      "aggregation": {
+        "groupBy": [{ "column": "date", "timeBucket": "day" }],
+        "functions": [{ "column": "*", "function": "count" }]
+      },
+      "ordering": { "column": "date_day", "direction": "ASC" }
+    },
+    "timeWidth": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "alias": "day_index",
+            "widthBucket": { "origin": 1788652800000, "width": 86400000, "scale": "time" }
+          }
+        ],
+        "functions": [
+          { "column": "*", "function": "count" },
+          { "column": "v", "function": "sum" }
+        ]
+      },
+      "ordering": { "column": "day_index", "direction": "ASC" }
+    },
+    "numberWidth": {
+      "aggregation": {
+        "groupBy": [
+          { "column": "latitude", "widthBucket": { "origin": 0.5, "width": 2, "scale": "number" } }
+        ],
+        "functions": [
+          { "column": "*", "function": "count" },
+          { "column": "v", "function": "avg" }
+        ]
+      },
+      "ordering": { "column": "latitude_bucket", "direction": "ASC" }
+    },
+    "correlation": {
+      "aggregation": {
+        "groupBy": [{ "column": "device_name" }],
+        "functions": [{ "column": "v", "function": "corr", "secondColumn": "latitude" }]
+      },
+      "ordering": { "column": "device_name", "direction": "ASC" }
+    },
+    "latestAndEarliest": {
+      "aggregation": {
+        "groupBy": [{ "column": "device_name" }],
+        "functions": [
+          { "column": "v", "function": "latest", "orderColumn": "timestamp", "tieBreaker": "id" },
+          { "column": "v", "function": "earliest", "orderColumn": "timestamp", "tieBreaker": "id" },
+          { "column": "id", "function": "latest", "orderColumn": "timestamp", "tieBreaker": "id" }
+        ]
+      },
+      "ordering": { "column": "device_name", "direction": "ASC" }
+    },
+    "groupedCumsum": {
+      "aggregation": {
+        "groupBy": [{ "column": "timestamp", "timeBucket": "day" }],
+        "functions": [
+          { "column": "v", "function": "cumsum" },
+          { "column": "*", "function": "cumsum" }
+        ]
+      },
+      "ordering": { "column": "timestamp_day", "direction": "DESC" }
+    },
+    "rowCumsum": {
+      "aggregation": {
+        "functions": [
+          { "column": "v", "function": "cumsum" },
+          { "column": "n", "function": "cumsum" }
+        ]
+      },
+      "ordering": { "column": "id", "direction": "ASC" },
+      "compare": ["id", "v", "v_cumsum", "n_cumsum"]
+    },
+    "rowWindows": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "v",
+            "function": "change_from_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "DOUBLE"
+          },
+          {
+            "column": "timestamp",
+            "function": "change_from_previous",
+            "alias": "seconds_since_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "TIMESTAMP"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": { "column": "id", "direction": "ASC" },
+      "compare": ["id", "v_previous", "v_change_from_previous", "seconds_since_previous", "row"]
+    },
+    "emptySelection": {
+      "filters": [{ "column": "id", "operator": "greater_than", "value": 100 }],
+      "aggregation": {
+        "functions": [
+          { "column": "*", "function": "count" },
+          { "column": "v", "function": "sum" },
+          { "column": "v", "function": "avg" },
+          { "column": "v", "function": "min" },
+          { "column": "v", "function": "std" },
+          { "column": "v", "function": "corr", "secondColumn": "latitude" }
+        ]
+      }
+    },
+    "filteredByPayload": {
+      "filters": [{ "column": "v", "operator": "greater_than_or_equal", "value": 2 }],
+      "aggregation": {
+        "groupBy": [{ "column": "device_name" }],
+        "functions": [{ "column": "v", "function": "sum" }]
+      },
+      "ordering": { "column": "device_name", "direction": "ASC" }
+    }
+  }
+}

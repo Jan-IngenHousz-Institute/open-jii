@@ -1,0 +1,776 @@
+{
+  "correlation": {
+    "columns": [
+      "device_name",
+      "v_corr_latitude"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        null,
+        null
+      ],
+      [
+        "A",
+        1.0
+      ],
+      [
+        "B",
+        1.0
+      ],
+      [
+        "C",
+        null
+      ],
+      [
+        "D",
+        null
+      ]
+    ]
+  },
+  "dateDays": {
+    "columns": [
+      "date_day",
+      "count_count"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2026-09-06T00:00:00.000Z",
+        1
+      ],
+      [
+        "2026-09-07T00:00:00.000Z",
+        2
+      ],
+      [
+        "2026-09-08T00:00:00.000Z",
+        2
+      ],
+      [
+        "2026-10-01T00:00:00.000Z",
+        1
+      ],
+      [
+        "2026-12-31T00:00:00.000Z",
+        1
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        1
+      ]
+    ]
+  },
+  "days": {
+    "columns": [
+      "timestamp_day",
+      "v_max"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        "2026-09-06T00:00:00.000Z",
+        1.5
+      ],
+      [
+        "2026-09-07T00:00:00.000Z",
+        2.5
+      ],
+      [
+        "2026-09-08T00:00:00.000Z",
+        6.0
+      ],
+      [
+        "2026-10-01T00:00:00.000Z",
+        8.0
+      ],
+      [
+        "2026-12-31T00:00:00.000Z",
+        -0.5
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        null
+      ]
+    ]
+  },
+  "emptySelection": {
+    "columns": [
+      "count_count",
+      "v_sum",
+      "v_avg",
+      "v_min",
+      "v_std",
+      "v_corr_latitude"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE",
+      "DOUBLE",
+      "DOUBLE",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        0,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    ]
+  },
+  "filteredByPayload": {
+    "columns": [
+      "device_name",
+      "v_sum"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        "A",
+        2.5
+      ],
+      [
+        "B",
+        10.0
+      ],
+      [
+        "C",
+        8.0
+      ]
+    ]
+  },
+  "groupedCumsum": {
+    "columns": [
+      "timestamp_day",
+      "v_cumsum",
+      "count_cumsum"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "DOUBLE",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2027-01-01T00:00:00.000Z",
+        21.5,
+        8
+      ],
+      [
+        "2026-12-31T00:00:00.000Z",
+        21.5,
+        7
+      ],
+      [
+        "2026-10-01T00:00:00.000Z",
+        22.0,
+        6
+      ],
+      [
+        "2026-09-08T00:00:00.000Z",
+        14.0,
+        5
+      ],
+      [
+        "2026-09-07T00:00:00.000Z",
+        4.0,
+        3
+      ],
+      [
+        "2026-09-06T00:00:00.000Z",
+        1.5,
+        1
+      ]
+    ]
+  },
+  "groupedStats": {
+    "columns": [
+      "device_name",
+      "v_sum",
+      "n_sum",
+      "v_avg",
+      "n_avg",
+      "count_count",
+      "v_count",
+      "n_count_distinct",
+      "v_min",
+      "n_max",
+      "v_std",
+      "v_var"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE",
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE",
+      "BIGINT",
+      "BIGINT",
+      "BIGINT",
+      "DOUBLE",
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        null,
+        -0.5,
+        3,
+        -0.5,
+        3.0,
+        1,
+        1,
+        1,
+        -0.5,
+        3,
+        null,
+        null
+      ],
+      [
+        "A",
+        4.0,
+        5,
+        2.0,
+        1.6666666666666667,
+        3,
+        2,
+        2,
+        1.5,
+        2,
+        0.7071067811865476,
+        0.5
+      ],
+      [
+        "B",
+        10.0,
+        4,
+        5.0,
+        4.0,
+        2,
+        2,
+        1,
+        4.0,
+        4,
+        1.4142135623730951,
+        2.0
+      ],
+      [
+        "C",
+        8.0,
+        5,
+        8.0,
+        5.0,
+        1,
+        1,
+        1,
+        8.0,
+        5,
+        null,
+        null
+      ],
+      [
+        "D",
+        null,
+        7,
+        null,
+        7.0,
+        1,
+        0,
+        1,
+        null,
+        7,
+        null,
+        null
+      ]
+    ]
+  },
+  "hours": {
+    "columns": [
+      "timestamp_hour",
+      "count_count"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2026-09-06T23:00:00.000Z",
+        1
+      ],
+      [
+        "2026-09-07T00:00:00.000Z",
+        2
+      ],
+      [
+        "2026-09-08T10:00:00.000Z",
+        2
+      ],
+      [
+        "2026-10-01T12:00:00.000Z",
+        1
+      ],
+      [
+        "2026-12-31T23:00:00.000Z",
+        1
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        1
+      ]
+    ]
+  },
+  "latestAndEarliest": {
+    "columns": [
+      "device_name",
+      "v_latest",
+      "v_earliest",
+      "id_latest"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE",
+      "DOUBLE",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        null,
+        -0.5,
+        -0.5,
+        6
+      ],
+      [
+        "A",
+        null,
+        1.5,
+        3
+      ],
+      [
+        "B",
+        4.0,
+        6.0,
+        4
+      ],
+      [
+        "C",
+        8.0,
+        8.0,
+        5
+      ],
+      [
+        "D",
+        null,
+        null,
+        7
+      ]
+    ]
+  },
+  "minutes": {
+    "columns": [
+      "timestamp_minute",
+      "count_count"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2026-09-06T23:30:00.000Z",
+        1
+      ],
+      [
+        "2026-09-07T00:30:00.000Z",
+        2
+      ],
+      [
+        "2026-09-08T10:15:00.000Z",
+        2
+      ],
+      [
+        "2026-10-01T12:00:00.000Z",
+        1
+      ],
+      [
+        "2026-12-31T23:59:00.000Z",
+        1
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        1
+      ]
+    ]
+  },
+  "months": {
+    "columns": [
+      "timestamp_month",
+      "count_count"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2026-09-01T00:00:00.000Z",
+        5
+      ],
+      [
+        "2026-10-01T00:00:00.000Z",
+        1
+      ],
+      [
+        "2026-12-01T00:00:00.000Z",
+        1
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        1
+      ]
+    ]
+  },
+  "nullKeysLast": {
+    "columns": [
+      "device_name",
+      "count_count"
+    ],
+    "types": [
+      "STRING",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "D",
+        1
+      ],
+      [
+        "C",
+        1
+      ],
+      [
+        "B",
+        2
+      ],
+      [
+        "A",
+        3
+      ],
+      [
+        null,
+        1
+      ]
+    ]
+  },
+  "numberWidth": {
+    "columns": [
+      "latitude_bucket",
+      "count_count",
+      "v_avg"
+    ],
+    "types": [
+      "BIGINT",
+      "BIGINT",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        null,
+        1,
+        -0.5
+      ],
+      [
+        0,
+        4,
+        4.0
+      ],
+      [
+        1,
+        1,
+        null
+      ],
+      [
+        2,
+        2,
+        5.0
+      ]
+    ]
+  },
+  "quarters": {
+    "columns": [
+      "timestamp_quarter",
+      "count_count"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2026-07-01T00:00:00.000Z",
+        5
+      ],
+      [
+        "2026-10-01T00:00:00.000Z",
+        2
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        1
+      ]
+    ]
+  },
+  "rowCumsum": {
+    "columns": [
+      "id",
+      "v",
+      "v_cumsum",
+      "n_cumsum"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        1,
+        1.5,
+        1.5,
+        1
+      ],
+      [
+        2,
+        2.5,
+        4.0,
+        3
+      ],
+      [
+        3,
+        null,
+        4.0,
+        5
+      ],
+      [
+        4,
+        4.0,
+        8.0,
+        5
+      ],
+      [
+        5,
+        8.0,
+        16.0,
+        10
+      ],
+      [
+        6,
+        -0.5,
+        15.5,
+        13
+      ],
+      [
+        7,
+        null,
+        15.5,
+        20
+      ],
+      [
+        8,
+        6.0,
+        21.5,
+        24
+      ]
+    ]
+  },
+  "rowWindows": {
+    "columns": [
+      "id",
+      "v_previous",
+      "v_change_from_previous",
+      "seconds_since_previous",
+      "row"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE",
+      "DOUBLE",
+      "INT"
+    ],
+    "rows": [
+      [
+        1,
+        null,
+        null,
+        null,
+        1
+      ],
+      [
+        2,
+        1.5,
+        1.0,
+        3600.0,
+        2
+      ],
+      [
+        3,
+        2.5,
+        null,
+        0.0,
+        3
+      ],
+      [
+        4,
+        6.0,
+        -2.0,
+        30.25,
+        2
+      ],
+      [
+        5,
+        null,
+        null,
+        null,
+        1
+      ],
+      [
+        6,
+        null,
+        null,
+        null,
+        1
+      ],
+      [
+        7,
+        null,
+        null,
+        null,
+        1
+      ],
+      [
+        8,
+        null,
+        null,
+        null,
+        1
+      ]
+    ]
+  },
+  "timeWidth": {
+    "columns": [
+      "day_index",
+      "count_count",
+      "v_sum"
+    ],
+    "types": [
+      "BIGINT",
+      "BIGINT",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        0,
+        1,
+        1.5
+      ],
+      [
+        1,
+        2,
+        2.5
+      ],
+      [
+        2,
+        2,
+        10.0
+      ],
+      [
+        25,
+        1,
+        8.0
+      ],
+      [
+        116,
+        1,
+        -0.5
+      ],
+      [
+        117,
+        1,
+        null
+      ]
+    ]
+  },
+  "weeks": {
+    "columns": [
+      "timestamp_week",
+      "count_count",
+      "v_avg"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        "2026-08-31T00:00:00.000Z",
+        1,
+        1.5
+      ],
+      [
+        "2026-09-07T00:00:00.000Z",
+        4,
+        4.166666666666667
+      ],
+      [
+        "2026-09-28T00:00:00.000Z",
+        1,
+        8.0
+      ],
+      [
+        "2026-12-28T00:00:00.000Z",
+        2,
+        -0.5
+      ]
+    ]
+  },
+  "years": {
+    "columns": [
+      "timestamp_year",
+      "count_count"
+    ],
+    "types": [
+      "TIMESTAMP",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "2026-01-01T00:00:00.000Z",
+        7
+      ],
+      [
+        "2027-01-01T00:00:00.000Z",
+        1
+      ]
+    ]
+  }
+}

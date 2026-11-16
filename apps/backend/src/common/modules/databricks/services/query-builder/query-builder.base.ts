@@ -11,6 +11,7 @@ import {
 import type { NumericStringKeys } from "./expressions/numeric-string-order";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
 import { buildWidthBucketExpression } from "./expressions/width-bucket";
+import { buildRowWindowExpression } from "./expressions/window";
 import type {
   AggregateExpression,
   FilterCondition,
@@ -204,6 +205,15 @@ export abstract class BaseQueryBuilder {
     opts: { orderBy: string; grouped: boolean },
   ): { sql: string; alias: string } {
     return buildCumsumExpression(agg, opts, this);
+  }
+
+  buildRowWindowExpression(item: AggregateExpression): { sql: string; alias: string } {
+    return buildRowWindowExpression(item, this);
+  }
+
+  /** An ordering's direction with where its nulls go, which Spark puts first going up. */
+  sortDirection(direction: "ASC" | "DESC"): string {
+    return direction;
   }
 
   /** AND-joined `column = value` equality conditions from [column, value] tuples. */

@@ -15,11 +15,13 @@ import type {
 } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, failure, success } from "../../utils/fp-utils";
 import type { Result } from "../../utils/fp-utils";
+import { hasAggregationContent } from "../databricks/services/query-builder/expressions/aggregation";
 import { QueryBuilderInputError } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
 import { CellValues } from "./services/client/cell-values";
 import { ServingStoreClientService } from "./services/client/client.service";
+import { StoreAggregation } from "./services/query-builder/store-aggregation";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
 
@@ -157,6 +159,9 @@ export class ServingStoreAdapter implements ServingStorePort {
     if (params.distinct) {
       builder.distinct();
     }
+    if (params.plotsValues) {
+      builder.plotValues();
+    }
     for (const { columnName, schema, suffix } of params.variants ?? []) {
       builder.parseVariant(columnName, schema, suffix);
     }
@@ -171,6 +176,15 @@ export class ServingStoreAdapter implements ServingStorePort {
     try {
       for (const filter of params.filters ?? []) {
         builder.filter(filter);
+      }
+      if (params.aggregation !== undefined && hasAggregationContent(params.aggregation)) {
+        return success(
+          new StoreAggregation(builder, params.aggregation).build({
+            ordering: params.ordering,
+            limit: params.limit,
+            offset: params.offset,
+          }),
+        );
       }
       if (params.ordering) {
         builder.orderBy(params.ordering, params.orderByIds);

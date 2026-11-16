@@ -39,12 +39,12 @@ export interface StoreMetadataSheet {
   version: string;
 }
 
-export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
+export interface StoreQueryParams extends Omit<ExperimentQueryParams, "join"> {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
-  /** Each client id whose device has a serial number to show, with it, for the labels a read
-   *  filters, sorts or lists by. */
-  deviceSerials?: [string, string][];
+  /** Each registered device's client id with the serial number its label shows, or none, for the
+   *  labels a read filters, sorts, lists or groups by. */
+  deviceSerials?: [string, string | null][];
   /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
   metadataSheets?: StoreMetadataSheet[];
 }
