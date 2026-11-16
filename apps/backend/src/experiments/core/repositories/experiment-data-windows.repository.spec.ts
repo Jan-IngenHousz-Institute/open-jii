@@ -12,10 +12,10 @@ import {
   failure,
   success,
 } from "../../../common/utils/fp-utils";
+import { AnnotationMergerService } from "../../application/services/annotation-merger.service";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
-import { PlatformAnnotationsService } from "../../application/services/platform-annotations.service";
 import type { ExperimentDto } from "../models/experiment.model";
 import type { CachePort } from "../ports/cache.port";
 import type { DatabricksPort } from "../ports/databricks.port";
@@ -69,7 +69,7 @@ function setup(
     cache,
     cache,
     new ContributorAnonymizerService(),
-    new PlatformAnnotationsService(
+    new AnnotationMergerService(
       fromPartial<ExperimentAnnotationsRepository>({
         findOnRows: () => Promise.resolve(success([])),
       }),

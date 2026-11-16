@@ -24,10 +24,10 @@ import { FlattenedFields } from "../../../common/modules/databricks/services/que
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
+import { AnnotationMergerService } from "../../application/services/annotation-merger.service";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
-import { PlatformAnnotationsService } from "../../application/services/platform-annotations.service";
 import {
   MACRO_TABLE_CONFIG,
   PAGE_TOO_LARGE_MESSAGE,
@@ -113,7 +113,7 @@ interface TableShape {
   baseColumns?: string[];
   /**
    * The column a read's phone annotations come from: the store's own annotations, the warehouse
-   * view's payload_annotations, or none, as on an upload table. The platform's come from Postgres.
+   * view's payload_annotations, or none, as on an upload table. Annotations added later come from Postgres.
    */
   phoneAnnotationsFrom?: string;
 }
@@ -135,7 +135,7 @@ export class ExperimentDataRepository {
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
-    private readonly platformAnnotations: PlatformAnnotationsService,
+    private readonly annotationMerger: AnnotationMergerService,
     private readonly warehouseReads: ExperimentWarehouseReadsService,
     private readonly storeReads: ExperimentStoreReadsService,
   ) {}
@@ -300,7 +300,7 @@ export class ExperimentDataRepository {
         if (pageResult.value.truncated) {
           return this.pageTooLarge();
         }
-        const filled = await this.withPlatformAnnotations(read, shape, pageResult.value);
+        const filled = await this.withMergedAnnotations(read, shape, pageResult.value);
         if (filled.isFailure()) {
           return filled;
         }
@@ -363,7 +363,7 @@ export class ExperimentDataRepository {
     if (pageResult.value.truncated) {
       return this.pageTooLarge();
     }
-    const filled = await this.withPlatformAnnotations(read, shape, pageResult.value);
+    const filled = await this.withMergedAnnotations(read, shape, pageResult.value);
     if (filled.isFailure()) {
       return filled;
     }
@@ -1096,7 +1096,7 @@ export class ExperimentDataRepository {
     }
 
     const data: SchemaData = { ...dataResult.value, rows, totalRows: totalResult.value, truncated };
-    const filled = await this.withPlatformAnnotations(read, shape, data);
+    const filled = await this.withMergedAnnotations(read, shape, data);
     if (filled.isFailure()) {
       return filled;
     }
@@ -1358,14 +1358,14 @@ export class ExperimentDataRepository {
     return shape.phoneAnnotationsFrom === ANNOTATIONS ? undefined : shape.phoneAnnotationsFrom;
   }
 
-  /** Each row's annotations, the phone's then the platform's from Postgres, timed as a phase of the read. */
-  private async withPlatformAnnotations(
+  /** Each row's annotations, the phone's then the later ones from Postgres, timed as a phase of the read. */
+  private async withMergedAnnotations(
     read: ReadTrace,
     shape: TableShape,
     data: SchemaData,
   ): Promise<Result<SchemaData>> {
     const [filled, annotationsMs] = await this.measure(() =>
-      this.platformAnnotations.fill({
+      this.annotationMerger.merge({
         experimentId: read.experimentId,
         tableName: read.tableName,
         data,

@@ -277,7 +277,7 @@ describe("ExperimentDataRepository", () => {
           truncated: false,
         }),
       );
-      // The Postgres lookup of the platform's annotations is a phase of its own.
+      // The Postgres lookup of later annotations is a phase of its own.
       expect(JSON.stringify(logSpy.mock.calls)).toMatch(/"annotationsMs":\d+/);
       logSpy.mockRestore();
     });
@@ -3306,7 +3306,7 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(await annotations.transaction((tx) => annotations.insert(tx, [flag])));
     });
 
-    it("reads the phone's from the warehouse's own column and the platform's from Postgres", async () => {
+    it("reads the phone's from the warehouse's own column and later ones from Postgres", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
       vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
         success(["id", "annotations", "payload_annotations"]),
@@ -3345,7 +3345,7 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
-    it("adds the platform's from Postgres to a store page's", async () => {
+    it("adds later ones from Postgres to a store page's", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
       vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
@@ -3372,7 +3372,7 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
-    it("adds the platform's to a filtered store page's", async () => {
+    it("adds later ones to a filtered store page's", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
       const countSql = "SELECT toString(count()) AS total";
@@ -3410,7 +3410,7 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
-    it("shows a pseudonym for the platform's authors in an anonymised experiment", async () => {
+    it("shows a pseudonym for later annotations' authors in an anonymised experiment", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
       vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
@@ -3508,7 +3508,7 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
-    it("gives an upload table's rows the platform's annotations, with no phone column to ask for", async () => {
+    it("gives an upload table's rows their later annotations, with no phone column to ask for", async () => {
       const uploadId = faker.string.uuid();
       const uploadTable = { ...table, identifier: uploadId, tableType: "upload" as const };
       const onUpload = await annotate(uploadId);
@@ -3547,7 +3547,7 @@ describe("ExperimentDataRepository", () => {
       expect(lookup).not.toHaveBeenCalled();
     });
 
-    it("shows a pseudonym for the platform's authors on a warehouse read of an anonymised experiment", async () => {
+    it("shows a pseudonym for later annotations' authors on a warehouse read of an anonymised experiment", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
       vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
         success(["id", "annotations", "payload_annotations"]),

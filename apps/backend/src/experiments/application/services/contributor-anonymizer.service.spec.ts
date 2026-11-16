@@ -112,7 +112,7 @@ describe("ContributorAnonymizerService", () => {
       expect(parsed.name).not.toBe("Alice");
     });
 
-    it("gives each platform annotation's author the contributor's pseudonym, and leaves the phone's", () => {
+    it("gives each later annotation's author the contributor's pseudonym, and leaves the phone's", () => {
       const annotationsColumn = {
         name: "annotations",
         type_text: WellKnownColumnTypes.ANNOTATIONS,

@@ -7,11 +7,11 @@ import { AppError, assertFailure, assertSuccess, failure } from "../../../common
 import { TestHarness } from "../../../test/test-harness";
 import type { AnnotationRecord } from "../../core/models/experiment-data-annotation.model";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
-import { PlatformAnnotationsService } from "./platform-annotations.service";
+import { AnnotationMergerService } from "./annotation-merger.service";
 
-describe("PlatformAnnotationsService", () => {
+describe("AnnotationMergerService", () => {
   const testApp = TestHarness.App;
-  let service: PlatformAnnotationsService;
+  let service: AnnotationMergerService;
   let experimentId: string;
   let userId: string;
 
@@ -55,7 +55,7 @@ describe("PlatformAnnotationsService", () => {
     return record;
   }
 
-  /** How both read paths write a platform annotation in a cell. */
+  /** How both read paths write an annotation added after the measurement in a cell. */
   function cell(record: AnnotationRecord, name: string | null) {
     return {
       id: record.id,
@@ -75,7 +75,7 @@ describe("PlatformAnnotationsService", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    service = testApp.module.get(PlatformAnnotationsService);
+    service = testApp.module.get(AnnotationMergerService);
     userId = await testApp.createTestUser({});
     await testApp.database
       .update(profiles)
@@ -93,7 +93,7 @@ describe("PlatformAnnotationsService", () => {
     await testApp.teardown();
   });
 
-  it("adds the platform's annotations after the phone's in the store's cell", async () => {
+  it("adds later annotations after the phone's in the store's cell", async () => {
     const flag = await annotate({});
     const data = page(
       ["id", "annotations"],
@@ -103,7 +103,7 @@ describe("PlatformAnnotationsService", () => {
       ],
     );
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -124,7 +124,7 @@ describe("PlatformAnnotationsService", () => {
       [["1", merged, JSON.stringify([phoneComment])]],
     );
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -139,7 +139,7 @@ describe("PlatformAnnotationsService", () => {
     ]);
   });
 
-  it("shows only the platform's on a table the phone writes none to", async () => {
+  it("shows only later annotations on a table the phone writes none to", async () => {
     const comment = await annotate({
       tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c",
       type: "comment",
@@ -148,7 +148,7 @@ describe("PlatformAnnotationsService", () => {
     });
     const data = page(["id", "annotations"], [["1", JSON.stringify([{ id: "lakehouse copy" }])]]);
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c",
       data,
@@ -162,7 +162,7 @@ describe("PlatformAnnotationsService", () => {
     await annotate({ tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c" });
     const data = page(["id", "annotations"], [["1", "[]"]]);
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -178,7 +178,7 @@ describe("PlatformAnnotationsService", () => {
     await annotate({ experimentId: other.id });
     const data = page(["id", "annotations"], [["1", "[]"]]);
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -192,7 +192,7 @@ describe("PlatformAnnotationsService", () => {
   it("leaves a read without annotations as it is, apart from the phone's column", async () => {
     const data = page(["id", "payload_annotations"], [["1", "[]"]]);
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -211,7 +211,7 @@ describe("PlatformAnnotationsService", () => {
       [[merged, JSON.stringify([phoneComment])]],
     );
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -227,7 +227,7 @@ describe("PlatformAnnotationsService", () => {
     const merged = JSON.stringify([phoneComment, { id: "lakehouse copy" }]);
     const data = page(["id", "annotations"], [["1", merged]]);
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -238,7 +238,7 @@ describe("PlatformAnnotationsService", () => {
     expect(result.value).toEqual(data);
   });
 
-  it("shows the platform's alone where the phone's cell cannot be read, and says so once", async () => {
+  it("shows later annotations alone where the phone's cell cannot be read, and says so once", async () => {
     const flag = await annotate({});
     const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
     const data = page(
@@ -249,7 +249,7 @@ describe("PlatformAnnotationsService", () => {
       ],
     );
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data,
@@ -271,7 +271,7 @@ describe("PlatformAnnotationsService", () => {
       failure(AppError.internal("Postgres did not answer the annotations query")),
     );
 
-    const result = await service.fill({
+    const result = await service.merge({
       experimentId,
       tableName: "raw_data",
       data: page(["id", "annotations"], [["1", "[]"]]),

@@ -71,7 +71,7 @@ export class ContributorAnonymizerService {
     });
   }
 
-  /** The platform's annotations name their author; the phone's name none and stay as they are. */
+  /** Annotations added after the measurement name their author; the phone's name none and stay as they are. */
   private anonymizeAuthors(cell: string, experimentId: string): string {
     const annotations: unknown = JSON.parse(cell);
     if (!Array.isArray(annotations)) {

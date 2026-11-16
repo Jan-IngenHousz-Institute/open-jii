@@ -10,13 +10,13 @@ const ROW_ID = "id";
 const ANNOTATIONS = "annotations";
 
 /**
- * Puts the platform's annotations, which Postgres holds, on each row of a read, after the phone's,
- * which travel with the measurement. Both read paths do it, so a page shows an annotation as soon
- * as it is written, whatever the lakehouse's copy is doing.
+ * Merges each row's annotations into one cell: the phone's, recorded with the measurement, then
+ * those added afterwards, which Postgres holds. Both read paths do it, so a page shows an annotation
+ * as soon as it is written, whatever the lakehouse's copy is doing.
  */
 @Injectable()
-export class PlatformAnnotationsService {
-  private readonly logger = new Logger(PlatformAnnotationsService.name);
+export class AnnotationMergerService {
+  private readonly logger = new Logger(AnnotationMergerService.name);
 
   constructor(private readonly annotations: ExperimentAnnotationsRepository) {}
 
@@ -24,7 +24,7 @@ export class PlatformAnnotationsService {
    * `phoneAnnotationsFrom` names the column holding the phone's annotations, or none when the table
    * has none. A column other than the annotations column itself is left out of what is returned.
    */
-  async fill(params: {
+  async merge(params: {
     experimentId: string;
     tableName: string;
     data: SchemaData;
@@ -63,8 +63,8 @@ export class PlatformAnnotationsService {
     const unreadable = phones.filter((phone) => phone === undefined).length;
     if (unreadable > 0) {
       this.logger.warn({
-        msg: "Could not read the phone's annotations on some rows; they show the platform's alone",
-        operation: "fillPlatformAnnotations",
+        msg: "Could not read the phone's annotations on some rows; they show the later ones alone",
+        operation: "mergeAnnotations",
         experimentId,
         tableName,
         rows: unreadable,
@@ -72,11 +72,11 @@ export class PlatformAnnotationsService {
     }
 
     const rows = data.rows.map((row, at) => {
-      const platform = (onRow.get(row[idIndex] ?? "") ?? []).map((annotation) =>
+      const later = (onRow.get(row[idIndex] ?? "") ?? []).map((annotation) =>
         this.cell(annotation),
       );
       return row.map((value, index) =>
-        index === annotationsIndex ? JSON.stringify([...(phones[at] ?? []), ...platform]) : value,
+        index === annotationsIndex ? JSON.stringify([...(phones[at] ?? []), ...later]) : value,
       );
     });
     return success(this.without({ ...data, rows }, separatePhoneIndex));
