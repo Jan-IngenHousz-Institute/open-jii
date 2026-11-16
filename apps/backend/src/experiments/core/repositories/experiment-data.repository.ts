@@ -235,22 +235,22 @@ export class ExperimentDataRepository {
     }
 
     let shape = shapeResult.value;
+    if (join) {
+      const joined = await this.joinedShape(experimentId, tableName, shape, join);
+      if (joined.isFailure()) return joined;
+      shape = joined.value;
+    }
     const isStoreRawByDevice =
       shape.source === "store" && this.groupsEveryRowByDevice(shape, aggregation);
-    if (isStoreRawByDevice && shape.metadata.rowCount > ceiling) {
-      const warehouse = await this.tableShape(experimentId, tableName, "warehouse");
+    const isPastCap = shape.metadata.rowCount > ceiling;
+    if (isStoreRawByDevice && isPastCap) {
+      const warehouse = await this.warehouseShape(experimentId, tableName, join);
       if (warehouse.isFailure()) {
         return warehouse;
       }
       shape = warehouse.value;
     }
     read.source = shape.source;
-    if (join) {
-      const joined = await this.joinedShape(experimentId, tableName, shape, join);
-      if (joined.isFailure()) return joined;
-      shape = joined.value;
-      read.source = shape.source;
-    }
     if (flagged !== undefined) {
       const flaggedRows = await this.storeReads.flaggedRows(
         experimentId,
@@ -968,19 +968,37 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Whether a chart groups by a whole device and a raw x, which leaves about one group per row.
-   * The store spends longer than its 30 s on that over 37 million rows, so a table past the cap
-   * reads it from the warehouse.
+   * Whether a chart groups by a whole device, its own table's or a matched table's, and a raw x,
+   * which leaves about one group per row. The store takes past 10 s on that over tens of millions
+   * of rows, so a table past the cap reads it from the warehouse.
    */
   private groupsEveryRowByDevice(shape: TableShape, aggregation?: AggregationSpec): boolean {
+    const isDevice = (column: string) => {
+      if (column === "device") {
+        return shape.metadata.tableType !== "upload";
+      }
+      const matched = shape.columns?.find(({ name }) => name === column)?.sourceTable;
+      return matched?.columnName === "device" && shape.join?.secondary.tableType !== "upload";
+    };
     const groups = aggregation?.groupBy ?? [];
-    const hasDevice =
-      shape.metadata.tableType !== "upload" && groups.some(({ column }) => column === "device");
+    const hasDevice = groups.some(({ column }) => isDevice(column));
     const hasRawX = groups.some(
       ({ column, timeBucket, widthBucket }) =>
-        column !== "device" && timeBucket === undefined && widthBucket === undefined,
+        !isDevice(column) && timeBucket === undefined && widthBucket === undefined,
     );
     return hasDevice && hasRawX;
+  }
+
+  private async warehouseShape(
+    experimentId: string,
+    tableName: string,
+    join?: ExperimentDataJoin,
+  ): Promise<Result<TableShape>> {
+    const shape = await this.tableShape(experimentId, tableName, "warehouse");
+    if (shape.isFailure() || join === undefined) {
+      return shape;
+    }
+    return this.joinedShape(experimentId, tableName, shape.value, join);
   }
 
   private reads(shape: TableShape): ExperimentTableReads {

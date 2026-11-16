@@ -3221,6 +3221,65 @@ describe("ExperimentDataRepository", () => {
       expect(store.mock.calls.filter(([query]) => query.sql.includes("GROUP BY"))).toHaveLength(2);
     });
 
+    it("groups a raw x by a matched table's device in the warehouse once the table passes the cap", async () => {
+      const macroTable: ExperimentTableMetadata = {
+        ...largeTable,
+        identifier: "macro_1",
+        tableType: "macro",
+        questionsSchema: null,
+      };
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, macroTable]),
+      );
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, macroTable]),
+      );
+      const tableColumns = [
+        { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 1 },
+        { name: "device_id", type_name: "STRING", type_text: "STRING", position: 2 },
+        {
+          name: "device",
+          type_name: "STRUCT",
+          type_text: WellKnownColumnTypes.DEVICE,
+          position: 3,
+        },
+      ];
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      const store = vi
+        .spyOn(servingStore, "executeQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join: {
+          tableName: "macro_1",
+          matchColumn: "device_id",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
+        aggregation: {
+          groupBy: [{ column: "timestamp" }, { column: "second__device" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+        sources: { pages: WAREHOUSE, charts: "store" },
+      });
+
+      assertSuccess(result);
+      expect(store.mock.calls.some(([query]) => query.sql.includes("GROUP BY"))).toBe(false);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY"))).toBe(true);
+    });
+
     it("keeps charts on the warehouse while pages read the store and the charts' flag is off", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([largeTable]),
