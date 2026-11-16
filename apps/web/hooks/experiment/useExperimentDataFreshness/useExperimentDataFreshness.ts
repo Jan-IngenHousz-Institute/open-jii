@@ -3,16 +3,11 @@ import { orpc } from "@/lib/orpc";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import type {
-  ExperimentTableMetadata,
-  ExperimentTablesListing,
-} from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
-/** The store answers with the rows it holds at that moment. */
-const STORE_POLL_MS = 5_000;
-const WAREHOUSE_POLL_MS = 30_000;
-/** The backend holds a warehouse listing this long, so an earlier refetch gets the same answer. */
-const WAREHOUSE_CACHE_MS = 15_000;
+const POLL_MS = 30_000;
+/** The backend holds the listing this long, so an earlier refetch gets the same answer. */
+const BACKEND_CACHE_MS = 15_000;
 const BEHIND_AFTER_MS = 2 * 60_000;
 
 export type DataFreshnessStatus = "live" | "paused" | "behind";
@@ -29,10 +24,6 @@ function newestOf(
 
 function versionOf(table: ExperimentTableMetadata): string {
   return `${table.totalRows}|${table.latestRowAt}|${table.schemaRevision}`;
-}
-
-function isFromStore(listing: ExperimentTablesListing | undefined): boolean {
-  return listing?.headers["x-data-source"] === "store";
 }
 
 /**
@@ -66,12 +57,9 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
     orpc.experiments.getExperimentTables.queryOptions({
       input: { id: experimentId },
       enabled: !isIdlePaused,
-      refetchInterval: (query) => {
-        const pollMs = isFromStore(query.state.data) ? STORE_POLL_MS : WAREHOUSE_POLL_MS;
-        return isPolling ? pollMs : false;
-      },
+      refetchInterval: isPolling ? POLL_MS : false,
       refetchOnWindowFocus: isPolling,
-      staleTime: (query) => (isFromStore(query.state.data) ? 0 : WAREHOUSE_CACHE_MS),
+      staleTime: BACKEND_CACHE_MS,
     }),
   );
   const tables = listing?.body;

@@ -213,27 +213,6 @@ describe("useExperimentDataFreshness", () => {
     expect(result.current.status).toBe("live");
   });
 
-  it.each([
-    { source: "store", pollMs: 5_000 },
-    { source: "warehouse", pollMs: 30_000 },
-  ])("checks a listing the $source answered every $pollMs ms", async ({ source, pollMs }) => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const spy = server.mount(contract.experiments.getExperimentTables, {
-      body: [RAW],
-      headers: { "x-data-source": source },
-    });
-
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
-    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
-    const callsAfterLoad = spy.callCount;
-
-    await act(() => vi.advanceTimersByTimeAsync(pollMs - 1_000));
-    expect(spy.callCount).toBe(callsAfterLoad);
-
-    await act(() => vi.advanceTimersByTimeAsync(1_000));
-    await waitFor(() => expect(spy.callCount).toBe(callsAfterLoad + 1));
-  });
-
   it.each(["store", "warehouse"])(
     "stops checking a %s listing while paused, and catches up at once on resume",
     async (source) => {
