@@ -9,10 +9,10 @@ import {
   success,
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import type { ContributorProfile } from "../models/contributor-profile.model";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import { ContributorProfilesWarehouseRepository } from "./contributor-profiles-warehouse.repository";
-import type { ContributorProfile } from "./contributor-profiles-warehouse.repository";
 
 describe("ContributorProfilesWarehouseRepository", () => {
   const testApp = TestHarness.App;

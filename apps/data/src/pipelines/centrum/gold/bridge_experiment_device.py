@@ -6,7 +6,7 @@
 # A streaming dropDuplicates keeps the first row it sees for each pair and holds
 # only the pairs in its state. It appends and never merges: every MERGE is
 # followed by an auto compaction on the pipeline's driver that cannot be turned
-# off. The registry lookup is downstream, in experiment_devices.
+# off. experiment_devices joins the registry downstream.
 
 # COMMAND ----------
 import dlt

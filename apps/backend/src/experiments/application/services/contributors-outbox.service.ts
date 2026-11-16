@@ -2,11 +2,11 @@ import { Injectable } from "@nestjs/common";
 
 import { Result, success } from "../../../common/utils/fp-utils";
 import { UserRepository } from "../../../users/core/repositories/user.repository";
+import type { ContributorProfile } from "../../core/models/contributor-profile.model";
 import { ContributorProfilesWarehouseRepository } from "../../core/repositories/contributor-profiles-warehouse.repository";
-import type { ContributorProfile } from "../../core/repositories/contributor-profiles-warehouse.repository";
 import { ExperimentDataOutboxService } from "./experiment-data-outbox.service";
 
-/** A user without a profile is gone from the copy, as the pipelines' lookup never found one. */
+/** A user without a profile is gone from the copy, so the pipelines give them an empty name. */
 @Injectable()
 export class ContributorsOutboxService extends ExperimentDataOutboxService<ContributorProfile> {
   constructor(

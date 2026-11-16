@@ -4,7 +4,7 @@
 # so a bridge rather than a dimension.
 #
 # Appended through a streaming dropDuplicates, like the device bridge, so it
-# never merges. The profile lookup is downstream, in experiment_contributors.
+# never merges. experiment_contributors joins the profiles downstream.
 
 # COMMAND ----------
 import dlt

@@ -2,16 +2,9 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
+import type { ContributorProfile } from "../models/contributor-profile.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
-
-/** A contributor's profile as every page shows it: "Unknown User" once they deactivate it. */
-export interface ContributorProfile {
-  id: string;
-  firstName: string;
-  lastName: string;
-  avatarUrl: string | null;
-}
 
 /**
  * The lakehouse's copy of contributors' profiles, `centrum.contributor_profiles`, which the
