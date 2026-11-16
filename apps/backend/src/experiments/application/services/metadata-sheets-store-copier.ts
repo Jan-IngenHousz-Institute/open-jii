@@ -57,12 +57,16 @@ export class MetadataSheetsStoreCopier extends ExperimentDataCopier<MetadataShee
     return this.sheets.findByIds(ids);
   }
 
-  protected async write(records: MetadataSheetRecord[]): Promise<Result<"written" | "stopped">> {
-    const written = await this.store.writeSheets(records);
+  protected async write(
+    records: MetadataSheetRecord[],
+    _canContinue: () => boolean,
+    claimedAt: Date,
+  ): Promise<Result<"written" | "stopped">> {
+    const written = await this.store.writeSheets(records, claimedAt);
     return written.map((): "written" => "written");
   }
 
-  protected remove(gone: CopyKey[]): Promise<Result<void>> {
-    return this.store.removeSheets(gone);
+  protected remove(gone: CopyKey[], claimedAt: Date): Promise<Result<void>> {
+    return this.store.removeSheets(gone, claimedAt);
   }
 }

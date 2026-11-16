@@ -28,11 +28,13 @@ interface SheetRow {
   identifier: string;
   fields: string;
   is_deleted: 0 | 1;
+  claimed_at: string;
 }
 
 /**
  * Writes the store's copies of annotations and metadata sheet rows. A copy inserts each record's
  * current state, and a removal inserts a row FINAL leaves out, so nothing is ever updated in place.
+ * Every row carries its claim's time as its version.
  */
 @Injectable()
 export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
@@ -44,7 +46,7 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
     return this.client.isConfigured();
   }
 
-  writeAnnotations(annotations: AnnotationCopy[]): Promise<Result<void>> {
+  writeAnnotations(annotations: AnnotationCopy[], claimedAt: Date): Promise<Result<void>> {
     return this.client.insert(
       "annotations",
       annotations.map((annotation) => ({
@@ -55,11 +57,12 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
         type: annotation.type,
         flag_type: annotation.flagType,
         is_deleted: 0,
+        claimed_at: claimedAt.toISOString(),
       })),
     );
   }
 
-  removeAnnotations(gone: CopyKey[]): Promise<Result<void>> {
+  removeAnnotations(gone: CopyKey[], claimedAt: Date): Promise<Result<void>> {
     return this.client.insert(
       "annotations",
       gone.map(({ experimentId, id }) => ({
@@ -69,35 +72,38 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
         row_id: "",
         type: "",
         is_deleted: 1,
+        claimed_at: claimedAt.toISOString(),
       })),
     );
   }
 
-  async writeSheets(sheets: MetadataSheetRecord[]): Promise<Result<void>> {
+  async writeSheets(sheets: MetadataSheetRecord[], claimedAt: Date): Promise<Result<void>> {
     const held = await this.heldIdentifiers(sheets);
     if (held.isFailure()) {
       return held;
     }
 
     const rows = sheets.flatMap((sheet) => {
-      const current = this.rowsOf(sheet);
+      const current = this.rowsOf(sheet, claimedAt);
       const kept = new Set(current.map((row) => row.identifier));
       const removed = (held.value.get(sheet.id) ?? [])
         .filter((identifier) => !kept.has(identifier))
-        .map((identifier) => this.tombstone(sheet, identifier));
+        .map((identifier) => this.tombstone(sheet, identifier, claimedAt));
       return [...current, ...removed];
     });
     return this.client.insert("metadata_rows", rows);
   }
 
-  async removeSheets(gone: CopyKey[]): Promise<Result<void>> {
+  async removeSheets(gone: CopyKey[], claimedAt: Date): Promise<Result<void>> {
     const held = await this.heldIdentifiers(gone);
     if (held.isFailure()) {
       return held;
     }
 
     const rows = gone.flatMap((sheet) =>
-      (held.value.get(sheet.id) ?? []).map((identifier) => this.tombstone(sheet, identifier)),
+      (held.value.get(sheet.id) ?? []).map((identifier) =>
+        this.tombstone(sheet, identifier, claimedAt),
+      ),
     );
     return this.client.insert("metadata_rows", rows);
   }
@@ -137,7 +143,7 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
    * text, the first row of each identifier winning, rows without one left out, and the rest of the
    * row, without its `_id`, as the fields. A sheet saved before its shape was checked has no rows.
    */
-  private rowsOf(sheet: MetadataSheetRecord): SheetRow[] {
+  private rowsOf(sheet: MetadataSheetRecord, claimedAt: Date): SheetRow[] {
     const shape = zSheetShape.safeParse(sheet.metadata);
     if (!shape.success) {
       this.logger.warn({
@@ -170,6 +176,7 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
         identifier,
         fields: JSON.stringify(fields),
         is_deleted: 0,
+        claimed_at: claimedAt.toISOString(),
       });
     }
     return result;
@@ -189,7 +196,7 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
     return JSON.stringify(value);
   }
 
-  private tombstone(sheet: CopyKey, identifier: string): SheetRow {
+  private tombstone(sheet: CopyKey, identifier: string, claimedAt: Date): SheetRow {
     return {
       experiment_id: sheet.experimentId,
       sheet_id: sheet.id,
@@ -198,6 +205,7 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
       identifier,
       fields: "",
       is_deleted: 1,
+      claimed_at: claimedAt.toISOString(),
     };
   }
 }

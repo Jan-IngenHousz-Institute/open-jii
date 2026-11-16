@@ -22,12 +22,16 @@ export class AnnotationsStoreCopier extends ExperimentDataCopier<AnnotationCopy>
     return this.annotations.findCopies(ids);
   }
 
-  protected async write(records: AnnotationCopy[]): Promise<Result<"written" | "stopped">> {
-    const written = await this.store.writeAnnotations(records);
+  protected async write(
+    records: AnnotationCopy[],
+    _canContinue: () => boolean,
+    claimedAt: Date,
+  ): Promise<Result<"written" | "stopped">> {
+    const written = await this.store.writeAnnotations(records, claimedAt);
     return written.map((): "written" => "written");
   }
 
-  protected remove(gone: CopyKey[]): Promise<Result<void>> {
-    return this.store.removeAnnotations(gone);
+  protected remove(gone: CopyKey[], claimedAt: Date): Promise<Result<void>> {
+    return this.store.removeAnnotations(gone, claimedAt);
   }
 }

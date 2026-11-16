@@ -213,9 +213,10 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     }
 
     const canContinue = () => Date.now() < deadlineAt && !this.stopping;
+    const claimedAt = new Date(Math.max(...rows.map((row) => row.claimedAt.getTime())));
     let left = rows;
     for (const group of groups.value) {
-      const outcome = await copier.copy(group, canContinue).catch(
+      const outcome = await copier.copy(group, canContinue, claimedAt).catch(
         (error: unknown): CopyOutcome => ({
           failed: error instanceof Error ? error.message : String(error),
         }),

@@ -16,7 +16,8 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
     return Promise.resolve(success([owed]));
   }
 
-  async copy(owed: CopyKey[], canContinue: () => boolean): Promise<CopyOutcome> {
+  /** `claimedAt` is when the outbox claim was taken, which a copy that keeps versions stamps. */
+  async copy(owed: CopyKey[], canContinue: () => boolean, claimedAt: Date): Promise<CopyOutcome> {
     if (!canContinue()) {
       return "stopped";
     }
@@ -30,7 +31,7 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
     }
 
     if (found.value.length > 0) {
-      const written = await this.write(found.value, canContinue);
+      const written = await this.write(found.value, canContinue, claimedAt);
       if (written.isFailure()) {
         return { failed: written.error.message };
       }
@@ -47,7 +48,7 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
       return "stopped";
     }
 
-    const removed = await this.remove(gone);
+    const removed = await this.remove(gone, claimedAt);
     return removed.isFailure() ? { failed: removed.error.message } : "copied";
   }
 
@@ -57,9 +58,10 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
   protected abstract write(
     records: T[],
     canContinue: () => boolean,
+    claimedAt: Date,
   ): Promise<Result<"written" | "stopped">>;
 
-  protected abstract remove(gone: CopyKey[]): Promise<Result<void>>;
+  protected abstract remove(gone: CopyKey[], claimedAt: Date): Promise<Result<void>>;
 
   protected gone(owed: CopyKey[], found: { id: string }[]): CopyKey[] {
     const kept = new Set(found.map(({ id }) => id));

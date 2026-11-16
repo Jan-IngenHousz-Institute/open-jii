@@ -1397,6 +1397,8 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       updatedAt: new Date("2026-09-01T08:00:00.123Z"),
     };
 
+    const claim = (minute: number) => new Date(Date.UTC(2026, 8, 14, 11, minute));
+
     async function viewRows(view: string, columns: string) {
       const result = await admin.query({
         query: `SELECT ${columns} FROM ${view}(experiment = '${EXPERIMENT}') ORDER BY ${columns}`,
@@ -1425,14 +1427,17 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     it("keeps a sheet's current rows, so the rows an edit dropped and a deleted sheet read no more", async () => {
-      assertSuccess(await copies.writeSheets([sheet]));
+      assertSuccess(await copies.writeSheets([sheet], claim(1)));
       assertSuccess(
-        await copies.writeSheets([
-          {
-            ...sheet,
-            metadata: { ...sheet.metadata, rows: [{ _id: "r1", plot: "A1", soil: "loam" }] },
-          },
-        ]),
+        await copies.writeSheets(
+          [
+            {
+              ...sheet,
+              metadata: { ...sheet.metadata, rows: [{ _id: "r1", plot: "A1", soil: "loam" }] },
+            },
+          ],
+          claim(2),
+        ),
       );
 
       expect(
@@ -1445,11 +1450,13 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         },
       ]);
 
-      assertSuccess(await copies.removeSheets([{ id: sheet.id, experimentId: EXPERIMENT }]));
+      assertSuccess(
+        await copies.removeSheets([{ id: sheet.id, experimentId: EXPERIMENT }], claim(3)),
+      );
       expect(await viewRows("experiment_metadata_rows", "identifier")).toEqual([]);
     });
 
-    it("reads an annotation at its newest copy, and not at all once it is removed", async () => {
+    it("reads an annotation at its newest claim's copy, however late an older one lands", async () => {
       const annotation: AnnotationCopy = {
         id: "a1",
         experimentId: EXPERIMENT,
@@ -1463,14 +1470,19 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         updatedAt: new Date("2026-09-01T08:00:00Z"),
         userName: "Ada Lovelace",
       };
-      assertSuccess(await copies.writeAnnotations([annotation]));
-      assertSuccess(await copies.writeAnnotations([{ ...annotation, flagType: "needs_review" }]));
+      assertSuccess(
+        await copies.writeAnnotations([{ ...annotation, flagType: "needs_review" }], claim(2)),
+      );
+      // A claim taken back after its lease lands its older state last.
+      assertSuccess(await copies.writeAnnotations([annotation], claim(1)));
 
       expect(await viewRows("experiment_annotations", "id, row_id, flag_type")).toEqual([
         { id: "a1", row_id: "1", flag_type: "needs_review" },
       ]);
 
-      assertSuccess(await copies.removeAnnotations([{ id: "a1", experimentId: EXPERIMENT }]));
+      assertSuccess(
+        await copies.removeAnnotations([{ id: "a1", experimentId: EXPERIMENT }], claim(3)),
+      );
       expect(await viewRows("experiment_annotations", "id")).toEqual([]);
     });
 
@@ -1501,35 +1513,58 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         format: "JSONEachRow",
       });
       assertSuccess(
-        await copies.writeAnnotations([
-          {
-            id: "a23",
-            experimentId: experiment,
-            tableName: "raw_data",
-            rowId: "23",
-            type: "flag",
-            contentText: null,
-            flagType: "outlier",
-            createdBy: ADA,
-            createdAt: new Date("2026-09-14T10:02:00Z"),
-            updatedAt: new Date("2026-09-14T10:02:00Z"),
-            userName: "Ada Lovelace",
-          },
-        ]),
+        await copies.writeAnnotations(
+          [
+            {
+              id: "a23",
+              experimentId: experiment,
+              tableName: "raw_data",
+              rowId: "23",
+              type: "flag",
+              contentText: null,
+              flagType: "outlier",
+              createdBy: ADA,
+              createdAt: new Date("2026-09-14T10:02:00Z"),
+              updatedAt: new Date("2026-09-14T10:02:00Z"),
+              userName: "Ada Lovelace",
+            },
+          ],
+          claim(1),
+        ),
       );
 
-      const read = (flagged: "only" | "exclude") =>
-        rowsOf({
-          tableName: "raw_data",
-          tableType: "static",
-          experimentId: experiment,
-          columns: ["id"],
-          ordering: { column: "id" },
-          flagged,
-        });
+      const params = (flagged: "only" | "exclude"): StoreQueryParams => ({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: experiment,
+        columns: ["id"],
+        flagged,
+      });
+      const sortedPage = async (flagged: "only" | "exclude") =>
+        (await rowsOf({ ...params(flagged), ordering: { column: "id" } })).rows;
+      const unsortedIds = async (flagged: "only" | "exclude") =>
+        (await rowsOf(params(flagged))).rows.flat().sort();
+      const count = async (flagged: "only" | "exclude") => {
+        const query = adapter.buildExperimentQuery(params(flagged));
+        assertSuccess(query);
+        const counted = await adapter.executeQuery(adapter.countQuery(query.value));
+        assertSuccess(counted);
+        return counted.value.rows;
+      };
 
-      expect((await read("only")).rows).toEqual([["21"], ["23"]]);
-      expect((await read("exclude")).rows).toEqual([["22"]]);
+      expect(await sortedPage("only")).toEqual([["21"], ["23"]]);
+      expect(await sortedPage("exclude")).toEqual([["22"]]);
+      expect(await unsortedIds("only")).toEqual(["21", "23"]);
+      expect(await count("only")).toEqual([["2"]]);
+
+      // Once the flag added afterwards is removed, only the phone's flag keeps its row.
+      assertSuccess(
+        await copies.removeAnnotations([{ id: "a23", experimentId: experiment }], claim(2)),
+      );
+      expect(await sortedPage("only")).toEqual([["21"]]);
+      expect(await unsortedIds("only")).toEqual(["21"]);
+      expect(await count("only")).toEqual([["1"]]);
+      expect(await count("exclude")).toEqual([["2"]]);
     });
   });
 });

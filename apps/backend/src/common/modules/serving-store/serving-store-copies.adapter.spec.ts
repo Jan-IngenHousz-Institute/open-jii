@@ -8,6 +8,7 @@ import { ServingStoreCopiesAdapter } from "./serving-store-copies.adapter";
 
 describe("ServingStoreCopiesAdapter", () => {
   const created = new Date("2026-09-01T08:00:00.000Z");
+  const claimed = new Date("2026-09-02T10:00:00.000Z");
 
   function sheet(metadata: Record<string, unknown>, id = "s1"): MetadataSheetRecord {
     return {
@@ -43,7 +44,7 @@ describe("ServingStoreCopiesAdapter", () => {
   it("writes each identifier's first row, its fields without the row id or the identifier", async () => {
     const { adapter, insert } = adapterHolding();
 
-    assertSuccess(await adapter.writeSheets([sheet(plots)]));
+    assertSuccess(await adapter.writeSheets([sheet(plots)], claimed));
 
     expect(insert).toHaveBeenCalledWith("metadata_rows", [
       {
@@ -54,6 +55,7 @@ describe("ServingStoreCopiesAdapter", () => {
         identifier: "A1",
         fields: '{"soil":"clay","area":1.5}',
         is_deleted: 0,
+        claimed_at: "2026-09-02T10:00:00.000Z",
       },
       expect.objectContaining({ identifier: "7", fields: '{"soil":"loam"}' }),
     ]);
@@ -65,7 +67,7 @@ describe("ServingStoreCopiesAdapter", () => {
       { sheet_id: "s1", identifier: "B2" },
     ]);
 
-    assertSuccess(await adapter.writeSheets([sheet(plots)]));
+    assertSuccess(await adapter.writeSheets([sheet(plots)], claimed));
 
     const [, written] = insert.mock.calls[0];
     expect(written).toContainEqual(
@@ -87,7 +89,7 @@ describe("ServingStoreCopiesAdapter", () => {
       rows: [{ _id: "r1", plot: "plot-0", soil: "clay" }],
     };
 
-    assertSuccess(await adapter.writeSheets([sheet(kept)]));
+    assertSuccess(await adapter.writeSheets([sheet(kept)], claimed));
 
     const [, written] = insert.mock.calls[0];
     expect(written).toHaveLength(100_000);
@@ -99,7 +101,7 @@ describe("ServingStoreCopiesAdapter", () => {
   it("copies no rows of a sheet saved before its shape was checked", async () => {
     const { adapter, insert } = adapterHolding();
 
-    assertSuccess(await adapter.writeSheets([sheet({ name: "Plots" })]));
+    assertSuccess(await adapter.writeSheets([sheet({ name: "Plots" })], claimed));
 
     expect(insert).toHaveBeenCalledWith("metadata_rows", []);
   });
@@ -110,7 +112,7 @@ describe("ServingStoreCopiesAdapter", () => {
       { sheet_id: "s1", identifier: "7" },
     ]);
 
-    assertSuccess(await adapter.removeSheets([{ id: "s1", experimentId: "e1" }]));
+    assertSuccess(await adapter.removeSheets([{ id: "s1", experimentId: "e1" }], claimed));
 
     expect(rows).toHaveBeenCalledWith(
       expect.stringContaining("FROM metadata_rows FINAL"),
@@ -127,23 +129,26 @@ describe("ServingStoreCopiesAdapter", () => {
     const { adapter, insert } = adapterHolding();
 
     assertSuccess(
-      await adapter.writeAnnotations([
-        {
-          id: "a1",
-          experimentId: "e1",
-          tableName: "raw_data",
-          rowId: "11",
-          type: "flag",
-          contentText: "Outlier",
-          flagType: "outlier",
-          createdBy: "u1",
-          createdAt: created,
-          updatedAt: created,
-          userName: "Ada Lovelace",
-        },
-      ]),
+      await adapter.writeAnnotations(
+        [
+          {
+            id: "a1",
+            experimentId: "e1",
+            tableName: "raw_data",
+            rowId: "11",
+            type: "flag",
+            contentText: "Outlier",
+            flagType: "outlier",
+            createdBy: "u1",
+            createdAt: created,
+            updatedAt: created,
+            userName: "Ada Lovelace",
+          },
+        ],
+        claimed,
+      ),
     );
-    assertSuccess(await adapter.removeAnnotations([{ id: "a2", experimentId: "e1" }]));
+    assertSuccess(await adapter.removeAnnotations([{ id: "a2", experimentId: "e1" }], claimed));
 
     expect(insert.mock.calls.map(([table, rows]) => [table, rows])).toEqual([
       [
@@ -157,6 +162,7 @@ describe("ServingStoreCopiesAdapter", () => {
             type: "flag",
             flag_type: "outlier",
             is_deleted: 0,
+            claimed_at: "2026-09-02T10:00:00.000Z",
           },
         ],
       ],
@@ -168,7 +174,7 @@ describe("ServingStoreCopiesAdapter", () => {
     const { adapter, insert, rows } = adapterHolding();
     rows.mockResolvedValue(failure(AppError.internal("The serving store could not take the copy")));
 
-    const result = await adapter.writeSheets([sheet(plots)]);
+    const result = await adapter.writeSheets([sheet(plots)], claimed);
 
     assertFailure(result);
     expect(insert).not.toHaveBeenCalled();

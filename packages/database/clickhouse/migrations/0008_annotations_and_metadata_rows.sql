@@ -2,8 +2,9 @@
 -- read can filter and fill by them: the annotations added to readings after they were measured, and
 -- the rows of the experiment's metadata sheets. A copy writes a record's current state, and a deleted
 -- record, or a sheet row an edit removed, arrives as a row with is_deleted = 1, which FINAL leaves
--- out. So the copier only ever inserts. The outbox never copies one record twice at once, so the
--- server's insert time orders a record's copies.
+-- out. So the copier only ever inserts. Each copy carries the time its outbox claim was taken, on
+-- Postgres's clock, as its version: a claim taken back after its lease is older than the claim that
+-- took it, so a copy it lands late loses to the newer one.
 CREATE TABLE IF NOT EXISTS annotations
 (
     experiment_id String,
@@ -13,9 +14,9 @@ CREATE TABLE IF NOT EXISTS annotations
     type LowCardinality(String),
     flag_type LowCardinality(Nullable(String)),
     is_deleted UInt8 DEFAULT 0,
-    inserted_at DateTime64(6, 'UTC') DEFAULT now64(6)
+    claimed_at DateTime64(3, 'UTC')
 )
-ENGINE = ReplacingMergeTree(inserted_at, is_deleted)
+ENGINE = ReplacingMergeTree(claimed_at, is_deleted)
 ORDER BY (experiment_id, id);
 
 -- One row per identifier a sheet matches readings by, the first of the sheet's rows that holds it.
@@ -30,9 +31,9 @@ CREATE TABLE IF NOT EXISTS metadata_rows
     identifier String,
     fields String,
     is_deleted UInt8 DEFAULT 0,
-    inserted_at DateTime64(6, 'UTC') DEFAULT now64(6)
+    claimed_at DateTime64(3, 'UTC')
 )
-ENGINE = ReplacingMergeTree(inserted_at, is_deleted)
+ENGINE = ReplacingMergeTree(claimed_at, is_deleted)
 ORDER BY (experiment_id, sheet_id, identifier);
 
 CREATE VIEW IF NOT EXISTS experiment_annotations DEFINER = CURRENT_USER SQL SECURITY DEFINER AS

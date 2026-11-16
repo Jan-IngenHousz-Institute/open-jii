@@ -192,8 +192,8 @@ describe("ExperimentDataOutboxWorker", () => {
       expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
 
       expect(merge).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
-      expect(write).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
-      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }]);
+      expect(write).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }], expect.any(Date));
+      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }], expect.any(Date));
       expect(await outboxRows()).toEqual([]);
     });
 
@@ -225,8 +225,8 @@ describe("ExperimentDataOutboxWorker", () => {
 
       expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
 
-      expect(write).toHaveBeenCalledWith([sheet]);
-      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }]);
+      expect(write).toHaveBeenCalledWith([sheet], expect.any(Date));
+      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }], expect.any(Date));
     });
 
     it("keeps the lakehouse's copy landing when the store refuses its own", async () => {
