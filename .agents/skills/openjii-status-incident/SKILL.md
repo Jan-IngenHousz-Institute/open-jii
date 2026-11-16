@@ -9,7 +9,7 @@ Read `AGENTS.md` first. The text rules live in `docs/runbooks/support/status-pag
 read it before you draft anything. It holds the component table, the stages and the templates. This
 skill is the procedure around it.
 
-A published entry reaches https://status.openjii.org in about two minutes, and the status Slack
+A published entry reaches https://status.openjii.org in about seven minutes, and the status Slack
 channel gets one message for it. A Slack message is never edited or deleted, and editing an update
 later does not post it again. Everything below is built so that nothing reaches either place until
 the person has read the exact text and said publish.
@@ -97,8 +97,8 @@ A dry run of `draft`, `update` or `resolve` makes no request, so it works withou
 prints the page card and the exact Slack message or messages the publisher will send. Show the
 person both as printed, not paraphrased, with the times in UTC and in their own time zone. Fix every
 problem it lists, in the file, before showing the person anything. A note under the Slack part
-about a maintenance window that starts or ends within two minutes means the real message may be the
-started or completed one, so tell the person.
+about a maintenance window that starts or ends within seven minutes means the real message may be
+the started or completed one, so tell the person.
 
 ## Write the drafts
 
