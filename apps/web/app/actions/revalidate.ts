@@ -1,13 +1,14 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { revalidatePath } from "next/cache";
 
 /**
- * Call this after sign-in, sign-out or registration. It clears the browser's page cache, which
- * would otherwise replay pages and redirects prefetched for the previous session. The server's
- * cached pages read no session, so they stay.
+ * Call this after sign-in, sign-out or registration. Only a revalidation makes Next drop the pages
+ * and redirects the browser prefetched for the previous session; `refresh()` refetches the current
+ * route alone. The platform layout covers every page that reads the session, and no public page
+ * shares it, so no cached public page is regenerated.
  */
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function revalidateAuth() {
-  refresh();
+  revalidatePath("/[locale]/platform", "layout");
 }
