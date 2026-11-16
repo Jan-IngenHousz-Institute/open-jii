@@ -2224,7 +2224,8 @@ locals {
   # The gold version each feed sink starts at when its checkpoint is new. Gold keeps old versions'
   # files for seven days, so read these on the day the feed first ships, and again before any
   # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
-  # the feed's alerts.
+  # the feed's alerts. device_events is silver's lifecycle events, whose change feed starts at the
+  # version that switched it on; empty keeps its sink off.
   serving_store_feed_start_versions = {
     measurements  = "58430"
     uploads       = "44"
@@ -2232,6 +2233,7 @@ locals {
     # The sheets' copy needs no history: the first load owes every sheet to it once
     # (docs/runbooks/procedures/serving-store-reload.md).
     metadata_rows = "latest"
+    device_events = ""
   }
   serving_store_feed = length(local.serving_store_feed_start_versions) > 0
 
