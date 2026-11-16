@@ -543,15 +543,26 @@ def test_an_export_removes_its_snapshot_when_it_is_done(
     assert not Path(task["SNAPSHOT_PATH"]).exists()
 
 
-def test_a_refused_export_removes_its_snapshot_and_writes_no_part(
-    export_task: Callable[..., dict[str, Any]],
+@pytest.mark.parametrize("export_format", ["json-array", "xlsx"])
+def test_a_refused_export_copies_one_row_past_the_limit_removes_it_and_writes_no_part(
+    export_task: Callable[..., dict[str, Any]], export_format: str
 ) -> None:
-    task = export_task("raw_data", "xlsx")
-    task["DRIVER_FORMAT_MAX_ROWS"] = 1
+    task = export_task("raw_data", export_format)
+    task["DRIVER_FORMAT_MAX_ROWS"] = 0
+    take_snapshot = task["take_snapshot"]
+    held: list[int] = []
+
+    def snapshot_recording_its_size(table: Any) -> DataFrame:
+        snapshot = take_snapshot(table)
+        held.append(snapshot.count())
+        return snapshot
+
+    task["take_snapshot"] = snapshot_recording_its_size
 
     with pytest.raises(task["ExportError"], match=r"too_many_rows_for_format"):
         _run(task)
 
+    assert held == [1]
     assert not Path(task["SNAPSHOT_PATH"]).exists()
     assert not Path(task["OUTPUT_PATH"]).exists()
 

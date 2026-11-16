@@ -85,7 +85,7 @@ def check_driver_format_limits(export_format: str, row_count: int, column_count:
     if row_count > DRIVER_FORMAT_MAX_ROWS:
         raise ExportError(
             "too_many_rows_for_format",
-            f"{row_count} rows exceed the {DRIVER_FORMAT_MAX_ROWS}-row limit of {export_format}",
+            f"more than {DRIVER_FORMAT_MAX_ROWS} rows, the limit of {export_format}",
         )
 
     if export_format == "xlsx" and column_count > EXCEL_MAX_COLUMNS:
@@ -271,6 +271,10 @@ def take_snapshot(table):
     rows = table.rows()
     if ANONYMIZE_CONTRIBUTORS:
         rows = anonymize_contributors(rows, EXPERIMENT_ID)
+
+    # One row past the limit is enough to refuse, so a refused export never copies the whole table.
+    if not WRITES_IN_PARTS:
+        rows = rows.limit(DRIVER_FORMAT_MAX_ROWS + 1)
 
     rows.write.mode("overwrite").parquet(SNAPSHOT_PATH)
     return spark.read.schema(rows.schema).parquet(SNAPSHOT_PATH)
