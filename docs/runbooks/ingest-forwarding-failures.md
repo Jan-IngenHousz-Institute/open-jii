@@ -158,11 +158,12 @@ is a quarter of what one shard takes, so live ingest keeps the rest, and ten tho
 about 40 seconds. `kinesis-write-throttling` should stay at zero while it runs. A record Kinesis
 refuses is tried twice more.
 
-The command ends with exit code 1 when a record stays refused, a request fails, or you stop it. The
-first Ctrl-C finishes the batch in hand, at most 250 records, sends no further batch or retry, and
-still writes the manifest; a second quits at once and writes none. A failed request or a stop ends
-the replay early, and the manifest then holds the messages decided until then, each marked `sent`, `refused`, `unknown` for the batch in flight, or
-`not sent`. Before running `--apply` again, wait until a dry run of the same window counts the sent
+The command ends with exit code 1 when a record stays refused, a request fails, or a stop leaves
+messages unsent. The first Ctrl-C finishes the batch in hand, at most 250 records, sends no further
+batch or retry, and still writes the manifest; a second quits at once and writes none. A Ctrl-C
+during the last batch leaves nothing unsent, so once that batch goes through the replay is complete.
+A failed request or a stop ends the replay early, and the manifest then holds the messages decided
+until then, each marked `sent`, `refused`, `unknown` for the batch in flight, or `not sent`. Before running `--apply` again, wait until a dry run of the same window counts the sent
 ones as `in bronze`, and until bronze holds a message that arrived after the failure, since an
 `unknown` batch may have landed. A few minutes after the pipeline catches up, a dry run of the same
 window should count no `missing`. Note the window, the source and the counts in the incident's
