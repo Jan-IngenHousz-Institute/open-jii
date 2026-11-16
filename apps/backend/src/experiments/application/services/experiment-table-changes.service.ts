@@ -83,8 +83,12 @@ export class ExperimentTableChangesService implements OnModuleDestroy {
       this.releaseStream(userId);
       wake();
     };
-    // Covers a request that aborts before its stream is first read.
+    // Covers a request that aborts before its stream is first read, or already has: oRPC ends an
+    // unread generator without running its `finally`.
     signal?.addEventListener("abort", close, { once: true });
+    if (signal?.aborted) {
+      close();
+    }
 
     const wait = (ms: number) =>
       new Promise<boolean>((resolve) => {

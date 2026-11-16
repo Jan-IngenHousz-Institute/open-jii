@@ -8,7 +8,10 @@ import {
   success,
 } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExperimentTableMetadata } from "../../core/models/experiment-data.model";
+import type {
+  ExperimentDataSource,
+  ExperimentTableMetadata,
+} from "../../core/models/experiment-data.model";
 import type { ExperimentDataRepository } from "../../core/repositories/experiment-data.repository";
 import {
   CHECK_MS,
@@ -16,6 +19,7 @@ import {
   HEARTBEAT_MS,
   MAX_STREAMS_PER_USER,
   MAX_WATCHED_EXPERIMENTS,
+  STREAM_LIFETIME_JITTER_MS,
   STREAM_LIFETIME_MS,
 } from "./experiment-table-changes.service";
 
@@ -30,7 +34,12 @@ const RAW: ExperimentTableMetadata = {
 
 function setup() {
   const listedTablesMetadata = vi
-    .fn<() => Promise<Result<ExperimentTableMetadata[]>>>()
+    .fn<
+      (
+        experimentId: string,
+        source: ExperimentDataSource,
+      ) => Promise<Result<ExperimentTableMetadata[]>>
+    >()
     .mockResolvedValue(success([RAW]));
   const service = new ExperimentTableChangesService(
     fromPartial<ExperimentDataRepository>({ listedTablesMetadata }),
@@ -48,6 +57,9 @@ function setup() {
 
   return { service, listedTablesMetadata, listen, stopAll };
 }
+
+type Repository = ReturnType<typeof setup>["listedTablesMetadata"];
+type Listening = ReturnType<ReturnType<typeof setup>["listen"]>;
 
 async function drain(events: AsyncGenerator<unknown, void>): Promise<void> {
   let result = await events.next();
@@ -249,5 +261,66 @@ describe("ExperimentTableChangesService", () => {
     service.onModuleDestroy();
 
     expect(await next).toEqual({ value: undefined, done: true });
+  });
+
+  it("holds nothing for a request that aborted before its stream opened", async () => {
+    const { service, listedTablesMetadata, listen, stopAll } = setup();
+    const gone = new AbortController();
+    gone.abort();
+
+    for (let stream = 0; stream < MAX_STREAMS_PER_USER; stream++) {
+      assertSuccess(service.open("exp-1", "user-1", gone.signal));
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    const checks = listedTablesMetadata.mock.calls.length;
+
+    listen("exp-2", "user-1");
+    await vi.advanceTimersByTimeAsync(CHECK_MS * 3);
+
+    const checksOfFirst = listedTablesMetadata.mock.calls.filter(([id]) => id === "exp-1").length;
+    expect(checksOfFirst).toBe(checks);
+    stopAll();
+  });
+
+  it.each([
+    {
+      exit: "an abort",
+      end: async (stream: Listening) => {
+        stream.stop.abort();
+        await stream.events.next();
+      },
+    },
+    {
+      exit: "its lifetime",
+      end: async (stream: Listening) => {
+        const ended = drain(stream.events);
+        await vi.advanceTimersByTimeAsync(STREAM_LIFETIME_MS + STREAM_LIFETIME_JITTER_MS);
+        await ended;
+      },
+    },
+    {
+      exit: "a failed check",
+      end: async (stream: Listening, repository: Repository) => {
+        repository.mockResolvedValue(failure(AppError.internal("store unreachable")));
+        await vi.advanceTimersByTimeAsync(CHECK_MS);
+        await drain(stream.events);
+      },
+    },
+    {
+      exit: "a shutdown",
+      end: async (stream: Listening, _: Repository, service: ExperimentTableChangesService) => {
+        service.onModuleDestroy();
+        await drain(stream.events);
+      },
+    },
+  ])("gives a user back a stream that ended through $exit", async ({ end }) => {
+    const { service, listedTablesMetadata, listen, stopAll } = setup();
+    const streams = Array.from({ length: MAX_STREAMS_PER_USER }, () => listen());
+    await streams[0].events.next();
+
+    await end(streams[0], listedTablesMetadata, service);
+
+    assertSuccess(service.open("exp-1", "user-1"));
+    stopAll();
   });
 });
