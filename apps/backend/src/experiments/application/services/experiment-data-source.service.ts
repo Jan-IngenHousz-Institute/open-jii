@@ -24,12 +24,14 @@ export class ExperimentDataSourceService {
     return this.flaggedSource(FEATURE_FLAGS.STORE_EXPERIMENT_READS, user);
   }
 
+  /** Charts read the store only for a user whose pages do, so a chart never lists the warehouse's
+   *  tables and columns while reading the store's rows. */
   async sourcesFor(user: FlagUser): Promise<ExperimentDataSources> {
     const [pages, charts] = await Promise.all([
       this.flaggedSource(FEATURE_FLAGS.STORE_EXPERIMENT_READS, user),
       this.flaggedSource(FEATURE_FLAGS.STORE_CHART_READS, user),
     ]);
-    return { pages, charts };
+    return { pages, charts: pages === "store" ? charts : "warehouse" };
   }
 
   private async flaggedSource(flag: FeatureFlagKey, user: FlagUser): Promise<ExperimentDataSource> {

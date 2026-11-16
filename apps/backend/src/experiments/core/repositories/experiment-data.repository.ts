@@ -428,24 +428,14 @@ export class ExperimentDataRepository {
     tableName: string;
     column: string;
     limit: number;
-    sources: ExperimentDataSources;
+    source: ExperimentDataSource;
     offset?: number;
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
-    const { experimentId, experiment, tableName, column, limit, offset, sources } = params;
+    const { experimentId, experiment, tableName, column, limit, offset, source } = params;
 
-    let shapeResult = await this.tableShape(experimentId, tableName, sources.pages);
+    const shapeResult = await this.tableShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
-    }
-
-    // The device picker's labels filter charts, so it reads where they do.
-    const isDevicePicker = column === "device" && shapeResult.value.metadata.tableType !== "upload";
-    const isChartsElsewhere = isDevicePicker && sources.charts !== sources.pages;
-    if (isChartsElsewhere) {
-      shapeResult = await this.tableShape(experimentId, tableName, sources.charts);
-      if (shapeResult.isFailure()) {
-        return shapeResult;
-      }
     }
 
     const shape = shapeResult.value;
@@ -456,10 +446,11 @@ export class ExperimentDataRepository {
     if (anonymizedResult.isFailure()) {
       return anonymizedResult;
     }
-    if (!isDevicePicker && (offset ?? 0) > 0) {
+    const deviceColumn = column === "device" && shape.metadata.tableType !== "upload";
+    if (!deviceColumn && (offset ?? 0) > 0) {
       return failure(AppError.badRequest("Offset paging is supported only for device columns"));
     }
-    const queryResult = await (isDevicePicker
+    const queryResult = await (deviceColumn
       ? this.deviceValuesSql(experimentId, shape, limit, offset)
       : this.buildQuery(experimentId, shape, {
           columns: [column],

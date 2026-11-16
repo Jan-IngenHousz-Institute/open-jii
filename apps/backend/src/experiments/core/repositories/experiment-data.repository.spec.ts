@@ -844,7 +844,7 @@ describe("ExperimentDataRepository", () => {
 
       it("refuses the distinct values of a contributor's name", async () => {
         const result = await repository.getDistinctColumnValues({
-          sources: WAREHOUSE_READS,
+          source: WAREHOUSE,
           experimentId: baseParams.experimentId,
           experiment: anonymized,
           tableName: "raw_data",
@@ -2033,7 +2033,7 @@ describe("ExperimentDataRepository", () => {
       tableName: "raw_data",
       column: "site",
       limit: 3,
-      sources: WAREHOUSE_READS,
+      source: WAREHOUSE,
     };
     const metadata: ExperimentTableMetadata[] = [
       {
@@ -2525,6 +2525,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
       const result = await repository.getDistinctColumnValues({
         ...params,
+        source: WAREHOUSE,
         tableName: "raw_data",
         column: "q",
         limit: 5,
@@ -3153,7 +3154,7 @@ describe("ExperimentDataRepository", () => {
       expect(warehouse).not.toHaveBeenCalled();
     });
 
-    it("reads charts from the store once their own flag is on, whatever pages read", async () => {
+    it("reads charts from the charts' source, apart from the pages'", async () => {
       const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
       const store = vi
         .spyOn(servingStore, "executeQuery")
@@ -3186,7 +3187,7 @@ describe("ExperimentDataRepository", () => {
       expect(build.mock.calls.every(([params]) => params.plotsValues === true)).toBe(true);
     });
 
-    it("keeps charts on the warehouse while their own flag is off, whatever pages read", async () => {
+    it("keeps charts on the warehouse while pages read the store and the charts' flag is off", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([largeTable]),
       );
@@ -3318,7 +3319,7 @@ describe("ExperimentDataRepository", () => {
         column: "device",
         limit: 3,
         offset: 200,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3330,37 +3331,6 @@ describe("ExperimentDataRepository", () => {
       expect(sql).toContain(
         "ORDER BY lowerUTF8(`device.serial_number`) ASC, `device.serial_number` ASC\nLIMIT 4\nOFFSET 200",
       );
-    });
-
-    it("lists Device picker labels where charts read, whatever pages read", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([largeTable]),
-      );
-      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
-        success({
-          columns: [
-            { name: "serial_number", type_name: "STRING", type_text: "STRING", position: 0 },
-          ],
-          rows: [["Ambit (d2)"]],
-          totalRows: 1,
-          truncated: false,
-        }),
-      );
-      const store = vi.spyOn(servingStore, "executeQuery");
-
-      const result = await repository.getDistinctColumnValues({
-        experimentId,
-        experiment: mockExperiment,
-        tableName: "raw_data",
-        column: "device",
-        limit: 3,
-        sources: { pages: "store", charts: WAREHOUSE },
-      });
-
-      assertSuccess(result);
-      expect(result.value.values).toEqual(["Ambit (d2)"]);
-      expect(warehouse).toHaveBeenCalled();
-      expect(store).not.toHaveBeenCalled();
     });
 
     it("keeps non-device distinct reads on the store", async () => {
@@ -3379,7 +3349,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         column: "plot",
         limit: 3,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3600,7 +3570,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         column: "annotations",
         limit: 10,
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);

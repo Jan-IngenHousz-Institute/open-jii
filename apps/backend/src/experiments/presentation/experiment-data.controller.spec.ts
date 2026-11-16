@@ -176,7 +176,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data", column: "site", limit: 50 }),
-        { pages: "warehouse", charts: "warehouse" },
+        "warehouse",
       );
     });
 
@@ -227,16 +227,29 @@ describe("ExperimentDataController", () => {
   });
 
   describe("read source", () => {
-    it("reads tables from the source the pages' flag picks", async () => {
+    it.each([
+      {
+        path: "tables",
+        mockUseCase: () =>
+          vi
+            .spyOn(getExperimentTablesUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No tables"))),
+      },
+      {
+        path: "data/distinct?tableName=raw_data&column=site",
+        mockUseCase: () =>
+          vi
+            .spyOn(getDistinctColumnValuesUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No values"))),
+      },
+    ])("reads $path from the source the pages' flag picks", async ({ path, mockUseCase }) => {
       const sourceFor = vi
         .spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor")
         .mockResolvedValue("store");
-      const execute = vi
-        .spyOn(getExperimentTablesUseCase, "execute")
-        .mockResolvedValue(failure(AppError.notFound("No tables")));
+      const execute = mockUseCase();
 
       await testApp
-        .get(`/api/v1/experiments/${readableExperimentId}/tables`)
+        .get(`/api/v1/experiments/${readableExperimentId}/${path}`)
         .withAuth(testUserId)
         .expect(404);
 
@@ -251,13 +264,6 @@ describe("ExperimentDataController", () => {
           vi
             .spyOn(getExperimentDataUseCase, "execute")
             .mockResolvedValue(failure(AppError.notFound("No data"))),
-      },
-      {
-        path: "data/distinct?tableName=raw_data&column=site",
-        mockUseCase: () =>
-          vi
-            .spyOn(getDistinctColumnValuesUseCase, "execute")
-            .mockResolvedValue(failure(AppError.notFound("No values"))),
       },
       {
         path: "data/columns?tableName=raw_data",

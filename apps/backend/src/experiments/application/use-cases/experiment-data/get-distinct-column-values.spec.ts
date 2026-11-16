@@ -60,7 +60,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
         column: "category",
         limit: 100,
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -92,7 +92,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
         tableName: "bronze_data",
         column: "category",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     // Default cap from DISTINCT_VALUES_DEFAULT_LIMIT.
@@ -115,7 +115,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
         tableName: "bronze_data",
         column: "category",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isFailure()).toBe(true);
@@ -144,7 +144,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
         tableName: "bronze_data",
         column: "category",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -169,7 +169,7 @@ describe("GetDistinctColumnValuesUseCase", () => {
         tableName: "bronze_data",
         column: "category",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isFailure()).toBe(true);

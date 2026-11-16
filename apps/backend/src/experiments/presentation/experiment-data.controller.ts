@@ -66,12 +66,12 @@ export class ExperimentDataController {
   getDistinctColumnValues(@Session() session: UserSession) {
     return implement(experimentDataContract.getDistinctColumnValues).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const sources = await this.dataSource.sourcesFor(session.user);
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getDistinctColumnValuesUseCase.execute(
         id,
         session.user.id,
         query,
-        sources,
+        source,
       );
       if (result.isSuccess()) {
         return result.value;

@@ -15,7 +15,7 @@ export const FEATURE_FLAGS = {
   // An experiment's tables, pages, filter values and columns read from the serving store together,
   // so a page never mixes the store's columns with the warehouse's cells.
   STORE_EXPERIMENT_READS: "store-experiment-reads",
-  // Charts, and the device picker whose labels filter them, read from the serving store.
+  // Charts read from the serving store, for users whose pages already do.
   STORE_CHART_READS: "store-chart-reads",
 } as const;
 

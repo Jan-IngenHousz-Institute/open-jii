@@ -50,16 +50,32 @@ describe("ExperimentDataSourceService", () => {
     expect(await service.sourceFor(user)).toBe("warehouse");
   });
 
-  it("switches charts by their own flag, apart from pages", async () => {
+  it("switches charts by their own flag once pages read the store", async () => {
     vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
-    const flag = vi
-      .spyOn(analyticsPort, "isFeatureFlagEnabled")
-      .mockImplementation((key) => Promise.resolve(key === FEATURE_FLAGS.STORE_CHART_READS));
+    const flag = vi.spyOn(analyticsPort, "isFeatureFlagEnabled").mockResolvedValue(true);
 
     const sources = await service.sourcesFor(user);
 
-    expect(sources).toEqual({ pages: "warehouse", charts: "store" });
+    expect(sources).toEqual({ pages: "store", charts: "store" });
     expect(flag).toHaveBeenCalledWith(FEATURE_FLAGS.STORE_CHART_READS, user);
+  });
+
+  it("keeps pages on the store while the charts' flag is off", async () => {
+    vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
+    vi.spyOn(analyticsPort, "isFeatureFlagEnabled").mockImplementation((key) =>
+      Promise.resolve(key === FEATURE_FLAGS.STORE_EXPERIMENT_READS),
+    );
+
+    expect(await service.sourcesFor(user)).toEqual({ pages: "store", charts: "warehouse" });
+  });
+
+  it("keeps charts on the warehouse while pages read it, whatever the charts' flag says", async () => {
+    vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
+    vi.spyOn(analyticsPort, "isFeatureFlagEnabled").mockImplementation((key) =>
+      Promise.resolve(key === FEATURE_FLAGS.STORE_CHART_READS),
+    );
+
+    expect(await service.sourcesFor(user)).toEqual({ pages: "warehouse", charts: "warehouse" });
   });
 
   it("reads charts from the warehouse where there is no store, whatever their flag says", async () => {
