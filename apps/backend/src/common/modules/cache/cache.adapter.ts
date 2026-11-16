@@ -38,11 +38,11 @@ interface Envelope<T> {
  */
 /**
  * One promise per key, so the map cannot carry each key's value type. What it
- * holds under a key is always that key's load, whose result is `T | null` by
- * construction in `tryCache`; nothing else writes to it.
+ * holds under a key is always that key's load, which every caller of the key
+ * fetches the same way; nothing else writes to it.
  */
-function sharedLoad<T>(running: Promise<unknown>): Promise<T | null> {
-  return running as Promise<T | null>;
+function sharedLoad<R>(running: Promise<unknown>): Promise<R> {
+  return running as Promise<R>;
 }
 
 export class CacheAdapter implements MacroCachePort, MetricsCachePort, ExperimentCachePort {
@@ -81,7 +81,7 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     return this.awaitWithin(load, this.namespace.waitMs);
   }
 
-  refresh<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
+  refresh<T>(key: string, fetchFn: () => Promise<T>): Promise<T> {
     return this.startLoad(`${this.namespace.prefix}${key}`, fetchFn);
   }
 
@@ -90,10 +90,10 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
    * behind a short TTL is otherwise repeated by every caller that arrives
    * while the first one runs, and abandoned when that caller stops waiting.
    */
-  private startLoad<T>(cacheKey: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
+  private startLoad<R>(cacheKey: string, fetchFn: () => Promise<R>): Promise<R> {
     const running = this.inFlight.get(cacheKey);
     if (running !== undefined) {
-      return sharedLoad<T>(running);
+      return sharedLoad<R>(running);
     }
 
     const generation = this.generations.get(cacheKey) ?? 0;
@@ -107,7 +107,7 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
 
     // A caller that stopped waiting leaves nobody to observe a rejection.
     load.catch((error: unknown) => {
-      this.logger.warn({ msg: "Background cache load failed", cacheKey, error });
+      this.logger.warn({ msg: "Cache load failed", cacheKey, error });
     });
 
     return load;
@@ -152,18 +152,19 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     }
   }
 
-  private async fetchAndStore<T>(
+  private async fetchAndStore<R>(
     cacheKey: string,
-    fetchFn: () => Promise<T | null>,
+    fetchFn: () => Promise<R>,
     generation: number,
-  ): Promise<T | null> {
-    const value = await fetchFn();
+  ): Promise<R> {
+    const value: R = await fetchFn();
 
     // Invalidated while loading: the caller still gets the source's answer,
     // but the cache does not, or the invalidation would be undone.
     const invalidated = (this.generations.get(cacheKey) ?? 0) !== generation;
 
-    if (value !== null && value !== undefined && !invalidated) {
+    const isStorable = value !== null && value !== undefined && !invalidated;
+    if (isStorable) {
       try {
         await this.store(cacheKey, value);
       } catch (error) {

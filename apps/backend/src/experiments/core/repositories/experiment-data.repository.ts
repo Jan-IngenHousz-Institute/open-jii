@@ -543,29 +543,23 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Schemas, row count and newest row of every table in an experiment, as one
-   * cached snapshot. Reads build their SQL from it and the tables listing
-   * serves it, so a count the page has seen is the count its next read uses.
-   * A failed lookup is thrown through the cache so it is never stored, and
-   * callers sharing the in-flight load all see the failure.
+   * Schemas, row count and newest row of every table in an experiment, as one snapshot cached on
+   * this task that reads build their SQL from. A failed lookup is never stored, and callers sharing
+   * the in-flight load all see the failure.
    */
   tablesMetadata(
     experimentId: string,
     source: ExperimentDataSource,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     return tryCatch(async () => {
-      const rows = await this.cachePort.tryCache(`table-metadata:${source}:${experimentId}`, () =>
+      const rows = await this.cachePort.tryCache(this.tablesMetadataKey(experimentId, source), () =>
         this.loadTablesMetadata(experimentId, source),
       );
       return rows ?? [];
     });
   }
 
-  /**
-   * The snapshot the tables listing serves. A source that lists cheaply is read afresh and its
-   * snapshot replaced, so a page checking it sees what the source holds at that moment and its
-   * next read uses the count it saw. Any other source's listing is served from the cache.
-   */
+  /** The snapshot the tables listing serves, reloaded on each call if the source lists cheaply. */
   listedTablesMetadata(
     experimentId: string,
     source: ExperimentDataSource,
@@ -574,12 +568,15 @@ export class ExperimentDataRepository {
       return this.tablesMetadata(experimentId, source);
     }
 
-    return tryCatch(async () => {
-      const rows = await this.cachePort.refresh(`table-metadata:${source}:${experimentId}`, () =>
+    return tryCatch(() =>
+      this.cachePort.refresh(this.tablesMetadataKey(experimentId, source), () =>
         this.loadTablesMetadata(experimentId, source),
-      );
-      return rows ?? [];
-    });
+      ),
+    );
+  }
+
+  private tablesMetadataKey(experimentId: string, source: ExperimentDataSource): string {
+    return `table-metadata:${source}:${experimentId}`;
   }
 
   private async loadTablesMetadata(

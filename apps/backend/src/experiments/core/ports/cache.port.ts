@@ -11,11 +11,8 @@ export abstract class CachePort {
    */
   abstract tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null>;
 
-  /**
-   * Loads the key from `fetchFn` whatever it holds, joining a load already running for it, and
-   * stores a non-null result for later reads.
-   */
-  abstract refresh<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null>;
+  /** Loads the key whatever it holds, joining a load already running, and stores the result. */
+  abstract refresh<T>(key: string, fetchFn: () => Promise<T>): Promise<T>;
 
   abstract invalidate(key: string): Promise<void>;
 }
