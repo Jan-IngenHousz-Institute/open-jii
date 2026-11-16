@@ -308,7 +308,7 @@ def _send(writer: StoreWriter, table: StoreTable, changes: DataFrame) -> None:
 
 
 @pytest.fixture(scope="module")
-def store(spark: SparkSession, tables: None, admin: _Store, first_refreshes: list[dict]) -> Iterator[_Store]:
+def store(spark: SparkSession, tables: None, admin: _Store, first_refreshes: list[dict]) -> _Store:
     """The same rows sent through the feed after older copies of two of them, left unmerged, every
     view refreshed, and the metrics user granted the views as the store's users.xml grants them."""
     for table in ("measurements", "macro_results", "uploads"):
