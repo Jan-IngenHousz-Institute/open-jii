@@ -55,7 +55,10 @@ export interface ServingStorePort {
 
   countQuery(query: StoreQuery): StoreQuery;
 
-  /** The distinct labels a read of `device.serial_number` holds, as the device picker lists them. */
+  /**
+   * The distinct labels a read of `device.serial_number` holds, blank ones left out, case folded
+   * for the order with the label itself breaking ties, one page at a time.
+   */
   deviceLabelsQuery(query: StoreQuery, limit: number, offset: number): StoreQuery;
 
   executeQuery(query: StoreQuery): Promise<Result<SchemaData>>;
