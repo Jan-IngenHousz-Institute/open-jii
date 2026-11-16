@@ -532,12 +532,7 @@
         "column": "id",
         "direction": "ASC"
       },
-      "compare": [
-        "id",
-        "v",
-        "v_cumsum",
-        "n_cumsum"
-      ]
+      "compare": ["id", "v", "v_cumsum", "n_cumsum"]
     },
     "rowWindows": {
       "aggregation": {
@@ -580,13 +575,7 @@
         "column": "id",
         "direction": "ASC"
       },
-      "compare": [
-        "id",
-        "v_previous",
-        "v_change_from_previous",
-        "seconds_since_previous",
-        "row"
-      ]
+      "compare": ["id", "v_previous", "v_change_from_previous", "seconds_since_previous", "row"]
     },
     "emptySelection": {
       "filters": [
@@ -627,11 +616,7 @@
       }
     },
     "timeMatchedRows": {
-      "columns": [
-        "id",
-        "w",
-        "matched_id"
-      ],
+      "columns": ["id", "w", "matched_id"],
       "join": {
         "matchColumn": "device_name",
         "toleranceMinutes": 60
@@ -702,11 +687,7 @@
       }
     },
     "timeMatchedTight": {
-      "columns": [
-        "id",
-        "w",
-        "matched_id"
-      ],
+      "columns": ["id", "w", "matched_id"],
       "join": {
         "matchColumn": "device_name",
         "toleranceMinutes": 20
@@ -789,11 +770,7 @@
         "column": "id",
         "direction": "ASC"
       },
-      "compare": [
-        "id",
-        "v_previous",
-        "row"
-      ]
+      "compare": ["id", "v_previous", "row"]
     },
     "latestByNullableOrder": {
       "aggregation": {
@@ -839,12 +816,7 @@
         "column": "id",
         "direction": "ASC"
       },
-      "compare": [
-        "id",
-        "v",
-        "v_cumsum",
-        "n_cumsum"
-      ],
+      "compare": ["id", "v", "v_cumsum", "n_cumsum"],
       "limit": 6,
       "exact": true
     },
@@ -889,13 +861,7 @@
         "column": "id",
         "direction": "ASC"
       },
-      "compare": [
-        "id",
-        "v_previous",
-        "v_change_from_previous",
-        "seconds_since_previous",
-        "row"
-      ],
+      "compare": ["id", "v_previous", "v_change_from_previous", "seconds_since_previous", "row"],
       "limit": 6,
       "exact": true
     },
@@ -923,11 +889,7 @@
         "column": "id",
         "direction": "ASC"
       },
-      "compare": [
-        "id",
-        "v_previous",
-        "row"
-      ],
+      "compare": ["id", "v_previous", "row"],
       "limit": 6,
       "exact": true
     }
