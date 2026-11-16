@@ -2878,6 +2878,6 @@ metrics:
       serving store has waited since it was first owed, 0 when none is. Every backend task
       publishes it every five minutes beside ExperimentDataCopiesWaiting, the number owed. A copy
       normally lands within seconds; the retries wait 10 s, 1, 5 and 15 minutes, so one still owed
-      after 30 minutes has failed four times, and the next waits an hour. Pages read annotations
+      after 30 minutes has failed five times, and the next waits an hour. Pages read annotations
       and sheets from Postgres, so a waiting copy delays exports, charts and store filters, not the
       page itself.

@@ -227,8 +227,8 @@ export class ExperimentDataRepository {
       shape = joined.value;
     }
     if (flagged !== undefined) {
-      // Charts, joined reads and tables the store does not hold read from the warehouse, which
-      // keeps no copy of the annotations to filter by.
+      // Charts, joined reads and tables the store does not hold read from the warehouse, and only
+      // the store's read builds the flag filter.
       if (shape.source !== "store") {
         return failure(
           AppError.badRequest(

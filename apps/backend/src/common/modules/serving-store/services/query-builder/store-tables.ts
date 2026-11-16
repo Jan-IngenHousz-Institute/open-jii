@@ -68,8 +68,8 @@ const DEVICE: StoreColumn = {
   idOf: "device",
 };
 
-// Annotations made on the platform and custom metadata are not in the store yet. A measurement's own
-// annotations read, and the backend adds the platform's from Postgres; custom metadata reads as none.
+// A row's cells take the annotations added after the measurement from Postgres, after its own; the
+// store's copy of them serves only the flag filter. Custom metadata reads as none for now.
 const CUSTOM_METADATA: StoreColumn = {
   name: "custom_metadata",
   type: "VARIANT",

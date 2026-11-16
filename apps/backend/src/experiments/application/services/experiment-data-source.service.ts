@@ -19,8 +19,8 @@ export class ExperimentDataSourceService {
   ) {}
 
   /**
-   * The store for a read filtered by flags, whatever the read flag says, since only the store keeps
-   * the annotations to filter by. Refused where there is no store.
+   * The store for a read filtered by flags, whatever the read flag says, since only the store's read
+   * builds the flag filter. Refused where there is no store.
    */
   flaggedSource(): Result<ExperimentDataSource> {
     if (!this.servingStore.isConfigured()) {
