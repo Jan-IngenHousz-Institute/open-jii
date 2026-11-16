@@ -65,6 +65,13 @@ export const DELIVERY_OUTAGE_LATENCY_MINUTES = 60;
 /** The consumer ten minutes behind the stream is falling behind rather than catching up. */
 export const ITERATOR_AGE_DEGRADED_MINUTES = 10;
 
+/**
+ * A reader that restarts on a quiet stream starts at the oldest record the stream still keeps, so
+ * for a minute the age reads up to the retention: a day on dev, three on prod. A real backlog that
+ * long also shows as a stall or as delivery latency, so an age of a day or more is not judged.
+ */
+export const ITERATOR_AGE_RESTART_MINUTES = 24 * 60;
+
 /** Bronze idle this long while devices publish is a stopped pipeline, as Ingest Stalled reads it. */
 export const DELIVERY_STALL_IDLE_MINUTES = 60;
 
@@ -195,7 +202,9 @@ function judgeDataDelivery({ readings }: ComponentEvidence): ComponentVerdict {
   const isStalled =
     (readings.ingestIdle ?? 0) > DELIVERY_STALL_IDLE_MINUTES &&
     (readings.devicePublishesBeforeIdle ?? 0) > 0;
-  const isBehindStream = iteratorAgeMs > ITERATOR_AGE_DEGRADED_MINUTES * 60_000;
+  const isBehindStream =
+    iteratorAgeMs > ITERATOR_AGE_DEGRADED_MINUTES * 60_000 &&
+    iteratorAgeMs < ITERATOR_AGE_RESTART_MINUTES * 60_000;
   const isDatabricksDown = isDependencyDown(readings.databricksUp);
 
   return {
