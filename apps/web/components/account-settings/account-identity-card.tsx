@@ -45,9 +45,8 @@ export function AccountIdentityCard({
   // Read-only: the user's active organization (Better Auth). In phase 1 this is
   // their auto-provisioned personal workspace.
   const { data: activeOrg } = authClient.useActiveOrganization();
-  const person = { ...profile, email };
-  const displayName = personName(person, t);
-  const own = ownName(person);
+  const displayName = personName(profile, t);
+  const own = ownName(profile);
   const previewAvatarUrl = getAvatarPreviewUrl(profile.avatarUrl);
 
   // `Card` brings `py-6` and `gap-6`, which left a 24px band of card background
@@ -75,7 +74,7 @@ export function AccountIdentityCard({
             </div>
 
             <div className="flex max-w-full flex-wrap justify-center gap-2 sm:justify-start">
-              {own && email && (
+              {email && (
                 <span className="bg-muted text-foreground/80 inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs">
                   <Mail className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{email}</span>

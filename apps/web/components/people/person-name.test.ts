@@ -10,9 +10,16 @@ describe("personName", () => {
     expect(personName({ firstName: "Lin", lastName: "" }, t)).toBe("Lin");
   });
 
-  it("falls back to a server-built name, then to the email", () => {
-    expect(personName({ displayName: "Lab Admin", email: "a@uni.edu" }, t)).toBe("Lab Admin");
-    expect(personName({ firstName: "", lastName: "", email: "a@uni.edu" }, t)).toBe("a@uni.edu");
+  it("falls back to a server-built name", () => {
+    expect(personName({ displayName: "Lab Admin" }, t)).toBe("Lab Admin");
+  });
+
+  it("never names a person by their email, whatever the placement", () => {
+    const nameless = { firstName: "", lastName: "", email: "a@uni.edu" };
+
+    expect(personName(nameless, t, { placement: "row" })).toBe("common.unnamedAccount");
+    expect(personName(nameless, t, { placement: "text" })).toBe("notifications:someone");
+    expect(personName(nameless, t, { placement: "byline" })).toBeNull();
   });
 
   it("returns a pseudonym exactly as sent", () => {

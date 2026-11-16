@@ -49,7 +49,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
 
   const { data: userProfile } = useGetUserProfile(user.id);
   const userProfileBody = userProfile;
-  const person = { ...userProfileBody, email: user.email };
+  const person = userProfileBody ?? {};
   const displayName = personName(person, t);
   const own = ownName(person);
   const avatar = (className: string) => (
@@ -91,11 +91,9 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </span>
                 {/* A long address still cannot fit the sidebar; the title makes
                     the truncated part reachable without opening the menu. */}
-                {own && (
-                  <span className="truncate text-xs" title={user.email}>
-                    {user.email}
-                  </span>
-                )}
+                <span className="truncate text-xs" title={user.email}>
+                  {user.email}
+                </span>
               </div>
             </div>
           </DropdownMenuLabel>
@@ -196,11 +194,9 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 </span>
                 {/* A long address still cannot fit the sidebar; the title makes
                     the truncated part reachable without opening the menu. */}
-                {own && (
-                  <span className="truncate text-xs" title={user.email}>
-                    {user.email}
-                  </span>
-                )}
+                <span className="truncate text-xs" title={user.email}>
+                  {user.email}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -216,7 +212,7 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 {avatar("rounded-lg")}
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{displayName}</span>
-                  {own && <span className="truncate text-xs">{user.email}</span>}
+                  <span className="truncate text-xs">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
