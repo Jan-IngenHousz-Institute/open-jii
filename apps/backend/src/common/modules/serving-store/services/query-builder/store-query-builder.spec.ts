@@ -83,6 +83,21 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("accurateCastOrNull(macro_output.`dead`, 'String') AS `dead`");
   });
 
+  it("marks the fields read from the store's JSON columns, which reprint their numbers", () => {
+    const columns = new StoreQueryBuilder()
+      .read(MACRO_RESULTS_TABLE, "e1", "m1")
+      .parseVariant("macro_output", "OBJECT<`vH+`: VARIANT>", "output")
+      .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")
+      .select(["id", "vH+", "plot"])
+      .outputColumns();
+
+    expect(columns.map(({ reprintedNumbers }) => reprintedNumbers)).toEqual([
+      undefined,
+      true,
+      false,
+    ]);
+  });
+
   it("escapes backslashes in a quoted name, which the store reads as escapes", () => {
     const sql = new StoreQueryBuilder()
       .read(UPLOADS_TABLE, "e1", "t1")

@@ -11,20 +11,22 @@ const TIMESTAMP = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?/;
  * Writes the store's values as the warehouse writes its cells, which pages show as they come:
  * times in UTC to the millisecond, doubles as Java prints them, and arrays and structs as JSON
  * whose every leaf is text. A VARIANT is JSON with its keys sorted and its numbers bare.
+ * `reprinted` marks a value read from the store's JSON type, which writes numbers in its own form.
  */
 export class CellValues {
-  static text(value: unknown, type: string): string | null {
+  static text(value: unknown, type: string, reprinted = false): string | null {
     if (value === null || value === undefined) {
       return null;
     }
     if (type === "VARIANT") {
-      return CellValues.variantJson(typeof value === "string" ? CellValues.parse(value) : value);
+      const parsed = typeof value === "string" ? CellValues.parse(value) : value;
+      return CellValues.variantJson(parsed, reprinted);
     }
 
     const isComplex = type.startsWith("ARRAY<") || type.startsWith("STRUCT<");
     if (isComplex) {
       const parsed = typeof value === "string" ? CellValues.parse(value) : value;
-      return JSON.stringify(CellValues.leaves(parsed, type));
+      return JSON.stringify(CellValues.leaves(parsed, type, reprinted));
     }
     return CellValues.scalar(value, type);
   }
@@ -63,14 +65,14 @@ export class CellValues {
     return parsed;
   }
 
-  private static leaves(value: unknown, type: string): unknown {
+  private static leaves(value: unknown, type: string, reprinted: boolean): unknown {
     if (value === null || value === undefined) {
       return null;
     }
     if (type.startsWith("ARRAY<")) {
       const element = type.slice("ARRAY<".length, -1);
       return Array.isArray(value)
-        ? value.map((item: unknown) => CellValues.leaves(item, element))
+        ? value.map((item: unknown) => CellValues.leaves(item, element, reprinted))
         : null;
     }
     if (type.startsWith("STRUCT<")) {
@@ -81,12 +83,12 @@ export class CellValues {
       return Object.fromEntries(
         fields.map(({ name, type: fieldType }) => [
           name,
-          CellValues.leaves(value[name], fieldType),
+          CellValues.leaves(value[name], fieldType, reprinted),
         ]),
       );
     }
     if (type === "VARIANT") {
-      return CellValues.variantJson(value);
+      return CellValues.variantJson(value, reprinted);
     }
     return CellValues.scalar(value, type);
   }
@@ -132,11 +134,11 @@ export class CellValues {
     return typeof value === "number" ? String(value) : null;
   }
 
-  /** Spark keeps a number written plainly as a decimal and one with an exponent as a double. */
-  private static variantJson(value: unknown): string {
+  private static variantJson(value: unknown, reprinted = false): string {
     const number = CellValues.numberText(value);
     if (number !== null) {
-      return /[eE]/.test(number) ? CellValues.javaDouble(Number(number)) : number;
+      const isDouble = CellValues.isGoldDouble(number, reprinted);
+      return isDouble ? CellValues.javaDouble(Number(number)) : number;
     }
     if (value === null || value === undefined) {
       return "null";
@@ -145,7 +147,7 @@ export class CellValues {
       return JSON.stringify(value);
     }
     if (Array.isArray(value)) {
-      return `[${value.map((item: unknown) => CellValues.variantJson(item)).join(",")}]`;
+      return `[${value.map((item: unknown) => CellValues.variantJson(item, reprinted)).join(",")}]`;
     }
     if (!CellValues.isRecord(value)) {
       return "null";
@@ -156,9 +158,25 @@ export class CellValues {
       Buffer.compare(Buffer.from(a), Buffer.from(b)),
     );
     const members = entries.map(
-      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item)}`,
+      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item, reprinted)}`,
     );
     return `{${members.join(",")}}`;
+  }
+
+  /**
+   * Spark keeps a number written plainly as a decimal and one with an exponent as a double; its
+   * own text shows which. The store's JSON type reprints numbers, so there the writer decides:
+   * gold's payloads come from Python's json.dumps, which gives every float below 1e-4 an exponent.
+   * It does from 1e16 too, but an integer that large reads alike, so there the store's own
+   * exponent, from 1e21, decides.
+   */
+  private static isGoldDouble(text: string, reprinted: boolean): boolean {
+    const hasExponent = /[eE]/.test(text);
+    if (!reprinted) {
+      return hasExponent;
+    }
+    const magnitude = Math.abs(Number(text));
+    return hasExponent || (magnitude > 0 && magnitude < 1e-4);
   }
 
   private static isRecord(value: unknown): value is Record<string, unknown> {

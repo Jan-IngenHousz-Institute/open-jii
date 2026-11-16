@@ -73,6 +73,18 @@ describe("CellValues.text", () => {
     );
   });
 
+  it("writes a number the store reprinted as a double where Python's json.dumps gave it an exponent", () => {
+    const reprinted = '{"a":-0.00000289,"b":0.00012345,"c":1e-7,"d":12345678.9,"e":3,"f":"NA"}';
+
+    expect(CellValues.text(reprinted, "VARIANT", true)).toBe(
+      '{"a":-2.89E-6,"b":0.00012345,"c":1.0E-7,"d":12345678.9,"e":3,"f":"NA"}',
+    );
+    expect(CellValues.text("-0.00000289", "VARIANT", true)).toBe("-2.89E-6");
+    expect(CellValues.text("[0.00005,0]", "ARRAY<VARIANT>", true)).toBe('["5.0E-5","0"]');
+    // Spark's own text says which numbers are doubles.
+    expect(CellValues.text("-0.00000289", "VARIANT")).toBe("-0.00000289");
+  });
+
   it("writes a variant with its keys in order and an exponent as a double", () => {
     expect(CellValues.text('{"z":1,"a":0.5,"m":1e-7}', "VARIANT")).toBe(
       '{"a":0.5,"m":1.0E-7,"z":1}',

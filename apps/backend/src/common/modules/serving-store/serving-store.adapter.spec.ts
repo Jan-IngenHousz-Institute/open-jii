@@ -627,6 +627,48 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     ]);
   });
 
+  it("writes a variant field's doubles as the warehouse holds them, though the store reprints them", async () => {
+    // Values of a macro's vH+ as gold holds them: the macro's Python json.dumps wrote -2.89e-06,
+    // which Spark keeps as a double, and the rest plainly, which it keeps as decimals or text.
+    const values: [number | string, string][] = [
+      [-0.00000289, "-2.89E-6"],
+      [0.00012345, "0.00012345"],
+      [1e-7, "1.0E-7"],
+      [12345678.9, "12345678.9"],
+      [3, "3"],
+      ["NA", '"NA"'],
+    ];
+    await admin.insert({
+      table: "macro_results",
+      values: values.map(([value], index) => ({
+        experiment_id: "macro-numbers",
+        id: 300 + index,
+        raw_id: 300 + index,
+        timestamp: "2026-09-13 01:00:00",
+        macro_id: "mac3",
+        macro_output: { "vH+": value },
+        questions_data: {},
+        annotations: [],
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-13 01:11:00",
+      })),
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      tableName: "mac3",
+      tableType: "macro",
+      experimentId: "macro-numbers",
+      variants: [
+        { columnName: "macro_output", schema: "OBJECT<`vH+`: VARIANT>", suffix: "output" },
+      ],
+      columns: ["vH+"],
+      ordering: { column: "id" },
+    });
+
+    expect(data.rows).toEqual(values.map(([, cell]) => [cell]));
+  });
+
   it("reads a payload that is no object whole", async () => {
     const data = await rowsOf({
       tableName: "mac2",

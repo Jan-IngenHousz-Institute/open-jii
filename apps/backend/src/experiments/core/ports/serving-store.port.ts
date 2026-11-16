@@ -16,6 +16,8 @@ export interface StoreQueryColumn {
    * A device's cell is the JSON pair of its client id and the label its row's own names give.
    */
   idOf?: "contributor" | "device";
+  /** Read from the store's JSON type, which keeps a number's value but not how gold wrote it. */
+  reprintedNumbers?: boolean;
 }
 
 export interface StoreQuery {

@@ -18,7 +18,9 @@ import { VariantSchema } from "../../../databricks/services/query-builder/schema
 import type { VariantField } from "../../../databricks/services/query-builder/schema/variant-schema";
 import type { StoreColumn, StoreTable } from "./store-tables";
 
-export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf">;
+export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf"> & {
+  reprintedNumbers?: boolean;
+};
 
 interface StoreOrdering extends QueryOrdering {
   idOrder?: string[];
@@ -200,13 +202,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       .filter(({ name }) => !hidden.has(name))
       .map(({ name, type, idOf }) => ({ name, type, idOf }));
     const flattened = this.flattenedFields();
-    const fields = this.variantColumns.flatMap((variant) =>
-      VariantSchema.isObject(variant.schema)
+    const fields = this.variantColumns.flatMap((variant) => {
+      const reprintedNumbers = this.reprintsNumbers(variant.column);
+      return VariantSchema.isObject(variant.schema)
         ? flattened
             .filter(({ column }) => column === variant.column)
-            .map(({ key, field }) => ({ name: key, type: this.variantCastType(field.type) }))
-        : [{ name: variant.column, type: this.variantCastType(variant.schema) }],
-    );
+            .map(({ key, field }) => ({
+              name: key,
+              type: this.variantCastType(field.type),
+              reprintedNumbers,
+            }))
+        : [{ name: variant.column, type: this.variantCastType(variant.schema), reprintedNumbers }];
+    });
     return [...base, ...fields];
   }
 
@@ -263,13 +270,21 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private outputColumn(name: string): StoreOutputColumn {
     const field = this.flattenedFields().find(({ key }) => key === name);
     if (field !== undefined) {
-      return { name, type: this.variantCastType(field.field.type) };
+      return {
+        name,
+        type: this.variantCastType(field.field.type),
+        reprintedNumbers: this.reprintsNumbers(field.column),
+      };
     }
     const whole = this.variantColumns.find(
       ({ column, schema }) => column === name && !VariantSchema.isObject(schema),
     );
     if (whole !== undefined) {
-      return { name, type: this.variantCastType(whole.schema) };
+      return {
+        name,
+        type: this.variantCastType(whole.schema),
+        reprintedNumbers: this.reprintsNumbers(whole.column),
+      };
     }
     const [base, path] = this.structPath(name);
     if (path !== undefined) {
@@ -424,6 +439,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const path = `${column}.${this.subcolumn(field.name)}`;
     const object = `${column}.^${this.subcolumn(field.name)}`;
     return this.typedValue(path, object, type);
+  }
+
+  /** Every payload but the answers, a map of text, is one of the store's JSON columns. */
+  private reprintsNumbers(column: string): boolean {
+    return column !== "questions_data";
   }
 
   /** The feed stores a payload that is no object as `{"_items": [...]}` or `{"_value": x}`. */

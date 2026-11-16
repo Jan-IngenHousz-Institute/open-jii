@@ -194,7 +194,7 @@ export class ServingStoreAdapter implements ServingStorePort {
       position,
     }));
     const rows = result.value.rows.map((row) =>
-      query.columns.map(({ type, idOf }, index) => {
+      query.columns.map(({ type, idOf, reprintedNumbers }, index) => {
         const value = row[index];
         if (idOf === "device") {
           return JSON.stringify(value);
@@ -202,7 +202,7 @@ export class ServingStoreAdapter implements ServingStorePort {
         if (idOf === "contributor") {
           return typeof value === "string" ? value : null;
         }
-        return CellValues.text(value, type);
+        return CellValues.text(value, type, reprintedNumbers);
       }),
     );
     return success({ columns, rows, totalRows: rows.length, truncated: false });
