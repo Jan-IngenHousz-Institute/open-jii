@@ -30,7 +30,6 @@ _TYPES = {"bigint": "BIGINT", "int": "INT", "double": "DOUBLE", "timestamp": "TI
 
 @pytest.fixture(scope="module")
 def chart_rows(spark: SparkSession) -> Iterator[None]:
-    zone = spark.conf.get("spark.sql.session.timeZone")
     # A Databricks SQL warehouse runs in UTC.
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     for view, key in (("chart_rows", "rows"), ("chart_matches", "matches")):
@@ -53,7 +52,7 @@ def chart_rows(spark: SparkSession) -> Iterator[None]:
     yield
     spark.catalog.dropTempView("chart_rows")
     spark.catalog.dropTempView("chart_matches")
-    spark.conf.set("spark.sql.session.timeZone", zone)
+    spark.conf.unset("spark.sql.session.timeZone")
 
 
 def _value(value: object) -> object:
@@ -87,7 +86,9 @@ def test_every_case_has_its_generated_query() -> None:
     assert set(_QUERIES) == set(_PARITY["cases"])
 
 
-def test_spark_returns_the_recorded_series_for_every_chart_case(spark: SparkSession, chart_rows: None) -> None:
+def test_spark_returns_the_recorded_series_for_every_chart_case(
+    spark: SparkSession, chart_rows: None
+) -> None:
     results = {name: _result(spark, name) for name in sorted(_PARITY["cases"])}
     if os.environ.get("WRITE_CHART_RESULTS") == "1":
         _RESULTS.write_text(json.dumps(results, indent=2) + "\n")
