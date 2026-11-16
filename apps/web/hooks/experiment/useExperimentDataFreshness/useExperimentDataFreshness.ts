@@ -1,20 +1,25 @@
 import { useIsIdle } from "@/hooks/useIsIdle";
-import { orpc, orpcClient } from "@/lib/orpc";
-import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { getOrpcError, orpc, orpcClient } from "@/lib/orpc";
+import { focusManager, useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type {
   ExperimentDataSource,
   ExperimentTableMetadata,
   ExperimentTablesEvent,
+  ExperimentTablesListing,
   ExperimentTableVersion,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 const POLL_MS = 30_000;
-const RECONNECT_MS = 10_000;
-/** The backend holds the listing this long, so an earlier refetch gets the same answer. */
+/** The backend holds a warehouse listing this long, so an earlier refetch gets the same answer. */
 const BACKEND_CACHE_MS = 15_000;
 const BEHIND_AFTER_MS = 2 * 60_000;
+const RECONNECT_MS = 10_000;
+const MAX_RECONNECT_MS = 2 * 60_000;
+/** Answers a retry would get again, so the page polls instead. */
+const REFUSED_STATUSES = new Set([401, 403, 404, 429, 503]);
 
 export type DataFreshnessStatus = "live" | "paused" | "behind";
 
@@ -32,51 +37,94 @@ function versionOf(table: ExperimentTableVersion): string {
   return `${table.totalRows}|${table.latestRowAt}|${table.schemaRevision}`;
 }
 
-function hasMoved(
-  seen: Map<string, ExperimentTableMetadata> | null,
-  tables: ExperimentTableVersion[],
-): boolean {
-  if (seen?.size !== tables.length) {
-    return true;
-  }
-  return tables.some((table) => {
-    const before = seen.get(table.identifier);
-    return before === undefined || versionOf(before) !== versionOf(table);
+function isSameTableSet(tables: ExperimentTableMetadata[], versions: ExperimentTableVersion[]) {
+  const identifiers = new Set(tables.map((table) => table.identifier));
+  return (
+    versions.length === identifiers.size &&
+    versions.every((version) => identifiers.has(version.identifier))
+  );
+}
+
+function withVersions(
+  listing: ExperimentTablesListing,
+  versions: ExperimentTableVersion[],
+): ExperimentTablesListing {
+  const byIdentifier = new Map(versions.map((version) => [version.identifier, version]));
+  return {
+    ...listing,
+    body: listing.body.map((table) => ({ ...table, ...byIdentifier.get(table.identifier) })),
+  };
+}
+
+function retryFailedRows(queryClient: QueryClient, experimentId: string): void {
+  void queryClient.refetchQueries({
+    queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
+    type: "active",
+    predicate: (query) => query.state.status === "error" && query.state.fetchStatus === "idle",
   });
 }
 
-/** Listens until `signal` aborts, reconnecting after a stream that dropped. */
+function subscribeToFocus(onChange: () => void): () => void {
+  return focusManager.subscribe(onChange);
+}
+
+function isFocused(): boolean {
+  return focusManager.isFocused();
+}
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+}
+
+/**
+ * Listens until `signal` aborts, reconnecting with a growing, jittered wait after a stream that
+ * ended or dropped, and giving up on an answer a retry would get again.
+ */
 async function followTableChanges(
   experimentId: string,
   signal: AbortSignal,
   onEvent: (event: ExperimentTablesEvent) => void,
   onDrop: () => void,
 ): Promise<void> {
-  while (!signal.aborted) {
+  let attempt = 0;
+  // Read through a call, since the stream's awaits can abort the signal between two reads.
+  const isStopped = () => signal.aborted;
+
+  while (!isStopped()) {
     try {
       const events = await orpcClient.experiments.watchExperimentTables(
         { id: experimentId },
         { signal },
       );
       for await (const event of events) {
+        attempt = 0;
         onEvent(event);
       }
-    } catch {
-      // The listing is checked every 30 seconds until the stream is back.
+    } catch (error) {
+      const isRefused = REFUSED_STATUSES.has(getOrpcError(error)?.status ?? 0);
+      if (isRefused) {
+        onDrop();
+        return;
+      }
+    }
+    if (isStopped()) {
+      return;
     }
 
     onDrop();
-    await new Promise((resolve) => {
-      const timer = setTimeout(resolve, RECONNECT_MS);
-      signal.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          resolve(undefined);
-        },
-        { once: true },
-      );
-    });
+    const backoffMs = Math.min(RECONNECT_MS * 2 ** attempt, MAX_RECONNECT_MS);
+    await sleep((0.5 + Math.random()) * backoffMs, signal);
+    attempt += 1;
   }
 }
 
@@ -99,6 +147,7 @@ export const useExperimentDataFreshness = (
   const [heldTables, setHeldTables] = useState<ExperimentTableMetadata[] | undefined>();
   const [overdueAt, setOverdueAt] = useState(0);
   const [streamHeardAt, setStreamHeardAt] = useState(0);
+  const [isStreamOpen, setIsStreamOpen] = useState(false);
 
   // An unattended page stops polling and catches up on the next input, since
   // re-enabling a query refetches stale data at once. A manual pause keeps the
@@ -106,11 +155,12 @@ export const useExperimentDataFreshness = (
   const isIdle = useIsIdle();
   const isIdlePaused = isIdle && !isPaused;
   const isPolling = !isPaused && !isIdle;
-  const isListening = isPolling && rowsSource === "store";
-  const isStreamLive = isListening && streamHeardAt > 0;
+  const isVisible = useSyncExternalStore(subscribeToFocus, isFocused, () => true);
+  const isListening = isPolling && isVisible && rowsSource === "store";
+  const isStreamLive = isListening && isStreamOpen;
   const isPollingListing = isPolling && !isStreamLive;
 
-  // A hidden tab stops polling: refetchIntervalInBackground stays off.
+  // A hidden tab stops polling, as refetchIntervalInBackground stays off, and closes the stream.
   const {
     data: listing,
     dataUpdatedAt,
@@ -175,13 +225,9 @@ export const useExperimentDataFreshness = (
       }
     }
 
-    // A version counts as seen once polled, so rows whose refresh failed are
-    // retried on every poll until they load, whether or not anything moved.
-    void queryClient.refetchQueries({
-      queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
-      type: "active",
-      predicate: (query) => query.state.status === "error" && query.state.fetchStatus === "idle",
-    });
+    // A version counts as seen once listed, so rows whose refresh failed are retried at
+    // every poll and stream event until they load, whether or not anything moved.
+    retryFailedRows(queryClient, experimentId);
     // An unchanged listing keeps its reference, so each poll is told apart by its time.
   }, [tables, dataUpdatedAt, isPaused, experimentId, queryClient]);
 
@@ -190,20 +236,39 @@ export const useExperimentDataFreshness = (
       return;
     }
 
-    // Joins a catch-up already loading, so reopening the stream fetches the listing once.
+    const listingKey = orpc.experiments.getExperimentTables.queryKey({
+      input: { id: experimentId },
+    });
+
     const handleEvent = (event: ExperimentTablesEvent) => {
       setStreamHeardAt(Date.now());
-      if (event.type === "changed" && hasMoved(seen.current, event.tables)) {
-        void refetch({ cancelRefetch: false });
+      setIsStreamOpen(true);
+
+      if (event.type === "heartbeat") {
+        retryFailedRows(queryClient, experimentId);
+        return;
       }
+
+      const listed = queryClient.getQueryData(listingKey);
+      const canApply = listed !== undefined && isSameTableSet(listed.body, event.tables);
+      if (canApply) {
+        queryClient.setQueryData(listingKey, withVersions(listed, event.tables));
+        return;
+      }
+
+      // A new table needs its name from the listing. Joins a catch-up already loading.
+      void refetch({ cancelRefetch: false });
     };
 
     const controller = new AbortController();
     void followTableChanges(experimentId, controller.signal, handleEvent, () =>
-      setStreamHeardAt(0),
+      setIsStreamOpen(false),
     );
-    return () => controller.abort();
-  }, [isListening, experimentId, refetch]);
+    return () => {
+      controller.abort();
+      setIsStreamOpen(false);
+    };
+  }, [isListening, experimentId, queryClient, refetch]);
 
   const heardAt = Math.max(dataUpdatedAt, streamHeardAt);
   useEffect(() => {

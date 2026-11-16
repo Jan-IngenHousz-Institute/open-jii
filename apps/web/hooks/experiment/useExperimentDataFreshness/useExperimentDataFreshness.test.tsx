@@ -3,9 +3,9 @@ import { createExperimentTable } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
-import { useQuery } from "@tanstack/react-query";
+import { focusManager, useQuery } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentTablesEvent } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -33,18 +33,27 @@ const RAW_VERSION = {
   schemaRevision: RAW.schemaRevision,
 };
 
-/** The store's change stream, held open until a test sends on it or drops it. */
+/** The store's change stream, held open until a test sends on it, ends it or drops it. */
 function mountChangeStream() {
   const encoder = new TextEncoder();
   const streams: ReadableStreamDefaultController<Uint8Array>[] = [];
-  const closed: string[] = [];
+  const closed = new Set<ReadableStreamDefaultController<Uint8Array>>();
   server.use(
     http.get(`${API_URL}/api/v1/experiments/:id/tables/changes`, ({ request }) => {
-      request.signal.addEventListener("abort", () => closed.push(request.url));
+      let stream: ReadableStreamDefaultController<Uint8Array> | undefined;
+      const markClosed = () => {
+        if (stream) {
+          closed.add(stream);
+        }
+      };
+      // The client's abort reaches the handler's signal or cancels the body, whichever comes first.
+      request.signal.addEventListener("abort", markClosed);
       const body = new ReadableStream<Uint8Array>({
         start: (controller) => {
+          stream = controller;
           streams.push(controller);
         },
+        cancel: markClosed,
       });
       return new HttpResponse(body, { headers: { "content-type": "text/event-stream" } });
     }),
@@ -52,13 +61,17 @@ function mountChangeStream() {
 
   return {
     opened: () => streams.length,
-    closed: () => closed.length,
+    closed: () => closed.size,
     send: async (event: ExperimentTablesEvent) => {
       streams.at(-1)?.enqueue(encoder.encode(`event: message\ndata: ${JSON.stringify(event)}\n\n`));
       await vi.advanceTimersByTimeAsync(10);
     },
     drop: async () => {
       streams.at(-1)?.error(new Error("connection lost"));
+      await vi.advanceTimersByTimeAsync(10);
+    },
+    end: async () => {
+      streams.at(-1)?.close();
       await vi.advanceTimersByTimeAsync(10);
     },
   };
@@ -308,34 +321,97 @@ describe("useExperimentDataFreshness", () => {
   });
 
   describe("with rows from the store", () => {
-    it("follows the change stream instead of polling, and checks again only when a table moved", async () => {
+    beforeEach(() => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
+      // The reconnect wait is then exactly its base: ten seconds, doubling.
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+    });
+
+    afterEach(() => {
+      focusManager.setFocused(undefined);
+      vi.restoreAllMocks();
+    });
+
+    async function goLive(stream: ReturnType<typeof mountChangeStream>) {
+      await waitFor(() => expect(stream.opened()).toBe(1));
+      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
+    }
+
+    it("applies a change to the listing it holds, refetching the moved rows but not the listing", async () => {
+      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const rowReads = server.mount(contract.experiments.getExperimentData, { body: [] });
+      const stream = mountChangeStream();
+      const { result } = renderHook(() => {
+        const freshness = useExperimentDataFreshness("exp-1", "store");
+        useQuery(
+          orpc.experiments.getExperimentData.queryOptions({
+            input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
+          }),
+        );
+        return freshness;
+      });
+      await goLive(stream);
+      await waitFor(() => expect(rowReads.callCount).toBe(1));
+      const listingCalls = listing.callCount;
+
+      await act(() => vi.advanceTimersByTimeAsync(60_000));
+      await act(() =>
+        stream.send({
+          type: "changed",
+          tables: [{ ...RAW_VERSION, totalRows: 11, latestRowAt: "2026-09-22T10:06:00.000Z" }],
+        }),
+      );
+
+      await waitFor(() => expect(rowReads.callCount).toBe(2));
+      expect(result.current.newestRowAt).toBe("2026-09-22T10:06:00.000Z");
+      expect(listing.callCount).toBe(listingCalls);
+    });
+
+    it("fetches the listing once for a change that names a new table", async () => {
       const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
       const stream = mountChangeStream();
-
-      const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
-      await waitFor(() => expect(stream.opened()).toBe(1));
-      await waitFor(() => expect(result.current.hasLoaded).toBe(true));
-      const callsAfterLoad = listing.callCount;
-
-      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
-      await act(() => vi.advanceTimersByTimeAsync(60_000));
-      expect(listing.callCount).toBe(callsAfterLoad);
+      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      await goLive(stream);
+      const listingCalls = listing.callCount;
 
       await act(() =>
-        stream.send({ type: "changed", tables: [{ ...RAW_VERSION, totalRows: 11 }] }),
+        stream.send({
+          type: "changed",
+          tables: [RAW_VERSION, { ...RAW_VERSION, identifier: "macro-1" }],
+        }),
       );
-      await waitFor(() => expect(listing.callCount).toBe(callsAfterLoad + 1));
+
+      await waitFor(() => expect(listing.callCount).toBe(listingCalls + 1));
+    });
+
+    it("retries rows whose refresh failed at a heartbeat, though nothing moved", async () => {
+      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      server.mount(contract.experiments.getExperimentData, { status: 500 });
+      const stream = mountChangeStream();
+      const { result } = renderHook(() => {
+        useExperimentDataFreshness("exp-1", "store");
+        return useQuery(
+          orpc.experiments.getExperimentData.queryOptions({
+            input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
+          }),
+        );
+      });
+      await goLive(stream);
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      const listingCalls = listing.callCount;
+
+      const rowReads = server.mount(contract.experiments.getExperimentData, { body: [] });
+      await act(() => stream.send({ type: "heartbeat" }));
+
+      await waitFor(() => expect(rowReads.callCount).toBe(1));
+      expect(listing.callCount).toBe(listingCalls);
     });
 
     it("counts a heartbeat as current, so a quiet stream is not behind", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
       server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
       const stream = mountChangeStream();
-
       const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
-      await waitFor(() => expect(stream.opened()).toBe(1));
-      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
+      await goLive(stream);
 
       for (let beat = 0; beat < 7; beat++) {
         await act(() => vi.advanceTimersByTimeAsync(20_000));
@@ -345,35 +421,103 @@ describe("useExperimentDataFreshness", () => {
       expect(result.current.status).toBe("live");
     });
 
-    it("polls every 30 s while the stream is down, and reconnects", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
+    it("stays live when the stream drops, and is behind two minutes after it last heard", async () => {
+      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const stream = mountChangeStream();
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      await goLive(stream);
+      for (let beat = 0; beat < 15; beat++) {
+        await act(() => vi.advanceTimersByTimeAsync(20_000));
+        await act(() => stream.send({ type: "heartbeat" }));
+      }
+
+      server.mount(contract.experiments.getExperimentTables, { status: 500 });
+      server.mount(contract.experiments.watchExperimentTables, { status: 500 });
+      await act(() => stream.drop());
+      await act(() => vi.advanceTimersByTimeAsync(1_000));
+      expect(result.current.status).toBe("live");
+
+      await act(() => vi.advanceTimersByTimeAsync(2 * 60_000));
+      await waitFor(() => expect(result.current.status).toBe("behind"));
+    });
+
+    it("polls every 30 s while the stream is down, and reconnects after a growing wait", async () => {
       const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
       const stream = mountChangeStream();
-
       renderHook(() => useExperimentDataFreshness("exp-1", "store"));
-      await waitFor(() => expect(stream.opened()).toBe(1));
+      await goLive(stream);
+      const listingCalls = listing.callCount;
+
+      const reopens = server.mount(contract.experiments.watchExperimentTables, { status: 500 });
+      await act(() => stream.drop());
+      await act(() => vi.advanceTimersByTimeAsync(9_900));
+      expect(reopens.callCount).toBe(0);
+      await act(() => vi.advanceTimersByTimeAsync(100));
+      await waitFor(() => expect(reopens.callCount).toBe(1));
+
+      await act(() => vi.advanceTimersByTimeAsync(19_800));
+      expect(reopens.callCount).toBe(1);
+      await act(() => vi.advanceTimersByTimeAsync(200));
+      await waitFor(() => expect(reopens.callCount).toBe(2));
+      await waitFor(() => expect(listing.callCount).toBe(listingCalls + 1));
+    });
+
+    it("reconnects after a stream ends at its lifetime", async () => {
+      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const stream = mountChangeStream();
+      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      await goLive(stream);
+
+      await act(() => stream.end());
+      await act(() => vi.advanceTimersByTimeAsync(9_900));
+      expect(stream.opened()).toBe(1);
+      await act(() => vi.advanceTimersByTimeAsync(100));
+
+      await waitFor(() => expect(stream.opened()).toBe(2));
+    });
+
+    it.each([403, 404, 429])(
+      "polls instead of reconnecting when the stream is refused with %i",
+      async (status) => {
+        const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+        const opens = server.mount(contract.experiments.watchExperimentTables, { status });
+        const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+        await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+        await waitFor(() => expect(opens.callCount).toBe(1));
+        const listingCalls = listing.callCount;
+
+        await act(() => vi.advanceTimersByTimeAsync(60_000));
+
+        expect(opens.callCount).toBe(1);
+        await waitFor(() => expect(listing.callCount).toBe(listingCalls + 2));
+      },
+    );
+
+    it("closes the stream in a hidden tab, and reopens it with at most one fetch when shown", async () => {
+      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const stream = mountChangeStream();
+      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      await goLive(stream);
+
+      act(() => focusManager.setFocused(false));
+      await waitFor(() => expect(stream.closed()).toBe(1));
+      const callsWhileHidden = listing.callCount;
+      await act(() => vi.advanceTimersByTimeAsync(5 * 60_000));
+      expect(listing.callCount).toBe(callsWhileHidden);
+
+      act(() => focusManager.setFocused(true));
+      await waitFor(() => expect(stream.opened()).toBe(2));
       await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
       await act(() => vi.advanceTimersByTimeAsync(1_000));
-      const callsWhileLive = listing.callCount;
 
-      await act(() => stream.drop());
-      await act(() => vi.advanceTimersByTimeAsync(9_000));
-      expect(stream.opened()).toBe(1);
-      await act(() => vi.advanceTimersByTimeAsync(1_000));
-      await waitFor(() => expect(stream.opened()).toBe(2));
-
-      await act(() => vi.advanceTimersByTimeAsync(20_000));
-      await waitFor(() => expect(listing.callCount).toBe(callsWhileLive + 1));
+      expect(listing.callCount).toBeLessThanOrEqual(callsWhileHidden + 1);
     });
 
     it("closes the stream while paused, and reopens it with one fetch on resume", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
       const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
       const stream = mountChangeStream();
-
       const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
-      await waitFor(() => expect(stream.opened()).toBe(1));
-      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
+      await goLive(stream);
 
       act(() => result.current.togglePaused());
       await waitFor(() => expect(stream.closed()).toBe(1));
@@ -388,13 +532,10 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("closes the stream after ten idle minutes, and reopens it with one fetch on input", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
       const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
       const stream = mountChangeStream();
-
       const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
-      await waitFor(() => expect(stream.opened()).toBe(1));
-      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
+      await goLive(stream);
 
       await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
       expect(result.current.status).toBe("paused");
@@ -410,25 +551,24 @@ describe("useExperimentDataFreshness", () => {
 
       expect(listing.callCount).toBe(callsWhileIdle + 1);
     });
-  });
 
-  it("opens the stream when the rows' source turns to the store, and closes it when it turns back", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
-    const stream = mountChangeStream();
+    it("opens the stream when the rows' source turns to the store, and closes it when it turns back", async () => {
+      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const stream = mountChangeStream();
 
-    const { rerender } = renderHook(
-      ({ source }: { source: "warehouse" | "store" }) =>
-        useExperimentDataFreshness("exp-1", source),
-      { initialProps: { source: "warehouse" } },
-    );
-    expect(stream.opened()).toBe(0);
+      const { rerender } = renderHook(
+        ({ source }: { source: "warehouse" | "store" }) =>
+          useExperimentDataFreshness("exp-1", source),
+        { initialProps: { source: "warehouse" } },
+      );
+      expect(stream.opened()).toBe(0);
 
-    rerender({ source: "store" });
-    await waitFor(() => expect(stream.opened()).toBe(1));
+      rerender({ source: "store" });
+      await waitFor(() => expect(stream.opened()).toBe(1));
 
-    rerender({ source: "warehouse" });
-    await waitFor(() => expect(stream.closed()).toBe(1));
+      rerender({ source: "warehouse" });
+      await waitFor(() => expect(stream.closed()).toBe(1));
+    });
   });
 
   it("polls a surface whose rows come from the warehouse every 30 s, with no stream", async () => {
