@@ -20,11 +20,24 @@ beforeEach(() => {
   mkdirSync(join(projectDir, ".claude"), { recursive: true });
 });
 
-function check(command: string): { blocked: boolean; message: string } {
+/**
+ * The developer's own AWS_PROFILE would otherwise leak into every case, and a suite that passes or
+ * fails depending on which profile is exported is not a test.
+ */
+function check(
+  command: string,
+  env: Record<string, string> = {},
+): { blocked: boolean; message: string } {
   const result = spawnSync("bash", [guard], {
     input: JSON.stringify({ session_id: "test", tool_input: { command } }),
     encoding: "utf8",
-    env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+    env: {
+      ...process.env,
+      AWS_PROFILE: "",
+      DATABRICKS_CONFIG_PROFILE: "",
+      ...env,
+      CLAUDE_PROJECT_DIR: projectDir,
+    },
   });
   return { blocked: result.status === 2, message: result.stderr };
 }
@@ -42,8 +55,9 @@ describe("what the guard allows", () => {
   it.each([
     "aws ecs describe-services --cluster backend-cluster-dev --services backend-dev",
     "aws ecs list-tasks --cluster backend-cluster-dev",
-    "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-dev --start-time 1 --limit 50",
+    "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-dev --start-time 1 --max-items 50",
     "aws logs start-query --log-group-name /aws/ecs/backend-service-dev --since 1h",
+    "aws logs get-log-events --log-group-name g --log-stream-name s --start-time 1 --limit 100",
     "aws cloudwatch get-metric-statistics --namespace AWS/ECS",
     "aws lambda get-function-configuration --function-name open-jii-dev-server",
     "aws sts get-caller-identity",
@@ -89,11 +103,23 @@ describe("what the guard blocks", () => {
     ["a payload file", "aws ecs run-task --cli-input-json file://task.json"],
     ["debug output", "aws sts get-caller-identity --debug"],
     ["a redirected endpoint", "aws s3api list-buckets --endpoint-url http://localhost:4566"],
-    ["a log read with no window", "aws logs filter-log-events --log-group-name g --limit 10"],
+    ["a log read with no window", "aws logs filter-log-events --log-group-name g --max-items 10"],
     ["a log read with no limit", "aws logs filter-log-events --log-group-name g --start-time 1"],
     [
+      "a filtered log read capped only per page",
+      "aws logs filter-log-events --log-group-name g --start-time 1 --limit 10",
+    ],
+    [
+      "a stream read with no limit",
+      "aws logs get-log-events --log-group-name g --log-stream-name s --start-time 1",
+    ],
+    [
+      "an unmasked log read",
+      "aws logs filter-log-events --log-group-name g --start-time 1 --max-items 10 --unmask",
+    ],
+    [
       "an oversized log read",
-      "aws logs filter-log-events --log-group-name g --start-time 1 --limit 5000",
+      "aws logs filter-log-events --log-group-name g --start-time 1 --max-items 5000",
     ],
     ["a tofu apply", "tofu apply -auto-approve"],
     ["a tofu plan", "tofu plan"],
@@ -198,11 +224,26 @@ describe("production", () => {
   });
 
   it("recognises production by environment root as well as by profile", () => {
-    expect(check("cd infrastructure/env/prod && tofu fmt").blocked).toBe(true);
+    expect(check("cd infrastructure/env/prod && aws ecs list-clusters").blocked).toBe(true);
+  });
+
+  it("lets tofu fmt run in the production root, since it never touches state", () => {
+    expect(check("cd infrastructure/env/prod && tofu fmt").blocked).toBe(false);
+  });
+
+  it("recognises production from an exported profile", () => {
+    expect(check("export AWS_PROFILE=openjii-analyst-prod; aws ecs list-clusters").blocked).toBe(
+      true,
+    );
+  });
+
+  it("recognises production from the session's own profile", () => {
+    expect(check("aws ecs list-clusters", { AWS_PROFILE: "openjii-prod" }).blocked).toBe(true);
+    expect(check("aws ecs list-clusters", { AWS_PROFILE: "openjii-dev" }).blocked).toBe(false);
   });
 
   it.each([
-    "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-prod --start-time 1 --limit 10",
+    "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-prod --start-time 1 --max-items 10",
     "aws ecs describe-services --cluster backend-cluster-prod",
     "aws lambda get-function-configuration --function-name open-jii-prod-server",
     "databricks tables get open_jii_prod.centrum.raw_data",
@@ -211,7 +252,7 @@ describe("production", () => {
   });
 
   it.each([
-    "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-dev --start-time 1 --limit 10",
+    "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-dev --start-time 1 --max-items 10",
     "aws ecs describe-services --cluster backend-cluster-dev --services backend-dev",
     "aws s3api list-objects-v2 --bucket open-jii-products --max-keys 1",
     "aws ecs list-tasks --cluster c --desired-status RUNNING",
@@ -225,6 +266,136 @@ describe("production", () => {
     expect(check("aws ecs update-service --profile openjii-analyst-prod --service s").blocked).toBe(
       true,
     );
+  });
+});
+
+describe("the command is read the way a shell reads it", () => {
+  it.each([
+    ["a flag on a continuation line", "aws ssm get-parameter --name /x \\\n  --with-decryption"],
+    ["a quoted program name", '"aws" s3 rm s3://b/k'],
+    ["a name split by quotes", "a''ws s3 rm s3://b/k"],
+    ["a name taken from a variable", "A=aws; $A s3 rm s3://b/k"],
+    ["a name in ANSI-C quotes", "$'aws' s3 rm s3://b/k"],
+    ["a name spelled with escapes", "$'\\x61ws' s3 rm s3://b/k"],
+    ["a name in locale quotes", '$"aws" s3 rm s3://b/k'],
+    ["a name built by brace expansion", "{aws,} s3 rm s3://b/k"],
+    ["a mutation inside a substitution", 'echo "$(aws s3 rm s3://b/k)"'],
+    ["a mutation inside backticks", "echo `aws s3 rm s3://b/k`"],
+    ["eval", "eval aws s3 rm s3://b/k"],
+    ["find -exec", "find . -name x -exec aws s3 rm s3://b/{} \\;"],
+    ["a mutation in an unquoted heredoc", "cat <<EOF\n$(aws s3 rm s3://b/k)\nEOF"],
+    ["an unknown option before the service", "aws --foo x s3 rm s3://b/k"],
+  ])("blocks %s", (_label, command) => {
+    expect(check(command).blocked).toBe(true);
+  });
+
+  it.each([
+    ["a read inside a nested shell", "bash -c 'aws ecs list-clusters'"],
+    ["global options before the service", "aws --profile openjii-analyst-dev ecs list-clusters"],
+    ["a tool name as a grep argument", "grep -rn aws ."],
+    ["a directory named after a tool", "ls infrastructure/modules/databricks"],
+    ["an unclosed quote with no cloud tool", "echo 'unterminated"],
+    [
+      "a heredoc commit message that mentions applies and production",
+      "git commit -m \"$(cat <<'EOF'\nfix(infra): tofu apply on prod, don't skip it\nEOF\n)\"",
+    ],
+    [
+      "a runbook log read with a date window over several lines",
+      "aws logs filter-log-events --log-group-name /aws/ecs/backend-service-dev \\\n  --start-time $(( ($(date +%s) - 3600) * 1000 )) \\\n  --max-items 100",
+    ],
+  ])("allows %s", (_label, command) => {
+    expect(check(command).blocked).toBe(false);
+  });
+});
+
+describe("runbook reads of operational state", () => {
+  it.each([
+    "aws s3 cp s3://open-jii-heartbeat-dev/heartbeat/2026/11/16/120000.json - | grep detail",
+    "aws s3api get-object --bucket open-jii-status-state-dev --key publisher-state.json /dev/stdout",
+    "aws s3 ls s3://open-jii-heartbeat-dev/heartbeat/$(date -u +%Y/%m/%d)/ | tail -5",
+  ])("allows %s", (command) => {
+    expect(check(command).blocked).toBe(false);
+  });
+
+  it.each([
+    ["a heartbeat object copied to a file", "aws s3 cp s3://open-jii-heartbeat-dev/k ./out.json"],
+    ["a research data object", "aws s3 cp s3://open-jii-iot-raw-archive-dev/k -"],
+    ["a recursive copy", "aws s3 cp --recursive s3://open-jii-heartbeat-dev/heartbeat/ ./h/"],
+    [
+      "a status object written to a file",
+      "aws s3api get-object --bucket open-jii-status-state-dev --key k out.json",
+    ],
+    ["a function invoke", "aws lambda invoke --function-name dev-status-publisher /dev/stdout"],
+    ["an instance session", "aws ssm start-session --target i-123"],
+    ["a followed log tail", "aws logs tail /aws/ecs/backend-service-dev --since 10m --follow"],
+  ])("blocks %s", (_label, command) => {
+    expect(check(command).blocked).toBe(true);
+  });
+});
+
+describe("the production window is the developer's", () => {
+  it.each([
+    "pnpm analyst:prod-window",
+    "pnpm --filter @repo/devkit analyst:prod-window",
+    "pnpm tsx tooling/devkit/src/commands/analyst-prod-window.ts",
+    "touch .claude/analyst-prod.o[k]",
+    "echo open > .claude/analyst-prod.ok",
+  ])("blocks %s", (command) => {
+    expect(check(command).blocked).toBe(true);
+  });
+
+  it("lets a commit message mention the window command", () => {
+    expect(check('git commit -m "docs: explain pnpm analyst:prod-window"').blocked).toBe(false);
+  });
+});
+
+describe("statements, workspaces and clusters", () => {
+  it.each([
+    [
+      "a write behind a common table expression",
+      "databricks statement-execution execute-statement --warehouse-id w --statement 'WITH x AS (SELECT 1) INSERT INTO t SELECT * FROM x'",
+    ],
+    [
+      "a statement passed some other way",
+      "databricks statement-execution execute-statement --json @request.json",
+    ],
+    ["a secrets endpoint", "databricks api get /api/2.0/secrets/get"],
+    ["a cluster secret", "kubectl get secrets -n default"],
+    ["raw cluster credentials", "kubectl config view --raw"],
+    ["the tf script", "pnpm tf"],
+  ])("blocks %s", (_label, command) => {
+    expect(check(command).blocked).toBe(true);
+  });
+
+  it.each([
+    "databricks statement-execution execute-statement --warehouse-id w --statement 'SELECT created_at, updated_at FROM t'",
+    "databricks api get /api/2.1/jobs/list",
+    "kubectl -n default get pods",
+    "pnpm tf:fmt",
+  ])("allows %s", (command) => {
+    expect(check(command).blocked).toBe(false);
+  });
+});
+
+describe("files that hold secrets", () => {
+  it.each([
+    "cat apps/backend/.env",
+    "source tooling/devkit/.env",
+    "head -5 infrastructure/env/dev/terraform.tfvars",
+    "grep key ~/.aws/credentials",
+    "cp apps/web/.env.local /tmp/x",
+    "less < apps/backend/.env",
+  ])("blocks %s", (command) => {
+    expect(check(command).blocked).toBe(true);
+  });
+
+  it.each([
+    "cat apps/backend/.env.example",
+    "cat packages/database/.env.test",
+    "git diff -- apps/backend/.env.example",
+    'git commit -m "docs: never read .env files"',
+  ])("allows %s", (command) => {
+    expect(check(command).blocked).toBe(false);
   });
 });
 
