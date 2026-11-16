@@ -5,15 +5,19 @@ import { CheckCircle2, Info, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LINKED_ACCOUNTS_KEY } from "~/hooks/auth/useLinkedAccounts/useLinkedAccounts";
-import { isConnectableProvider, PROVIDER_NAMES } from "~/lib/sign-in-providers";
+import {
+  CONNECT_ERROR_PARAM,
+  CONNECT_RESULT_PARAMS,
+  CONNECTED_PARAM,
+  ERROR_PARAM,
+  isConnectableProvider,
+  PROVIDER_NAMES,
+} from "~/lib/sign-in-providers";
 import type { ConnectableProvider } from "~/lib/sign-in-providers";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
-
-// Better Auth adds `error_description` beside `error` when the provider sent one.
-const RESULT_PARAMS = ["connected", "connect", "error", "error_description"] as const;
 
 type ConnectResult =
   | { kind: "connected"; provider: ConnectableProvider }
@@ -23,20 +27,17 @@ type ConnectResult =
       reason: "cancelled" | "alreadyLinked" | "didNotFinish";
     };
 
-/**
- * `connected=` is where a link lands; `connect=` is where Better Auth's error redirect
- * lands, with the library's code appended as `error=`.
- */
+/** Better Auth appends its own code as `ERROR_PARAM` beside `CONNECT_ERROR_PARAM`. */
 function readResult(params: URLSearchParams): ConnectResult | null {
-  const connected = params.get("connected");
+  const connected = params.get(CONNECTED_PARAM);
   if (connected !== null) {
     return isConnectableProvider(connected) ? { kind: "connected", provider: connected } : null;
   }
 
-  const provider = params.get("connect");
+  const provider = params.get(CONNECT_ERROR_PARAM);
   if (!isConnectableProvider(provider)) return null;
 
-  const error = params.get("error");
+  const error = params.get(ERROR_PARAM);
   const reason =
     error === "access_denied"
       ? "cancelled"
@@ -59,13 +60,13 @@ export function ConnectResultBanner() {
   const [result, setResult] = useState(() => readResult(searchParams));
 
   useEffect(() => {
-    if (!searchParams.has("connected") && !searchParams.has("connect")) return;
+    if (!searchParams.has(CONNECTED_PARAM) && !searchParams.has(CONNECT_ERROR_PARAM)) return;
 
-    if (searchParams.has("connected")) {
+    if (searchParams.has(CONNECTED_PARAM)) {
       void queryClient.invalidateQueries({ queryKey: LINKED_ACCOUNTS_KEY });
     }
     const remaining = new URLSearchParams(searchParams);
-    for (const param of RESULT_PARAMS) remaining.delete(param);
+    for (const param of CONNECT_RESULT_PARAMS) remaining.delete(param);
     const query = remaining.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [pathname, queryClient, router, searchParams]);

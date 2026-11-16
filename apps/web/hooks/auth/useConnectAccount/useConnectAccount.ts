@@ -5,7 +5,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { useMutation } from "@tanstack/react-query";
 import { env } from "~/env";
 import { useSignInAgainToast } from "~/hooks/auth/useSignInAgainToast/useSignInAgainToast";
-import { PROVIDER_NAMES } from "~/lib/sign-in-providers";
+import { CONNECT_ERROR_PARAM, CONNECTED_PARAM, PROVIDER_NAMES } from "~/lib/sign-in-providers";
 import type { ConnectableProvider } from "~/lib/sign-in-providers";
 
 import { authClient } from "@repo/auth/client";
@@ -15,8 +15,9 @@ import { toast } from "@repo/ui/hooks/use-toast";
 /**
  * Hook to connect a GitHub or ORCID account to the signed-in one. On success the client
  * follows the provider's URL itself, and the provider returns the person to Security
- * with `connected=` or, through Better Auth's error redirect, `connect=` and `error=`.
- * The provider rides in our own parameter because the error redirect carries only a code.
+ * with `CONNECTED_PARAM` or, through Better Auth's error redirect, `CONNECT_ERROR_PARAM`
+ * and `ERROR_PARAM`. The provider rides in our own parameter because the error redirect
+ * carries only a code.
  */
 export function useConnectAccount() {
   const { t } = useTranslation("account");
@@ -29,8 +30,8 @@ export function useConnectAccount() {
       return unwrapAuthResult(
         await authClient.linkSocial({
           provider,
-          callbackURL: `${security}?connected=${provider}`,
-          errorCallbackURL: `${security}?connect=${provider}`,
+          callbackURL: `${security}?${CONNECTED_PARAM}=${provider}`,
+          errorCallbackURL: `${security}?${CONNECT_ERROR_PARAM}=${provider}`,
         }),
       );
     },

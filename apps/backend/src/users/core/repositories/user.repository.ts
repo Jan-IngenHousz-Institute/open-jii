@@ -42,7 +42,7 @@ import {
   resourceGrants,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, SQL, Transaction } from "@repo/database";
+import type { AnyColumn, DatabaseInstance, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, trigramMatch } from "../../../common/utils/fts";
@@ -86,12 +86,9 @@ export const SOLE_RESOURCE_ADMIN_MESSAGE =
 export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
 
-/**
- * Drizzle renders a single-table query's columns bare, so an outer column interpolated
- * into a correlated subquery would bind to the subquery's own table instead.
- */
-function qualified(table: string, column: string): SQL {
-  return sql`${sql.identifier(table)}.${sql.identifier(column)}`;
+/** Drizzle has no array aggregate; an empty set aggregates to null, hence the fallback. */
+function idList(column: AnyColumn) {
+  return sql<string[]>`coalesce(array_agg(${column}::text), '{}')`;
 }
 
 @Injectable()
@@ -149,20 +146,33 @@ export class UserRepository {
    */
   async findSignInMethods(userId: string): Promise<Result<UserSignInMethods | null>> {
     return tryCatch(async () => {
+      // An aggregate without GROUP BY always answers one row, so a person with no passkeys
+      // or no connections still gets one, with an empty list. Drizzle selects a CTE's
+      // fields by their bare alias, so the two aliases must differ.
+      const userPasskeys = this.database.$with("user_passkeys").as(
+        this.database
+          .select({ ids: idList(passkeys.id).as("passkey_ids") })
+          .from(passkeys)
+          .where(eq(passkeys.userId, userId)),
+      );
+      const userAccounts = this.database.$with("user_accounts").as(
+        this.database
+          .select({ ids: idList(accounts.id).as("account_ids") })
+          .from(accounts)
+          .where(eq(accounts.userId, userId)),
+      );
+
       const rows = await this.database
+        .with(userPasskeys, userAccounts)
         .select({
           email: users.email,
           emailVerified: users.emailVerified,
-          passkeyIds: sql<string[]>`array(
-            SELECT ${qualified("passkeys", "id")}::text FROM ${passkeys}
-            WHERE ${qualified("passkeys", "user_id")} = ${qualified("users", "id")}
-          )`,
-          accountIds: sql<string[]>`array(
-            SELECT ${qualified("accounts", "id")}::text FROM ${accounts}
-            WHERE ${qualified("accounts", "user_id")} = ${qualified("users", "id")}
-          )`,
+          passkeyIds: userPasskeys.ids,
+          accountIds: userAccounts.ids,
         })
         .from(users)
+        .crossJoin(userPasskeys)
+        .crossJoin(userAccounts)
         .where(eq(users.id, userId))
         .limit(1);
 
