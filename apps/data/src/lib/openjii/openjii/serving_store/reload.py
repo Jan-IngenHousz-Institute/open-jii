@@ -47,8 +47,9 @@ class Reloaded:
     version: int
     written: Written
     schemas: Written
-    # Rows per experiment, one per store key: gold's at the version, and the store's afterwards by
-    # where the newest commit of each falls against the version.
+    # Rows per experiment, or per device for a table counted by device, one per store key: gold's at
+    # the version, and the store's afterwards by where the newest commit of each falls against the
+    # version.
     gold: dict[str, int]
     store: dict[str, int]
     newer: dict[str, int]
@@ -98,8 +99,8 @@ class StoreReload:
         version, committed_at = self.latest_version(table)
         if newest > version:
             raise StoreAheadOfGold(
-                f"store.{table.name} or its payload schemas hold version {newest} and gold's {table.source_table} "
-                f"only {version}: empty both first (docs/runbooks/procedures/serving-store-reload.md)"
+                f"store.{table.name}, its copies or its payload schemas hold version {newest} and gold's "
+                f"{table.source_table} only {version}: empty them first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
         rows = self.gold_rows(table, version)
@@ -119,24 +120,27 @@ class StoreReload:
         if not written.rejected:
             if not allow_removal:
                 self._check_removal(table, version, experiment_id)
-            self._delete_older(table.name, version, experiment_id)
-            if not schemas.rejected:
+            for store_table in (table.name, *table.copies):
+                self._delete_older(store_table, version, experiment_id)
+            if table.payloads and not schemas.rejected:
                 # A table type's schemas carry its gold table's versions, so the older ones are
                 # those only rows from before the load had.
                 self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
-            self._prune_ids(experiment_id)
+            if any(table.name in sources for _, sources in ID_SOURCES.values()):
+                self._prune_ids(experiment_id)
 
-        gold = rows.select(*table.key()).dropDuplicates().groupBy("experiment_id").count().collect()
+        counted_by = table.counted_by
+        gold = rows.select(*table.key()).dropDuplicates().groupBy(counted_by).count().collect()
         stored = self._stored_rows(table, version, experiment_id)
         return Reloaded(
             table.name,
             version,
             written,
             schemas,
-            gold={row["experiment_id"]: row["count"] for row in gold},
-            store={row["experiment_id"]: int(row["current"]) for row in stored if int(row["current"])},
-            newer={row["experiment_id"]: int(row["newer"]) for row in stored if int(row["newer"])},
-            older={row["experiment_id"]: int(row["older"]) for row in stored if int(row["older"])},
+            gold={row[counted_by]: row["count"] for row in gold},
+            store={row[counted_by]: int(row["current"]) for row in stored if int(row["current"])},
+            newer={row[counted_by]: int(row["newer"]) for row in stored if int(row["newer"])},
+            older={row[counted_by]: int(row["older"]) for row in stored if int(row["older"])},
         )
 
     def latest_version(self, table: StoreTable) -> tuple[int, datetime]:
@@ -171,6 +175,8 @@ class StoreReload:
 
     def _write_schemas(self, table: StoreTable, changes: DataFrame) -> Written:
         """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
+        if not table.payloads:
+            return Written()
         lines = [row.line for row in table.schema_lines(changes).collect()]
         return self._until_sent(
             f"schemas of {table.name}", lambda: self.writer.insert(PAYLOAD_SCHEMAS, lines)
@@ -197,13 +203,22 @@ class StoreReload:
             time.sleep(delay)
 
     def _newest_stored_version(self, table: StoreTable) -> int:
-        """The newest commit the store holds of the table, its rows or its payload schemas."""
+        """The newest commit the store holds of the table, its rows, their copies or its payload
+        schemas."""
         database = self.writer.database
+        newest = [
+            f"(SELECT max(_commit_version) FROM {database}.{store_table})"
+            for store_table in (table.name, *table.copies)
+        ]
+        parameters = {}
+        if table.payloads:
+            newest.append(
+                f"(SELECT max(_commit_version) FROM {database}.{PAYLOAD_SCHEMAS} WHERE table_type = {{table_type:String}})"
+            )
+            parameters["table_type"] = table.table_type
+        # greatest takes two values or more; no commit is below 0.
         [row] = self.writer.query(
-            f"SELECT greatest((SELECT max(_commit_version) FROM {database}.{table.name}), "
-            f"(SELECT max(_commit_version) FROM {database}.{PAYLOAD_SCHEMAS} WHERE table_type = {{table_type:String}})) "
-            "AS newest FORMAT JSONEachRow",
-            table_type=table.table_type,
+            f"SELECT greatest({', '.join(newest)}, 0) AS newest FORMAT JSONEachRow", **parameters
         )
         return int(row["newest"])
 
@@ -212,7 +227,7 @@ class StoreReload:
         longer holds. After the load, a key gold holds has its newest copy at the version, so the
         keys still older are the ones the delete removes for good."""
         removed = {
-            row["experiment_id"]: int(row["older"])
+            row[table.counted_by]: int(row["older"])
             for row in self._stored_rows(table, version, experiment_id)
             if int(row["older"])
         }
@@ -260,15 +275,15 @@ class StoreReload:
             self.writer.query(f"DELETE FROM {database}.{id_table} WHERE 1{scope}{still_named}", **parameters)
 
     def _stored_rows(self, table: StoreTable, version: int, experiment_id: str | None) -> list[dict]:
-        """The store's rows per experiment, one per key, counted by where each one's newest commit
-        falls against ``version``. A row older than it came back after the delete, from a feed
-        still catching up on commits before the version."""
+        """The store's rows per experiment, or per device, one per key, counted by where each one's
+        newest commit falls against ``version``. A row older than it came back after the delete,
+        from a feed still catching up on commits before the version."""
         scope, parameters = self._scope(experiment_id)
         return self.writer.query(
-            "SELECT experiment_id, countIf(_commit_version >= {version:Int64}) AS current, "
+            f"SELECT {table.counted_by}, countIf(_commit_version >= {{version:Int64}}) AS current, "
             "countIf(_commit_version > {version:Int64}) AS newer, "
             "countIf(_commit_version < {version:Int64}) AS older "
-            f"FROM {self.writer.database}.{table.name} FINAL WHERE 1{scope} GROUP BY experiment_id "
+            f"FROM {self.writer.database}.{table.name} FINAL WHERE 1{scope} GROUP BY {table.counted_by} "
             # A count is a read, under the cap every read has; the reloader's profile lifts it for inserts.
             "SETTINGS max_memory_usage = 4294967296 FORMAT JSONEachRow",
             version=version,

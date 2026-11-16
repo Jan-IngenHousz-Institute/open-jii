@@ -45,8 +45,13 @@ delivery time near zero.
 After its delete it removes the contributor and client ids that no row names any longer, such as an
 erased contributor's, from the id tables the page sorts use.
 
+`measurements_by_device`, the copy of measurements that device pages read, fills from measurements as
+rows land, so a reload of measurements fills it too, and its delete takes the copy's older rows with
+measurements'. `device_events` comes from silver's `clean_device_lifecycle_events`, not from gold. Its
+rows belong to no experiment, so it reloads only for `all` and counts its rows per device.
+
 It connects as `openjii_reloader`, which may read and insert in `store` and delete from the tables it
-reloads (the three row tables, `payload_schemas` and the two id tables), but cannot update their
+reloads (the four row tables, the device copy, `payload_schemas` and the two id tables), but cannot update their
 values, delete from `feed_rejects`, or write to the migration ledger. Its right to delete also lets
 it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has
 no narrower grant for a delete.
@@ -57,7 +62,8 @@ Run it once the feed is on and has caught up. A quiet `store-feed-latency` does 
 a stopped feed sends nothing to measure. Check it instead: the store's newest version must be at
 least gold's newest commit that added rows. As the admin, `SELECT max(_commit_version) FROM
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
-(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
+(`experiment_raw_data`, `experiment_macro_data`, `experiment_uploaded_data` or, for device events,
+silver's `clean_device_lifecycle_events`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
 it carries in parallel, so the store's newest version can reach gold's while that batch still
 writes older ones. So also check that batch has finished. `SELECT max(inserted_at) FROM
 store.<table> WHERE _commit_version = <gold's newest version>` gives when the feed landed that
@@ -79,8 +85,10 @@ the feed does, so run that when the app's reads can wait. The rows it deletes st
 merges drop them, so a whole table needs about its own size free again (`store-disk`). Its delete and
 its count may each take up to an hour; a run that times out is safe to run again.
 
-Give the experiment's id, or `all`, and one table (`measurements`, `macro_results`, `uploads`), or
-`all`. A run without an experiment fails rather than reloading everything. In the Databricks UI,
+Give the experiment's id, or `all`, and one table (`measurements`, `macro_results`, `uploads`,
+`device_events`), or `all`. A run without an experiment fails rather than reloading everything.
+`device_events` needs `all`: a run for one experiment leaves it out of `all` tables, and refuses it
+by name. In the Databricks UI,
 open the job and choose "Run now with different parameters". From a terminal:
 
 ```bash
@@ -115,6 +123,11 @@ in this order, and compare the read paths or widen a store flag only at the end:
 An environment whose feed is off, as prod's is before its first rollout, needs only its first
 reload of `all`.
 
+0010 fills `measurements_by_device` from the rows measurements already holds, as it applies, and
+needs no reload for it. Its `device_events` starts empty: once silver's lifecycle events have their
+change feed (step 2) and their sink is on, with `device_events` in the feed's start versions
+(`store-feed-stalled`), reload `device_events` for `all`.
+
 ## After a full or large reload
 
 A reload of `all`, or of an experiment with millions of rows, leaves each month it wrote in many
@@ -123,7 +136,7 @@ rollout. Every read through the views then merges those parts as it reads, and C
 background merges can leave them that way for a day or more. On dev, a 37M-row experiment's count
 took 1.5 to 2.9 s in that state and 0.4 s once merged; its pages took up to twice as long.
 
-When the run has finished, merge the three tables once, as the admin, starting `clickhouse-client`
+When the run has finished, merge the tables it wrote once, as the admin, starting `clickhouse-client`
 with `--receive_timeout=3600`. A merge writes each month's new part beside the old ones before it
 drops them, so first check the store's disk has about the table's size free (`store-disk`, or
 `SELECT formatReadableSize(sum(bytes_on_disk)) FROM system.parts WHERE database = 'store' AND table = 'measurements' AND active`
@@ -131,8 +144,10 @@ against `SELECT formatReadableSize(free_space) FROM system.disks`):
 
 ```sql
 OPTIMIZE TABLE store.measurements FINAL;
+OPTIMIZE TABLE store.measurements_by_device FINAL;
 OPTIMIZE TABLE store.macro_results FINAL;
 OPTIMIZE TABLE store.uploads FINAL;
+OPTIMIZE TABLE store.device_events FINAL;
 ```
 
 Dev's measurements took about five minutes. Without the longer timeout the client gives up after
@@ -143,7 +158,8 @@ own merges handle. This lists what is left:
 
 ```sql
 SELECT table, partition, count() AS parts FROM system.parts
-WHERE database = 'store' AND active AND table IN ('measurements', 'macro_results', 'uploads')
+WHERE database = 'store' AND active
+  AND table IN ('measurements', 'measurements_by_device', 'macro_results', 'uploads', 'device_events')
   AND partition < toString(toYYYYMM(now()))
 GROUP BY table, partition HAVING parts > 1;
 ```
@@ -204,7 +220,8 @@ no copy of annotations: a read filtered by flags takes the flagged rows from Pos
   again for the same experiments; the new delete takes them.
 - **The store holds a version newer than gold's.** Gold's table was recreated and its versions
   restarted, so the load's rows and schemas would lose to the old ones. As the admin, empty the store
-  table and `store.payload_schemas` with `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says
+  table, for measurements also `store.measurements_by_device`, and `store.payload_schemas` with
+  `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says
   why). Then set the feed's start version to gold's latest and reset its checkpoint as
   `store-feed-stalled` describes, and once the feed has caught up, reload every table for `all`, since
   `payload_schemas` held every table's schemas.

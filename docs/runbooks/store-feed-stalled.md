@@ -4,11 +4,13 @@
 of them in 105 minutes, or the store's feed timer has sent nothing for five minutes.** Until the
 feed moves again, the store holds data that stops at the stall.
 
-The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Centrum also sends the metadata sheets and their rows, from
-the backend's copy of the sheets rather than from gold. Each pipeline's sinks exist only while the feed is switched
-on. A timer on the store's instance counts the rows each table took every minute and reports zero
-when none arrived, so its silence is the timer or ClickHouse stopping, not a quiet night.
+The feed's sinks run inside the pipelines that write gold: measurements, uploads and silver's device
+lifecycle events in Centrum, macro results in the macro pipeline. Centrum also sends the metadata
+sheets and their rows, from the backend's copy of the sheets rather than from gold. Each pipeline's
+sinks exist only while the feed is switched on, and the device events sink only once its start
+version is set too. A timer on the store's instance counts the rows each table took every minute and
+reports zero when none arrived, so its silence is the timer or ClickHouse stopping, not a quiet
+night.
 
 The pipelines' logs are in `/Volumes/<catalog>/centrum/pipeline-logs/<centrum|macro>/<cluster id>/`,
 the driver's under `driver/` and the executors' under `executor/`. Every line the feed writes starts
@@ -78,7 +80,10 @@ DESCRIBE HISTORY open_jii_<env>.centrum.experiment_raw_data LIMIT 1
 Repeat for `experiment_uploaded_data` and `experiment_macro_data`, and set `measurements`,
 `uploads` and `macro_results` in the map to those versions. `metadata_rows` starts at `latest`:
 the sheets' rows are filled by owing every sheet to the lakehouse once
-([reload](procedures/serving-store-reload.md#metadata-sheets)). After switching on, watch the first
+([reload](procedures/serving-store-reload.md#metadata-sheets)). Device events read silver's
+`clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so
+their start version, `SERVING_STORE_FEED_START_DEVICE_EVENTS` in the Centrum pipeline's settings, is
+that table's latest version, never one before it. After switching on, watch the first
 batches in each pipeline's driver log (`[serving store] measurements batch 0: ... inserted`). A
 first batch numbered 0 means the sink started at its start version, and rows gold gained while the
 feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number
@@ -91,7 +96,8 @@ newest half hour gained rows before the start versions; it clears as soon as new
 
 Needed when the feed was off for more than seven days, or when a gold table was recreated. Its
 versions then restart, so first empty the store table with `TRUNCATE TABLE store.<table>` as the
-admin, and `TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left
+admin, for measurements also `store.measurements_by_device`, which holds the same versions, and
+`TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left
 behind, either keeps a reload from running. Empty a store table only with `TRUNCATE`: after a
 `DELETE` the store still holds the dedup tokens of the deleted rows' inserts, and drops those rows
 when the feed sends them again. `payload_schemas` holds every table's schemas, so once the feed has

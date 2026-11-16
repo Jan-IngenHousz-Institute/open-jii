@@ -9,10 +9,10 @@
 import traceback
 
 from openjii.serving_store.reload import StoreReload
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS
+from openjii.serving_store.tables import DEVICE_EVENTS, MACRO_RESULTS, MEASUREMENTS, UPLOADS
 from openjii.serving_store.writer import StoreWriter
 
-TABLES = {table.name: table for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS)}
+TABLES = {table.name: table for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS, DEVICE_EVENTS)}
 
 WIDGETS = ("CATALOG_NAME", "CENTRAL_SCHEMA", "ENVIRONMENT", "EXPERIMENT_ID", "TABLE")
 for name in WIDGETS:
@@ -38,6 +38,12 @@ if TABLE != "all" and TABLE not in TABLES:
     raise ValueError(f"TABLE is {TABLE!r}; use all or one of {', '.join(TABLES)}")
 tables = list(TABLES.values()) if TABLE == "all" else [TABLES[TABLE]]
 experiment_id = None if EXPERIMENT_ID == "all" else EXPERIMENT_ID
+
+# A table whose rows belong to no experiment, as device events, reloads only for all.
+if experiment_id is not None:
+    if TABLE != "all" and TABLES[TABLE].counted_by != "experiment_id":
+        raise ValueError(f"TABLE {TABLE} holds no experiment's rows; reload it with EXPERIMENT_ID all")
+    tables = [table for table in tables if table.counted_by == "experiment_id"]
 
 # Lets the delete remove more than the reload's limit of rows gold no longer holds, as for a
 # deleted experiment. Anything but true or false is refused, so a typo cannot pass for either.
@@ -74,11 +80,12 @@ for table in tables:
         mismatches.append(f"{table.name} failed: {type(error).__name__}: {error}")
         continue
 
+    counted = "experiments" if table.counted_by == "experiment_id" else "devices"
     print(
         f"[serving store] Reloaded {table.name} at gold version {reloaded.version}: "
         f"{reloaded.written.inserted} rows sent, {reloaded.written.rejected} refused (in feed_rejects); "
         f"{sum(reloaded.gold.values())} rows in gold and {sum(reloaded.store.values())} in the store "
-        f"over {len(reloaded.gold)} experiments, {sum(reloaded.newer.values())} of them written by the feed since",
+        f"over {len(reloaded.gold)} {counted}, {sum(reloaded.newer.values())} of them written by the feed since",
         flush=True,
     )
     found_nothing = experiment_id is not None and not (reloaded.gold or reloaded.store or reloaded.older)

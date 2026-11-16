@@ -16,9 +16,10 @@ import pytest
 import requests
 from openjii.serving_store import reload as reload_module
 from openjii.serving_store.reload import Reloaded, RemovalOverLimit, StoreAheadOfGold, StoreReload
-from openjii.serving_store.tables import MEASUREMENTS, UPLOADS, StoreTable
+from openjii.serving_store.tables import DEVICE_EVENTS, MEASUREMENTS, UPLOADS, StoreTable
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 pytestmark = pytest.mark.spark
 
@@ -381,8 +382,10 @@ def store(store_migrations: list[str]) -> Iterator[_Admin]:
     store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_RELOADER}")
     for table in (
         "measurements",
+        "measurements_by_device",
         "macro_results",
         "uploads",
+        "device_events",
         "payload_schemas",
         "contributor_ids",
         "client_ids",
@@ -605,3 +608,105 @@ def test_schemas_from_a_recreated_gold_table_stop_the_reload(
 
     with pytest.raises(StoreAheadOfGold, match="hold version 99"):
         _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
+
+
+# Silver's lifecycle events at version 7: c1's two events and c2's one.
+_SILVER_EVENTS = """
+    SELECT client_id, event_type, ts AS event_timestamp, session AS session_identifier,
+      CAST(NULL AS STRING) AS disconnect_reason, TIMESTAMP'2026-10-19 12:00:00' AS ingestion_timestamp
+    FROM VALUES
+      ('c1', 'connected', TIMESTAMP'2026-10-19 09:00:00', 's1'),
+      ('c1', 'disconnected', TIMESTAMP'2026-10-19 10:00:00', 's1'),
+      ('c2', 'connected', TIMESTAMP'2026-10-19 11:00:00', CAST(NULL AS STRING))
+      AS t(client_id, event_type, ts, session)
+"""
+
+
+def test_device_events_reload_whole_without_schemas_or_ids_and_count_by_device(spark: SparkSession) -> None:
+    writer = _Writer()
+
+    reloaded = _GoldAt(spark, writer, _SILVER_EVENTS).reload(DEVICE_EVENTS)
+
+    [sent] = writer.lines
+    assert sorted((line["client_id"], line["event_type"]) for line in sent) == [
+        ("c1", "connected"),
+        ("c1", "disconnected"),
+        ("c2", "connected"),
+    ]
+    assert writer.inserts == []
+    [newest] = [sql for sql, _ in writer.statements if "AS newest" in sql]
+    assert newest == (
+        "SELECT greatest((SELECT max(_commit_version) FROM store.device_events), 0) AS newest FORMAT JSONEachRow"
+    )
+    assert [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")] == [
+        ("DELETE FROM store.device_events WHERE _commit_version < {version:Int64}", {"version": 7})
+    ]
+    assert reloaded.gold == {"c1": 2, "c2": 1}
+
+
+def test_a_measurements_reload_deletes_the_older_rows_of_its_copy_by_device_too(spark: SparkSession) -> None:
+    writer = _Writer()
+
+    _GoldAt(spark, writer, _GOLD_RAW_DATA.replace("{copies}", _FIRST_COPY)).reload(MEASUREMENTS, "e1")
+
+    [newest] = [sql for sql, _ in writer.statements if "AS newest" in sql]
+    assert "FROM store.measurements_by_device)" in newest
+    deletes = [
+        (sql, params) for sql, params in writer.statements if sql.startswith("DELETE FROM store.measurements")
+    ]
+    scope = "WHERE _commit_version < {version:Int64} AND experiment_id = {experiment:String}"
+    assert deletes == [
+        (f"DELETE FROM store.measurements {scope}", {"version": 7, "experiment": "e1"}),
+        (f"DELETE FROM store.measurements_by_device {scope}", {"version": 7, "experiment": "e1"}),
+    ]
+
+
+@pytest.mark.clickhouse
+def test_reloading_device_events_leaves_them_as_silver_holds_them(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter
+) -> None:
+    fed = spark.sql(
+        f"SELECT * FROM ({_SILVER_EVENTS}) WHERE client_id = 'c1' "
+        "UNION ALL SELECT 'c3', 'connected', TIMESTAMP'2026-10-19 08:00:00', 's3', NULL, NULL"
+    ).withColumns(
+        {
+            "_change_type": F.lit("insert"),
+            "_commit_version": F.lit(3).cast("long"),
+            "_commit_timestamp": F.lit(_COMMITTED_AT),
+        }
+    )
+    reloader.write(DEVICE_EVENTS.lines(fed), DEVICE_EVENTS.name)
+
+    reloaded = _GoldAt(spark, reloader, _SILVER_EVENTS).reload(DEVICE_EVENTS)
+
+    assert store.rows(
+        f"SELECT client_id, event_type, _commit_version FROM {_DATABASE}.device_events "
+        "ORDER BY client_id, event_timestamp"
+    ) == [
+        {"client_id": "c1", "event_type": "connected", "_commit_version": 7},
+        {"client_id": "c1", "event_type": "disconnected", "_commit_version": 7},
+        {"client_id": "c2", "event_type": "connected", "_commit_version": 7},
+    ]
+    assert (reloaded.gold, reloaded.store, reloaded.missing) == ({"c1": 2, "c2": 1}, {"c1": 2, "c2": 1}, 0)
+
+
+@pytest.mark.clickhouse
+def test_reloading_measurements_leaves_their_copy_by_device_as_gold_holds_them(
+    spark: SparkSession, store: _Admin, reloader: StoreWriter
+) -> None:
+    fed = spark.sql(_GOLD_RAW_DATA.replace("{copies}", _FIRST_COPY)).withColumns(
+        {
+            "_change_type": F.lit("insert"),
+            "_commit_version": F.lit(3).cast("long"),
+            "_commit_timestamp": F.lit(_COMMITTED_AT),
+        }
+    )
+    gone = fed.withColumn("id", F.lit(2).cast("long"))
+    reloader.write(MEASUREMENTS.lines(fed.unionByName(gone)), MEASUREMENTS.name)
+
+    _GoldAt(spark, reloader, _GOLD_RAW_DATA.replace("{copies}", _RECOMPUTED_COPY)).reload(MEASUREMENTS, "e1")
+
+    # Without FINAL, so the older copies show unless the delete took them.
+    assert store.rows(f"SELECT client_id, id, _commit_version FROM {_DATABASE}.measurements_by_device") == [
+        {"client_id": "c1", "id": 1, "_commit_version": 7}
+    ]
