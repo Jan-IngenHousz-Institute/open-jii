@@ -76,5 +76,12 @@
         }
       ]
     }
+  },
+  "store-device-reads": {
+    "name": "A device's page, and one device's chart on an experiment's Devices tab, read from the serving store; fleet and group monitoring and the Devices tab's list stay on the warehouse. Off until production has compared both read paths.",
+    "active": true,
+    "continuity": false,
+    "tags": ["backend", "serving-store"],
+    "filters": { "groups": [{ "rollout_percentage": 0 }] }
   }
 }
