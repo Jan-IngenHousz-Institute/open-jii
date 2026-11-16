@@ -17,7 +17,10 @@ describe("IncidentCard", () => {
       <IncidentCard
         incident={{
           ...incident,
-          updates: [update, { ...update, text: "A second note at the same minute." }],
+          updates: [
+            update,
+            { ...update, id: "upd-second", text: "A second note at the same minute." },
+          ],
         }}
       />,
     );
@@ -25,5 +28,17 @@ describe("IncidentCard", () => {
     expect(screen.getByText(update.text)).toBeInTheDocument();
     expect(screen.getByText("A second note at the same minute.")).toBeInTheDocument();
     expect(error).not.toHaveBeenCalled();
+  });
+
+  it("keeps the paragraph breaks in an update", () => {
+    const [update] = incident.updates;
+
+    renderWithProviders(
+      <IncidentCard
+        incident={{ ...incident, updates: [{ ...update, text: "First.\n\nSecond." }] }}
+      />,
+    );
+
+    expect(screen.getByText(/First\.\s+Second\./)).toHaveClass("whitespace-pre-line");
   });
 });

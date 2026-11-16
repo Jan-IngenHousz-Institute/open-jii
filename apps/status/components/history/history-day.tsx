@@ -26,6 +26,7 @@ interface HistoryDayProps {
   index: number;
   day: DayRecord;
   incidents: Incident[];
+  generatedAt: string;
   checksBegan: string;
   isToday: boolean;
   isStop: boolean;
@@ -40,6 +41,7 @@ export const HistoryDay = memo(function HistoryDay({
   index,
   day,
   incidents,
+  generatedAt,
   checksBegan,
   isToday,
   isStop,
@@ -50,7 +52,7 @@ export const HistoryDay = memo(function HistoryDay({
 }: HistoryDayProps) {
   const { t } = useTranslation("status");
   const format = useFormat();
-  const summary = summarizeDay(day, incidents);
+  const summary = summarizeDay(day, incidents, generatedAt);
   const label = useDayLabel(day.date, summary, checksBegan, isToday);
   const wasOpenOnPress = useRef(false);
 

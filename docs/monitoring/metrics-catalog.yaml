@@ -130,6 +130,9 @@ passes:
   - date: 2026-11-04
     range: [135, 136]
     note: the status publisher's errors and its silence, since a failed or missing run leaves the public status page's data file as it was
+  - date: 2026-11-04
+    range: [137, 137]
+    note: the status Slack function's dropped events, since a dropped event leaves the status channel without a change the page shows
   - date: 2026-11-06
     range: [138, 138]
     note: every use of the Google Play review account, since nothing else shows someone signing in with or guessing its fixed code
@@ -144,6 +147,9 @@ passes:
   - date: 2026-11-16
     range: [145, 145]
     note: web pages that failed to regenerate, since a failed regeneration leaves the old copy up and nothing else says so
+  - date: 2026-11-16
+    range: [146, 147]
+    note: exports that failed on our side and sign-in code emails that failed to send, since the status page now shows both
   - date: 2026-11-16
     range: [149, 149]
     note: cached Contentful reads behind the public pages that fail to refresh, since Next keeps serving the old value and only logs it
@@ -2549,11 +2555,14 @@ metrics:
     baseline: { method: threshold, max: 2 }
     runbook: docs/runbooks/status-publisher-errors.md
     notes: >-
-      The status publisher checks the platform every minute and rewrites the public status page's
-      data file. A run that fails before it writes leaves the file as it was, and the page shows
-      when it was last checked. A failed minute is not retried and the next run records it as
-      unknown time, so this fires when more than two runs fail in five minutes and that still holds
-      at the next check five minutes later, when the page is going stale rather than blinking.
+      The status publisher checks the platform every minute, rewrites the public status page's data
+      file and sends what changed to the status events topic. A run that fails before it writes
+      leaves the file as it was, and the page shows when it was last checked; the next run records
+      the lost minute as unknown time. A run that fails while sending events has already written the
+      file, and the next run sends the same events again. A Contentful read that fails is covered by
+      the last good one and fails the run only once that one is more than 15 minutes old, or when
+      there is none, after everything is written. This fires when more than two runs fail in five
+      minutes and that still holds at the next check five minutes later.
 
   - num: 136
     id: status-publisher-stopped
@@ -2579,6 +2588,32 @@ metrics:
       135 cannot see this, since a function that never runs reports no errors, which is why this one
       also fires when CloudWatch has no datapoints at all.
 
+  - num: 137
+    id: status-slack-errors
+    name: Status Slack events dropped
+    family: observability
+    area: api
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: AsyncEventsDropped
+      stat: Sum
+      dimensions: { FunctionName: "${STATUS_SLACK_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/status-slack-errors.md
+    notes: >-
+      The status Slack function posts each event the status publisher sends to the status events topic
+      into the status channel. Lambda runs it asynchronously, tries a failed event twice more and then
+      drops it, and drops any event that is more than an hour old. This counts the dropped events, each
+      a change the channel never got, and fires on any in an hour. The function's Errors metric counts
+      every failed try, including those a retry recovers, so it is not the signal here. It reads zero
+      where the function does not exist, because the sink is off until the environment is given a
+      webhook. The page itself is not affected, which entries 135 and 136 cover.
+
   - num: 138
     id: play-review-account-use
     name: Play review account use
@@ -2602,6 +2637,50 @@ metrics:
       the address or the code. Each backend task refuses the address after ten attempts, counted from
       when the task started and reset each UTC day, so a deployment or a replaced task starts at zero.
 
+  - num: 146
+    id: exports-failed
+    name: Exports failing on our side
+    family: observability
+    area: api
+    source: api
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Backend
+      metric: ExportsFailed
+      stat: Sum
+      dimensions: { Environment: "${ENVIRONMENT}", Cause: platform }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/exports-failed.md
+    notes: >-
+      Exports the backend recorded as failed with the error code unknown, its own failure rather than
+      the data's or the request's. The backend task that finishes an export counts it once, with
+      Cause user for the other codes. The status page shows Exports degraded while any failed this way
+      in the last hour.
+
+  - num: 147
+    id: sign-in-emails-failed
+    name: Sign-in code emails that failed to send
+    family: observability
+    area: api
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Backend
+      metric: SignInEmailsFailed
+      stat: Sum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/sign-in-emails-failed.md
+    notes: >-
+      Emails with a sign-in or verification code that the email server did not take, counted by a
+      metric filter on the backend's log group from the auth server's "Sign-in code email failed"
+      line. Each one is someone who asked for a code and got none. The status page shows Sign-in
+      degraded while any failed in the last 15 minutes.
   - num: 139
     id: emails-sent
     name: Emails sent

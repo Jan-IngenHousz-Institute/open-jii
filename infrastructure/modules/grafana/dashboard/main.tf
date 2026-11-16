@@ -3981,7 +3981,7 @@ resource "grafana_rule_group" "status_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The status publisher threw, so the public status page has stopped updating."
+      description      = "The status publisher keeps failing, so the status page or its incident notes are going stale."
       summary          = "Status publisher is failing to publish"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -4077,6 +4077,272 @@ resource "grafana_rule_group" "status_publisher_health" {
       severity  = "warning"
       service   = "monitoring"
       metric_id = "status-publisher-stopped"
+    }
+  }
+}
+
+resource "grafana_rule_group" "sign_in_and_exports" {
+  provider         = grafana.amg
+  name             = "Sign-in and Exports"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 146. The backend only publishes on a failure, so no data is a quiet hour.
+  rule {
+    name      = "Exports Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "ExportsFailed"
+        statistic  = "Sum"
+        dimensions = {
+          Environment = var.environment
+          Cause       = "platform"
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "An export failed for a reason on our side in the last hour, so the status page shows Exports degraded."
+      summary          = "Exports are failing on our side"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/exports-failed.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["exports-failed"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "backend"
+      metric_id = "exports-failed"
+    }
+  }
+
+  # Catalog entry 147. A log metric filter counts these, so the count has no dimensions.
+  rule {
+    name      = "Sign-in Emails Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "SignInEmailsFailed"
+        statistic  = "Sum"
+        dimensions = {}
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "A sign-in code email failed to send in the last 15 minutes, so the status page shows Sign-in degraded."
+      summary          = "Sign-in code emails are failing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/sign-in-emails-failed.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["sign-in-emails-failed"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "backend"
+      metric_id = "sign-in-emails-failed"
+    }
+  }
+}
+
+resource "grafana_rule_group" "status_slack_health" {
+  count = var.status_slack_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Status Slack Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  rule {
+    name      = "Status Slack Messages Dropped"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "AsyncEventsDropped"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.status_slack_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Lambda dropped an event for the status Slack function after its retries or its maximum event age, so a change on the public status page never reached the status channel."
+      summary          = "Status events were dropped before reaching Slack"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-slack-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["status-slack-errors"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "status-slack-errors"
     }
   }
 }

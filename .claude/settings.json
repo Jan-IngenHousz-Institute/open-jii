@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "ask": [
+      "Bash(pnpm status:incident publish:*)",
+      "Bash(pnpm cms:models apply:*)",
+      "Bash(pnpm --filter @repo/devkit status:incident publish:*)",
+      "Bash(pnpm --filter @repo/devkit cms:models apply:*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

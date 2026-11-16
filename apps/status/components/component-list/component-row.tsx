@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import { HistoryStrip } from "~/components/history/history-strip";
 import { ProblemDays } from "~/components/history/problem-days";
 import { useVisibleDays } from "~/components/history/use-visible-days";
@@ -20,18 +20,22 @@ import {
 interface ComponentRowProps {
   component: StatusComponent;
   incidents: Incident[];
-  today: string;
+  generatedAt: string;
   isStale: boolean;
 }
 
-export function ComponentRow({ component, incidents, today, isStale }: ComponentRowProps) {
+export function ComponentRow({ component, incidents, generatedAt, isStale }: ComponentRowProps) {
   const { t } = useTranslation("status");
   const format = useFormat();
   const dayCount = useVisibleDays();
   const id = useId();
   const badgeId = `${id}-state`;
   const uptimeId = `${id}-uptime`;
-  const checksBegan = component.days.at(0)?.date ?? today;
+  const checksBegan = component.days.at(0)?.date ?? generatedAt.slice(0, 10);
+  const affecting = useMemo(
+    () => incidents.filter((incident) => incident.components.includes(component.id)),
+    [incidents, component.id],
+  );
   const text = (field: "name" | "description" | "details") =>
     t(`component.${component.id}.${field}`);
   const hasFullHistory = component.days.length >= STATUS_HISTORY_DAYS;
@@ -71,13 +75,19 @@ export function ComponentRow({ component, incidents, today, isStale }: Component
 
       <CollapsibleContent>
         <p className="mt-3 max-w-prose text-sm leading-relaxed">{text("details")}</p>
-        <ProblemDays days={component.days} incidents={incidents} checksBegan={checksBegan} />
+        <ProblemDays
+          days={component.days}
+          incidents={affecting}
+          generatedAt={generatedAt}
+          checksBegan={checksBegan}
+        />
       </CollapsibleContent>
 
       <div className="mt-4">
         <HistoryStrip
           component={component}
-          incidents={incidents}
+          incidents={affecting}
+          generatedAt={generatedAt}
           checksBegan={checksBegan}
           dayCount={dayCount}
           describedBy={`${badgeId} ${uptimeId}`}

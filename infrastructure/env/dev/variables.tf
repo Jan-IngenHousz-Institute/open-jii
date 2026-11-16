@@ -252,6 +252,13 @@ variable "posthog_grafana_api_key" {
   sensitive   = true
 }
 
+variable "status_slack_webhook_url" {
+  description = "Slack incoming webhook for the status channel, which receives the status page's changes. Empty leaves the Slack feed out."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "data_platform_sp_application_id" {
   description = "Application ID of the jii-data-platform deploy service principal (github-actions-jii-data-platform-sandbox-deploy). It runs the analyst gold pipelines in the sandbox workspace, which read this environment's centrum tables cross-catalog. Read-only; granted at catalog level in main.tf."
   type        = string

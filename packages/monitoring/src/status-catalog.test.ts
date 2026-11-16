@@ -52,11 +52,6 @@ const UNCATALOGUED: Uncatalogued[] = [
     reason: "The requests the API's 5xx share is weighed against; no rule alerts on the count",
     dimensionsOf: "backend-5xx",
   },
-  {
-    namespace: "OpenJII/Backend",
-    metric: "ExportsFailed",
-    reason: "Not published yet; the exports component is not live and no producer emits it",
-  },
 ];
 
 /** What one catalogue entry reads from CloudWatch, in the terms a status query is compared in. */

@@ -10,12 +10,13 @@ import { ProblemDayItem } from "./problem-day-item";
 interface ProblemDaysProps {
   days: DayRecord[];
   incidents: Incident[];
+  generatedAt: string;
   checksBegan: string;
 }
 
-export function ProblemDays({ days, incidents, checksBegan }: ProblemDaysProps) {
+export function ProblemDays({ days, incidents, generatedAt, checksBegan }: ProblemDaysProps) {
   const { t } = useTranslation("status");
-  const listed = problemDays(days, incidents);
+  const listed = problemDays(days, incidents, generatedAt);
 
   function renderDay({ day, summary }: ProblemDay) {
     return <ProblemDayItem key={day.date} day={day} summary={summary} checksBegan={checksBegan} />;

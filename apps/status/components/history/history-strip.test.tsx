@@ -23,6 +23,7 @@ function renderStrip(document: StatusDocument, id: StatusComponent["id"], dayCou
     <HistoryStrip
       component={component}
       incidents={document.incidents}
+      generatedAt={document.generatedAt}
       checksBegan={component.days.at(0)?.date ?? TODAY}
       dayCount={dayCount}
       describedBy=""

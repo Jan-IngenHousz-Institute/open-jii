@@ -42,10 +42,13 @@ resource "aws_iam_role_policy" "status_publisher" {
         Resource = "*"
       },
       {
-        Sid      = "ReadAndWriteState"
-        Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject"]
-        Resource = "${var.state_bucket_arn}/publisher-state.json"
+        Sid    = "ReadAndWriteState"
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:PutObject"]
+        Resource = [
+          "${var.state_bucket_arn}/publisher-state.json",
+          "${var.state_bucket_arn}/status-feed.json"
+        ]
       },
       {
         # Without it S3 answers a read of a key that does not exist yet with AccessDenied, not NoSuchKey.
@@ -61,6 +64,19 @@ resource "aws_iam_role_policy" "status_publisher" {
         Resource = "${var.site_bucket_arn}/data/status.json"
       },
       {
+        Sid      = "ReadContentfulSecret"
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = var.contentful_secret_arn
+      },
+      {
+        # PublishBatch is authorized as sns:Publish.
+        Sid      = "PublishStatusEvents"
+        Effect   = "Allow"
+        Action   = ["sns:Publish"]
+        Resource = aws_sns_topic.status_events.arn
+      },
+      {
         Sid    = "CloudWatchLogs"
         Effect = "Allow"
         Action = [
@@ -73,6 +89,14 @@ resource "aws_iam_role_policy" "status_publisher" {
   })
 }
 
+# Subscribers attach outside the module. The role holds no kms grant, which the README explains.
+resource "aws_sns_topic" "status_events" {
+  name              = "status-events-${var.environment}"
+  kms_master_key_id = "alias/aws/sns"
+
+  tags = local.tags
+}
+
 # Declared up front: a group the Lambda auto-creates cannot be adopted later without an
 # import, and it would keep every line forever.
 resource "aws_cloudwatch_log_group" "status_publisher" {
@@ -82,7 +106,7 @@ resource "aws_cloudwatch_log_group" "status_publisher" {
   tags = local.tags
 }
 
-# Reserved concurrency of one keeps a slow run from racing the next on the state file.
+# Reserved concurrency of one keeps a slow run from racing the next on the state files.
 resource "aws_lambda_function" "status_publisher" {
   filename                       = "${path.module}/lambda/function.zip"
   source_code_hash               = filebase64sha256("${path.module}/lambda/function.zip")
@@ -104,6 +128,10 @@ resource "aws_lambda_function" "status_publisher" {
       ALB_ARN_SUFFIX      = local.alb_arn_suffix
       WEB_DISTRIBUTION_ID = var.web_distribution_id
       KINESIS_STREAM_NAME = var.kinesis_stream_name
+
+      STATUS_CONTENTFUL_SECRET_ARN = var.contentful_secret_arn
+      STATUS_EVENTS_TOPIC_ARN      = aws_sns_topic.status_events.arn
+      STATUS_PAGE_URL              = var.page_url
     }
   }
 

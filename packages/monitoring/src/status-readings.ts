@@ -86,6 +86,10 @@ function collapse(points: { at: number; value: number }[], reduce: StatusSignal[
     return Math.max(...points.map((point) => point.value));
   }
 
+  if (reduce === "min") {
+    return Math.min(...points.map((point) => point.value));
+  }
+
   const newest = points.reduce((latest, point) => (point.at > latest.at ? point : latest));
   return newest.value;
 }

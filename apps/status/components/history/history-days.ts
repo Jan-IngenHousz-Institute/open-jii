@@ -16,7 +16,6 @@ function emptyDay(date: string): DayRecord {
     degradedMinutes: 0,
     maintenanceMinutes: 0,
     unknownMinutes: 0,
-    incidentIds: [],
   };
 }
 
