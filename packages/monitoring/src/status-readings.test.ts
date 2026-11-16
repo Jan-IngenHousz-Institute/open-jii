@@ -22,20 +22,26 @@ describe("collapseReadings", () => {
     expect(readings).toEqual({ ingestForwardingFailures: 5 });
   });
 
-  it("takes the largest point for max and the newest point for latest", () => {
+  it("takes the largest point for max, the smallest for min and the newest for latest", () => {
     const readings = collapseReadings(
       [
         { id: "ingestIteratorAge", periodSeconds: 60, lookbackMinutes: 5, reduce: "max" },
+        { id: "ingestIteratorAgeFloor", periodSeconds: 60, lookbackMinutes: 20, reduce: "min" },
         { id: "ingestIdle", periodSeconds: 300, lookbackMinutes: 75, reduce: "latest" },
       ],
       [
         { Id: "ingestIteratorAge", Timestamps: [minutesAgo(1), minutesAgo(2)], Values: [10, 40] },
+        {
+          Id: "ingestIteratorAgeFloor",
+          Timestamps: [minutesAgo(1), minutesAgo(12), minutesAgo(25)],
+          Values: [86_400_000, 30, 0],
+        },
         { Id: "ingestIdle", Timestamps: [minutesAgo(5), minutesAgo(35)], Values: [2, 90] },
       ],
       now,
     );
 
-    expect(readings).toEqual({ ingestIteratorAge: 40, ingestIdle: 2 });
+    expect(readings).toEqual({ ingestIteratorAge: 40, ingestIteratorAgeFloor: 30, ingestIdle: 2 });
   });
 
   it("reads a dependency down only when every check in its window failed", () => {

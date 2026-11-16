@@ -66,9 +66,9 @@ export const DELIVERY_OUTAGE_LATENCY_MINUTES = 60;
 export const ITERATOR_AGE_DEGRADED_MINUTES = 10;
 
 /**
- * A reader that restarts on a quiet stream starts at the oldest record the stream still keeps, so
- * for a minute the age reads up to the retention: a day on dev, three on prod. A real backlog that
- * long also shows as a stall or as delivery latency, so an age of a day or more is not judged.
+ * A reader resuming after a pause can report the whole retention, a day on dev and three on prod,
+ * for the minute it resumes in. An age that high counts only when it climbed there: when the age
+ * stayed over ten minutes for the 20 minutes before, as a backlog does.
  */
 export const ITERATOR_AGE_RESTART_MINUTES = 24 * 60;
 
@@ -202,9 +202,10 @@ function judgeDataDelivery({ readings }: ComponentEvidence): ComponentVerdict {
   const isStalled =
     (readings.ingestIdle ?? 0) > DELIVERY_STALL_IDLE_MINUTES &&
     (readings.devicePublishesBeforeIdle ?? 0) > 0;
-  const isBehindStream =
-    iteratorAgeMs > ITERATOR_AGE_DEGRADED_MINUTES * 60_000 &&
-    iteratorAgeMs < ITERATOR_AGE_RESTART_MINUTES * 60_000;
+  const hasClimbed =
+    (readings.ingestIteratorAgeFloor ?? 0) > ITERATOR_AGE_DEGRADED_MINUTES * 60_000;
+  const isResumeSpike = iteratorAgeMs >= ITERATOR_AGE_RESTART_MINUTES * 60_000 && !hasClimbed;
+  const isBehindStream = iteratorAgeMs > ITERATOR_AGE_DEGRADED_MINUTES * 60_000 && !isResumeSpike;
   const isDatabricksDown = isDependencyDown(readings.databricksUp);
 
   return {

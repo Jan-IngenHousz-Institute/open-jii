@@ -83,6 +83,7 @@ const HEALTHY_READINGS: StatusReadings = {
   devicePublishesBeforeIdle: 4500,
   collectorHeartbeat: 1,
   ingestIteratorAge: 1000,
+  ingestIteratorAgeFloor: 0,
   macroPlatformFailures: 0,
   macroLatencyP95: 10,
   macroBacklog: 0,
@@ -416,9 +417,38 @@ const thresholdCases: Case[] = [
   },
   {
     id: "data-delivery",
-    name: "iterator age of a day, a reader restarted at the oldest record of a quiet stream",
-    change: { readings: { ingestIteratorAge: ITERATOR_AGE_RESTART_MINUTES * 60_000 } },
+    name: "iterator age of a day for the minute a reader resumes, after ages near zero",
+    change: {
+      readings: {
+        ingestIteratorAge: ITERATOR_AGE_RESTART_MINUTES * 60_000,
+        ingestIteratorAgeFloor: 0,
+      },
+    },
     state: "operational",
+  },
+  {
+    id: "data-delivery",
+    name: "iterator age of a day reached by a backlog that stayed behind, with no traffic since",
+    change: {
+      readings: {
+        ingestIteratorAge: ITERATOR_AGE_RESTART_MINUTES * 60_000,
+        ingestIteratorAgeFloor: (ITERATOR_AGE_RESTART_MINUTES - 20) * 60_000,
+        deliveryLatencyP95: undefined,
+        devicePublishesBeforeIdle: undefined,
+      },
+    },
+    state: "degraded",
+  },
+  {
+    id: "data-delivery",
+    name: "iterator age at three days, a backlog at the end of prod's retention",
+    change: {
+      readings: {
+        ingestIteratorAge: 3 * ITERATOR_AGE_RESTART_MINUTES * 60_000,
+        ingestIteratorAgeFloor: 3 * ITERATOR_AGE_RESTART_MINUTES * 60_000 - 60_000,
+      },
+    },
+    state: "degraded",
   },
   {
     id: "data-delivery",
