@@ -979,7 +979,7 @@ export const experimentDataOutbox = pgTable(
   (table) => [
     check(
       "experiment_data_outbox_experiment_check",
-      sql`${table.experimentId} IS NOT NULL OR ${table.recordType} NOT IN ('annotation', 'metadata_sheet')`,
+      sql`(${table.experimentId} IS NOT NULL) = (${table.recordType} IN ('annotation', 'metadata_sheet'))`,
     ),
     // A change made while the record's row waits joins that row.
     uniqueIndex("experiment_data_outbox_waiting_uniq")

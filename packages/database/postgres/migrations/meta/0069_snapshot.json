@@ -1,5 +1,5 @@
 {
-  "id": "1981018a-83a6-420c-ac95-7a9bd0b18343",
+  "id": "ade1d879-804a-4e7e-abec-ec7687361239",
   "prevId": "18157c35-b93b-4f0a-a05f-23ff4ff82787",
   "version": "7",
   "dialect": "postgresql",
@@ -1576,7 +1576,7 @@
       "checkConstraints": {
         "experiment_data_outbox_experiment_check": {
           "name": "experiment_data_outbox_experiment_check",
-          "value": "\"experiment_data_outbox\".\"experiment_id\" IS NOT NULL OR \"experiment_data_outbox\".\"record_type\" NOT IN ('annotation', 'metadata_sheet')"
+          "value": "(\"experiment_data_outbox\".\"experiment_id\" IS NOT NULL) = (\"experiment_data_outbox\".\"record_type\" IN ('annotation', 'metadata_sheet'))"
         }
       },
       "isRLSEnabled": false

@@ -137,7 +137,24 @@ describe("ExperimentDataOutboxRepository", () => {
           experimentId: null,
           destination: "lakehouse",
         }),
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({
+        cause: { constraint_name: "experiment_data_outbox_experiment_check" },
+      });
+    }
+  });
+
+  it("refuses a contributor or a device owed under an experiment", async () => {
+    for (const recordType of ["contributor", "device"] as const) {
+      await expect(
+        testApp.database.insert(experimentDataOutbox).values({
+          recordType,
+          recordId: faker.string.uuid(),
+          experimentId: faker.string.uuid(),
+          destination: "lakehouse",
+        }),
+      ).rejects.toMatchObject({
+        cause: { constraint_name: "experiment_data_outbox_experiment_check" },
+      });
     }
   });
 
