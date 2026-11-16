@@ -80,6 +80,8 @@ export interface Manifest {
   applied: boolean;
   /** How far bronze had read the stream on its slowest shard, when the stream may still hold what was read. */
   bronzeReadUpTo: string | null;
+  /** Shards the stream can hold records on that bronze has no row from since its retention began. */
+  shardsNotInBronze: string[];
   streamMayHold: boolean;
   restoreFirst: string[];
   /** Objects Firehose wrote after the window's end and margin that were read, from their names. */
@@ -440,21 +442,14 @@ export function contentQuery(
   };
 }
 
-/**
- * How far bronze has read the stream: the latest arrival on its slowest shard, among the shards
- * that delivered anything since the retention began. A shard with no row since then is left out,
- * whether it was idle or bronze stopped reading it while it read the others; the runbook says how
- * to tell the two apart.
- */
+/** The latest arrival bronze holds from each shard it read since the stream's retention began. */
 export function bronzeProgressQuery(table: string, retentionStartMs: number): Statement {
   return {
     statement: [
-      "SELECT unix_millis(min(latest)) FROM (",
-      "  SELECT kinesis_shard_id, max(kinesis_arrival_time) AS latest",
-      `  FROM ${table}`,
-      "  WHERE ingest_date >= :since AND kinesis_arrival_time >= :retention_start",
-      "  GROUP BY kinesis_shard_id",
-      ")",
+      "SELECT kinesis_shard_id, unix_millis(max(kinesis_arrival_time))",
+      `FROM ${table}`,
+      "WHERE ingest_date >= :since AND kinesis_arrival_time >= :retention_start",
+      "GROUP BY kinesis_shard_id",
     ].join("\n"),
     parameters: [
       { name: "since", value: dayOf(retentionStartMs), type: "DATE" },
@@ -795,11 +790,7 @@ function createSender(deps: ReplayDeps) {
   let isCut = false;
 
   async function put(batch: Outgoing[]): Promise<Outgoing[]> {
-    if (hasSent) {
-      await deps.wait(BATCH_INTERVAL_MS);
-    }
     hasSent = true;
-
     const results = await deps.stream.put(batch.map(({ record }) => record));
     const refused: Outgoing[] = [];
     batch.forEach((item, index) => {
@@ -829,6 +820,9 @@ function createSender(deps: ReplayDeps) {
       }
       const refused: Outgoing[] = [];
       for (const batch of batches(pending)) {
+        if (hasSent) {
+          await deps.wait(BATCH_INTERVAL_MS);
+        }
         if (deps.stop.aborted) {
           for (const item of pending) {
             item.entry.outcome ??= "not sent";
@@ -856,14 +850,39 @@ function createSender(deps: ReplayDeps) {
   return { send, hasSent: () => hasSent, wasCut: () => isCut };
 }
 
-async function bronzeReadUpTo(
+interface BronzeProgress {
+  /** The latest arrival on bronze's slowest shard, or null while a shard has no row. */
+  readUpTo: number | null;
+  shardsNotInBronze: string[];
+}
+
+/**
+ * How far bronze has read the stream: the latest arrival on its slowest shard. A shard with no row
+ * since the retention began may be idle or unread, and nothing but bronze's rows can tell, so its
+ * progress is unknown.
+ */
+async function bronzeProgress(
   deps: ReplayDeps,
   table: string,
   retentionStartMs: number,
-): Promise<number | null> {
-  const progress = bronzeProgressQuery(table, retentionStartMs);
-  const [[millis] = []] = await deps.warehouse.rows(progress.statement, progress.parameters);
-  return millis ? Number(millis) : null;
+): Promise<BronzeProgress> {
+  const shards = await deps.stream.shardsInRetention();
+  const query = bronzeProgressQuery(table, retentionStartMs);
+  const rows = await deps.warehouse.rows(query.statement, query.parameters);
+
+  const latest = new Map<string, number>();
+  for (const [shard, millis] of rows) {
+    if (shard && millis) {
+      latest.set(shard, Number(millis));
+    }
+  }
+  const shardsNotInBronze = shards.filter((shard) => !latest.has(shard));
+  const isEveryShardRead = latest.size > 0 && shardsNotInBronze.length === 0;
+
+  return {
+    readUpTo: isEveryShardRead ? Math.min(...latest.values()) : null,
+    shardsNotInBronze,
+  };
 }
 
 export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Manifest> {
@@ -890,10 +909,18 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
   const retentionStart = deps.now.getTime() - targets.retentionHours * HOUR_MS;
   const isInRetention = args.source === "archive" && newestWrite > retentionStart;
   const caughtUpAt = newestWrite + BRONZE_CAUGHT_UP_MS;
-  const readUpTo = isInRetention
-    ? await bronzeReadUpTo(deps, targets.bronze, retentionStart)
-    : null;
+  const { readUpTo, shardsNotInBronze } = isInRetention
+    ? await bronzeProgress(deps, targets.bronze, retentionStart)
+    : { readUpTo: null, shardsNotInBronze: [] };
   const streamMayHold = isInRetention && (readUpTo === null || readUpTo < caughtUpAt);
+  if (args.apply && shardsNotInBronze.length > 0) {
+    throw new Error(
+      `Bronze has no row since the stream's retention began from ${shardsNotInBronze.join(", ")}, ` +
+        `which it may have stopped reading, so the stream may still hold messages of the objects ` +
+        `read. Find out why before replaying, or run again once the newest object is older than ` +
+        `the stream's ${targets.retentionHours} hours`,
+    );
+  }
   if (args.apply && streamMayHold) {
     const readTo = readUpTo === null ? "nothing" : new Date(readUpTo).toISOString();
     throw new Error(
@@ -983,6 +1010,7 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
     device: args.device,
     applied: args.apply,
     bronzeReadUpTo: readUpTo === null ? null : new Date(readUpTo).toISOString(),
+    shardsNotInBronze,
     streamMayHold,
     restoreFirst,
     lateObjects: late,
@@ -1039,6 +1067,11 @@ async function run(args: string[]): Promise<number> {
   if (manifest.restoreFirst.length > 0) {
     process.stdout.write(
       `${manifest.restoreFirst.length} objects are archived and were not read; the runbook says how to restore them\n`,
+    );
+  }
+  if (manifest.shardsNotInBronze.length > 0) {
+    process.stdout.write(
+      `bronze has no row since the stream's retention began from ${manifest.shardsNotInBronze.join(", ")}; the runbook says what to check\n`,
     );
   }
   if (manifest.streamMayHold) {

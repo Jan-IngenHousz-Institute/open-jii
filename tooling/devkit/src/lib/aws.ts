@@ -1,4 +1,4 @@
-import { KinesisClient, PutRecordsCommand } from "@aws-sdk/client-kinesis";
+import { KinesisClient, ListShardsCommand, PutRecordsCommand } from "@aws-sdk/client-kinesis";
 import type { KinesisClientConfig } from "@aws-sdk/client-kinesis";
 import { GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { Agent } from "node:https";
@@ -32,6 +32,8 @@ export interface StreamResult {
 
 export interface StreamWriter {
   put(records: StreamRecord[]): Promise<StreamResult[]>;
+  /** The shards that can still hold records: every open shard, and any closed within the retention. */
+  shardsInRetention(): Promise<string[]>;
 }
 
 // The profile names an SSO session in ~/.aws/config, which also gives the region.
@@ -113,6 +115,28 @@ export function createStreamWriter(streamName: string, profile: string): StreamW
         sequenceNumber: result.SequenceNumber ?? null,
         error: result.ErrorCode ? `${result.ErrorCode}: ${result.ErrorMessage ?? ""}` : null,
       }));
+    },
+
+    async shardsInRetention() {
+      const shards: string[] = [];
+      let token: string | undefined;
+      do {
+        // Kinesis refuses the stream's name and the filter on a page after the first.
+        const page = await kinesis.send(
+          new ListShardsCommand(
+            token === undefined
+              ? { StreamName: streamName, ShardFilter: { Type: "FROM_TRIM_HORIZON" } }
+              : { NextToken: token },
+          ),
+        );
+        for (const shard of page.Shards ?? []) {
+          if (shard.ShardId) {
+            shards.push(shard.ShardId);
+          }
+        }
+        token = page.NextToken;
+      } while (token);
+      return shards;
     },
   };
 }

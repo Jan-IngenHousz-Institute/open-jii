@@ -102,11 +102,12 @@ the next measurement to land, or until the newest object is older than the reten
 that state warns that messages the stream still holds count as `missing`. `--source errors` skips
 the check, since those messages never entered the stream.
 
-The check leaves out a shard with no bronze row since the retention began. That is right for an idle
-shard, and wrong for one bronze stopped reading while it read the others, whose records the stream
-still holds. If bronze's per-shard query below names fewer shards than
-`aws kinesis list-shards --stream-name open-jii-<env>-data-ingest-stream` lists open ones, find out
-why before `--apply`.
+The check covers every shard the stream can hold records on, which it lists from Kinesis. The IoT
+rule spreads messages over the shards by a random key, so a shard bronze has no row from since the
+retention began is one it may have stopped reading. `--apply` then refuses and names the shard, and
+the dry run lists it under `shardsNotInBronze`. Find out why bronze is not reading it before
+anything else, or wait until the newest object is older than the retention. This query shows how far
+bronze has read each shard:
 
 ```sql
 SELECT kinesis_shard_id, max(kinesis_arrival_time) AS latest
@@ -116,8 +117,8 @@ GROUP BY kinesis_shard_id
 ```
 
 It runs under your AWS profile for the environment, which must hold the infrastructure maintainer
-role, the one that may call `kinesis:PutRecords` on the stream, and your Databricks profile.
-`--warehouse` takes the id of the environment's Investigations warehouse, which
+role, the one that may call `kinesis:ListShards` and `kinesis:PutRecords` on the stream, and your
+Databricks profile. `--warehouse` takes the id of the environment's Investigations warehouse, which
 `databricks warehouses list -p <env>` lists. `--apply` writes to the environment's stream directly,
 outside the release path, so on prod it is a step a person takes while following this runbook, with
 the dry run's counts in the incident's ticket first. An agent runs dry runs only. Run one replay of
@@ -158,9 +159,9 @@ about 40 seconds. `kinesis-write-throttling` should stay at zero while it runs. 
 refuses is tried twice more.
 
 The command ends with exit code 1 when a record stays refused, a request fails, or you stop it. The
-first Ctrl-C finishes the batch in hand, at most 250 records, sends no further one, and still writes
-the manifest; a second quits at once and writes none. A failed request or a stop ends the replay early, and the manifest then holds the
-messages decided until then, each marked `sent`, `refused`, `unknown` for the batch in flight, or
+first Ctrl-C finishes the batch in hand, at most 250 records, sends no further batch or retry, and
+still writes the manifest; a second quits at once and writes none. A failed request or a stop ends
+the replay early, and the manifest then holds the messages decided until then, each marked `sent`, `refused`, `unknown` for the batch in flight, or
 `not sent`. Before running `--apply` again, wait until a dry run of the same window counts the sent
 ones as `in bronze`, and until bronze holds a message that arrived after the failure, since an
 `unknown` batch may have landed. A few minutes after the pipeline catches up, a dry run of the same

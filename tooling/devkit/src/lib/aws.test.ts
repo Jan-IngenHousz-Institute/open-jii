@@ -1,4 +1,4 @@
-import { KinesisClient, PutRecordsCommand } from "@aws-sdk/client-kinesis";
+import { KinesisClient, ListShardsCommand, PutRecordsCommand } from "@aws-sdk/client-kinesis";
 import { GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { mockClient } from "aws-sdk-client-mock";
 import { Agent } from "node:https";
@@ -111,6 +111,26 @@ describe("createStreamWriter", () => {
     expect(call.args[0].input.Records?.map((record) => record.PartitionKey)).toEqual([
       "replay/run/0",
       "replay/run/1",
+    ]);
+  });
+
+  it("lists every page of the shards within the stream's retention", async () => {
+    const shard = (id: string) => ({
+      ShardId: id,
+      HashKeyRange: { StartingHashKey: "0", EndingHashKey: "1" },
+      SequenceNumberRange: { StartingSequenceNumber: "0" },
+    });
+    kinesis
+      .on(ListShardsCommand)
+      .resolvesOnce({ Shards: [shard("shardId-000000000000")], NextToken: "page-2" })
+      .resolvesOnce({ Shards: [shard("shardId-000000000001")] });
+
+    const shards = await createStreamWriter("stream", "openjii-dev").shardsInRetention();
+
+    expect(shards).toEqual(["shardId-000000000000", "shardId-000000000001"]);
+    expect(kinesis.commandCalls(ListShardsCommand).map((call) => call.args[0].input)).toEqual([
+      { StreamName: "stream", ShardFilter: { Type: "FROM_TRIM_HORIZON" } },
+      { NextToken: "page-2" },
     ]);
   });
 });

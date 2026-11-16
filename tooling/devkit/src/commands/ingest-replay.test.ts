@@ -21,6 +21,7 @@ import type { ReplayArgs, ReplayDeps } from "./ingest-replay.js";
 const experiment = "11111111-1111-4111-8111-111111111111";
 const topic = `experiment/data_ingest/v1/${experiment}/multispeq/v1.0/protocol`;
 const archiveStream = "open-jii-dev-iot-raw-archive";
+const shard = "shardId-000000000000";
 
 function message(fields: Record<string, unknown>): string {
   return JSON.stringify({ topic, client_id: "phone-1", device_id: "MS-1", ...fields });
@@ -70,15 +71,15 @@ interface Bronze {
   recordIds?: string[];
   /** Rows without a record id: experiment, _client_id (null or empty), client, device, millis. */
   contentRows?: (string | null)[][];
-  /** The latest arrival on bronze's slowest shard, in epoch milliseconds. */
-  readUpTo?: string | null;
+  /** The latest arrival bronze holds from each shard, in epoch milliseconds. */
+  shards?: Record<string, string>;
 }
 
 function warehouse(bronze: Bronze = {}): Warehouse {
   return {
     rows: vi.fn<Warehouse["rows"]>((statement) => {
       if (statement.includes("kinesis_shard_id")) {
-        return Promise.resolve([[bronze.readUpTo ?? null]]);
+        return Promise.resolve(Object.entries(bronze.shards ?? {}));
       }
       if (statement.includes("SELECT DISTINCT _client_id")) {
         return Promise.resolve((bronze.recordIds ?? []).map((id) => [id]));
@@ -103,6 +104,7 @@ function stream(refuse: (record: StreamRecord, call: number) => boolean = () => 
         ),
       );
     }),
+    shardsInRetention: vi.fn(() => Promise.resolve([shard])),
   };
   return Object.assign(writer, { sent });
 }
@@ -343,10 +345,12 @@ describe("bronze lookups", () => {
     expect(query.parameters).toContainEqual({ name: "time_1", value: "2", type: "BIGINT" });
   });
 
-  it("measures bronze's progress on its slowest shard, among shards heard from in the retention", () => {
+  it("measures bronze's progress on each shard it read in the stream's retention", () => {
     const query = bronzeProgressQuery("t", Date.parse("2026-10-06T14:00:00Z"));
 
-    expect(query.statement).toContain("SELECT unix_millis(min(latest))");
+    expect(query.statement).toContain(
+      "SELECT kinesis_shard_id, unix_millis(max(kinesis_arrival_time))",
+    );
     expect(query.statement).toContain("GROUP BY kinesis_shard_id");
     expect(query.parameters).toEqual([
       { name: "since", value: "2026-10-06", type: "DATE" },
@@ -614,6 +618,7 @@ describe("runReplay", () => {
           records.map((record) => ({ sequenceNumber: `seq-${record.partitionKey}`, error: null })),
         );
       }),
+      shardsInRetention: () => Promise.resolve([shard]),
     };
 
     const manifest = await runReplay(
@@ -627,6 +632,55 @@ describe("runReplay", () => {
 
     expect(writer.put).toHaveBeenCalledTimes(1);
     expect(manifest.counts).toEqual(expect.objectContaining({ sent: 250, "not sent": 350 }));
+    expect(manifest.stopped).toContain("stopped by the operator");
+    expect(isComplete(manifest)).toBe(false);
+  });
+
+  it("sends no further batch when the operator stops it during the pause between batches", async () => {
+    const stop = new AbortController();
+    const writer = stream();
+    const wait = vi.fn(() => {
+      stop.abort();
+      return Promise.resolve();
+    });
+
+    const manifest = await runReplay(
+      args({ apply: true }),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(600))]),
+        stream: writer,
+        wait,
+        stop: stop.signal,
+      }),
+    );
+
+    expect(wait).toHaveBeenCalledExactlyOnceWith(1000);
+    expect(writer.put).toHaveBeenCalledTimes(1);
+    expect(manifest.counts).toEqual(expect.objectContaining({ sent: 250, "not sent": 350 }));
+    expect(manifest.stopped).toContain("stopped by the operator");
+  });
+
+  it("retries no refused record once the operator stops it while it waits to retry", async () => {
+    const stop = new AbortController();
+    const writer = stream(() => true);
+    const wait = vi.fn(() => {
+      stop.abort();
+      return Promise.resolve();
+    });
+
+    const manifest = await runReplay(
+      args({ apply: true }),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", [missing])]),
+        stream: writer,
+        wait,
+        stop: stop.signal,
+      }),
+    );
+
+    expect(wait.mock.calls[0]).toEqual([4000]);
+    expect(writer.put).toHaveBeenCalledTimes(1);
+    expect(manifest.counts).toEqual(expect.objectContaining({ refused: 1, "not sent": 0 }));
     expect(manifest.stopped).toContain("stopped by the operator");
     expect(isComplete(manifest)).toBe(false);
   });
@@ -726,6 +780,7 @@ describe("runReplay", () => {
           records.map((record) => ({ sequenceNumber: `seq-${record.partitionKey}`, error: null })),
         );
       }),
+      shardsInRetention: () => Promise.resolve([shard]),
     };
 
     const manifest = await runReplay(
@@ -833,7 +888,7 @@ describe("runReplay", () => {
     const now = new Date("2026-10-07T14:00:00Z");
     const window = (apply: boolean) => args({ apply });
     const reader = () => archive([object("raw-iot/2026/10/07/a.gz", [missing])]);
-    const readTo = (time: string) => warehouse({ readUpTo: String(Date.parse(time)) });
+    const readTo = (time: string) => warehouse({ shards: { [shard]: String(Date.parse(time)) } });
 
     it("refuses to send until bronze has read past the newest object read", async () => {
       const behind = readTo("2026-10-07T12:15:00Z");
@@ -843,7 +898,7 @@ describe("runReplay", () => {
       ).rejects.toThrow("may still hold messages of the objects read");
       await expect(
         runReplay(window(true), deps({ archive: reader(), warehouse: warehouse(), now })),
-      ).rejects.toThrow("Bronze has read the stream up to nothing");
+      ).rejects.toThrow(`Bronze has no row since the stream's retention began from ${shard}`);
 
       const dryRun = await runReplay(
         window(false),
@@ -868,6 +923,41 @@ describe("runReplay", () => {
 
       expect(manifest.streamMayHold).toBe(false);
       expect(writer.sent).toHaveLength(1);
+    });
+
+    it("holds the replay back on a shard bronze has not read or lags on, however far it read the others", async () => {
+      const second = "shardId-000000000001";
+      const writer = {
+        ...stream(),
+        shardsInRetention: vi.fn(() => Promise.resolve([shard, second])),
+      };
+      const caughtUp = String(Date.parse("2026-10-07T12:30:00Z"));
+      const unread = warehouse({ shards: { [shard]: caughtUp } });
+      const lagging = warehouse({
+        shards: { [shard]: caughtUp, [second]: String(Date.parse("2026-10-07T12:15:00Z")) },
+      });
+
+      await expect(
+        runReplay(
+          window(true),
+          deps({ archive: reader(), warehouse: unread, stream: writer, now }),
+        ),
+      ).rejects.toThrow(`began from ${second}, which it may have stopped reading`);
+      await expect(
+        runReplay(
+          window(true),
+          deps({ archive: reader(), warehouse: lagging, stream: writer, now }),
+        ),
+      ).rejects.toThrow("up to 2026-10-07T12:15:00.000Z on its slowest shard");
+
+      const dryRun = await runReplay(
+        window(false),
+        deps({ archive: reader(), warehouse: unread, stream: writer, now }),
+      );
+      expect(dryRun.shardsNotInBronze).toEqual([second]);
+      expect(dryRun.streamMayHold).toBe(true);
+      expect(dryRun.bronzeReadUpTo).toBeNull();
+      expect(writer.put).not.toHaveBeenCalled();
     });
 
     it("waits for an object Firehose wrote after the window's end, whose messages it sends too", async () => {
