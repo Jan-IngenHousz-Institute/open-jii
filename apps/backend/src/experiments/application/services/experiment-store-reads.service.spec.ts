@@ -411,6 +411,27 @@ describe("ExperimentStoreReadsService", () => {
     ]);
   });
 
+  it("looks the devices up only for an aggregation that names one or keeps every row", async () => {
+    const ids = vi.spyOn(store, "getExperimentIds").mockResolvedValue(success([]));
+    const read = (aggregation: ExperimentQueryParams["aggregation"]) =>
+      reads.buildQuery({ ...page, aggregation });
+
+    await read({
+      groupBy: [{ column: "timestamp", timeBucket: "day" }],
+      functions: [{ column: "latitude", function: "avg" }],
+    });
+    expect(ids).not.toHaveBeenCalled();
+
+    await read({
+      groupBy: [{ column: "device" }],
+      functions: [{ column: "*", function: "count" }],
+    });
+    await read({
+      functions: [{ column: "*", function: "row_number", orderColumn: "timestamp" }],
+    });
+    expect(ids).toHaveBeenCalledTimes(2);
+  });
+
   it("fills a matched table's device, and leaves it null where no row matched", async () => {
     const owner = await testApp.createTestUser({});
     await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-1", thingName: "thing-1" });

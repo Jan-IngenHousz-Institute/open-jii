@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
 
+import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { hasAggregationContent } from "../../../common/modules/databricks/services/query-builder/expressions/aggregation";
@@ -99,13 +100,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   async buildQuery(params: ExperimentQueryParams): Promise<Result<TableQuery>> {
-    const columnsResult = this.store.getExperimentTableColumns(params.tableType, params.tableName);
+    const columnsResult = this.idColumnsOf(params);
     if (columnsResult.isFailure()) {
       return columnsResult;
     }
-    const idColumns: IdColumns = new Map(
-      columnsResult.value.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
-    );
+    const idColumns = columnsResult.value;
 
     const devicesResult = this.readsLabels(params, idColumns)
       ? await this.devicesOf(params.experimentId)
@@ -236,6 +235,36 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return registered.map(({ clientId }) => clientId);
   }
 
+  /** The read's contributor and device columns, a second table's under the names it joins as. */
+  private idColumnsOf({ tableType, tableName, join }: ExperimentQueryParams): Result<IdColumns> {
+    const columns = this.store.getExperimentTableColumns(tableType, tableName);
+    if (columns.isFailure()) {
+      return columns;
+    }
+    const idColumns: IdColumns = new Map(
+      columns.value.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
+    );
+    if (join === undefined) {
+      return success(idColumns);
+    }
+
+    const secondary = this.store.getExperimentTableColumns(
+      join.secondary.tableType,
+      join.secondary.tableName,
+    );
+    if (secondary.isFailure()) {
+      return secondary;
+    }
+    const secondaryIds = new Map(secondary.value.map(({ name, idOf }) => [name, idOf]));
+    for (const { name, alias } of join.secondaryColumns) {
+      const idOf = secondaryIds.get(name);
+      if (idOf !== undefined) {
+        idColumns.set(alias, idOf);
+      }
+    }
+    return success(idColumns);
+  }
+
   /**
    * Whether the read filters, sorts or lists by a device's label, which needs its serial, or
    * aggregates over devices, which the warehouse tells apart by their registry rows.
@@ -250,9 +279,37 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       const [name, field] = this.structPath(column);
       return idColumns.get(name) === "device" && field === "serial_number";
     });
+    return (
+      namesLabel ||
+      this.aggregatesDevices(params, idColumns) ||
+      this.sortsWholeDevice(params, idColumns)
+    );
+  }
+
+  /** An aggregation that names a device column, or keeps every row and so every row's device. */
+  private aggregatesDevices({ aggregation }: ExperimentQueryParams, idColumns: IdColumns): boolean {
+    if (aggregation === undefined || !hasAggregationContent(aggregation)) {
+      return false;
+    }
+    const groups = aggregation.groupBy ?? [];
+    const functions = aggregation.functions ?? [];
+    const keepsRows =
+      groups.length === 0 &&
+      functions.every(({ function: fn }) => fn === "cumsum" || aggregateKind(fn) === "rowWindow");
+    const named = [
+      ...groups.map(({ column }) => column),
+      ...functions.flatMap((item) => [
+        item.column,
+        item.secondColumn,
+        item.partitionColumn,
+        item.orderColumn,
+      ]),
+    ];
+    const namesDevice = named.some(
+      (name) => name !== undefined && idColumns.get(this.structPath(name)[0]) === "device",
+    );
     const hasDevices = [...idColumns.values()].includes("device");
-    const aggregatesDevices = hasDevices && hasAggregationContent(params.aggregation);
-    return namesLabel || aggregatesDevices || this.sortsWholeDevice(params, idColumns);
+    return hasDevices && (keepsRows || namesDevice);
   }
 
   /**

@@ -158,8 +158,9 @@ describe("row-window repository inputs", () => {
       assertSuccess(
         await read({ column: "value", function: "change_from_previous", orderColumn: "value" }),
       );
+      // The count statement is built only for a read that was cut.
       const items = build.mock.calls.flatMap(([query]) => query.aggregation?.functions ?? []);
-      expect(items).toHaveLength(2);
+      expect(items).toHaveLength(1);
       expect(items[0]).toMatchObject({ valueType: type, tieBreaker: "id" });
     },
   );

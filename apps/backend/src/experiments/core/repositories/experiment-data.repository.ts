@@ -240,6 +240,7 @@ export class ExperimentDataRepository {
       const joined = await this.joinedShape(experimentId, tableName, shape, join);
       if (joined.isFailure()) return joined;
       shape = joined.value;
+      read.source = shape.source;
     }
     if (flagged !== undefined) {
       const flaggedRows = await this.storeReads.flaggedRows(
@@ -280,20 +281,17 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      const countSubqueryResult = await this.buildQuery(experimentId, shape, {
-        filters: effectiveFilters,
-        aggregation,
-        plotsValues: true,
-      });
-      if (countSubqueryResult.isFailure()) {
-        return countSubqueryResult;
-      }
       return this.getFullTableData({
         tableName,
         experiment,
         shape,
         query: queryResult.value,
-        countQuery: this.reads(shape).countQuery(countSubqueryResult.value),
+        countQuery: () =>
+          this.countQuery(experimentId, shape, {
+            filters: effectiveFilters,
+            aggregation,
+            plotsValues: true,
+          }),
         ceiling,
         read,
       });
@@ -366,20 +364,17 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      const countSubqueryResult = await this.buildQuery(experimentId, shape, {
-        columns,
-        filters: effectiveFilters,
-        plotsValues: true,
-      });
-      if (countSubqueryResult.isFailure()) {
-        return countSubqueryResult;
-      }
       return this.getFullTableData({
         tableName,
         experiment,
         shape,
         query: queryResult.value,
-        countQuery: this.reads(shape).countQuery(countSubqueryResult.value),
+        countQuery: () =>
+          this.countQuery(experimentId, shape, {
+            columns,
+            filters: effectiveFilters,
+            plotsValues: true,
+          }),
         ceiling,
         read,
       });
@@ -1116,14 +1111,14 @@ export class ExperimentDataRepository {
   /**
    * One page of every matching row, up to `ceiling`. The query asks for one row more than the
    * ceiling, so an extra row means the read stopped short, as does a result the warehouse cut at
-   * its byte limit. Only then is the full count read.
+   * its byte limit. Only then is the full count built and read.
    */
   private async getFullTableData(params: {
     tableName: string;
     experiment: ExperimentDto;
     shape: TableShape;
     query: TableQuery;
-    countQuery: TableQuery;
+    countQuery: () => Promise<Result<TableQuery>>;
     ceiling: number;
     read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
@@ -1180,12 +1175,26 @@ export class ExperimentDataRepository {
     return success(this.reads(shape).deviceLabelsQuery(projected.value, limit + 1, offset));
   }
 
+  /** How many rows a read without its page returns. */
+  private async countQuery(
+    experimentId: string,
+    shape: TableShape,
+    options: Pick<ExperimentQueryParams, "columns" | "filters" | "aggregation" | "plotsValues">,
+  ): Promise<Result<TableQuery>> {
+    const subquery = await this.buildQuery(experimentId, shape, options);
+    return subquery.isFailure() ? subquery : success(this.reads(shape).countQuery(subquery.value));
+  }
+
   private async countRows(
     shape: TableShape,
-    countQuery: TableQuery,
+    countQuery: () => Promise<Result<TableQuery>>,
     read: ReadTrace,
   ): Promise<Result<number>> {
-    const [countResult, countMs] = await this.measure(() => this.executeQuery(shape, countQuery));
+    const query = await countQuery();
+    if (query.isFailure()) {
+      return query;
+    }
+    const [countResult, countMs] = await this.measure(() => this.executeQuery(shape, query.value));
     read.countMs = countMs;
     if (countResult.isFailure()) {
       return countResult;
