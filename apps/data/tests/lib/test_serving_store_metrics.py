@@ -11,8 +11,9 @@ fixture leaves out what the tolerances below cover, which real data has:
 - Volume is the bytes of each payload's JSON as the store holds it, which Spark writes out from
   gold's parsed payload: compact, keys in order, numbers reprinted. That is about the raw size and
   rarely equal to it; the fixture's payloads are written that way already. A payload that is not
-  JSON counts no bytes, and one with NaN or Infinity in it, which gold reads as null there, gives a
-  reading where the pipeline's parse of the raw text may give none.
+  JSON counts no bytes.
+- A NaN or Infinity reading, which gold holds as null, is no observation in the store; the pipeline
+  counts it, and sorts NaN above every number.
 - Medians are exact, of the lower middle value. Spark's percentile_approx picks that value up to
   10,000 values; beyond them it may pick one up to a 10,000th of the count away.
 - A zone the store does not know, such as PST or +02:00, gives its rows no local hour.
@@ -35,6 +36,11 @@ from pathlib import Path
 
 import pytest
 import requests
+from openjii.metrics.constants import (
+    DERIVED_PARAMETER_ALLOWLIST,
+    PARAMETER_LABELS,
+    SENSOR_PARAMETER_ALLOWLIST,
+)
 from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS
 from openjii.serving_store.writer import StoreWriter
 from pyspark.sql import DataFrame, SparkSession
@@ -49,6 +55,7 @@ _SCHEMA = "spark_catalog.metrics_store_parity"
 
 _NOTEBOOKS = Path(__file__).parents[2] / "src/pipelines/metrics"
 _MAIN_TF = Path(__file__).parents[4] / "infrastructure/modules/serving-store/main.tf"
+_MIGRATIONS = Path(__file__).parents[4] / "packages/database/clickhouse/migrations"
 
 # Silver's measurements and gold's macro results, uploaded rows and device registry, each written
 # once, so the pipeline and the feed read the very same times.
@@ -280,14 +287,27 @@ def _sorted(rows: list[dict], *key: str) -> list[dict]:
 
 
 def test_the_metrics_user_is_granted_every_view_the_migrations_make() -> None:
-    migrations = Path(__file__).parents[4] / "packages/database/clickhouse/migrations"
     made = {
         name
-        for migration in migrations.glob("*.sql")
+        for migration in _MIGRATIONS.glob("*.sql")
         for name in re.findall(r"CREATE MATERIALIZED VIEW IF NOT EXISTS (metrics_\w+)", migration.read_text())
     }
 
     assert sorted(_granted_views()) == sorted(made)
+
+
+def test_every_vetted_parameter_is_counted_under_its_label_from_its_own_field() -> None:
+    migration = (_MIGRATIONS / "0011_platform_metrics.sql").read_text()
+
+    counted = {
+        name: (label, source)
+        for name, label, source in re.findall(r"\('(\w+)', '([^']+)', ([\w.]+)\)", migration)
+    }
+
+    assert counted == {
+        **{name: (PARAMETER_LABELS[name], f"macro_output.{name}") for name in DERIVED_PARAMETER_ALLOWLIST},
+        **{name: (PARAMETER_LABELS[name], f"{name}_readings") for name in SENSOR_PARAMETER_ALLOWLIST},
+    }
 
 
 def test_the_metrics_user_reads_no_rows(store: _Store) -> None:
