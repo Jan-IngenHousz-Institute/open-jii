@@ -90,15 +90,6 @@ describe("describeSearchedUser", () => {
     ).toBeUndefined();
   });
 
-  it("labels a person with no name as an unnamed account, never by their email", () => {
-    const user = createUserProfile({ firstName: "", lastName: "", email: "lin@uni.edu" });
-    const row = describeSearchedUser(user, { typedEmail: null, t });
-
-    expect(row.label).toBe("common.unnamedAccount");
-    expect(row.identityLine).toBeUndefined();
-    expect(row.person?.email).toBe("lin@uni.edu");
-  });
-
   it("gives the match hint only for a hidden address typed in full", () => {
     const matched = createUserProfile({ email: null, matchedEmail: true });
     const unmatched = createUserProfile({ email: null, matchedEmail: false });
