@@ -7,7 +7,10 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 - gold removed rows, as when an experiment is deleted or a repair drops rows;
 - the feed missed rows: while it was off for longer than its start versions reach, after a
   checkpoint reset, after a gold refresh that changed a key column (`store-feed-stalled`), or for
-  refused rows once the feed's code can send them (`store-feed-rejects`).
+  refused rows once the feed's code can send them (`store-feed-rejects`);
+- a store migration adds a column the feed fills, such as 0009's payload texts: rows written
+  before it carry none, and the feed never sends them again (see "After a migration the feed
+  fills").
 
 ## What it does
 
@@ -85,6 +88,23 @@ only when those rows should go, as for an experiment gold has dropped, and only 
 The cluster takes a few minutes to start. Each table's result is one line of the task's output:
 
 `[serving store] Reloaded <table> at gold version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in gold and <n> in the store over <n> experiments, <n> of them written by the feed since`
+
+## After a migration the feed fills
+
+A migration that adds a column the feed fills leaves the column empty on every row the store
+already holds, and on every row the feed writes until its pipelines run the new code. Reads that
+depend on it show those rows wrong without an error: after 0009, a macro or upload row without its
+payload text shows every payload cell empty, while filters and sorts on those fields still run. Go
+in this order, and compare the read paths or widen a store flag only at the end:
+
+1. Apply the store migrations with the backend deploy.
+2. Deploy the data bundle, and update the centrum pipelines so their store sinks run the new code.
+3. Check that the feed has caught up, as "Running it" describes.
+4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`.
+5. Merge them once, as "After a full or large reload" describes.
+
+An environment whose feed is off, as prod's is before its first rollout, needs only its first
+reload of `all`.
 
 ## After a full or large reload
 
