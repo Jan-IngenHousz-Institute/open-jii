@@ -10,8 +10,8 @@ import { ExperimentDataOutboxRepository } from "../../core/repositories/experime
 export const EXPERIMENT_DATA_METRICS_NAMESPACE = "OpenJII/Backend";
 
 /**
- * Publishes how many copies of annotations and metadata sheets are still owed, and how long the
- * oldest has been, so a copy stuck on every retry reaches someone. Only a deployed service
+ * Publishes how many copies of annotations, metadata sheets, contributors and devices are still
+ * owed, and how long the oldest has been, so a copy stuck on every retry reaches someone. Only a deployed service
  * publishes; nothing here throws, so a CloudWatch failure never reaches a copy.
  */
 @Injectable()
