@@ -1,6 +1,7 @@
 "use client";
 
 import { useExperimentLayoutAttributes } from "@/hooks/experiment/useExperimentLayoutAttributes/useExperimentLayoutAttributes";
+import { useExperimentSessionWalkingOrder } from "@/hooks/experiment/useExperimentSessionWalkingOrder/useExperimentSessionWalkingOrder";
 import { useState } from "react";
 
 import type {
@@ -9,6 +10,7 @@ import type {
 } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
 
 import { PlotCategories } from "./plot-state";
+import { FieldPlan } from "./sessions/field-plan";
 
 export interface LayoutColoring {
   hasAttributes: boolean;
@@ -25,19 +27,23 @@ export interface LayoutColoring {
     | undefined;
 }
 
-const DEFAULT_ATTRIBUTE = "Treatment";
-
-/** What Color by offers on the Plots view and what the grid fills each plot with. */
+/**
+ * What Color by offers on the Plots view and what the grid fills each plot with. It starts on the
+ * attribute the walk balances on, and otherwise on the first attribute.
+ */
 export function useLayoutColoring(
   experimentId: string,
   layout: ExperimentLayout | null,
 ): LayoutColoring {
   const { data } = useExperimentLayoutAttributes(experimentId, layout !== null);
+  const { data: walkingOrder } = useExperimentSessionWalkingOrder(experimentId);
   const [chosen, setChosen] = useState<string | null | undefined>(undefined);
 
   const names = data?.names ?? [];
   const hasAttributes = names.length > 0;
-  const fallback = names.includes(DEFAULT_ATTRIBUTE) ? DEFAULT_ATTRIBUTE : (names[0] ?? null);
+  const balanceName = walkingOrder ? FieldPlan.rolesOf(walkingOrder).balanceName : null;
+  const fallback =
+    balanceName !== null && names.includes(balanceName) ? balanceName : (names[0] ?? null);
   const colorBy = chosen === undefined ? fallback : chosen;
 
   const valuesByUnit = new Map((data?.plots ?? []).map((plot) => [plot.unitId, plot.values]));

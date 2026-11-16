@@ -4,20 +4,13 @@ import { DocsHelpLink } from "@/components/docs-help-link";
 import { DiscardChangesDialog } from "@/components/shared/discard-changes-dialog";
 import { useExperimentUpdate } from "@/hooks/experiment/useExperimentUpdate/useExperimentUpdate";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
-import { z } from "zod";
+import { useForm } from "react-hook-form";
 import { parseApiError } from "~/util/apiError";
 
 import type { DataLicense, Experiment } from "@repo/api/domains/experiment/experiment.schema";
-import {
-  validateStudyDates,
-  zDataLicense,
-  zFundingReferenceList,
-} from "@repo/api/domains/experiment/experiment.schema";
-import type { GrowthFacilityType } from "@repo/api/domains/experiment/study/experiment-study.schema";
-import { zGrowthFacilityType } from "@repo/api/domains/experiment/study/experiment-study.schema";
+import { zDataLicense } from "@repo/api/domains/experiment/experiment.schema";
+import type { StudyRecord } from "@repo/api/domains/experiment/study/experiment-study.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -49,48 +42,18 @@ import {
 import { Textarea } from "@repo/ui/components/textarea";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import type { OrganismChoice } from "./organism-select";
-import { OrganismSelect } from "./organism-select";
-
-// Cleared fields hold null, not undefined: react-hook-form treats an undefined
-// onChange value as "revert to the default", which un-clears the field.
-const studyDetailsFormSchema = z
-  .object({
-    startDate: z.string().date().nullable(),
-    endDate: z.string().date().nullable(),
-    organism: z.object({ name: z.string().max(255), taxonId: z.string().nullable() }).nullable(),
-    experimentalDesign: z.string().nullable(),
-    growthFacilityType: zGrowthFacilityType.nullable(),
-    growthFacility: z.string().nullable(),
-    license: zDataLicense.nullable(),
-    fundingReferences: zFundingReferenceList,
-  })
-  .superRefine((val, ctx) => {
-    validateStudyDates(val.startDate, val.endDate, ctx);
-  });
-
-type StudyDetailsFormValues = z.infer<typeof studyDetailsFormSchema>;
+import type { StudyDetailsFormValues } from "./study-details-form-schema";
+import { experimentToFormValues, studyDetailsFormSchema } from "./study-details-form-schema";
+import { StudyFundingFields } from "./study-funding-fields";
+import { StudyRelatedWorkFields } from "./study-related-work-fields";
+import { StudySubjectsField } from "./study-subjects-field";
 
 const LICENSE_NONE = "none";
-const FACILITY_TYPE_NONE = "none";
-
-const toOrganismChoice = (name: string | null): OrganismChoice | null =>
-  name ? { name, taxonId: null } : null;
-
-const experimentToFormValues = (experiment: Experiment): StudyDetailsFormValues => ({
-  startDate: experiment.startDate,
-  endDate: experiment.endDate,
-  organism: toOrganismChoice(experiment.organism),
-  experimentalDesign: experiment.experimentalDesign,
-  growthFacilityType: null,
-  growthFacility: experiment.growthFacility,
-  license: experiment.license,
-  fundingReferences: experiment.fundingReferences ?? [],
-});
 
 interface ExperimentStudyDetailsDialogProps {
   experimentId: string;
   experiment: Experiment;
+  record: StudyRecord | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -98,6 +61,7 @@ interface ExperimentStudyDetailsDialogProps {
 export function ExperimentStudyDetailsDialog({
   experimentId,
   experiment,
+  record,
   open,
   onOpenChange,
 }: ExperimentStudyDetailsDialogProps) {
@@ -107,35 +71,27 @@ export function ExperimentStudyDetailsDialog({
 
   const form = useForm<StudyDetailsFormValues>({
     resolver: zodResolver(studyDetailsFormSchema),
-    defaultValues: experimentToFormValues(experiment),
+    defaultValues: experimentToFormValues(experiment, record),
   });
 
-  const funding = useFieldArray({ control: form.control, name: "fundingReferences" });
-  const hasFunding = funding.fields.length > 0;
   const isDirty = form.formState.isDirty;
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
-      form.reset(experimentToFormValues(experiment));
+      form.reset(experimentToFormValues(experiment, record));
     }
-  }, [open, experiment, form]);
+  }, [open, experiment, record, form]);
 
   const licenseLabels: Record<DataLicense, string> = {
     "CC0-1.0": t("studyDetails.licenseCc0"),
     "CC-BY-4.0": t("studyDetails.licenseCcBy"),
+    "CC-BY-SA-4.0": t("studyDetails.licenseCcBySa"),
   };
 
-  const facilityTypeLabels: Record<GrowthFacilityType, string> = {
-    open_field: tStudy("facility.openField"),
-    greenhouse: tStudy("facility.greenhouse"),
-    growth_chamber: tStudy("facility.growthChamber"),
-    other: tStudy("facility.other"),
-  };
-
-  const renderFacilityType = (type: GrowthFacilityType) => (
-    <SelectItem key={type} value={type}>
-      {facilityTypeLabels[type]}
+  const renderLicense = (license: DataLicense) => (
+    <SelectItem key={license} value={license}>
+      {licenseLabels[license]}
     </SelectItem>
   );
 
@@ -159,62 +115,10 @@ export function ExperimentStudyDetailsDialog({
     onOpenChange(false);
   };
 
-  const handleAddFunding = () => funding.append({ funderName: "", awardNumber: null });
-
-  const renderFundingRow = (row: { id: string }, index: number) => (
-    <div key={row.id} className="flex items-start gap-2">
-      <FormField
-        control={form.control}
-        name={`fundingReferences.${index}.funderName`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormLabel>{tStudy("funding.funder")}</FormLabel>
-            <FormControl>
-              <Input {...field} placeholder={tStudy("funding.funderPlaceholder")} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name={`fundingReferences.${index}.awardNumber`}
-        render={({ field }) => (
-          <FormItem className="flex-1">
-            <FormLabel>{tStudy("funding.awardNumber")}</FormLabel>
-            <FormControl>
-              <Input
-                value={field.value ?? ""}
-                onChange={handleOptionalChange(field.onChange)}
-                placeholder={tStudy("funding.awardNumberPlaceholder")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="mt-[22px] shrink-0"
-        aria-label={tStudy("funding.remove")}
-        onClick={() => funding.remove(index)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-
   const onSubmit = async (values: StudyDetailsFormValues) => {
     // Every field is sent; an emptied field is null so the stored value clears.
-    const { organism, growthFacilityType: _growthFacilityType, ...rest } = values;
     await updateExperiment(
-      {
-        id: experimentId,
-        ...rest,
-        organism: organism?.name ?? null,
-      },
+      { id: experimentId, ...values },
       {
         onSuccess: () => {
           toast({ description: t("experiments.experimentUpdated") });
@@ -283,24 +187,7 @@ export function ExperimentStudyDetailsDialog({
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="organism"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("studyDetails.organism")}</FormLabel>
-                      <FormControl>
-                        <OrganismSelect
-                          value={field.value}
-                          onSelect={field.onChange}
-                          onClear={() => field.onChange(null)}
-                        />
-                      </FormControl>
-                      <FormDescription>{tStudy("organism.help")}</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <StudySubjectsField form={form} />
 
                 <FormField
                   control={form.control}
@@ -312,65 +199,16 @@ export function ExperimentStudyDetailsDialog({
                         <Textarea
                           value={field.value ?? ""}
                           onChange={handleOptionalChange(field.onChange)}
-                          placeholder={t("studyDetails.experimentalDesignPlaceholder")}
+                          placeholder={tStudy("design.placeholder")}
                         />
                       </FormControl>
-                      <FormDescription>{t("studyDetails.experimentalDesignHelp")}</FormDescription>
+                      <FormDescription>{tStudy("design.help")}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <div className="space-y-2">
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                    <FormField
-                      control={form.control}
-                      name="growthFacilityType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("studyDetails.growthFacility")}</FormLabel>
-                          <Select
-                            value={field.value ?? FACILITY_TYPE_NONE}
-                            onValueChange={(value) =>
-                              field.onChange(value === FACILITY_TYPE_NONE ? null : value)
-                            }
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={FACILITY_TYPE_NONE}>
-                                {tStudy("facility.none")}
-                              </SelectItem>
-                              {zGrowthFacilityType.options.map(renderFacilityType)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="growthFacility"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{tStudy("facility.description")}</FormLabel>
-                          <FormControl>
-                            <Input
-                              value={field.value ?? ""}
-                              onChange={handleOptionalChange(field.onChange)}
-                              placeholder={tStudy("facility.descriptionPlaceholder")}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <p className="text-muted-foreground text-sm">{tStudy("facility.help")}</p>
-                </div>
+                <StudyRelatedWorkFields form={form} />
 
                 <FormField
                   control={form.control}
@@ -393,11 +231,7 @@ export function ExperimentStudyDetailsDialog({
                           <SelectItem value={LICENSE_NONE}>
                             {t("studyDetails.licenseNone")}
                           </SelectItem>
-                          {zDataLicense.options.map((license) => (
-                            <SelectItem key={license} value={license}>
-                              {licenseLabels[license]}
-                            </SelectItem>
-                          ))}
+                          {zDataLicense.options.map(renderLicense)}
                         </SelectContent>
                       </Select>
                       <FormDescription>{t("studyDetails.licenseHelp")}</FormDescription>
@@ -406,24 +240,7 @@ export function ExperimentStudyDetailsDialog({
                   )}
                 />
 
-                <section
-                  aria-labelledby="study-details-funding"
-                  className="space-y-3 border-t pt-4"
-                >
-                  <h3 id="study-details-funding" className="text-sm font-semibold">
-                    {tStudy("funding.title")}
-                  </h3>
-                  <p className="text-muted-foreground text-sm">{tStudy("funding.help")}</p>
-                  {hasFunding ? (
-                    funding.fields.map(renderFundingRow)
-                  ) : (
-                    <p className="text-muted-foreground text-sm">{tStudy("funding.empty")}</p>
-                  )}
-                  <Button type="button" variant="outline" size="sm" onClick={handleAddFunding}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    {hasFunding ? tStudy("funding.addAnother") : tStudy("funding.add")}
-                  </Button>
-                </section>
+                <StudyFundingFields form={form} />
               </DialogBody>
 
               <DialogFooter>

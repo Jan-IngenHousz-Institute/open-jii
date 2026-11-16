@@ -8,8 +8,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { parseApiError } from "~/util/apiError";
 
-import type { ColumnDescription } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
-import { zColumnDescription } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
+import type {
+  ColumnDescription,
+  ColumnProcessingLevel,
+  ColumnProducer,
+  ColumnValueKind,
+  DescribeColumnBody,
+} from "@repo/api/domains/experiment/columns/experiment-columns.schema";
+import { zDescribeColumnBody } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
+import { isNumericType } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Form } from "@repo/ui/components/form";
 import {
@@ -27,16 +34,36 @@ import type { SuggestedDescription } from "./column-suggestion-banner";
 import type { DictionaryEntry, DictionaryFilter, DictionaryView } from "./dictionary-view";
 import { useProducerText } from "./use-producer-text";
 
-const EMPTY_DESCRIPTION: ColumnDescription = {
-  trait: "",
-  traitTerm: null,
-  noTermFits: false,
-  method: null,
-  methodTerm: null,
-  scale: null,
-  scaleTerm: null,
-  unit: null,
+const STARTING_PROCESSING_LEVELS: Partial<Record<ColumnProducer["kind"], ColumnProcessingLevel>> = {
+  instrument: "measured",
+  upload: "measured",
+  macro: "computed",
 };
+
+function startingValueKind(type: string): ColumnValueKind | null {
+  if (isNumericType(type)) {
+    return "number";
+  }
+  return type === "STRING" ? "text" : null;
+}
+
+/** What an undescribed column starts from: its method, kind of value and processing level. */
+function startingDescription(entry: DictionaryEntry, method: string | null): ColumnDescription {
+  return {
+    definition: "",
+    property: "",
+    propertyTerm: null,
+    noTermFits: false,
+    objectOfInterest: null,
+    objectOfInterestTerm: null,
+    context: null,
+    contextTerm: null,
+    method,
+    unit: null,
+    valueKind: startingValueKind(entry.column.type),
+    processingLevel: STARTING_PROCESSING_LEVELS[entry.producer.kind] ?? null,
+  };
+}
 
 interface ColumnDescribeDrawerProps {
   experimentId: string;
@@ -48,7 +75,7 @@ interface ColumnDescribeDrawerProps {
   onClose: () => void;
 }
 
-/** Records what one column measures: a trait, a method, a scale and a unit. */
+/** Records what one column measures: its definition, the property and what it is a property of. */
 export function ColumnDescribeDrawer({
   experimentId,
   view,
@@ -64,9 +91,18 @@ export function ColumnDescribeDrawer({
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [appliedIdentity, setAppliedIdentity] = useState<string | null>(null);
 
-  const form = useForm<ColumnDescription>({
-    resolver: zodResolver(zColumnDescription),
-    values: selected?.column.description ?? EMPTY_DESCRIPTION,
+  // react-hook-form resets only when `values` differs from the last `values` it was given, so the
+  // identity keeps two undescribed columns from sharing one form.
+  const values: DescribeColumnBody | undefined = selected
+    ? {
+        column: selected.column.identity,
+        ...(selected.column.description ??
+          startingDescription(selected, producerText(selected.producer).method)),
+      }
+    : undefined;
+  const form = useForm<DescribeColumnBody>({
+    resolver: zodResolver(zDescribeColumnBody),
+    values,
   });
   const isDirty = form.formState.isDirty;
 
@@ -99,21 +135,20 @@ export function ColumnDescribeDrawer({
     return null;
   };
 
-  const save =
-    (entry: DictionaryEntry, afterSave: () => void) => async (values: ColumnDescription) => {
-      await describeColumn(
-        { id: experimentId, column: entry.column.identity, ...values },
-        {
-          onSuccess: () => {
-            toast({ description: t("describe.saved") });
-            afterSave();
-          },
-          onError: (err) => {
-            toast({ description: parseApiError(err)?.message, variant: "destructive" });
-          },
+  const save = (afterSave: () => void) => async (body: DescribeColumnBody) => {
+    await describeColumn(
+      { id: experimentId, ...body },
+      {
+        onSuccess: () => {
+          toast({ description: t("describe.saved") });
+          afterSave();
         },
-      );
-    };
+        onError: (err) => {
+          toast({ description: parseApiError(err)?.message, variant: "destructive" });
+        },
+      },
+    );
+  };
 
   const handleOpenChange = (open: boolean) => {
     if (open) {
@@ -137,17 +172,18 @@ export function ColumnDescribeDrawer({
   };
 
   const handleUseSuggestion = (entry: DictionaryEntry) => (suggestion: SuggestedDescription) => {
-    form.reset({ ...EMPTY_DESCRIPTION, ...suggestion.description }, { keepDefaultValues: true });
+    form.reset(
+      { column: entry.column.identity, ...suggestion.description },
+      { keepDefaultValues: true },
+    );
     setAppliedIdentity(entry.column.identity);
   };
 
   const renderPanel = (entry: DictionaryEntry) => {
     const suggestion = suggestionFor(entry);
     const next = view.nextToDo(entry, filter);
-    const handleSave = form.handleSubmit(save(entry, onClose));
-    const handleSaveAndNext = form.handleSubmit(
-      save(entry, () => (next ? onSelect(next) : onClose())),
-    );
+    const handleSave = form.handleSubmit(save(onClose));
+    const handleSaveAndNext = form.handleSubmit(save(() => (next ? onSelect(next) : onClose())));
 
     return (
       <>

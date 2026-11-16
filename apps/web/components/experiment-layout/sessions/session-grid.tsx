@@ -11,7 +11,10 @@ import { rowLetter } from "../row-letter";
 interface SessionGridProps {
   layout: ExperimentLayout;
   renderCell: (unit: ExperimentUnit | undefined, row: number, column: number) => ReactNode;
-  /** Drawn over the cells in grid units, one unit per cell, so a point at (2.5, 0.5) is a center. */
+  /**
+   * Drawn over the cells in grid units, one unit per cell, so a point at (2.5, 0.5) is a center.
+   * It sits under text a cell raises with a higher z-index.
+   */
   overlay?: ReactNode;
   isCompact?: boolean;
   onPointerUp?: () => void;
@@ -67,6 +70,7 @@ export function SessionGrid({
     <div
       className={cn("grid gap-x-1.5", isCompact ? "gap-y-1" : "gap-y-1.5")}
       style={{ gridTemplateColumns: "1.5rem 1fr" }}
+      data-session-grid
     >
       <div />
       <div className="grid" style={{ gridTemplateColumns: columnTemplate }}>
@@ -84,7 +88,7 @@ export function SessionGrid({
         {rowNumbers.map(renderRow)}
         {overlay ? (
           <svg
-            className="pointer-events-none absolute inset-0 h-full w-full"
+            className="z-1 pointer-events-none absolute inset-0 h-full w-full"
             viewBox={`0 0 ${layout.columns} ${layout.rows}`}
             preserveAspectRatio="none"
             aria-hidden

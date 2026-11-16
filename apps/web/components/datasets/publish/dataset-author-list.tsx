@@ -22,10 +22,16 @@ import type { DatasetAuthor } from "@repo/api/domains/dataset/dataset.schema";
 
 import { DatasetAuthorRow } from "./dataset-author-row";
 import type { PublishDatasetForm } from "./dataset-publish-schema";
+import type { PersonRole } from "./use-dataset-people";
+
+interface DatasetAuthorListProps {
+  form: UseFormReturn<PublishDatasetForm>;
+  onRoleChange: (key: string, role: PersonRole) => void;
+}
 
 /** The order here is the order the dataset is cited in, so it is set by hand, never by role. */
-export function DatasetAuthorList({ form }: { form: UseFormReturn<PublishDatasetForm> }) {
-  const { fields, move, remove } = useFieldArray({ control: form.control, name: "authors" });
+export function DatasetAuthorList({ form, onRoleChange }: DatasetAuthorListProps) {
+  const { fields, move } = useFieldArray({ control: form.control, name: "authors" });
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -47,7 +53,7 @@ export function DatasetAuthorList({ form }: { form: UseFormReturn<PublishDataset
       id={field.id}
       position={position}
       author={field}
-      onRemove={remove}
+      onRoleChange={onRoleChange}
     />
   );
 

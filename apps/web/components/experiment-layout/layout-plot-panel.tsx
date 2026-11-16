@@ -17,7 +17,10 @@ import {
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { LayoutAttributeRoles } from "./layout-attribute-roles";
+import { LayoutMeasurerVisibility } from "./layout-measurer-visibility";
 import { LayoutPlotAttribute } from "./layout-plot-attribute";
+import { PlotAttributeHistory } from "./plot-attribute-history";
 import { rowLetter } from "./row-letter";
 
 interface LayoutPlotPanelProps {
@@ -71,8 +74,16 @@ export function LayoutPlotPanel({ experimentId, plotId, canEdit, onClose }: Layo
   const hasAttributes = plot.attributes.length > 0;
   const isUnplaced = position === null;
 
+  // The en-CA locale writes a local calendar date as YYYY-MM-DD.
+  const today = new Date().toLocaleDateString("en-CA");
+
   const renderAttribute = (attribute: PlotAttribute) => (
-    <LayoutPlotAttribute key={attribute.name} attribute={attribute} canEdit={canEdit} />
+    <LayoutPlotAttribute
+      key={attribute.name}
+      history={new PlotAttributeHistory(attribute, today)}
+      plotName={unit.identifier}
+      canEdit={canEdit}
+    />
   );
 
   return (
@@ -128,6 +139,9 @@ export function LayoutPlotPanel({ experimentId, plotId, canEdit, onClose }: Layo
             <dl className="space-y-4">{plot.attributes.map(renderAttribute)}</dl>
           </div>
         ) : null}
+
+        <LayoutMeasurerVisibility experimentId={experimentId} canEdit={canEdit} />
+        <LayoutAttributeRoles experimentId={experimentId} canEdit={canEdit} />
       </CardContent>
     </Card>
   );

@@ -38,11 +38,11 @@ export function ColumnSuggestionBanner({
   const withTerm = (text: string | null, term: ColumnTerm | null) =>
     text && term ? `${text} (${term.id})` : text;
 
-  const traitText = () => {
-    const isNoTermFits = description.noTermFits && description.traitTerm === null;
+  const propertyText = () => {
+    const isNoTermFits = description.noTermFits && description.propertyTerm === null;
     return isNoTermFits
-      ? `${description.trait} (${t("suggestion.noneFits")})`
-      : withTerm(description.trait, description.traitTerm);
+      ? `${description.property} (${t("suggestion.noneFits")})`
+      : withTerm(description.property, description.propertyTerm);
   };
 
   const matchLine = () => {
@@ -78,9 +78,12 @@ export function ColumnSuggestionBanner({
       <AlertTitle>{t(titleKey)}</AlertTitle>
       <AlertDescription className="gap-3">
         <div className="space-y-0.5">
-          {renderLine(t("describe.trait"), traitText())}
-          {renderLine(t("describe.method"), withTerm(description.method, description.methodTerm))}
-          {renderLine(t("describe.scale"), withTerm(description.scale, description.scaleTerm))}
+          {renderLine(t("describe.definition"), description.definition)}
+          {renderLine(t("describe.property"), propertyText())}
+          {renderLine(
+            t("describe.objectOfInterest"),
+            withTerm(description.objectOfInterest, description.objectOfInterestTerm),
+          )}
           {renderLine(t("describe.unit"), description.unit)}
         </div>
         <p className="text-xs">{matchLine()}</p>

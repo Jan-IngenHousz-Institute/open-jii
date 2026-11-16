@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, UserPlus, UserRound } from "lucide-react";
+import { Building2, Mail, Plus } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 
-/** Authors come from the experiment's members, or by name for someone without an account. */
-export function AddAuthorMenu({ onAddByName }: { onAddByName: () => void }) {
+/** People beyond the experiment come from its organization, or by email for someone without an account. */
+export function AddPersonMenu({ onAddByEmail }: { onAddByEmail: () => void }) {
   const { t } = useTranslation("datasets");
 
   return (
@@ -20,17 +20,17 @@ export function AddAuthorMenu({ onAddByName }: { onAddByName: () => void }) {
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" size="sm">
           <Plus className="size-4" />
-          {t("describe.addAuthor")}
+          {t("describe.addPerson")}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent align="end">
         <DropdownMenuItem>
-          <UserRound className="mr-2 size-4" />
-          {t("describe.addMember")}
+          <Building2 className="mr-2 size-4" />
+          {t("describe.addFromOrganization")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onAddByName}>
-          <UserPlus className="mr-2 size-4" />
-          {t("describe.addByName")}
+        <DropdownMenuItem onSelect={onAddByEmail}>
+          <Mail className="mr-2 size-4" />
+          {t("describe.addByEmail")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

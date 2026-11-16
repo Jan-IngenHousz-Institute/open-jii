@@ -1,7 +1,7 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { Archive, Globe, Lock, Snowflake } from "lucide-react";
+import { Archive, Lock, ShieldCheck, Snowflake } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
@@ -15,7 +15,7 @@ export function FreezeCommitsCard() {
   const { t } = useTranslation("datasets");
 
   const commitments: Commitment[] = [
-    { icon: Globe, text: t("freeze.commits.public") },
+    { icon: ShieldCheck, text: t("freeze.commits.review") },
     { icon: Snowflake, text: t("freeze.commits.frozen") },
     { icon: Lock, text: t("freeze.commits.final") },
     { icon: Archive, text: t("freeze.commits.experiment") },

@@ -1,44 +1,83 @@
-import { FileSpreadsheet, PencilLine } from "lucide-react";
+"use client";
 
-import type { PlotAttribute } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
+import { useState } from "react";
+
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
+import { LayoutAttributeChangeDialog } from "./layout-attribute-change-dialog";
+import { LayoutAttributeVersion } from "./layout-attribute-version";
+import type { HistoryEntry, PlotAttributeHistory } from "./plot-attribute-history";
+
 interface LayoutPlotAttributeProps {
-  attribute: PlotAttribute;
-  /** Offers Edit value, which opens the sheet the value came from. */
+  history: PlotAttributeHistory;
+  plotName: string;
+  /** Offers Edit, which asks whether a change is planned from a date or corrects a mistake. */
   canEdit: boolean;
 }
 
-export function LayoutPlotAttribute({ attribute, canEdit }: LayoutPlotAttributeProps) {
+/** One attribute in the plot panel: the value in force today, its source, and its history beneath. */
+export function LayoutPlotAttribute({ history, plotName, canEdit }: LayoutPlotAttributeProps) {
   const { t } = useTranslation("experiments");
-  const { source } = attribute;
+  const [isEditing, setIsEditing] = useState(false);
 
-  const isEdited = source.type === "edit";
-  const SourceIcon = isEdited ? PencilLine : FileSpreadsheet;
-  const sourceLabel = isEdited
-    ? t("layout.plot.source.edit", { sheet: source.sheetName })
-    : t("layout.plot.source.sheet", { sheet: source.sheetName });
+  const { current, others } = history;
+  const hasHistory = others.length > 0;
+
+  const openEdit = () => {
+    setIsEditing(true);
+  };
+
+  const closeEdit = () => {
+    setIsEditing(false);
+  };
+
+  const renderEntry = (entry: HistoryEntry, index: number) => (
+    <li key={index}>
+      <LayoutAttributeVersion entry={entry} showsValue />
+    </li>
+  );
 
   return (
-    <div className="flex items-start justify-between gap-2">
-      <div className="min-w-0 space-y-0.5">
-        <dt className="text-muted-foreground text-xs">{attribute.name}</dt>
-        <dd className="text-sm font-medium">{attribute.value}</dd>
-        <dd className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <SourceIcon className="size-3.5 shrink-0" aria-hidden />
-          {sourceLabel}
-        </dd>
+    <div className="space-y-2" data-plot-attribute={history.name}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 space-y-0.5">
+          <dt className="text-muted-foreground text-xs">{history.name}</dt>
+          <dd className="text-sm font-medium">{current?.version.value}</dd>
+          {current ? (
+            <dd>
+              <LayoutAttributeVersion entry={current} showsValue={false} />
+            </dd>
+          ) : null}
+        </div>
+        {canEdit ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground h-7 px-2"
+            aria-label={t("layout.plot.editValue", { name: history.name })}
+            onClick={openEdit}
+          >
+            {t("layout.plot.edit")}
+          </Button>
+        ) : null}
       </div>
-      {canEdit ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground h-7 px-2"
-          aria-label={t("layout.plot.editValue", { name: attribute.name })}
-        >
-          {t("layout.plot.edit")}
-        </Button>
+
+      {hasHistory ? (
+        <dd>
+          <ol className="ml-1.5 space-y-2 border-l pl-3" data-attribute-history>
+            {others.map(renderEntry)}
+          </ol>
+        </dd>
+      ) : null}
+
+      {isEditing ? (
+        <LayoutAttributeChangeDialog
+          plotName={plotName}
+          attributeName={history.name}
+          currentValue={current?.version.value ?? ""}
+          onClose={closeEdit}
+        />
       ) : null}
     </div>
   );

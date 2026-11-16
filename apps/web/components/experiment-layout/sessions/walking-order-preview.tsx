@@ -1,10 +1,12 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { TriangleAlert } from "lucide-react";
 import type { KeyboardEvent } from "react";
 import { useState } from "react";
 
 import type { ExperimentUnit } from "@repo/api/domains/experiment/layout/experiment-layout.schema";
+import type { WalkingStrategy } from "@repo/api/domains/experiment/sessions/experiment-sessions.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Card,
@@ -25,6 +27,8 @@ import { SessionGrid } from "./session-grid";
 import { useGridFocus } from "./use-grid-focus";
 import type { WalkPaint } from "./walk-grid-cell";
 import { WalkGridCell } from "./walk-grid-cell";
+import { WalkPathOverlay } from "./walk-path-overlay";
+import { WalkStretchControl } from "./walk-stretch-control";
 import { WalkStrip } from "./walk-strip";
 
 interface WalkingOrderPreviewProps {
@@ -39,6 +43,10 @@ interface WalkingOrderPreviewProps {
 
 const PAINT_KEYS = new Set([" ", "Enter"]);
 
+// These walks never cross themselves, so the whole walk reads as one line. Any other walk drawn
+// whole is a tangle, so the preview shows a stretch of it instead.
+const WHOLE_WALK_STRATEGIES: readonly (WalkingStrategy | null)[] = ["byRow", "serpentine"];
+
 /** The Walking order view's grid, with the walk and any shares drawn on the plots. */
 export function WalkingOrderPreview({
   plan,
@@ -49,7 +57,9 @@ export function WalkingOrderPreview({
   paint,
 }: WalkingOrderPreviewProps) {
   const { t } = useTranslation("fieldSessions");
-  const [isPathShown, setIsPathShown] = useState(false);
+  const locale = useLocale();
+  const [isPathOn, setIsPathOn] = useState(false);
+  const [stretchFirst, setStretchFirst] = useState(1);
   const focus = useGridFocus(plan.layout.rows, plan.layout.columns);
 
   const balance = plan.balance();
@@ -60,6 +70,17 @@ export function WalkingOrderPreview({
       ? []
       : plan.order.slice(balance.outside.first - 1, balance.outside.last),
   );
+
+  const isPathShown = showsOrder && isPathOn;
+  const isWholeWalk = WHOLE_WALK_STRATEGIES.includes(plan.strategy);
+  const isStretchShown = isPathShown && !isWholeWalk;
+  const stretch = {
+    first: stretchFirst,
+    last: Math.min(stretchFirst + balance.window - 1, plan.order.length),
+  };
+  const stretchOrder = plan.stretchPlots(stretch);
+  const stretchPlots = new Set(stretchOrder);
+  const pathPlots = isStretchShown ? stretchOrder : plan.order;
 
   const description = shares
     ? t("divide.gridDescription", { count: plan.plots.length })
@@ -86,24 +107,11 @@ export function WalkingOrderPreview({
       showsOrder={showsOrder}
       shares={shares}
       isFlagged={unit !== undefined && showsOrder && flagged.has(unit.id)}
+      isFaded={unit !== undefined && isStretchShown && !stretchPlots.has(unit.id)}
+      hasOverlay={isPathShown}
       paint={paint}
       cellRef={focus.register(row, column)}
       onKeyDown={unit === undefined ? undefined : handleKey(unit, row, column)}
-    />
-  );
-
-  const path = (
-    <polyline
-      points={plan
-        .walkPoints()
-        .map(({ x, y }) => `${x},${y}`)
-        .join(" ")}
-      fill="none"
-      className="stroke-foreground/70"
-      strokeWidth={1.5}
-      strokeLinejoin="round"
-      strokeLinecap="round"
-      vectorEffect="non-scaling-stroke"
     />
   );
 
@@ -112,7 +120,7 @@ export function WalkingOrderPreview({
       <Label htmlFor="walk-show-path" className="text-sm font-normal">
         {t("walkingOrder.showPath")}
       </Label>
-      <Switch id="walk-show-path" checked={isPathShown} onCheckedChange={setIsPathShown} />
+      <Switch id="walk-show-path" checked={isPathOn} onCheckedChange={setIsPathOn} />
     </div>
   );
 
@@ -122,7 +130,12 @@ export function WalkingOrderPreview({
       {t("walkingOrder.unbalanced", { first: balance.outside?.first, last: balance.outside?.last })}
     </p>
   ) : (
-    <p className="text-sm">{t("walkingOrder.balance", { window: balance.window })}</p>
+    <p className="text-sm">
+      {t("walkingOrder.balance", {
+        window: balance.window,
+        values: new Intl.ListFormat(locale).format(plan.balanceValues),
+      })}
+    </p>
   );
 
   return (
@@ -136,9 +149,15 @@ export function WalkingOrderPreview({
         <SessionGrid
           layout={plan.layout}
           renderCell={renderCell}
-          overlay={showsOrder && isPathShown ? path : undefined}
+          overlay={
+            isPathShown ? <WalkPathOverlay points={plan.walkPoints(pathPlots)} /> : undefined
+          }
           onPointerUp={paint?.onStrokeEnd}
         />
+
+        {isStretchShown ? (
+          <WalkStretchControl plan={plan} stretch={stretch} onMove={setStretchFirst} />
+        ) : null}
 
         {showsOrder ? (
           <div className="pt-3">
@@ -155,7 +174,7 @@ export function WalkingOrderPreview({
             />
           ) : null}
           <PlotStateLegend
-            categoryName={t("treatment")}
+            categoryName={plan.balanceName ?? undefined}
             categories={plan.categories}
             shares={shares?.legend}
             entries={["gap"]}

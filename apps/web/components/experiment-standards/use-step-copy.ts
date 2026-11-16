@@ -6,7 +6,7 @@ import { useTranslation } from "@repo/i18n";
 
 export interface StepCopy {
   title: string;
-  /** The columns or plots the step acts on, when the title only counts them. */
+  /** The columns, plots or attributes the step acts on, when the title only counts them. */
   subjects: string | null;
   /** Why the step only informs. */
   note: string | null;
@@ -21,25 +21,32 @@ export function useStepCopy(): (reason: StepReason) => StepCopy {
     if (reason.code === "no-location" || reason.code === "no-layout") {
       return { title: t(`step.${reason.code}`), subjects: null, note: null };
     }
+    if (reason.code === "unit-without-type") {
+      return {
+        title: t("step.unit-without-type", { unitName: reason.unitName }),
+        subjects: null,
+        note: null,
+      };
+    }
 
     const count = reason.subjects.length;
     const names = formatList(locale, reason.subjects);
 
-    if (reason.code === "unit-without-greenhouse-term") {
-      return { title: t(`step.${reason.code}`), subjects: names, note: null };
+    if (reason.code === "attributes-without-role") {
+      return { title: t("step.attributes-without-role"), subjects: names, note: null };
     }
-    if (reason.code === "members-without-orcid") {
+    if (reason.code === "members-without-orcid" || reason.code === "members-without-affiliation") {
       return {
-        title: t("step.members-without-orcid", { count, names }),
+        title: t(`step.${reason.code}`, { count, names }),
         subjects: null,
-        note: t("stepNote.members-without-orcid"),
+        note: t(`stepNote.${reason.code}`),
       };
     }
-    if (reason.code === "plots-left-skipped") {
+    if (reason.code === "plots-left-skipped" || reason.code === "columns-without-term") {
       return {
-        title: t("step.plots-left-skipped", { count }),
+        title: t(`step.${reason.code}`, { count }),
         subjects: names,
-        note: t("stepNote.plots-left-skipped"),
+        note: t(`stepNote.${reason.code}`),
       };
     }
 

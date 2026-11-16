@@ -25,20 +25,36 @@ describe("<ExperimentStudyDetailsSection />", () => {
     expect(screen.getByText("studyDetails.empty")).toBeInTheDocument();
   });
 
-  it("renders the stored descriptors", () => {
+  it("renders the stored descriptors", async () => {
+    server.mount(contract.experiments.getStudyRecord, {
+      body: {
+        subjects: [
+          {
+            label: "Arabidopsis thaliana",
+            term: {
+              id: "NCBITaxon:3702",
+              label: "Arabidopsis thaliana",
+              vocabulary: "NCBI Taxonomy",
+            },
+          },
+          { label: "drought stress", term: null },
+        ],
+        relatedWork: [{ identifier: "10.1234/example", relationType: "IsDescribedBy" }],
+      },
+    });
     renderSection({
       experiment: createExperiment({
         startDate: "2026-03-01",
         endDate: "2026-06-30",
-        organism: "Arabidopsis thaliana",
-        growthFacility: "Greenhouse compartment 2",
         license: "CC-BY-4.0",
       }),
     });
 
+    expect(await screen.findByText("Arabidopsis thaliana")).toBeInTheDocument();
     expect(screen.getByText("Mar 1, 2026 → Jun 30, 2026")).toBeInTheDocument();
-    expect(screen.getByText("Arabidopsis thaliana")).toBeInTheDocument();
-    expect(screen.getByText("Greenhouse compartment 2")).toBeInTheDocument();
+    expect(screen.getByText("NCBITaxon:3702")).toBeInTheDocument();
+    expect(screen.getByText("drought stress")).toBeInTheDocument();
+    expect(screen.getByText("10.1234/example")).toBeInTheDocument();
     expect(screen.getByText("studyDetails.licenseCcByShort")).toBeInTheDocument();
   });
 
@@ -69,16 +85,19 @@ describe("<ExperimentStudyDetailsSection />", () => {
   it("saves edited descriptors, clearing emptied ones to null", async () => {
     const user = userEvent.setup();
     const spy = server.mount(contract.experiments.updateExperiment, { status: 200 });
-    server.mount(contract.experiments.searchOrganisms, {
-      body: { organisms: [{ taxonId: "3702", name: "Arabidopsis thaliana" }] },
-    });
+    const arabidopsis = {
+      id: "NCBITaxon:3702",
+      label: "Arabidopsis thaliana",
+      vocabulary: "NCBI Taxonomy",
+    };
+    server.mount(contract.experiments.searchColumnTerms, { body: { terms: [arabidopsis] } });
     const experiment = createExperiment({ organism: "Zea mays" });
 
     renderSection({ experiment, hasAccess: true });
     await user.click(screen.getByText("common.edit"));
 
-    await user.click(screen.getByRole("combobox", { name: "studyDetails.organism" }));
-    await user.type(screen.getByPlaceholderText("organism.searchPlaceholder"), "thale");
+    await user.click(screen.getByRole("button", { name: "subjects.add" }));
+    await user.type(screen.getByPlaceholderText("subjects.searchPlaceholder"), "thale");
     await user.click(await screen.findByRole("option", { name: /Arabidopsis thaliana/ }));
     await user.click(screen.getByText("common.save"));
 
@@ -86,9 +105,12 @@ describe("<ExperimentStudyDetailsSection />", () => {
     expect(spy.calls.at(-1)?.body).toEqual({
       startDate: null,
       endDate: null,
-      organism: "Arabidopsis thaliana",
+      subjects: [
+        { label: "Zea mays", term: null },
+        { label: "Arabidopsis thaliana", term: arabidopsis },
+      ],
       experimentalDesign: null,
-      growthFacility: null,
+      relatedWork: [],
       license: null,
       fundingReferences: [],
     });

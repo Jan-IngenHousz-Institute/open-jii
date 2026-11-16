@@ -9,14 +9,18 @@ import type {
 import { DictionaryView } from "./dictionary-view";
 
 const DESCRIPTION: ColumnDescription = {
-  trait: "Leaf temperature",
-  traitTerm: null,
+  definition: "Surface temperature of the leaf the sensor faces",
+  property: "Temperature",
+  propertyTerm: null,
   noTermFits: true,
+  objectOfInterest: "leaf",
+  objectOfInterestTerm: null,
+  context: null,
+  contextTerm: null,
   method: null,
-  methodTerm: null,
-  scale: null,
-  scaleTerm: null,
-  unit: null,
+  unit: "Cel",
+  valueKind: "number",
+  processingLevel: "measured",
 };
 
 function column(identity: string, overrides: Partial<DictionaryColumn> = {}): DictionaryColumn {

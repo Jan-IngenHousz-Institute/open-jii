@@ -23,18 +23,24 @@ interface WalkGridCellProps {
   showsOrder: boolean;
   shares?: FieldShares;
   isFlagged: boolean;
+  /** Outside the stretch of the walk being shown, so drawn without its fill. */
+  isFaded?: boolean;
+  /** The walk is drawn over the grid, so the plot's text is raised above the line. */
+  hasOverlay?: boolean;
   paint?: WalkPaint;
   cellRef?: Ref<HTMLButtonElement>;
   onKeyDown?: (event: KeyboardEvent<HTMLButtonElement>) => void;
 }
 
-/** One position of the Walking order view's grid: treatment, share, and place in the walk. */
+/** One position of the Walking order view's grid: balance value, share, and place in the walk. */
 export function WalkGridCell({
   unit,
   plan,
   showsOrder,
   shares,
   isFlagged,
+  isFaded = false,
+  hasOverlay = false,
   paint,
   cellRef,
   onKeyDown,
@@ -49,12 +55,20 @@ export function WalkGridCell({
   const isStart = position === 1;
   const isEnd = position !== undefined && position === plan.order.length;
   const tag = isStart ? t("walkingOrder.start") : isEnd ? t("walkingOrder.end") : null;
+  const category = isFaded ? undefined : plan.categories.get(plan.balanceValueOf(unit.id));
 
   const label =
     position === undefined ? undefined : (
       <span className="flex flex-col items-center leading-none">
-        <span className="text-[13px] font-semibold">{position}</span>
-        <span className="text-muted-foreground mt-0.5 text-[10px] font-normal">
+        <span className={cn("text-[13px] font-semibold", isFaded && "text-muted-foreground/80")}>
+          {position}
+        </span>
+        <span
+          className={cn(
+            "mt-0.5 text-[10px] font-normal",
+            isFaded ? "text-muted-foreground/70" : "text-muted-foreground",
+          )}
+        >
           {unit.identifier}
         </span>
       </span>
@@ -70,13 +84,14 @@ export function WalkGridCell({
       <PlotStateCell
         kind="plot"
         identifier={unit.identifier}
-        category={plan.categories.get(plan.treatmentOf(unit.id))}
+        category={category}
         share={shares?.styleOfPlot(unit.id)}
         isSelected={paint?.stroke.includes(unit.id) ?? false}
+        hasOverlay={hasOverlay}
         label={label}
       />
       {tag ? (
-        <span className="bg-foreground text-background absolute left-1 top-1 rounded px-1 text-[9px] font-semibold leading-tight">
+        <span className="bg-foreground text-background z-2 absolute left-1 top-1 rounded px-1 text-[9px] font-semibold leading-tight">
           {tag}
         </span>
       ) : null}

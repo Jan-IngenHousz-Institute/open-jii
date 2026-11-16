@@ -2,7 +2,7 @@
 
 import type { UseFormReturn } from "react-hook-form";
 
-import type { ColumnDescription } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
+import type { DescribeColumnBody } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   FormControl,
@@ -15,12 +15,13 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 
+import { ColumnDescribeMoreDetail } from "./column-describe-more-detail";
 import type { SuggestedDescription } from "./column-suggestion-banner";
 import { ColumnSuggestionBanner } from "./column-suggestion-banner";
 import { ColumnTermField } from "./column-term-field";
 
 interface ColumnDescribeFieldsProps {
-  form: UseFormReturn<ColumnDescription>;
+  form: UseFormReturn<DescribeColumnBody>;
   canDescribe: boolean;
   suggestion: SuggestedDescription | null;
   isSuggestionApplied: boolean;
@@ -43,6 +44,23 @@ export function ColumnDescribeFields({
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       onChange(event.target.value || null);
 
+  // react-hook-form validates on submit, so the unit is checked here as it is typed.
+  const handleUnitChange =
+    (onChange: (value: string | null) => void) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(event.target.value || null);
+      void form.trigger("unit");
+    };
+
+  const requiredLabel = (text: string) => (
+    <FormLabel>
+      {text}
+      <span aria-hidden className="text-destructive ml-1">
+        *
+      </span>
+      <span className="sr-only"> ({t("describe.required")})</span>
+    </FormLabel>
+  );
+
   return (
     <div className="flex-1 space-y-5 overflow-y-auto px-6 py-6">
       <p className="text-muted-foreground text-sm">
@@ -57,80 +75,91 @@ export function ColumnDescribeFields({
         />
       )}
 
+      <FormField
+        control={form.control}
+        name="definition"
+        render={({ field }) => (
+          <FormItem>
+            {requiredLabel(t("describe.definition"))}
+            <FormControl>
+              <Textarea
+                {...field}
+                disabled={isDisabled}
+                placeholder={t("describe.definitionPlaceholder")}
+                className="min-h-16"
+              />
+            </FormControl>
+            <FormDescription>{t("describe.definitionHelp")}</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       <div className="space-y-4">
         <FormField
           control={form.control}
-          name="trait"
+          name="property"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                {t("describe.trait")}
-                <span aria-hidden className="text-destructive ml-1">
-                  *
-                </span>
-                <span className="sr-only"> ({t("describe.required")})</span>
-              </FormLabel>
+              {requiredLabel(t("describe.property"))}
               <FormControl>
                 <Input
                   {...field}
                   disabled={isDisabled}
-                  placeholder={t("describe.traitPlaceholder")}
+                  placeholder={t("describe.propertyPlaceholder")}
                 />
               </FormControl>
-              <FormDescription>{t("describe.traitHelp")}</FormDescription>
+              <FormDescription>{t("describe.propertyHelp")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <ColumnTermField form={form} name="traitTerm" disabled={isDisabled} />
+        <ColumnTermField form={form} name="propertyTerm" disabled={isDisabled} />
       </div>
 
       <div className="space-y-4">
         <FormField
           control={form.control}
-          name="method"
+          name="objectOfInterest"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("describe.method")}</FormLabel>
-              <FormControl>
-                <Textarea
-                  value={field.value ?? ""}
-                  disabled={isDisabled}
-                  onChange={handleOptionalChange(field.onChange)}
-                  placeholder={t("describe.methodPlaceholder")}
-                  className="min-h-16"
-                />
-              </FormControl>
-              <FormDescription>{t("describe.methodHelp")}</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <ColumnTermField form={form} name="methodTerm" disabled={isDisabled} />
-      </div>
-
-      <div className="space-y-4">
-        <FormField
-          control={form.control}
-          name="scale"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("describe.scale")}</FormLabel>
+              <FormLabel>{t("describe.objectOfInterest")}</FormLabel>
               <FormControl>
                 <Input
                   value={field.value ?? ""}
                   disabled={isDisabled}
                   onChange={handleOptionalChange(field.onChange)}
-                  placeholder={t("describe.scalePlaceholder")}
+                  placeholder={t("describe.objectOfInterestPlaceholder")}
                 />
               </FormControl>
-              <FormDescription>{t("describe.scaleHelp")}</FormDescription>
+              <FormDescription>{t("describe.objectOfInterestHelp")}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        <ColumnTermField form={form} name="scaleTerm" disabled={isDisabled} />
+        <ColumnTermField form={form} name="objectOfInterestTerm" disabled={isDisabled} />
       </div>
+
+      <FormField
+        control={form.control}
+        name="method"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("describe.method")}</FormLabel>
+            <FormControl>
+              <Textarea
+                value={field.value ?? ""}
+                disabled={isDisabled}
+                onChange={handleOptionalChange(field.onChange)}
+                placeholder={t("describe.methodPlaceholder")}
+                className="min-h-16"
+              />
+            </FormControl>
+            <FormDescription>{t("describe.methodHelp")}</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
       <FormField
         control={form.control}
@@ -142,8 +171,9 @@ export function ColumnDescribeFields({
               <Input
                 value={field.value ?? ""}
                 disabled={isDisabled}
-                onChange={handleOptionalChange(field.onChange)}
+                onChange={handleUnitChange(field.onChange)}
                 placeholder={t("describe.unitPlaceholder")}
+                className="font-mono"
               />
             </FormControl>
             <FormDescription>{t("describe.unitHelp")}</FormDescription>
@@ -151,6 +181,8 @@ export function ColumnDescribeFields({
           </FormItem>
         )}
       />
+
+      <ColumnDescribeMoreDetail form={form} disabled={isDisabled} />
     </div>
   );
 }

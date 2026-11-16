@@ -1,6 +1,7 @@
 "use client";
 
-import { Ban, LockOpen, MoreHorizontal } from "lucide-react";
+import { useDatasetCancelReview } from "@/hooks/dataset/useDatasetCancelReview/useDatasetCancelReview";
+import { Ban, LockOpen, MoreHorizontal, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import type { Dataset } from "@repo/api/domains/dataset/dataset.schema";
@@ -15,19 +16,22 @@ import {
 
 import { DatasetWithdrawDialog } from "./dataset-withdraw-dialog";
 
-/** What an experiment's admins can do to a dataset that is already public. */
+/** What an experiment's admins can do to a dataset that is waiting for review or already public. */
 export function DatasetRowActions({ dataset }: { dataset: Dataset }) {
   const { t } = useTranslation("datasets");
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const { mutate: cancelReview, isPending: isCancelling } = useDatasetCancelReview();
 
+  const isInReview = dataset.state === "inReview";
   const isPublic = dataset.state === "published" || dataset.state === "superseded";
   const isEmbargoed = dataset.state === "published" && dataset.access === "embargoed";
 
-  if (!isPublic) {
+  if (!isPublic && !isInReview) {
     return null;
   }
 
   const handleWithdraw = () => setIsWithdrawOpen(true);
+  const handleCancelReview = () => cancelReview({ id: dataset.id });
 
   return (
     <>
@@ -43,24 +47,34 @@ export function DatasetRowActions({ dataset }: { dataset: Dataset }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          {isInReview ? (
+            <DropdownMenuItem onSelect={handleCancelReview} disabled={isCancelling}>
+              <Undo2 className="mr-2 size-4" aria-hidden />
+              {t("actions.cancelReview")}
+            </DropdownMenuItem>
+          ) : null}
           {isEmbargoed ? (
             <DropdownMenuItem>
               <LockOpen className="mr-2 size-4" aria-hidden />
               {t("actions.openFiles")}
             </DropdownMenuItem>
           ) : null}
-          <DropdownMenuItem variant="destructive" onSelect={handleWithdraw}>
-            <Ban className="mr-2 size-4" aria-hidden />
-            {t("actions.withdraw")}
-          </DropdownMenuItem>
+          {isPublic ? (
+            <DropdownMenuItem variant="destructive" onSelect={handleWithdraw}>
+              <Ban className="mr-2 size-4" aria-hidden />
+              {t("actions.withdraw")}
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DatasetWithdrawDialog
-        dataset={dataset}
-        open={isWithdrawOpen}
-        onOpenChange={setIsWithdrawOpen}
-      />
+      {isPublic ? (
+        <DatasetWithdrawDialog
+          dataset={dataset}
+          open={isWithdrawOpen}
+          onOpenChange={setIsWithdrawOpen}
+        />
+      ) : null}
     </>
   );
 }

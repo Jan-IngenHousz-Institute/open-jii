@@ -42,15 +42,15 @@ export function ColumnDictionaryGroup({
         <p className="text-muted-foreground text-sm">{caption}</p>
       </div>
       <div className="rounded-lg border">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead className="w-1/4">{t("dictionary.column")}</TableHead>
               <TableHead className="w-28">{t("dictionary.type")}</TableHead>
               <TableHead className="w-28 text-right">{t("dictionary.rows")}</TableHead>
               <TableHead className="w-44">{t("dictionary.status")}</TableHead>
-              <TableHead>{t("dictionary.trait")}</TableHead>
-              <TableHead className="w-24">
+              <TableHead>{t("dictionary.measures")}</TableHead>
+              <TableHead className="w-32">
                 <span className="sr-only">{t("dictionary.describe")}</span>
               </TableHead>
             </TableRow>

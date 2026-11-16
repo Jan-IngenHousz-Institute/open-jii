@@ -9,7 +9,7 @@ export const zPublishDatasetForm = zPublishDatasetBody.extend({
 
 export type PublishDatasetForm = z.infer<typeof zPublishDatasetForm>;
 
-export const scopeSchema = z.object({});
+export const scopeSchema = zPublishDatasetForm.pick({ scope: true });
 
 export const curateSchema = zPublishDatasetForm.pick({ excludedReadings: true });
 

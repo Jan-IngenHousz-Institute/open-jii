@@ -1,5 +1,6 @@
 "use client";
 
+import { formatList } from "@/components/calibrations/format-list";
 import { SettingsCard } from "@/components/shared/settings-card";
 import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
@@ -10,6 +11,7 @@ import { useTranslation } from "@repo/i18n";
 
 import { LICENSE_KEYS } from "../license-keys";
 import type { PublishDatasetForm } from "./dataset-publish-schema";
+import { countScopeChoice } from "./scope-count";
 
 interface SummaryRow {
   label: string;
@@ -33,6 +35,11 @@ export function FreezeSummaryCard({ values, scope }: FreezeSummaryCardProps) {
       ? t("freeze.accessEmbargoed", { date: format.date(embargoUntil) })
       : t("freeze.accessOpen");
   const excludedCount = values.excludedReadings.length;
+  const readingCount = countScopeChoice(scope.tables, values.scope);
+  const tables = formatList(
+    locale,
+    values.scope.tables.map((table) => table.displayName),
+  );
 
   const renderAuthor = (author: DatasetAuthor, position: number) => (
     <li key={`${author.givenName}-${author.familyName}`} className="tabular-nums">
@@ -54,7 +61,7 @@ export function FreezeSummaryCard({ values, scope }: FreezeSummaryCardProps) {
         <>
           <p>
             {t("freeze.readings", {
-              count: scope.readingCount,
+              count: readingCount,
               time: format.dateTime(scope.countedAt),
             })}
           </p>
@@ -66,7 +73,21 @@ export function FreezeSummaryCard({ values, scope }: FreezeSummaryCardProps) {
         </>
       ),
     },
-    { label: t("freeze.filesLabel"), value: t("freeze.files") },
+    {
+      label: t("freeze.filesLabel"),
+      value: (
+        <>
+          <p>
+            {t("freeze.files", {
+              tables,
+              from: format.date(values.scope.from),
+              to: format.date(values.scope.to),
+            })}
+          </p>
+          <p className="text-muted-foreground">{t("freeze.filesAlways")}</p>
+        </>
+      ),
+    },
   ];
 
   const renderRow = ({ label, value }: SummaryRow) => (

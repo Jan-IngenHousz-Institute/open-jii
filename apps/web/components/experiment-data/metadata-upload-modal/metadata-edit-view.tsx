@@ -1,6 +1,7 @@
 import { MetadataTable } from "@/components/metadata-table/metadata-table";
 import type { MetadataColumn, MetadataRow } from "@/components/metadata-table/types";
 import { useExperimentLayout } from "@/hooks/experiment/useExperimentLayout/useExperimentLayout";
+import { useExperimentLayoutAttributes } from "@/hooks/experiment/useExperimentLayoutAttributes/useExperimentLayoutAttributes";
 import { useExperimentMetadataCreate } from "@/hooks/experiment/useExperimentMetadataCreate/useExperimentMetadataCreate";
 import { useExperimentMetadataUpdate } from "@/hooks/experiment/useExperimentMetadataUpdate/useExperimentMetadataUpdate";
 import {
@@ -36,6 +37,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import type { MetadataFormValues } from "./form-helpers";
 import { toWirePayload } from "./form-helpers";
+import { LayoutSheetApplicationChoice } from "./layout-sheet-application";
 import { LayoutSheetMatchPreview } from "./layout-sheet-match-preview";
 import { useMetadataImport } from "./use-metadata-import";
 
@@ -83,6 +85,8 @@ export function MetadataEditView({
 
   const { data: layout } = useExperimentLayout(experimentId);
   const isPlotMatch = matchTarget === LAYOUT_PLOT_MATCH_TARGET && identifierColumnId !== "";
+  const { data: layoutAttributes } = useExperimentLayoutAttributes(experimentId, isPlotMatch);
+  const plotsCarryValues = (layoutAttributes?.names.length ?? 0) > 0;
   const sheetIdentifiers = useMemo(
     () =>
       isPlotMatch
@@ -401,6 +405,7 @@ export function MetadataEditView({
                 levelName={layout.levelName}
               />
             )}
+            {isPlotMatch && layout && plotsCarryValues && <LayoutSheetApplicationChoice />}
           </div>
         </DialogBody>
       )}

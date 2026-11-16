@@ -1,7 +1,7 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { Info, Lock } from "lucide-react";
+import { Info, Lock, TriangleAlert } from "lucide-react";
 
 import type { DatasetAccess } from "@repo/api/domains/dataset/dataset.schema";
 import { zDatasetAccess } from "@repo/api/domains/dataset/dataset.schema";
@@ -23,12 +23,14 @@ export function LicenseStep(props: WizardStepProps<PublishDatasetForm>) {
   const { t } = useTranslation("datasets");
   const { form } = props;
   const access = form.watch("access");
+  const license = form.watch("license");
   const isEmbargoed = access === "embargoed";
+  const isShareAlike = license === "CC-BY-SA-4.0";
 
   const handleLicenseChange = (value: string) => {
-    const license = zDataLicense.options.find((option) => option === value);
-    if (license !== undefined) {
-      form.setValue("license", license, { shouldValidate: true, shouldDirty: true });
+    const next = zDataLicense.options.find((option) => option === value);
+    if (next !== undefined) {
+      form.setValue("license", next, { shouldValidate: true, shouldDirty: true });
     }
   };
 
@@ -39,14 +41,24 @@ export function LicenseStep(props: WizardStepProps<PublishDatasetForm>) {
     }
   };
 
-  const renderLicense = (license: DataLicense) => (
+  const renderLicense = (option: DataLicense) => (
     <ChoiceOption
-      key={license}
-      value={license}
-      id={`dataset-license-${license}`}
-      label={t(`licenses.${LICENSE_KEYS[license]}`)}
-      detail={t(`license.${LICENSE_KEYS[license]}Detail`)}
-    />
+      key={option}
+      value={option}
+      id={`dataset-license-${option}`}
+      label={t(`licenses.${LICENSE_KEYS[option]}`)}
+      detail={t(`license.${LICENSE_KEYS[option]}Detail`)}
+    >
+      {option === "CC-BY-SA-4.0" && isShareAlike ? (
+        <p
+          className="text-status-stale-foreground mt-2 flex items-start gap-2 pl-7 text-xs leading-relaxed"
+          data-testid="share-alike-warning"
+        >
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          {t("license.shareAlikeWarning")}
+        </p>
+      ) : null}
+    </ChoiceOption>
   );
 
   const renderAccess = (option: DatasetAccess) => (
@@ -68,6 +80,7 @@ export function LicenseStep(props: WizardStepProps<PublishDatasetForm>) {
           title={t("license.title")}
           description={t("license.description")}
           contentClassName="space-y-4"
+          data-testid="dataset-license"
         >
           <FormField
             control={form.control}

@@ -20,6 +20,10 @@ function authorNames(dataset: Dataset): string {
   return dataset.authors.map((author) => `${author.givenName} ${author.familyName}`).join(", ");
 }
 
+function subjectNames(dataset: Dataset): string {
+  return (dataset.studyDetails?.subjects ?? []).map((subject) => subject.label).join(", ");
+}
+
 export function getDatasetCatalogueColumns({
   t,
   formatDate,
@@ -51,12 +55,10 @@ export function getDatasetCatalogueColumns({
       ),
     },
     {
-      header: t("catalogue.columns.organism"),
+      header: t("catalogue.columns.subjects"),
       className: "hidden w-40 md:table-cell",
       cell: (dataset) => (
-        <span className={cn("text-[13px] italic", overviewTableText.strong)}>
-          {dataset.studyDetails?.organism ?? ""}
-        </span>
+        <span className={cn("text-[13px]", overviewTableText.strong)}>{subjectNames(dataset)}</span>
       ),
     },
     {

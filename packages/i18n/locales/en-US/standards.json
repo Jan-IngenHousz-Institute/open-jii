@@ -5,20 +5,15 @@
       "inSentence": "the plant phenotyping checklist",
       "name": "MIAPPE"
     },
-    "crop-ontology": {
-      "title": "Crop trait names",
-      "inSentence": "crop trait names",
-      "name": "Crop Ontology"
-    },
-    "common-greenhouse-ontology": {
-      "title": "Greenhouse terms",
-      "inSentence": "greenhouse terms",
-      "name": "Common Greenhouse Ontology"
-    },
     "openaire": {
       "title": "OpenAIRE record",
       "inSentence": "the OpenAIRE record",
       "name": "OpenAIRE"
+    },
+    "ro-crate": {
+      "title": "File description",
+      "inSentence": "the file description",
+      "name": "RO-Crate"
     },
     "brapi": {
       "title": "Breeding tool access",
@@ -37,14 +32,11 @@
     }
   },
   "status": {
-    "all-filled": "Every field is filled",
-    "fields-missing_one": "{{count}} field missing",
-    "fields-missing_other": "{{count}} fields missing",
-    "columns-without-term_one": "{{count}} column without a term",
-    "columns-without-term_other": "{{count}} columns without a term",
-    "applies-to-greenhouses": "Applies to greenhouse and growth chamber experiments",
-    "unit-without-greenhouse-term": "The unit name, {{unitName}}, carries no greenhouse term",
+    "all-filled": "Every required field is filled",
+    "fields-missing_one": "{{count}} of {{total}} required fields missing",
+    "fields-missing_other": "{{count}} of {{total}} required fields missing",
     "filled-while-publishing": "Filled in as you publish",
+    "every-frozen-dataset": "Written into every frozen dataset",
     "calls-answer_one": "{{count}} call answers for this experiment",
     "calls-answer_other": "{{count}} calls answer for this experiment",
     "under-evaluation": "Not offered yet, while the platform decides whether to serve it",
@@ -65,34 +57,44 @@
   "step": {
     "no-location": "Add where the experiment ran",
     "no-layout": "Lay out the plots",
+    "study-details-missing_one": "Fill in {{count}} study detail",
+    "study-details-missing_other": "Fill in {{count}} study details",
     "columns-not-described_one": "Describe {{count}} column",
     "columns-not-described_other": "Describe {{count}} columns",
-    "columns-without-term_one": "Give {{count}} column a crop trait name",
-    "columns-without-term_other": "Give {{count}} columns a crop trait name",
-    "unit-without-greenhouse-term": "Give the unit name a greenhouse term",
-    "plots-without-treatment_one": "Give {{count}} plot a treatment",
-    "plots-without-treatment_other": "Give {{count}} plots a treatment",
+    "columns-without-method-or-scale_one": "Add a method or scale to {{count}} column",
+    "columns-without-method-or-scale_other": "Add a method or scale to {{count}} columns",
+    "columns-without-term_one": "Give {{count}} column a term",
+    "columns-without-term_other": "Give {{count}} columns a term",
+    "unit-without-type": "Choose a unit type for {{unitName}}",
+    "attributes-without-role": "Say which plot attribute is the studied material",
     "plots-measured-twice_one": "Resolve {{count}} plot measured twice",
     "plots-measured-twice_other": "Resolve {{count}} plots measured twice",
     "plots-left-skipped_one": "{{count}} plot was left skipped",
     "plots-left-skipped_other": "{{count}} plots were left skipped",
     "members-without-orcid_one": "{{names}} has not connected ORCID",
-    "members-without-orcid_other": "{{names}} have not connected ORCID"
+    "members-without-orcid_other": "{{names}} have not connected ORCID",
+    "members-without-affiliation_one": "{{names}} has no affiliation",
+    "members-without-affiliation_other": "{{names}} have no affiliation"
   },
   "stepNote": {
+    "columns-without-term": "MIAPPE prefers a term where possible, so this never holds Freeze.",
     "plots-left-skipped": "Noted in the dataset's limitations, so it never holds Freeze.",
     "members-without-orcid": "Only they can connect it, so it never holds Freeze.",
+    "members-without-affiliation": "Only they can add it, so it never holds Freeze.",
     "everyDataset": "Every dataset"
   },
   "fix": {
     "no-location": "Add location",
     "no-layout": "Define layout",
+    "study-details-missing": "Fill in",
     "columns-not-described": "Describe",
+    "columns-without-method-or-scale": "Add methods",
     "columns-without-term": "Add terms",
-    "unit-without-greenhouse-term": "Add a term",
-    "plots-without-treatment": "Add treatments",
+    "unit-without-type": "Choose type",
+    "attributes-without-role": "Choose roles",
     "plots-measured-twice": "Resolve",
-    "members-without-orcid": "Connect ORCID"
+    "members-without-orcid": "Connect ORCID",
+    "members-without-affiliation": "Add affiliation"
   },
   "publish": {
     "waits_one": "Freeze waits for the step above",
@@ -118,37 +120,36 @@
     "openDatasets": "Open Datasets"
   },
   "panel": {
-    "filledCount": "{{filled}} of {{total}} fields filled",
+    "filledCount": "{{filled}} of {{total}} required fields filled",
     "missing": "Still missing",
     "filled_one": "{{count}} filled field",
     "filled_other": "{{count}} filled fields",
     "from": "From {{source}}",
     "notFilled": "Not filled",
-    "validatorPassed": "The official validator passed the package exported on {{date}}.",
-    "validatorFailed": "The official validator failed the package exported on {{date}}.",
-    "validatorNotRun": "The official validator runs on each MIAPPE export, and none has been exported yet.",
+    "validatorPassed": "The official validator passed the MIAPPE package of the dataset frozen on {{date}}.",
+    "validatorFailed": "The official validator failed the MIAPPE package of the dataset frozen on {{date}}.",
+    "validatorNotRun": "The official validator checks the MIAPPE package of each frozen dataset.",
     "loadError": "The fields could not be loaded.",
     "retry": "Retry"
   },
   "field": {
-    "title": "Title",
-    "description": "Description",
-    "license": "License",
+    "investigation-title": "Investigation title",
+    "study-title": "Study title",
+    "miappe-version": "MIAPPE version",
+    "person-name": "People",
+    "person-role": "Person roles",
+    "affiliation": "Affiliations",
+    "contact-institution": "Contact institution",
     "start-date": "Start date",
-    "end-date": "End date",
     "experimental-design": "Experimental design",
     "growth-facility": "Growth facility",
-    "observation-unit-level": "Unit name",
-    "site-name": "Site name",
     "country": "Country",
-    "latitude": "Latitude",
-    "longitude": "Longitude",
-    "person-name": "People",
-    "orcid": "ORCID iDs",
+    "site-name": "Site name",
     "organism": "Organism",
-    "biological-material-id": "Genotypes",
-    "experimental-factor": "Treatments",
+    "biological-material-id": "Studied material",
     "observation-unit-id": "Plots",
+    "observation-unit-type": "Unit type",
+    "observation-unit-description": "Plot description",
     "variable-name": "Columns",
     "trait": "Trait",
     "method": "Method",
@@ -159,7 +160,9 @@
     "study-details": "study details",
     "layout": "the layout",
     "data-dictionary": "the data dictionary",
-    "profile": "member profiles"
+    "profile": "member profiles",
+    "author-list": "the dataset's author list",
+    "standard": "the checklist itself"
   },
   "check": {
     "title": "Standards this experiment follows",
@@ -168,17 +171,5 @@
     "blocked_one": "Finish this step, or change what this experiment follows, before freezing.",
     "blocked_other": "Finish these {{count}} steps, or change what this experiment follows, before freezing.",
     "change": "Change what this experiment follows"
-  },
-  "export": {
-    "group": "Whole experiment",
-    "packageDetail": "{{name}} as ISA-Tab files",
-    "emptyFields_one": "{{count}} field will be empty",
-    "emptyFields_other": "{{count}} fields will be empty",
-    "complete": "Every field is filled",
-    "confirmTitle_one": "{{count}} field goes out empty",
-    "confirmTitle_other": "{{count}} fields go out empty",
-    "confirmDescription": "The package covers the whole experiment, and these fields stay empty in it. Each group says what fills them.",
-    "back": "Back",
-    "exportAnyway": "Export anyway"
   }
 }

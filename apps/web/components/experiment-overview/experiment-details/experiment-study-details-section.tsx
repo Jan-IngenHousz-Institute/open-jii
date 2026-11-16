@@ -1,14 +1,22 @@
 "use client";
 
+import { useExperimentStudyRecord } from "@/hooks/experiment/useExperimentStudyRecord/useExperimentStudyRecord";
 import { formatShortDate } from "@/util/date";
 import { useState } from "react";
 
 import type { Experiment, FundingReference } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  RelatedWork,
+  StudySubject,
+} from "@repo/api/domains/experiment/study/experiment-study.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
 import { ExperimentStudyDetailsDialog } from "./experiment-study-details-dialog";
+import { studySubjects } from "./study-details-form-schema";
 import { useDataLicenseLabel } from "./use-data-license-label";
+import { useFunderIdentifierTypeLabel } from "./use-funder-identifier-type-label";
+import { useRelationLabel } from "./use-relation-label";
 
 interface ExperimentStudyDetailsSectionProps {
   experimentId: string;
@@ -25,8 +33,11 @@ export function ExperimentStudyDetailsSection({
 }: ExperimentStudyDetailsSectionProps) {
   const { t } = useTranslation("experiments");
   const licenseLabel = useDataLicenseLabel();
+  const relationLabel = useRelationLabel();
+  const identifierTypeLabel = useFunderIdentifierTypeLabel();
   const { t: tStudy } = useTranslation("studyMetadata");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { data: record } = useExperimentStudyRecord(experimentId);
 
   const canEdit = hasAccess && !isArchived;
   const hasPeriod = Boolean(experiment.startDate ?? experiment.endDate);
@@ -37,12 +48,16 @@ export function ExperimentStudyDetailsSection({
     ? `${formatDay(experiment.startDate)} → ${formatDay(experiment.endDate)}`
     : null;
   const fundingReferences = experiment.fundingReferences ?? [];
+  const subjects = studySubjects(experiment, record);
+  const relatedWork = record?.relatedWork ?? [];
   const hasFunding = fundingReferences.length > 0;
+  const hasSubjects = subjects.length > 0;
+  const hasRelatedWork = relatedWork.length > 0;
   const hasAnyDetail =
     hasPeriod ||
     hasFunding ||
-    Boolean(experiment.organism) ||
-    Boolean(experiment.growthFacility) ||
+    hasSubjects ||
+    hasRelatedWork ||
     Boolean(experiment.experimentalDesign) ||
     Boolean(experiment.license);
   const showsRows = canEdit || hasAnyDetail;
@@ -69,21 +84,50 @@ export function ExperimentStudyDetailsSection({
     );
   };
 
+  const renderList = (label: string, hasItems: boolean, items: React.ReactNode) => {
+    const isHidden = !hasItems && !canEdit;
+
+    return isHidden ? null : (
+      <div>
+        <p className="text-muted-foreground text-xs">{label}</p>
+        {hasItems ? items : renderValue(null)}
+      </div>
+    );
+  };
+
+  const renderSubject = (subject: StudySubject, index: number) => (
+    <p key={index} className="text-sm">
+      {subject.label}
+      {subject.term && (
+        <span className="text-muted-foreground ml-2 font-mono text-xs">{subject.term.id}</span>
+      )}
+    </p>
+  );
+
+  const renderRelatedWork = (work: RelatedWork, index: number) => (
+    <p key={index} className="text-sm">
+      {relationLabel(work.relationType)}{" "}
+      <span className="font-mono text-xs">{work.identifier}</span>
+    </p>
+  );
+
   const renderFundingReference = (reference: FundingReference, index: number) => {
     const text = reference.awardNumber
       ? tStudy("funding.reference", { funder: reference.funderName, award: reference.awardNumber })
       : reference.funderName;
-    return <div key={index}>{renderValue(text)}</div>;
-  };
+    const identifierType = reference.funderIdentifierType;
+    const identifier =
+      identifierType && reference.funderIdentifier
+        ? tStudy("funding.identifierEntry", {
+            type: identifierTypeLabel(identifierType),
+            identifier: reference.funderIdentifier,
+          })
+        : null;
 
-  const renderFunding = () => {
-    if (!hasFunding && !canEdit) {
-      return null;
-    }
     return (
-      <div data-study-funding>
-        <p className="text-muted-foreground text-xs">{tStudy("funding.title")}</p>
-        {hasFunding ? fundingReferences.map(renderFundingReference) : renderValue(null)}
+      <div key={index}>
+        {renderValue(text)}
+        {identifier && <p className="text-muted-foreground font-mono text-xs">{identifier}</p>}
       </div>
     );
   };
@@ -103,14 +147,24 @@ export function ExperimentStudyDetailsSection({
         {showsRows ? (
           <div className="space-y-2">
             {renderRow(t("studyDetails.period"), period)}
-            {renderRow(t("studyDetails.organism"), experiment.organism)}
+            {renderList(tStudy("subjects.label"), hasSubjects, subjects.map(renderSubject))}
             {renderRow(t("studyDetails.experimentalDesign"), experiment.experimentalDesign)}
-            {renderRow(t("studyDetails.growthFacility"), experiment.growthFacility)}
+            {renderList(
+              tStudy("relatedWork.title"),
+              hasRelatedWork,
+              relatedWork.map(renderRelatedWork),
+            )}
             {renderRow(
               t("studyDetails.license"),
               experiment.license ? licenseLabel(experiment.license) : null,
             )}
-            {renderFunding()}
+            <div data-study-funding>
+              {renderList(
+                tStudy("funding.title"),
+                hasFunding,
+                fundingReferences.map(renderFundingReference),
+              )}
+            </div>
           </div>
         ) : (
           <p className="text-muted-foreground text-sm italic">{t("studyDetails.empty")}</p>
@@ -120,6 +174,7 @@ export function ExperimentStudyDetailsSection({
       <ExperimentStudyDetailsDialog
         experimentId={experimentId}
         experiment={experiment}
+        record={record}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />

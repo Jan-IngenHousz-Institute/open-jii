@@ -10,7 +10,7 @@ interface WalkStripProps {
   shares?: FieldShares;
 }
 
-/** The walk laid out step by step from start to end, each step carrying its treatment's code. */
+/** The walk laid out step by step from start to end, each step carrying its balance value's code. */
 export function WalkStrip({ plan, outside, shares }: WalkStripProps) {
   const { t } = useTranslation("fieldSessions");
 
@@ -22,8 +22,8 @@ export function WalkStrip({ plan, outside, shares }: WalkStripProps) {
 
   const renderStep = (unitId: string, index: number) => {
     const position = index + 1;
-    const treatment = plan.treatmentOf(unitId);
-    const category = plan.categories.get(treatment);
+    const value = plan.balanceValueOf(unitId);
+    const category = plan.categories.get(value);
     const share = shares?.styleOfPlot(unitId);
 
     return (
@@ -32,7 +32,7 @@ export function WalkStrip({ plan, outside, shares }: WalkStripProps) {
         title={t("walkingOrder.stripStep", {
           position,
           plot: plan.identifierOf(unitId),
-          treatment: treatment ?? "",
+          value: value ?? "",
         })}
         className={cn(
           "text-foreground/70 flex h-7 items-center justify-center rounded-sm text-[10px] font-semibold",

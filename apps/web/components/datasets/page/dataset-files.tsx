@@ -1,36 +1,26 @@
 "use client";
 
-import { formatFileSize } from "@/util/format-file-size";
-import { Download, FileText } from "lucide-react";
-
-import type { DatasetFile } from "@repo/api/domains/dataset/dataset.schema";
+import type { DatasetFile, DatasetFileKind } from "@repo/api/domains/dataset/dataset.schema";
+import { zDatasetFileKind } from "@repo/api/domains/dataset/dataset.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 
+import { DatasetFileGroup } from "./dataset-file-group";
+
+/** The frozen files, one row per kind in a fixed order, the standard packages after the data. */
 export function DatasetFiles({ files }: { files: DatasetFile[] }) {
   const { t } = useTranslation("datasets");
 
-  const renderFile = (file: DatasetFile) => (
-    <li key={file.name} className="flex items-center gap-3 px-4 py-3">
-      <FileText className="text-muted-foreground size-4 shrink-0" aria-hidden />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{file.name}</p>
-        <p className="text-muted-foreground text-xs">{t(`page.fileKinds.${file.kind}`)}</p>
-      </div>
-      <span className="text-muted-foreground text-sm tabular-nums">
-        {formatFileSize(file.sizeBytes)}
-      </span>
-      <Button variant="outline" size="sm">
-        <Download className="size-4" />
-        {t("page.download")}
-      </Button>
-    </li>
+  const filesOf = (kind: DatasetFileKind) => files.filter((file) => file.kind === kind);
+  const kinds = zDatasetFileKind.options.filter((kind) => filesOf(kind).length > 0);
+
+  const renderKind = (kind: DatasetFileKind) => (
+    <DatasetFileGroup key={kind} kind={kind} files={filesOf(kind)} />
   );
 
   return (
-    <section className="space-y-2" id="dataset-files">
+    <section className="space-y-2" id="dataset-files" data-testid="dataset-files">
       <h2 className="text-lg font-semibold">{t("page.files")}</h2>
-      <ul className="bg-card divide-border divide-y rounded-lg border">{files.map(renderFile)}</ul>
+      <ul className="bg-card divide-border divide-y rounded-lg border">{kinds.map(renderKind)}</ul>
     </section>
   );
 }

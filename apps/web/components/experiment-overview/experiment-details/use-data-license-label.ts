@@ -8,6 +8,7 @@ export function useDataLicenseLabel(): (license: DataLicense) => string {
   const labels: Record<DataLicense, string> = {
     "CC0-1.0": t("studyDetails.licenseCc0Short"),
     "CC-BY-4.0": t("studyDetails.licenseCcByShort"),
+    "CC-BY-SA-4.0": t("studyDetails.licenseCcBySaShort"),
   };
 
   return (license) => labels[license];

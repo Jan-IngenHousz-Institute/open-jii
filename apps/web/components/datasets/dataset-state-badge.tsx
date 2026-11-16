@@ -10,6 +10,7 @@ import { Badge } from "@repo/ui/components/badge";
 // Superseded is not a fault, so it gets no fill at all.
 const STATE_TONES: Record<Exclude<DatasetState, "superseded">, StatusTone> = {
   draft: "archived",
+  inReview: "stale",
   published: "published",
   withdrawn: "destructive",
 };

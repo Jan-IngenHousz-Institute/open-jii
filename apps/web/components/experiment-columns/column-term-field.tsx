@@ -3,8 +3,8 @@
 import type { UseFormReturn } from "react-hook-form";
 
 import type {
-  ColumnDescription,
   ColumnTerm,
+  DescribeColumnBody,
 } from "@repo/api/domains/experiment/columns/experiment-columns.schema";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -17,29 +17,31 @@ import {
 
 import { ColumnTermSelect } from "./column-term-select";
 
-type TermName = "traitTerm" | "methodTerm" | "scaleTerm";
+type TermName = "propertyTerm" | "objectOfInterestTerm" | "contextTerm";
 
 const LABEL_KEYS: Record<TermName, string> = {
-  traitTerm: "describe.term.labelTrait",
-  methodTerm: "describe.term.labelMethod",
-  scaleTerm: "describe.term.labelScale",
+  propertyTerm: "describe.term.labelProperty",
+  objectOfInterestTerm: "describe.term.labelObjectOfInterest",
+  contextTerm: "describe.term.labelContext",
 };
 
 interface ColumnTermFieldProps {
-  form: UseFormReturn<ColumnDescription>;
+  form: UseFormReturn<DescribeColumnBody>;
   name: TermName;
   disabled: boolean;
 }
 
-/** The term for one field. Only the trait can be left as "No term fits", which counts as done. */
+/** The term for one part. Only the property can be left as "No term fits", which counts as done. */
 export function ColumnTermField({ form, name, disabled }: ColumnTermFieldProps) {
   const { t } = useTranslation("studyMetadata");
-  const isTrait = name === "traitTerm";
+  const isProperty = name === "propertyTerm";
   const isNoTermFits = form.watch("noTermFits") === true;
 
   const handleSelect = (term: ColumnTerm) => {
     form.setValue(name, term, { shouldDirty: true });
-    form.setValue("noTermFits", false, { shouldDirty: true });
+    if (isProperty) {
+      form.setValue("noTermFits", false, { shouldDirty: true });
+    }
   };
 
   const handleClear = () => {
@@ -47,7 +49,7 @@ export function ColumnTermField({ form, name, disabled }: ColumnTermFieldProps) 
   };
 
   const handleNoTermFits = () => {
-    form.setValue("traitTerm", null, { shouldDirty: true });
+    form.setValue("propertyTerm", null, { shouldDirty: true });
     form.setValue("noTermFits", true, { shouldDirty: true });
   };
 
@@ -57,20 +59,19 @@ export function ColumnTermField({ form, name, disabled }: ColumnTermFieldProps) 
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>{t(LABEL_KEYS[name])}</FormLabel>
+          <FormLabel>{t("describe.term.label")}</FormLabel>
           <FormControl>
             <ColumnTermSelect
+              label={t(LABEL_KEYS[name])}
               value={field.value}
-              isNoTermFits={isTrait ? isNoTermFits : undefined}
+              isNoTermFits={isProperty ? isNoTermFits : undefined}
               disabled={disabled}
               onSelect={handleSelect}
               onClear={handleClear}
-              onNoTermFits={isTrait ? handleNoTermFits : undefined}
+              onNoTermFits={isProperty ? handleNoTermFits : undefined}
             />
           </FormControl>
-          <FormDescription>
-            {isTrait ? t("describe.term.traitHelp") : t("describe.term.optionalHelp")}
-          </FormDescription>
+          {isProperty && <FormDescription>{t("describe.term.propertyHelp")}</FormDescription>}
         </FormItem>
       )}
     />

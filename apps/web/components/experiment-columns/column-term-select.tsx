@@ -1,6 +1,5 @@
 "use client";
 
-import { useExperimentColumnTermSearch } from "@/hooks/experiment/useExperimentColumnTermSearch/useExperimentColumnTermSearch";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
@@ -18,10 +17,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import { cn } from "@repo/ui/lib/utils";
 
+import { TermSearchResults } from "./term-search-results";
+
 interface ColumnTermSelectProps {
   id?: string;
+  label: string;
   value: ColumnTerm | null;
-  /** The trait's own choice: looked, and nothing fits. Absent where a term is only optional. */
+  /** The property's own choice: looked, and nothing fits. Absent where a term is only optional. */
   isNoTermFits?: boolean;
   disabled?: boolean;
   onSelect: (term: ColumnTerm) => void;
@@ -32,11 +34,12 @@ interface ColumnTermSelectProps {
 const NONE_VALUE = "__none__";
 
 /**
- * Searchable Crop Ontology picker, built like the Common Greenhouse Ontology picker on the layout
- * setup card. cmdk's own filter stays off because the server already matched the terms by name.
+ * Searchable term picker, built like the Common Greenhouse Ontology picker on the layout setup
+ * card. cmdk's own filter stays off because the server already matched the terms by name.
  */
 export function ColumnTermSelect({
   id,
+  label,
   value,
   isNoTermFits = false,
   disabled = false,
@@ -47,12 +50,7 @@ export function ColumnTermSelect({
   const { t } = useTranslation("studyMetadata");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const { data, isFetching, isError } = useExperimentColumnTermSearch(search);
 
-  const hasQuery = search.trim().length >= 2;
-  const terms = hasQuery ? (data?.terms ?? []) : [];
-  const isSearching = hasQuery && isFetching;
-  const hasNoMatch = hasQuery && !isFetching && !isError && terms.length === 0;
   const hasTerm = value !== null;
   const hasChoice = hasTerm || isNoTermFits;
   const canDeclineTerm = onNoTermFits !== undefined;
@@ -86,23 +84,6 @@ export function ColumnTermSelect({
     return isNoTermFits ? t("describe.term.noneFits") : t("describe.term.choose");
   };
 
-  const renderTerm = (term: ColumnTerm) => (
-    <CommandItem key={term.id} value={term.id} onSelect={() => handleSelect(term)}>
-      <Check
-        className={cn("size-4 shrink-0", value?.id === term.id ? "opacity-100" : "opacity-0")}
-      />
-      <div className="min-w-0 flex-1">
-        <span className="block truncate">{term.label}</span>
-        <span className="text-muted-foreground block truncate font-mono text-xs">{term.id}</span>
-        {term.definition && (
-          <span className="text-muted-foreground line-clamp-2 block text-xs">
-            {term.definition}
-          </span>
-        )}
-      </div>
-    </CommandItem>
-  );
-
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -111,6 +92,7 @@ export function ColumnTermSelect({
           type="button"
           variant="outline"
           role="combobox"
+          aria-label={label}
           disabled={disabled}
           aria-expanded={open}
           className={cn(
@@ -130,31 +112,12 @@ export function ColumnTermSelect({
             onValueChange={setSearch}
           />
           <CommandList>
-            {!hasQuery && (
-              <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-                {t("describe.term.hint")}
-              </p>
-            )}
-            {isSearching && (
-              <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-                {t("describe.term.searching")}
-              </p>
-            )}
-            {isError && (
-              <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-                {t("describe.term.unreachable")}
-              </p>
-            )}
-            {hasNoMatch && (
-              <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-                {t("describe.term.noMatches")}
-              </p>
-            )}
-            {terms.length > 0 && (
-              <CommandGroup heading={t("describe.term.ontology")}>
-                {terms.map(renderTerm)}
-              </CommandGroup>
-            )}
+            <TermSearchResults
+              search={search}
+              selectedId={value?.id ?? null}
+              unreachableMessage={t("describe.term.unreachable")}
+              onSelect={handleSelect}
+            />
             <CommandSeparator />
             <CommandGroup>
               <CommandItem value={NONE_VALUE} onSelect={handleDecline}>

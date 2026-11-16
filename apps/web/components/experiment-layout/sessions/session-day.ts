@@ -108,12 +108,12 @@ export class SessionDay {
   }
 
   /** Plots of each treatment nobody measured, in the field's treatment order. */
-  missingByTreatment(): Map<string, string[]> {
+  missingByBalance(): Map<string, string[]> {
     const missing = new Map<string, string[]>(
-      this.plan.treatments.map((treatment) => [treatment, []]),
+      this.plan.balanceValues.map((treatment) => [treatment, []]),
     );
     for (const plot of this.plan.plots) {
-      const treatment = this.plan.treatmentOf(plot.id);
+      const treatment = this.plan.balanceValueOf(plot.id);
       if (treatment !== null && !this.measured.has(plot.id)) {
         missing.get(treatment)?.push(plot.id);
       }

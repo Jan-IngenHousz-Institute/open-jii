@@ -5,6 +5,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { PlotMarkGlyph } from "./plot-mark-glyph";
 import type { PlotCategory, PlotCellKind, PlotMark, PlotShare } from "./plot-state";
+import { PlotTextPatch } from "./plot-text-patch";
 
 export interface PlotStateCellProps {
   kind: PlotCellKind;
@@ -22,6 +23,8 @@ export interface PlotStateCellProps {
   isCompact?: boolean;
   /** Replaces the name in the middle, such as a walking order position. */
   label?: ReactNode;
+  /** A line drawn over the grid, which the name and code are raised above. */
+  hasOverlay?: boolean;
 }
 
 /**
@@ -38,6 +41,7 @@ export function PlotStateCell({
   isSelected = false,
   isCompact = false,
   label,
+  hasOverlay = false,
 }: PlotStateCellProps) {
   const { t } = useTranslation("experiments");
 
@@ -53,6 +57,10 @@ export function PlotStateCell({
   const isRemoved = kind === "removed";
   const hasCode = category !== undefined && !isCompact;
   const glyph = isRemoved ? "removed" : mark;
+  const fillClassName = isRemoved ? "bg-muted/30" : (category?.fillClassName ?? "bg-muted/50");
+  const text = label ?? identifier;
+  const codeClassName =
+    "text-foreground/70 absolute bottom-0.5 left-1 text-[10px] font-semibold leading-none";
 
   return (
     <div
@@ -60,19 +68,26 @@ export function PlotStateCell({
       className={cn(
         "text-foreground relative flex h-full w-full items-center justify-center rounded-md font-medium",
         isCompact ? "text-[10px]" : "text-xs",
-        isRemoved ? "bg-muted/30" : (category?.fillClassName ?? "bg-muted/50"),
+        fillClassName,
         share ? cn("border-[3px]", share.borderClassName) : "border-foreground/15 border",
         isRemoved && "text-muted-foreground line-through",
         isDimmed && "opacity-40",
         isSelected && "ring-foreground ring-2 ring-offset-1",
       )}
     >
-      {label ?? identifier}
-      {hasCode ? (
-        <span className="text-foreground/70 absolute bottom-0.5 left-1 text-[10px] font-semibold leading-none">
+      {hasOverlay ? (
+        <PlotTextPatch fillClassName={fillClassName} className="relative" padClassName="px-2 py-1">
+          {text}
+        </PlotTextPatch>
+      ) : (
+        text
+      )}
+      {hasCode && hasOverlay ? (
+        <PlotTextPatch fillClassName={fillClassName} className={codeClassName}>
           {category.code}
-        </span>
+        </PlotTextPatch>
       ) : null}
+      {hasCode && !hasOverlay ? <span className={codeClassName}>{category.code}</span> : null}
       {glyph === undefined ? null : (
         <span className="absolute right-0.5 top-0.5">
           <PlotMarkGlyph mark={glyph} className={isCompact ? "size-2.5" : undefined} />

@@ -1,7 +1,6 @@
 {
   "gridTitle": "{{level}} grid",
   "unitName": "{{level}} {{plot}}",
-  "treatment": "Treatment",
   "plotCount_one": "{{count}} plot",
   "plotCount_other": "{{count}} plots",
   "coverage": "{{measured}} of {{total}}",
@@ -12,7 +11,9 @@
     "description": "How measurers walk the field. Phones receive it when their next session starts.",
     "choose": "Choose a walking order",
     "recommended": "Recommended",
-    "addTreatments": "Add treatments to plots first",
+    "addAttributes": "Add plot attributes first",
+    "balanceOn": "Balance on",
+    "blocksFrom": "Blocks from",
     "strategies": {
       "byRow": {
         "label": "By row",
@@ -41,14 +42,17 @@
     "summaryNoCode": "{{strategy}}",
     "previewDescription": "{{count}} plots in walking order",
     "showPath": "Show path",
+    "stretchLabel": "Stretch of the walk",
+    "stretchCount": "{{count}} {{value}}",
+    "stretchHolds": "Plots {{first}} to {{last}} of the walk hold {{counts}}.",
     "start": "Start",
     "end": "End",
     "strip": "The walk, step by step",
     "stripStart": "Start {{plot}}",
     "stripEnd": "End {{plot}}",
-    "stripStep": "Step {{position}}, {{plot}}, {{treatment}}",
-    "balance": "Any {{window}} consecutive plots in the walk hold each treatment in proportion to its plots in the field, give or take one.",
-    "unbalanced": "Steps {{first}} to {{last}} hold a treatment more or less often than the balance allows.",
+    "stripStep": "Step {{position}}, {{plot}}, {{value}}",
+    "balance": "Any {{window}} consecutive plots in the walk hold {{values}} in proportion to their plots in the field, give or take one.",
+    "unbalanced": "Steps {{first}} to {{last}} hold one value more or less often than the balance allows.",
     "outsideBalance": "Outside the balance",
     "orderCode": "Order code",
     "orderCodeHint": "The same code always rebuilds this order. A new code changes the order for sessions that start after you save, never walks already recorded.",
@@ -118,8 +122,6 @@
     "quiet": "Uploaded {{time}}. The phone may be out of signal, and its readings arrive when it reconnects.",
     "noUpload": "No upload yet.",
     "noUploadHint": "Nothing has arrived from this phone today.",
-    "byTreatment": "By treatment",
-    "byGenotype": "By genotype",
     "gridDescription": "{{measured}} of {{total}} plots measured"
   },
   "overview": {
@@ -162,7 +164,6 @@
       "other": "Other"
     },
     "waiting": "Waiting for upload",
-    "coverageTitle": "Measured by treatment",
     "missing": "Missing {{plots}}",
     "measuredTwiceTitle": "Plots measured twice",
     "measuredTwiceLine": "{{plots}} hold readings nobody asked to repeat. A person decides which reading stands.",

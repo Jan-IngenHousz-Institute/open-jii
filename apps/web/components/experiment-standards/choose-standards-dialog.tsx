@@ -56,9 +56,15 @@ export function ChooseStandardsDialog({
   };
 
   const handleToggle = (standard: FollowableStandardId) => {
-    setSelection((current) =>
-      current.includes(standard) ? current.filter((id) => id !== standard) : [...current, standard],
-    );
+    setSelection((current) => {
+      const next = new Set(current);
+      if (next.has(standard)) {
+        next.delete(standard);
+      } else {
+        next.add(standard);
+      }
+      return [...next];
+    });
   };
 
   const handleSave = () => {

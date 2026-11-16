@@ -8,7 +8,7 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 
-import { CoverageLine } from "./coverage-line";
+import { AttributeCoverage } from "./attribute-coverage";
 import type { FieldPlan } from "./field-plan";
 import type { FieldShares } from "./field-shares";
 import { MeasurerProgress } from "./measurer-progress";
@@ -19,17 +19,13 @@ interface LiveProgressCardProps {
   progress: SessionProgress;
 }
 
-/** The Field days view's side panel while sessions run: each measurer, then each treatment. */
+/** The Field days view's side panel while sessions run: each measurer, then each attribute's values. */
 export function LiveProgressCard({ plan, shares, progress }: LiveProgressCardProps) {
   const { t } = useTranslation("fieldSessions");
   const locale = useLocale();
 
   const measured = new Set(progress.measurers.flatMap((entry) => entry.measuredUnitIds));
-  const measuredByTreatment = plan.countByTreatment(measured);
-  const totalByTreatment = plan.totalByTreatment();
-  const measuredByGenotype = plan.countByGenotype(measured);
-  const totalByGenotype = plan.totalByGenotype();
-  const hasGenotypes = plan.genotypes.length > 0;
+  const counted = plan.balanceName === null ? [] : [plan.balanceName, ...plan.otherAttributes];
 
   const renderMeasurer = (share: FieldShare) => {
     const entry = progress.measurers.find((candidate) => candidate.userId === share.userId);
@@ -50,23 +46,8 @@ export function LiveProgressCard({ plan, shares, progress }: LiveProgressCardPro
     );
   };
 
-  const renderTreatment = (treatment: string) => (
-    <CoverageLine
-      key={treatment}
-      label={treatment}
-      measured={measuredByTreatment.get(treatment) ?? 0}
-      total={totalByTreatment.get(treatment) ?? 0}
-      category={plan.categories.get(treatment)}
-    />
-  );
-
-  const renderGenotype = (genotype: string) => (
-    <CoverageLine
-      key={genotype}
-      label={genotype}
-      measured={measuredByGenotype.get(genotype) ?? 0}
-      total={totalByGenotype.get(genotype) ?? 0}
-    />
+  const renderAttribute = (attribute: string) => (
+    <AttributeCoverage key={attribute} plan={plan} attribute={attribute} measured={measured} />
   );
 
   return (
@@ -79,16 +60,7 @@ export function LiveProgressCard({ plan, shares, progress }: LiveProgressCardPro
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-5">{shares.shares.map(renderMeasurer)}</div>
-        <div className="space-y-3 border-t pt-4">
-          <p className="text-sm font-medium">{t("live.byTreatment")}</p>
-          {plan.treatments.map(renderTreatment)}
-        </div>
-        {hasGenotypes ? (
-          <div className="space-y-3 border-t pt-4">
-            <p className="text-sm font-medium">{t("live.byGenotype")}</p>
-            {plan.genotypes.map(renderGenotype)}
-          </div>
-        ) : null}
+        {counted.map(renderAttribute)}
       </CardContent>
     </Card>
   );

@@ -11,8 +11,13 @@ export interface MissingFieldGroup {
   fields: MissingStandardField[];
 }
 
-// Steps other people finish, which only inform, follow the ones the researcher can do.
-const INFORMING: readonly StepReasonCode[] = ["members-without-orcid", "plots-left-skipped"];
+// Steps that only inform follow the ones that hold Freeze.
+const INFORMING: readonly StepReasonCode[] = [
+  "columns-without-term",
+  "members-without-orcid",
+  "members-without-affiliation",
+  "plots-left-skipped",
+];
 
 /**
  * Gathers a standard's missing fields under the step that fills them, in the order the mapping lists

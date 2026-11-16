@@ -9,8 +9,8 @@ import { ExperimentStandardsReadiness } from "./experiment-standards-readiness";
 
 const experiment = createExperiment();
 
-const followingTwo = {
-  followed: ["miappe", "crop-ontology"],
+const followingChecklist = {
+  followed: ["miappe"],
   standards: [],
   steps: [
     { reason: { code: "no-location" }, holdsFreeze: true, standards: ["miappe"] },
@@ -24,7 +24,7 @@ const followingTwo = {
 
 describe("<ExperimentStandardsReadiness />", () => {
   it("names what the experiment follows and links to its steps while one holds Freeze", async () => {
-    server.mount(contract.experiments.getExperimentStandards, { body: followingTwo });
+    server.mount(contract.experiments.getExperimentStandards, { body: followingChecklist });
     render(<ExperimentStandardsReadiness experiment={experiment} />);
 
     const link = await screen.findByRole("link", { name: "line.seeSteps" });

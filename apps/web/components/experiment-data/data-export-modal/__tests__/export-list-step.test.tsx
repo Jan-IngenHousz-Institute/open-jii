@@ -56,8 +56,6 @@ const defaultProps = {
   experimentId: "exp-123",
   tableName: "raw_data",
   onCreateExport: vi.fn(),
-  onConfirmPackage: vi.fn(),
-  onExportPackage: vi.fn(),
   onClose: vi.fn(),
 };
 

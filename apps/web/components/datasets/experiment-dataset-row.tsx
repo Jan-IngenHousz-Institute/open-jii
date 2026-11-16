@@ -42,9 +42,11 @@ export function ExperimentDatasetRow({
   const format = useLocalDateFormat(locale);
 
   const isDraft = dataset.state === "draft";
+  const isInReview = dataset.state === "inReview";
   const embargoUntil = dataset.access === "embargoed" ? dataset.embargoUntil : null;
   const zenodoCopy = dataset.state === "withdrawn" ? dataset.zenodoCopy : null;
-  // A Draft reopens the publish flow; everything else has a dataset page.
+  const returnReason = isDraft ? (dataset.review?.returnReason ?? null) : null;
+  // A Draft reopens the publish flow; everything else has a dataset page, a preview while In review.
   const href = isDraft
     ? `/${locale}/platform/experiments/${dataset.experimentId}/datasets/${dataset.id}/publish`
     : `/${locale}/datasets/${dataset.id}`;
@@ -55,6 +57,9 @@ export function ExperimentDatasetRow({
     }
     if (dataset.publishedAt !== null) {
       return t("list.published", { date: format.date(dataset.publishedAt) });
+    }
+    if (isInReview && dataset.review !== null) {
+      return t("list.frozen", { date: format.date(dataset.review.frozenAt) });
     }
     return t("list.started", { date: format.date(dataset.createdAt) });
   };
@@ -71,7 +76,7 @@ export function ExperimentDatasetRow({
     if (dataset.doi === null) {
       return (
         <span className="text-muted-foreground">
-          {isDraft ? t("list.doiAtFreeze") : t("list.notDeposited")}
+          {isDraft || isInReview ? t("list.doiAfterApproval") : t("list.notDeposited")}
         </span>
       );
     }
@@ -105,6 +110,11 @@ export function ExperimentDatasetRow({
             {t("list.supersedes", { version: supersededVersion })}
           </p>
         ) : null}
+        {returnReason !== null ? (
+          <p className="text-status-stale-foreground mt-0.5 text-xs" data-testid="dataset-returned">
+            {t("list.returned", { reason: returnReason })}
+          </p>
+        ) : null}
       </TableCell>
 
       <TableCell>
@@ -116,6 +126,7 @@ export function ExperimentDatasetRow({
         {embargoUntil !== null ? (
           <p className="text-xs">{t("list.filesOpen", { date: format.date(embargoUntil) })}</p>
         ) : null}
+        {isInReview ? <p className="text-xs">{t("list.membersOnly")}</p> : null}
       </TableCell>
 
       <TableCell className="text-muted-foreground tabular-nums">{readingsLabel}</TableCell>

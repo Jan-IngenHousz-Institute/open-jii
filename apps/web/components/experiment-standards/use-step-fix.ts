@@ -15,7 +15,7 @@ type FixableCode = Exclude<StepReasonCode, "plots-left-skipped">;
 
 /**
  * The one action that fixes a step, or null when nobody viewing can: skipped plots only inform, and
- * only the members named can connect their own ORCID iD.
+ * only the members named can connect their own ORCID iD or set their own affiliation.
  */
 export function useStepFix(experimentId: string): (reason: StepReason) => StepFix | null {
   const { t } = useTranslation("standards");
@@ -24,22 +24,29 @@ export function useStepFix(experimentId: string): (reason: StepReason) => StepFi
   // Scaffold: each fix opens in place as a sheet or dialog in the product, so these pages stand in.
   const experimentPath = `/${locale}/platform/experiments/${experimentId}`;
   const plotsView = `${experimentPath}/layout?view=plots`;
+  const accountPath = `/${locale}/platform/account`;
   const fixPaths: Record<FixableCode, string> = {
     "no-location": experimentPath,
     "no-layout": plotsView,
+    "study-details-missing": experimentPath,
     "columns-not-described": `${experimentPath}/data`,
+    "columns-without-method-or-scale": `${experimentPath}/data`,
     "columns-without-term": `${experimentPath}/data`,
-    "unit-without-greenhouse-term": plotsView,
-    "plots-without-treatment": plotsView,
+    "unit-without-type": plotsView,
+    "attributes-without-role": plotsView,
     "plots-measured-twice": `${experimentPath}/layout?view=field-days`,
-    "members-without-orcid": `/${locale}/platform/account`,
+    "members-without-orcid": accountPath,
+    "members-without-affiliation": accountPath,
   };
 
   return (reason) => {
     if (reason.code === "plots-left-skipped") {
       return null;
     }
-    if (reason.code === "members-without-orcid" && !reason.includesViewer) {
+    const isSomeoneElses =
+      (reason.code === "members-without-orcid" || reason.code === "members-without-affiliation") &&
+      !reason.includesViewer;
+    if (isSomeoneElses) {
       return null;
     }
 

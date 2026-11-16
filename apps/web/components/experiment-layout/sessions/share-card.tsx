@@ -22,8 +22,8 @@ export function ShareCard({ plan, name, style, unitIds }: ShareCardProps) {
   const { t } = useTranslation("fieldSessions");
   const locale = useLocale();
 
-  const counts = [...plan.countByTreatment(unitIds)];
-  const missing = plan.missingTreatments(unitIds);
+  const counts = [...plan.countByBalance(unitIds)];
+  const missing = plan.missingBalanceValues(unitIds);
   const hasPlots = unitIds.length > 0;
   const isMissingTreatment = missing.length > 0;
   const isOutsideBalance = !isMissingTreatment && !plan.isBalanced(unitIds);

@@ -496,8 +496,10 @@
     "licenseNone": "No license",
     "licenseCc0": "CC0 1.0 (public domain)",
     "licenseCcBy": "CC BY 4.0 (attribution)",
+    "licenseCcBySa": "CC BY-SA 4.0 (attribution, share alike)",
     "licenseCc0Short": "CC0 1.0",
     "licenseCcByShort": "CC BY 4.0",
+    "licenseCcBySaShort": "CC BY-SA 4.0",
     "dateNotSet": "not set",
     "dialogDescription": "Say when the study ran, what it studied and how others may reuse the data. Exports and published datasets carry these facts, so fill in what you know.",
     "learnMore": "About study details"
@@ -590,7 +592,7 @@
     "gapCount_other": "{{count}} gaps",
     "countPair": "{{plots}}, {{gaps}}",
     "gridTitle": "{{level}} grid",
-    "addAttributes": "Add treatments and genotypes",
+    "addAttributes": "Add plot attributes",
     "legend": {
       "measured": "Measured",
       "skipped": "Skipped",
@@ -636,7 +638,7 @@
       "notFound": "No {{unit}} named {{name}}.",
       "loadError": "This plot could not be loaded.",
       "title": "{{level}} {{identifier}}",
-      "description": "Where it sits and where each value came from.",
+      "description": "Where it sits, and where each value came from and when it changed.",
       "close": "Close",
       "rename": "Rename",
       "setPosition": "Set position",
@@ -648,10 +650,17 @@
       "noPosition": "No row and column yet",
       "attributes": "Attributes",
       "edit": "Edit",
-      "editValue": "Edit {{name}} in its sheet",
-      "source": {
-        "sheet": "From the sheet \"{{sheet}}\"",
-        "edit": "From the sheet \"{{sheet}}\", edited after upload"
+      "editValue": "Change {{name}}",
+      "version": {
+        "line": "{{applies}}, {{origin}}",
+        "fromStart": "From the experiment's start",
+        "fromDate": "From {{date}}",
+        "sheet": "from the sheet \"{{sheet}}\", row {{row}}",
+        "planned": "a planned change typed by {{name}} on {{recorded}}",
+        "phone": "entered on the phone by {{name}} on {{recorded}}",
+        "correction": "A correction typed by {{name}} on {{recorded}}: {{reason}}",
+        "upcoming": "Upcoming",
+        "corrected": "Corrected"
       }
     },
     "term": {
@@ -750,6 +759,46 @@
       "clash_one": "{{count}} names a position an earlier row already took and goes to Unplaced with a note ({{names}}).",
       "clash_other": "{{count}} name positions earlier rows already took and go to Unplaced with a note ({{names}}).",
       "clashName": "{{plot}} at row {{row}}, column {{column}}, taken by {{keptBy}}"
+    },
+    "measurers": {
+      "title": "Shown to measurers",
+      "description": "Each switch applies to every plot of this experiment in the app. Measurers always see a plot's position.",
+      "blocksShown": "Always shown, since it helps measurers find the plot"
+    },
+    "roles": {
+      "title": "Roles for standards",
+      "description": "Standards such as MIAPPE read which attribute is a factor that was varied, the material being studied, or a grouping such as a block. A role changes no value, color or walking order.",
+      "label": "Role of {{name}}",
+      "factor": "Factor",
+      "studiedMaterial": "Studied material",
+      "grouping": "Grouping",
+      "none": "No role",
+      "suggested": "Suggested from each attribute's name until you save.",
+      "saved": "Saved. Each role applies to every plot.",
+      "save": "Save roles"
+    },
+    "change": {
+      "title": "Change {{name}} on plot {{plot}}",
+      "description": "{{name}} is {{value}} today. Say whether the new value is planned or fixes a mistake.",
+      "newValue": "New value",
+      "planned": "Planned change",
+      "plannedHelp": "Readings taken before its date keep {{value}}.",
+      "correction": "Correction",
+      "correctionHelp": "Replaces {{value}} for every reading it covered.",
+      "appliesFrom": "Applies from",
+      "reason": "Reason",
+      "reasonPlaceholder": "What was wrong with the value",
+      "reasonHelp": "The reason stays in the plot's history.",
+      "cancel": "Cancel",
+      "save": "Save change"
+    },
+    "sheetApplication": {
+      "title": "Plots already carry values",
+      "description": "Say how this sheet's values relate to the ones the plots carry now.",
+      "planned": "Applies from a date",
+      "plannedHelp": "Readings taken before the date keep the values they have now.",
+      "correction": "Corrects the current values",
+      "correctionHelp": "Replaces the current values for every reading they covered."
     }
   }
 }

@@ -63,7 +63,14 @@ export function ColumnDictionaryRow({
   const isDescribed = status === "described";
   const labelKey = typeLabelKey(column.type);
   const typeLabel = labelKey ? t(labelKey) : column.type;
-  const traitTerm = column.description?.traitTerm;
+  const description = column.description;
+  const propertyTerm = description?.propertyTerm;
+  const measures = description?.objectOfInterest
+    ? t("dictionary.measuresText", {
+        property: description.property,
+        object: description.objectOfInterest,
+      })
+    : description?.property;
 
   const action = rowAction(canDescribe, isDescribed);
 
@@ -82,10 +89,15 @@ export function ColumnDictionaryRow({
       <TableCell>
         <ColumnDescriptionStatus status={status} />
       </TableCell>
-      <TableCell>
-        {column.description?.trait}
-        {traitTerm && (
-          <span className="text-muted-foreground ml-2 font-mono text-xs">{traitTerm.id}</span>
+      <TableCell className="whitespace-normal">
+        {measures}
+        {propertyTerm && (
+          <span
+            className="text-muted-foreground ml-2 font-mono text-xs"
+            title={propertyTerm.vocabulary}
+          >
+            {propertyTerm.id}
+          </span>
         )}
       </TableCell>
       <TableCell className="text-right">

@@ -1,9 +1,7 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
-import { useState } from "react";
 
-import type { DatasetAuthor } from "@repo/api/domains/dataset/dataset.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   FormControl,
@@ -17,30 +15,17 @@ import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import type { WizardStepProps } from "@repo/ui/components/wizard-form";
 
-import { AddAuthorByNameForm } from "./add-author-by-name-form";
-import { AddAuthorMenu } from "./add-author-menu";
-import { DatasetAuthorList } from "./dataset-author-list";
-import { DatasetAuthorsNotes } from "./dataset-authors-notes";
-import { DatasetContributorList } from "./dataset-contributor-list";
+import { DatasetPeopleCard } from "./dataset-people-card";
 import type { PublishDatasetForm } from "./dataset-publish-schema";
 import { DatasetPublishStepFrame } from "./dataset-publish-step-frame";
 
-export function DescribeStep(props: WizardStepProps<PublishDatasetForm>) {
+interface DescribeStepProps extends WizardStepProps<PublishDatasetForm> {
+  datasetId: string;
+}
+
+export function DescribeStep({ datasetId, ...props }: DescribeStepProps) {
   const { t } = useTranslation("datasets");
   const { form } = props;
-  const [isAddingByName, setIsAddingByName] = useState(false);
-  const authors = form.watch("authors");
-
-  const openAddByName = () => setIsAddingByName(true);
-  const closeAddByName = () => setIsAddingByName(false);
-
-  const handleAddByName = (author: DatasetAuthor) => {
-    form.setValue("authors", [...form.getValues("authors"), author], {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-    setIsAddingByName(false);
-  };
 
   return (
     <DatasetPublishStepFrame {...props}>
@@ -91,28 +76,7 @@ export function DescribeStep(props: WizardStepProps<PublishDatasetForm>) {
         />
       </SettingsCard>
 
-      <SettingsCard
-        title={t("describe.authorsTitle")}
-        description={t("describe.authorsDescription")}
-        contentClassName="space-y-3"
-        data-testid="dataset-authors"
-      >
-        <DatasetAuthorList form={form} />
-        {isAddingByName ? (
-          <AddAuthorByNameForm onAdd={handleAddByName} onCancel={closeAddByName} />
-        ) : (
-          <AddAuthorMenu onAddByName={openAddByName} />
-        )}
-        <DatasetAuthorsNotes authors={authors} />
-      </SettingsCard>
-
-      <SettingsCard
-        title={t("describe.contributorsTitle")}
-        description={t("describe.contributorsDescription")}
-        data-testid="dataset-contributors"
-      >
-        <DatasetContributorList form={form} />
-      </SettingsCard>
+      <DatasetPeopleCard form={form} datasetId={datasetId} />
     </DatasetPublishStepFrame>
   );
 }

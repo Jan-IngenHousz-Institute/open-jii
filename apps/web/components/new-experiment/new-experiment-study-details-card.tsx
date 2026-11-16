@@ -43,6 +43,7 @@ export function NewExperimentStudyDetailsCard({ form }: NewExperimentStudyDetail
   const licenseLabels: Record<DataLicense, string> = {
     "CC0-1.0": t("newExperiment.licenseCc0"),
     "CC-BY-4.0": t("newExperiment.licenseCcBy"),
+    "CC-BY-SA-4.0": t("newExperiment.licenseCcBySa"),
   };
 
   const handleOptionalChange =

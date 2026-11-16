@@ -1,6 +1,5 @@
 "use client";
 
-import { MiappeExportConfirm } from "@/components/experiment-standards/miappe-export-confirm";
 import { InsetPanel } from "@/components/shared/inset-panel";
 import { Download } from "lucide-react";
 import * as React from "react";
@@ -43,7 +42,6 @@ export function DataExportModal({
 }: DataExportModalProps) {
   const { t } = useTranslation("experimentData");
   const [creationStatus, setCreationStatus] = React.useState<CreationStatus>("idle");
-  const [isConfirmingPackage, setIsConfirmingPackage] = React.useState(false);
 
   // Toggle inherits the experiment's stored setting; user can override per-export.
   const { data: experimentData } = useExperiment(experimentId);
@@ -56,7 +54,6 @@ export function DataExportModal({
       const timer = setTimeout(() => {
         setCreationStatus("idle");
         setAnonymizeOverride(undefined);
-        setIsConfirmingPackage(false);
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -103,13 +100,6 @@ export function DataExportModal({
     onOpenChange(false);
   };
 
-  const openPackageConfirm = () => setIsConfirmingPackage(true);
-  const closePackageConfirm = () => setIsConfirmingPackage(false);
-
-  // Scaffold: the package format joins the export contract with the MIAPPE export, so nothing is
-  // queued here yet.
-  const handleExportPackage = () => setIsConfirmingPackage(false);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -146,24 +136,14 @@ export function DataExportModal({
           </Label>
         </InsetPanel>
 
-        {isConfirmingPackage ? (
-          <MiappeExportConfirm
-            experimentId={experimentId}
-            onBack={closePackageConfirm}
-            onExport={handleExportPackage}
-          />
-        ) : (
-          <ExportListStep
-            experimentId={experimentId}
-            tableName={tableName}
-            displayName={displayName}
-            onCreateExport={handleCreateExport}
-            onConfirmPackage={openPackageConfirm}
-            onExportPackage={handleExportPackage}
-            onClose={handleClose}
-            creationStatus={creationStatus}
-          />
-        )}
+        <ExportListStep
+          experimentId={experimentId}
+          tableName={tableName}
+          displayName={displayName}
+          onCreateExport={handleCreateExport}
+          onClose={handleClose}
+          creationStatus={creationStatus}
+        />
       </DialogContent>
     </Dialog>
   );

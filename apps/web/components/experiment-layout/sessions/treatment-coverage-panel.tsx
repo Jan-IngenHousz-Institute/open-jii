@@ -11,9 +11,9 @@ interface TreatmentCoveragePanelProps {
 
 export function TreatmentCoveragePanel({ plan, day }: TreatmentCoveragePanelProps) {
   const { t } = useTranslation("fieldSessions");
-  const measured = plan.countByTreatment(day.measured);
-  const totals = plan.totalByTreatment();
-  const missing = day.missingByTreatment();
+  const measured = plan.countByBalance(day.measured);
+  const totals = plan.totalByBalance();
+  const missing = day.missingByBalance();
 
   const renderTreatment = (treatment: string) => {
     const missingPlots = (missing.get(treatment) ?? []).map((unitId) => plan.identifierOf(unitId));
@@ -36,8 +36,8 @@ export function TreatmentCoveragePanel({ plan, day }: TreatmentCoveragePanelProp
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium">{t("overview.coverageTitle")}</p>
-      {plan.treatments.map(renderTreatment)}
+      <p className="text-sm font-medium">{plan.balanceName}</p>
+      {plan.balanceValues.map(renderTreatment)}
     </div>
   );
 }

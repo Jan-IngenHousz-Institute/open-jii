@@ -2,18 +2,22 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
-import { FlaskConical, Layers } from "lucide-react";
+import { Eye, FlaskConical, Layers } from "lucide-react";
 
 import type { PublicDataset } from "@repo/api/domains/dataset/dataset.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { DatasetNotice } from "./dataset-notice";
 
-/** A newer version or a test deposit, said before the citation so nobody cites the wrong thing. */
+/**
+ * A preview, a newer version or a test deposit, said before the citation so nobody cites the
+ * wrong thing.
+ */
 export function DatasetStateNotices({ dataset }: { dataset: PublicDataset }) {
   const { t } = useTranslation("datasets");
   const locale = useLocale();
 
+  const isPreview = dataset.state === "inReview";
   const isTestDeposit = dataset.depositEnvironment === "sandbox";
   const newer =
     dataset.state === "superseded" &&
@@ -24,6 +28,17 @@ export function DatasetStateNotices({ dataset }: { dataset: PublicDataset }) {
 
   return (
     <>
+      {isPreview ? (
+        <DatasetNotice
+          icon={Eye}
+          title={t("page.previewTitle")}
+          tone="caution"
+          testId="dataset-preview"
+        >
+          <p>{t("page.previewDetail")}</p>
+        </DatasetNotice>
+      ) : null}
+
       {isTestDeposit ? (
         <DatasetNotice
           icon={FlaskConical}

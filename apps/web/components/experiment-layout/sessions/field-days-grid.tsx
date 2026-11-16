@@ -40,7 +40,7 @@ export function FieldDaysGrid({ plan, description, markOf, shares }: FieldDaysGr
       <PlotStateCell
         kind="plot"
         identifier={unit.identifier}
-        category={plan.categories.get(plan.treatmentOf(unit.id))}
+        category={plan.categories.get(plan.balanceValueOf(unit.id))}
         share={shares?.styleOfPlot(unit.id)}
         mark={markOf(unit.id)}
       />
@@ -56,7 +56,7 @@ export function FieldDaysGrid({ plan, description, markOf, shares }: FieldDaysGr
         <SessionGrid layout={plan.layout} renderCell={renderCell} />
         <div className="border-t pt-4">
           <PlotStateLegend
-            categoryName={t("treatment")}
+            categoryName={plan.balanceName ?? undefined}
             categories={plan.categories}
             shares={shares?.legend}
             entries={[...entries, "gap"]}

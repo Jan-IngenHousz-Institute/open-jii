@@ -24,6 +24,7 @@ import { Form, FormControl, FormField, FormItem } from "@repo/ui/components/form
 import { RadioGroup } from "@repo/ui/components/radio-group";
 
 import type { FieldPlan } from "./field-plan";
+import { WalkingAttributePicker } from "./walking-attribute-picker";
 import { WalkingStrategyOption } from "./walking-strategy-option";
 
 interface WalkingOrderCardProps {
@@ -33,13 +34,24 @@ interface WalkingOrderCardProps {
 
 const RECOMMENDED: WalkingStrategy = "treatmentBalanced";
 
+/** The strategies that read a plot attribute, and the setting that names it. */
+const ATTRIBUTE_ROLES: Partial<Record<WalkingStrategy, "balanceOn" | "blocksFrom">> = {
+  treatmentBalanced: "balanceOn",
+  randomByBlock: "blocksFrom",
+};
+
 export function WalkingOrderCard({ plan, canEdit }: WalkingOrderCardProps) {
   const { t } = useTranslation("fieldSessions");
 
-  const fallback: WalkingStrategy = plan.hasTreatments ? RECOMMENDED : "randomByBlock";
+  const fallback: WalkingStrategy = plan.balanceName === null ? "random" : RECOMMENDED;
   const form = useForm<WalkingOrderSettings>({
     resolver: zodResolver(zWalkingOrderSettings),
-    defaultValues: { strategy: plan.strategy ?? fallback, orderCode: plan.orderCode },
+    defaultValues: {
+      strategy: plan.strategy ?? fallback,
+      orderCode: plan.orderCode,
+      balanceOn: plan.balanceName,
+      blocksFrom: plan.blocksName,
+    },
   });
 
   const isSaved = plan.strategy !== null;
@@ -48,15 +60,31 @@ export function WalkingOrderCard({ plan, canEdit }: WalkingOrderCardProps) {
   // Scaffold: storing the strategy is not built yet.
   const handleSave = form.handleSubmit(() => undefined);
 
-  const renderOption = (option: WalkingStrategy) => (
-    <WalkingStrategyOption
-      key={option}
-      strategy={option}
-      isRecommended={option === RECOMMENDED}
-      isDisabled={!canEdit || (option === RECOMMENDED && !plan.hasTreatments)}
-      needsTreatments={option === RECOMMENDED && !plan.hasTreatments}
+  const renderPicker = (role: "balanceOn" | "blocksFrom") => (
+    <WalkingAttributePicker
+      control={form.control}
+      name={role}
+      label={t(`walkingOrder.${role}`)}
+      attributes={plan.attributeNames}
+      isDisabled={!canEdit}
     />
   );
+
+  const renderOption = (option: WalkingStrategy) => {
+    const role = ATTRIBUTE_ROLES[option];
+    const needsAttributes = role !== undefined && !plan.hasAttributes;
+
+    return (
+      <WalkingStrategyOption
+        key={option}
+        strategy={option}
+        isRecommended={option === RECOMMENDED}
+        isDisabled={!canEdit || needsAttributes}
+        needsAttributes={needsAttributes}
+        picker={role === undefined ? undefined : renderPicker(role)}
+      />
+    );
+  };
 
   return (
     <Card>
