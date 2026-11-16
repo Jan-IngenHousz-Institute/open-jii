@@ -489,6 +489,29 @@ def test_an_export_writes_its_parts_from_its_snapshot_not_from_the_views(
     }
 
 
+@pytest.mark.parametrize("table_name", ["raw_data", "mac-1"])
+def test_a_parquet_export_keeps_the_columns_and_types_the_table_has(
+    export_task: Callable[..., dict[str, Any]], table_name: str
+) -> None:
+    task = export_task(table_name, "parquet")
+    write_parts = task["write_parts"]
+    written: list[DataFrame] = []
+
+    def write_recording_the_frame(frame: DataFrame) -> None:
+        written.append(frame)
+        write_parts(frame)
+
+    task["write_parts"] = write_recording_the_frame
+    _run(task)
+
+    # A file read makes every field nullable, so only names and types can match the source's.
+    [frame] = written
+    expected = load_experiment_table("e1", table_name, _CATALOG)
+    assert [(f.name, f.dataType.simpleString()) for f in frame.schema.fields] == [
+        (f.name, f.dataType.simpleString()) for f in expected.schema.fields
+    ]
+
+
 @pytest.mark.parametrize("export_format", _FORMATS)
 def test_an_export_removes_its_snapshot_when_it_is_done(
     export_task: Callable[..., dict[str, Any]], export_format: str

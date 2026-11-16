@@ -262,12 +262,15 @@ def write_manifest(manifest):
 def take_snapshot(table):
     """Read the table's source once, into files the count, the limits and the parts all read.
 
-    Serverless caches a DataFrame only from environment version 5, so the snapshot is parquet. The
-    payloads stay VARIANT in it: a parsed payload can hold an empty struct or ARRAY<VOID>, which
-    parquet cannot.
+    Files rather than ``cache()``: serverless caches a DataFrame only from environment version 5
+    (docs.databricks.com/aws/en/compute/serverless/dataframe-cache). The payloads stay VARIANT in
+    the files, because a parsed payload can hold an empty struct or ARRAY<VOID>, which parquet
+    cannot. The files are read with the rows' own schema, so a VARIANT reads back as one whatever
+    their footers say.
     """
-    table.rows().write.mode("overwrite").parquet(SNAPSHOT_PATH)
-    return spark.read.parquet(SNAPSHOT_PATH)
+    rows = table.rows()
+    rows.write.mode("overwrite").parquet(SNAPSHOT_PATH)
+    return spark.read.schema(rows.schema).parquet(SNAPSHOT_PATH)
 
 
 def main():
