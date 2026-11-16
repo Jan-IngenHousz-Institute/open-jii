@@ -52,11 +52,16 @@ export interface ServingStorePort {
   /** False for a table the store does not hold, such as the device table. */
   holdsTable(tableName: string): boolean;
 
-  /** Each table with rows, those that take custom metadata with the schema the sheets give. */
-  getExperimentTableMetadata(
-    experimentId: string,
-    customMetadataSchema: string | null,
-  ): Promise<Result<ExperimentTableMetadata[]>>;
+  getExperimentTableMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>>;
+
+  /** Whether the experiment's metadata sheets match the table's rows; an upload's they never do. */
+  takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean;
+
+  /** The listed table with the schema the sheets give, where it takes them, and its revision. */
+  withCustomMetadata(
+    table: ExperimentTableMetadata,
+    schema: string | null,
+  ): ExperimentTableMetadata;
 
   getExperimentTableColumns(
     tableType: ExperimentTableType,

@@ -70,7 +70,7 @@ describe("ServingStoreAdapter", () => {
         }),
       );
 
-    const result = await adapter.getExperimentTableMetadata("e1", null);
+    const result = await adapter.getExperimentTableMetadata("e1");
 
     assertSuccess(result);
     expect(query.mock.calls[0][0]).toContain("FROM experiment_measurements(experiment = 'e1')");
@@ -103,7 +103,7 @@ describe("ServingStoreAdapter", () => {
     ]);
   });
 
-  it("lists the sheets' schema on the tables whose rows take custom metadata, and in their revision", async () => {
+  it("gives the sheets' schema to the tables whose rows take custom metadata, and to their revision", async () => {
     vi.spyOn(client, "query")
       .mockResolvedValueOnce(
         success({
@@ -117,23 +117,25 @@ describe("ServingStoreAdapter", () => {
       .mockResolvedValueOnce(success({ rows: [] }));
     const schema = "OBJECT<area: DECIMAL(4,2)>";
 
-    const result = await adapter.getExperimentTableMetadata("e1", schema);
+    const listed = await adapter.getExperimentTableMetadata("e1");
+    assertSuccess(listed);
+    const tables = listed.value.map((table) => adapter.withCustomMetadata(table, schema));
 
-    assertSuccess(result);
-    expect(result.value.map(({ customMetadataSchema }) => customMetadataSchema)).toEqual([
+    expect(tables.map(({ customMetadataSchema }) => customMetadataSchema)).toEqual([
       schema,
       schema,
       null,
     ]);
-    expect(result.value[0].schemaRevision).toBe(
-      createHash("md5").update(`||${schema}|`).digest("hex"),
-    );
+    expect(tables[0].schemaRevision).toBe(createHash("md5").update(`||${schema}|`).digest("hex"));
+    expect(tables[2].schemaRevision).toBe(listed.value[2].schemaRevision);
+    expect(adapter.takesCustomMetadata("upload", "t1")).toBe(false);
+    expect(adapter.takesCustomMetadata("macro", "m1")).toBe(true);
   });
 
   it("passes on a failed listing", async () => {
     vi.spyOn(client, "query").mockResolvedValue(failure(AppError.internal("store down")));
 
-    const result = await adapter.getExperimentTableMetadata("e1", null);
+    const result = await adapter.getExperimentTableMetadata("e1");
 
     assertFailure(result);
     expect(result.error.message).toBe("store down");
@@ -537,7 +539,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
   });
 
   it("lists the experiment's tables with their counts, newest rows and merged schemas", async () => {
-    const result = await adapter.getExperimentTableMetadata(EXPERIMENT, null);
+    const result = await adapter.getExperimentTableMetadata(EXPERIMENT);
     assertSuccess(result);
 
     const tables = new Map(result.value.map((table) => [table.identifier, table]));

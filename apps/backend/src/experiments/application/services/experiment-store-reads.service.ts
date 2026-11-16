@@ -43,6 +43,8 @@ interface CustomMetadata {
   sheets: StoreMetadataSheet[];
 }
 
+const NO_CUSTOM_METADATA: CustomMetadata = { schema: null, sheets: [] };
+
 /** A contributor as the warehouse's views show one. */
 interface ContributorCell {
   id: string;
@@ -94,15 +96,19 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   async tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
-    const custom = await this.customMetadata(experimentId);
-    if (custom.isFailure()) {
-      return custom;
+    const [tables, metadata] = await Promise.all([
+      this.store.getExperimentTableMetadata(experimentId),
+      this.customMetadata(experimentId),
+    ]);
+    if (tables.isFailure()) {
+      return tables;
     }
-    const metadata = await this.store.getExperimentTableMetadata(experimentId, custom.value.schema);
     if (metadata.isFailure()) {
       return metadata;
     }
-    return this.numberAnswers.typed(experimentId, metadata.value);
+    const { schema } = metadata.value;
+    const withMetadata = tables.value.map((table) => this.store.withCustomMetadata(table, schema));
+    return this.numberAnswers.typed(experimentId, withMetadata);
   }
 
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>> {
@@ -138,7 +144,10 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return orderResult;
     }
 
-    const metadataResult = await this.customMetadata(params.experimentId);
+    const takesMetadata = this.store.takesCustomMetadata(params.tableType, params.tableName);
+    const metadataResult = takesMetadata
+      ? await this.customMetadata(params.experimentId)
+      : success(NO_CUSTOM_METADATA);
     if (metadataResult.isFailure()) {
       return metadataResult;
     }
@@ -292,11 +301,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return versions;
     }
 
-    const ids = versions.value.map(({ id }) => id).sort();
-    const newest = Math.max(0, ...versions.value.map(({ updatedAt }) => updatedAt.getTime()));
-    const version = createHash("md5")
-      .update(`${ids.join(",")}|${newest}`)
-      .digest("hex");
+    // Each sheet's own update time: an edit that commits after a newer one still changes the key.
+    const sheetVersions = versions.value.map(({ id, updatedAt }) => `${id}@${updatedAt.getTime()}`);
+    const version = createHash("md5").update(sheetVersions.sort().join(",")).digest("hex");
     return tryCatch(async () => {
       const metadata = await this.schemaCache.tryCache(
         `custom-metadata:${experimentId}:${version}`,
@@ -308,7 +315,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
           return this.customMetadataOf(sheets.value);
         },
       );
-      return metadata ?? { schema: null, sheets: [] };
+      return metadata ?? NO_CUSTOM_METADATA;
     });
   }
 

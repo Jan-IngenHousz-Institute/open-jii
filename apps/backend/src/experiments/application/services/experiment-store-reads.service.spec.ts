@@ -489,11 +489,33 @@ describe("ExperimentStoreReadsService", () => {
       }
     }
 
+    async function edit(record: MetadataSheetRecord, rows: Record<string, unknown>[], at: string) {
+      const metadata = { ...record.metadata, rows };
+      await sheets.transaction((tx) =>
+        sheets.update(tx, experimentId, record.id, metadata, new Date(at)),
+      );
+    }
+
+    async function listedSchema() {
+      const tables = await reads.tablesMetadata(experimentId);
+      assertSuccess(tables);
+      return tables.value[0].customMetadataSchema;
+    }
+
     beforeEach(async () => {
       sheets = testApp.module.get(ExperimentMetadataRepository);
       userId = await testApp.createTestUser({});
       const { experiment } = await testApp.createExperiment({ name: "Plots", userId });
       experimentId = experiment.id;
+      const rawData: ExperimentTableMetadata = {
+        identifier: "raw_data",
+        tableType: "static",
+        displayName: null,
+        rowCount: 1,
+        latestRowAt: null,
+        schemaRevision: null,
+      };
+      vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success([rawData]));
     });
 
     it("lists the store's tables with the schema gold gives the sheets' rows, each without its identifier", async () => {
@@ -512,14 +534,8 @@ describe("ExperimentStoreReadsService", () => {
           [{ _id: "r1", serial: "d1", plot: "a field of this sheet" }],
         ),
       );
-      const listing = vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success([]));
 
-      assertSuccess(await reads.tablesMetadata(experimentId));
-
-      expect(listing).toHaveBeenCalledWith(
-        experimentId,
-        "OBJECT<area: DECIMAL(4,2), plot: STRING>",
-      );
+      expect(await listedSchema()).toBe("OBJECT<area: DECIMAL(4,2), plot: STRING>");
     });
 
     it("hands the store the sheets oldest first, each with what it matches", async () => {
@@ -547,23 +563,46 @@ describe("ExperimentStoreReadsService", () => {
         [{ _id: "r1", plot: "A1", area: 1.5 }],
       );
       await insert(record);
-      const listing = vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success([]));
       const read = vi.spyOn(sheets, "findByExperimentId");
 
-      await reads.tablesMetadata(experimentId);
-      await reads.tablesMetadata(experimentId);
-      const metadata = { ...record.metadata, rows: [{ _id: "r1", plot: "A1", area: 1.25 }] };
-      await sheets.transaction((tx) =>
-        sheets.update(tx, experimentId, record.id, metadata, new Date("2026-09-05T08:00:00Z")),
-      );
-      await reads.tablesMetadata(experimentId);
+      const first = await listedSchema();
+      const again = await listedSchema();
+      await edit(record, [{ _id: "r1", plot: "A1", area: 1.25 }], "2026-09-05T08:00:00Z");
+      const edited = await listedSchema();
 
       expect(read).toHaveBeenCalledTimes(2);
-      expect(listing.mock.calls.map(([, schema]) => schema)).toEqual([
+      expect([first, again, edited]).toEqual([
         "OBJECT<area: DECIMAL(2,1)>",
         "OBJECT<area: DECIMAL(2,1)>",
         "OBJECT<area: DECIMAL(3,2)>",
       ]);
+    });
+
+    it("takes an edit that commits after another sheet's later one", async () => {
+      const first = sheet("2026-09-01T08:00:00Z", ["plot", "plot"], [{ plot: "A1", area: 1.5 }]);
+      const second = sheet(
+        "2026-09-03T08:00:00Z",
+        ["plot", "plot"],
+        [{ plot: "B1", soil: "clay" }],
+      );
+      await insert(first, second);
+
+      const before = await listedSchema();
+      await edit(first, [{ plot: "A1", area: 1.25, depth: 3 }], "2026-09-02T08:00:00Z");
+      const after = await listedSchema();
+
+      expect(before).toBe("OBJECT<area: DECIMAL(2,1), soil: STRING>");
+      expect(after).toBe("OBJECT<area: DECIMAL(3,2), depth: BIGINT, soil: STRING>");
+    });
+
+    it("asks Postgres nothing for a table whose rows take no metadata", async () => {
+      const versions = vi.spyOn(sheets, "findVersions");
+      const build = vi.spyOn(store, "buildExperimentQuery");
+
+      await reads.buildQuery({ tableName: "t1", tableType: "upload", experimentId });
+
+      expect(versions).not.toHaveBeenCalled();
+      expect(build).toHaveBeenCalledWith(expect.objectContaining({ metadataSheets: [] }));
     });
   });
 });
