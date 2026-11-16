@@ -7,6 +7,13 @@ import { hasUsableBattery } from "@repo/api/transforms/ambyte-power";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 
+const chargeStateKeys: Record<number, string> = {
+  0: "powerNotCharging",
+  1: "powerTrickle",
+  2: "powerConstantCurrent",
+  3: "powerChargeDone",
+};
+
 export function PowerPanel({ power }: { power: DevicePower | undefined }) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
@@ -26,7 +33,10 @@ export function PowerPanel({ power }: { power: DevicePower | undefined }) {
   const missing = t("iot.devices.monitoring.batteryMissing");
   const date = (value: string) => new Date(value).toLocaleString(locale, { timeZoneName: "short" });
   const since = protection?.sinceUtc;
-  const sinceDate = since === null || since === undefined ? null : new Date(since * 1000);
+  const sinceDate =
+    since !== null && since !== undefined && since * 1000 >= Date.UTC(2020, 0, 1)
+      ? new Date(since * 1000)
+      : null;
   const lastBattery = power.lastValidBattery;
   return (
     <div className="space-y-4">
@@ -91,7 +101,9 @@ export function PowerPanel({ power }: { power: DevicePower | undefined }) {
             label={t("iot.devices.monitoring.powerChargeState")}
             value={
               latest.valid === true && latest.chargeStatus !== null
-                ? String(latest.chargeStatus)
+                ? t(
+                    `iot.devices.monitoring.${chargeStateKeys[latest.chargeStatus] ?? "powerUnknown"}`,
+                  )
                 : missing
             }
           />

@@ -2,10 +2,16 @@ import { fromPartial } from "@total-typescript/shoehorn";
 
 import { zDevicePower } from "@repo/api/domains/iot/device-power.schema";
 
-import { GetDeviceBatteryUseCase } from "../../../../iot/application/use-cases/get-device-battery/get-device-battery";
-import { assertFailure, assertSuccess, success, failure, AppError } from "../../../utils/fp-utils";
-import { DatabricksAdapter } from "../databricks.adapter";
-import type { DatabricksSqlService } from "./sql/sql.service";
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
+import type { DatabricksSqlService } from "../../../../common/modules/databricks/services/sql/sql.service";
+import {
+  assertFailure,
+  assertSuccess,
+  success,
+  failure,
+  AppError,
+} from "../../../../common/utils/fp-utils";
+import { GetDeviceBatteryUseCase } from "../get-device-battery/get-device-battery";
 
 const at = "2026-01-01T03:00:00.000Z";
 const entry = (battery: number | null, valid = true) =>
@@ -73,6 +79,10 @@ describe("device power warehouse boundary", () => {
     const [, sql, parameters] = executeSqlQuery.mock.calls[0];
     expect(sql).not.toContain("synthetic'unit");
     expect(sql).toContain("timestamp BETWEEN :from AND :to");
+    expect(sql).toContain("sample LIKE '%ambyte.telemetry/1%'");
+    expect(sql.indexOf("sample LIKE '%ambyte.telemetry/1%'")).toBeLessThan(
+      sql.indexOf("explode(from_json(sample"),
+    );
     expect(parameters).toContainEqual({
       name: "thingName",
       value: "synthetic'unit",

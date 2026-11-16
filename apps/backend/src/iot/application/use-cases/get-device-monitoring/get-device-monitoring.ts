@@ -71,7 +71,9 @@ export class GetDeviceMonitoringUseCase {
       this.getDevicePayloadStats.execute(thingName, from, to),
       this.getDeviceMeasurements.execute(thingName, from, to),
       this.getDeviceFirmwareHistory.execute(thingName, from, to, bucket),
-      this.databricks.getDevicePower(thingName, from, to),
+      deviceResult.value.deviceType === "ambyte"
+        ? this.databricks.getDevicePower(thingName, from, to)
+        : undefined,
     ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);
@@ -92,11 +94,18 @@ export class GetDeviceMonitoringUseCase {
       return failure(firmwareResult.error);
     }
 
-    if (powerResult.isFailure()) return failure(powerResult.error);
+    if (powerResult?.isFailure()) {
+      this.logger.warn({
+        msg: "Power telemetry lookup failed; monitoring renders power as unavailable",
+        operation: "getDeviceMonitoring",
+        deviceId,
+        errorCode: powerResult.error.code,
+      });
+    }
 
     return success({
       bucket,
-      power: powerResult.value,
+      power: powerResult?.isSuccess() ? powerResult.value : undefined,
       ...sessionsResult.value,
       throughput: throughputResult.value,
       battery: batteryResult.value,

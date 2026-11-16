@@ -32,6 +32,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { cn } from "@repo/ui/lib/utils";
 
 const CONNECTIVITY_POLL_MS = 15_000;
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
@@ -84,6 +85,11 @@ export default function DeviceMonitoringPage() {
     isError,
     refetch,
   } = useDeviceMonitoring(deviceId, selection.range);
+  const showBattery =
+    device?.deviceType === "ambyte" ||
+    monitoring?.battery.some((point) =>
+      point.sampleCount === undefined ? point.averageBattery !== null : point.sampleCount > 0,
+    );
 
   const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
     setSelection({ range, preset });
@@ -203,14 +209,16 @@ export default function DeviceMonitoringPage() {
             <MeasurementValuesTable measurements={monitoring.recentMeasurements} />
           </PanelCard>
 
-          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-            <PanelCard title={t("iot.devices.monitoring.batteryTitle")}>
-              <BatteryPanel
-                monitoring={monitoring}
-                from={selection.range.from}
-                to={selection.range.to}
-              />
-            </PanelCard>
+          <div className={cn("grid min-w-0 gap-6", showBattery ? "lg:grid-cols-2" : "grid-cols-1")}>
+            {showBattery && (
+              <PanelCard title={t("iot.devices.monitoring.batteryTitle")}>
+                <BatteryPanel
+                  monitoring={monitoring}
+                  from={selection.range.from}
+                  to={selection.range.to}
+                />
+              </PanelCard>
+            )}
 
             <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
               <EventLog

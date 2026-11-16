@@ -242,7 +242,8 @@ the experiments it streams into and handing it its configuration.
 Connection status describes broker contact. The separate **Telemetry power and
 measurement protection** panel shows the last Ambyte telemetry in the selected
 time range, with its capture time. It is a historical observation, not a guarantee
-of the device's present state.
+of the device's present state. A failed power lookup leaves the other monitoring
+panels available.
 
 - **Battery voltage, VBAT** comes from charger telemetry. A zero, missing or
   invalid reading appears as unavailable. It does not prove that the battery is
@@ -253,7 +254,10 @@ of the device's present state.
 - **Measurement protection** is independent of connection and charging.
   `no_flash` restricts flash measurements; `hold` restricts all Ambit work. The
   panel shows the reported reason, state start time and skipped-run counters.
-  Older firmware may not report this information.
+  Older firmware may not report this information. A state start time before
+  1 January 2020 appears as unavailable because the device clock may be unsynced.
+- **Reported charge state** names the charger state: not charging, trickle,
+  constant current or charge done. It is separate from measurement protection.
 
 Firmware can report a plausible but unchanged ADC value. Treat the validity flag
 as a firmware report, not proof of a fresh conversion. A future capture timestamp
@@ -262,10 +266,14 @@ is flagged for a clock check.
 **Reported battery history** uses the battery value in message envelopes. Firmware
 may cache it, and units depend on the device family. Its hourly or daily means
 are separate from charger VBAT. The plot keeps missing buckets as gaps, reports
-how many buckets and messages contain a value, and shows unavailable when the
-latest report is missing. The table retains those empty buckets. An entirely
-empty range also shows an explanation. Chart and table buckets use UTC. Capture
-times include the viewer's time zone.
+how many buckets and messages contain a value, and shows the newest received
+report. Trailing buckets without messages do not erase that headline. If the
+newest received message has no battery value, the headline shows unavailable
+even when an older message has a value. The table retains all empty buckets.
+Ambyte devices keep this panel visible for empty ranges. Other device families
+hide it when there are no received messages, leaving the event log at full
+width. Chart and table buckets use UTC. Capture times include the viewer's
+time zone.
 
 When comparing an experiment chart with Monitoring, check the device, time range,
 voltage field and aggregation. An experiment chart configured as hourly minimum

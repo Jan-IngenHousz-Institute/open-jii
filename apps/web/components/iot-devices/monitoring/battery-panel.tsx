@@ -62,8 +62,9 @@ export function BatteryPanel({ monitoring, from, to }: BatteryPanelProps) {
       : null,
   );
   const available = values.filter((value): value is number => value !== null);
-  const last = points.at(-1);
-  const latest = last?.latestBattery === undefined ? (values.at(-1) ?? null) : last.latestBattery;
+  const last = points.findLast((point) => point.sampleCount === undefined || point.sampleCount > 0);
+  const latest =
+    last?.latestBattery === undefined ? (last?.averageBattery ?? null) : last.latestBattery;
   const lastReport = points
     .flatMap((point) => (point.lastReportedAt ? [point.lastReportedAt] : []))
     .sort()
