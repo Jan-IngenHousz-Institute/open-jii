@@ -60,6 +60,15 @@ module "logs_bucket" {
 
   enable_versioning = false
 
+  lifecycle_rules = [{
+    id                                 = "expire-cloudfront-access-logs"
+    status                             = "Enabled"
+    prefix                             = "cloudfront-logs/"
+    transitions                        = []
+    expiration_days                    = 30
+    noncurrent_version_expiration_days = 30
+  }]
+
   tags = {
     Environment = var.environment
     Project     = "open-jii"
