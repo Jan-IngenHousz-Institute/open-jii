@@ -13,7 +13,7 @@ import math
 import tempfile
 from datetime import datetime, timezone
 
-from openjii.helpers import load_experiment_table
+from openjii.helpers import ExperimentTable
 from pyspark.dbutils import DBUtils
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, concat, lit, sha2, struct, substring, to_json, upper, when
@@ -42,8 +42,9 @@ except Exception:
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
 
-# A retry of this run reuses the export id, so it overwrites the same folder.
+# A retry of this run reuses the export id, so it overwrites the same folders.
 OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/centrum/exports/{EXPERIMENT_ID}/{TABLE_NAME}/{FORMAT}/{EXPORT_ID}"
+SNAPSHOT_PATH = f"{OUTPUT_PATH}-snapshot"
 MANIFEST_NAME = "manifest.json"
 SNAPSHOT_AT = datetime.now(timezone.utc).isoformat()
 
@@ -95,8 +96,8 @@ def check_driver_format_limits(export_format: str, row_count: int, column_count:
 
 
 def build_manifest(export_id: str, export_format: str, row_count: int, snapshot_at: str, parts: list) -> dict:
-    """``rowCount`` is the count taken when the export started; rows that arrive while it runs
-    may or may not be in the files."""
+    """``rowCount`` is the number of rows in the parts, which all come from one read of the table
+    taken just after ``snapshotAt``."""
     return {
         "exportId": export_id,
         "format": export_format,
@@ -258,34 +259,41 @@ def write_manifest(manifest):
 # COMMAND ----------
 
 # DBTITLE 1,Main Execution
-def load(parts=None):
-    return load_experiment_table(
-        experiment_id=EXPERIMENT_ID,
-        table_name=TABLE_NAME,
-        catalog_name=CATALOG_NAME,
-        schema_name="centrum",
-        parts=parts,
-    )
+def take_snapshot(table):
+    """Read the table's source once, into files the count, the limits and the parts all read.
+
+    Serverless caches a DataFrame only from environment version 5, so the snapshot is parquet. The
+    payloads stay VARIANT in it: a parsed payload can hold an empty struct or ARRAY<VOID>, which
+    parquet cannot.
+    """
+    table.rows().write.mode("overwrite").parquet(SNAPSHOT_PATH)
+    return spark.read.parquet(SNAPSHOT_PATH)
 
 
 def main():
-    row_count = load().count()
-    log(f"Loaded {row_count} rows")
+    table = ExperimentTable(EXPERIMENT_ID, TABLE_NAME, CATALOG_NAME, schema_name="centrum")
 
-    parts = []
-    if row_count > 0:
-        parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
-        log(f"Writing {row_count} rows as {parts_planned} part(s)")
-        df = load(parts_planned if WRITES_IN_PARTS else None)
-        check_driver_format_limits(FORMAT, row_count, len(df.columns))
-        if ANONYMIZE_CONTRIBUTORS:
-            df = anonymize_contributors(df, EXPERIMENT_ID)
-        write_parts(df)
-        parts = list_parts(OUTPUT_PATH)
+    try:
+        snapshot = take_snapshot(table)
+        row_count = snapshot.count()
+        log(f"Loaded {row_count} rows")
 
-    manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
-    write_manifest(manifest)
-    log(f"Wrote {len(parts)} part(s) and the manifest")
+        parts = []
+        if row_count > 0:
+            parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
+            log(f"Writing {row_count} rows as {parts_planned} part(s)")
+            df = table.shape(snapshot, parts_planned if WRITES_IN_PARTS else None)
+            check_driver_format_limits(FORMAT, row_count, len(df.columns))
+            if ANONYMIZE_CONTRIBUTORS:
+                df = anonymize_contributors(df, EXPERIMENT_ID)
+            write_parts(df)
+            parts = list_parts(OUTPUT_PATH)
+
+        manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
+        write_manifest(manifest)
+        log(f"Wrote {len(parts)} part(s) and the manifest")
+    finally:
+        dbutils.fs.rm(SNAPSHOT_PATH, True)
 
     dbutils.notebook.exit(json.dumps(manifest))
 

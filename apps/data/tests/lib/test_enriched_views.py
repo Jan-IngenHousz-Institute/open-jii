@@ -4,16 +4,23 @@ These run each view's SQL over small tables and check what a reader gets back.""
 from __future__ import annotations
 
 import ast
+import gzip
+import hashlib
 import json
-from collections.abc import Iterator
+import shutil
+import sys
+import types
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any
+from types import SimpleNamespace
+from typing import IO, Any
+from urllib.parse import urlparse
 
+import pandas as pd
 import pytest
 from openjii.helpers import load_experiment_table
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql import types as T
 from pyspark.sql.types import ArrayType
 
 pytestmark = pytest.mark.spark
@@ -167,19 +174,25 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     spark.sql(f"DROP DATABASE {_CATALOG}.centrum CASCADE")
 
 
+def _readable(frame: DataFrame) -> DataFrame:
+    """The frame with its VARIANT columns as JSON text."""
+    return frame.select(
+        *[
+            F.to_json(F.col(field.name)).alias(field.name)
+            if field.dataType.typeName() == "variant"
+            else F.col(field.name)
+            for field in frame.schema.fields
+        ]
+    )
+
+
 def _rows(spark: SparkSession, name: str) -> dict[int, dict[str, Any]]:
     """The view's rows by id, with VARIANT columns read back as JSON values."""
     frame = spark.sql((_VIEWS / f"{name}.sql").read_text().replace("${catalog}", _CATALOG))
-    readable = [
-        F.to_json(F.col(field.name)).alias(field.name)
-        if field.dataType.typeName() == "variant"
-        else F.col(field.name)
-        for field in frame.schema.fields
-    ]
     variants = {field.name for field in frame.schema.fields if field.dataType.typeName() == "variant"}
 
     rows = {}
-    for row in frame.select(*readable).collect():
+    for row in _readable(frame).collect():
         values = row.asDict(recursive=True)
         for column in variants:
             values[column] = json.loads(values[column]) if values[column] is not None else None
@@ -272,50 +285,251 @@ def test_measurements_and_macro_results_name_the_workbook_version_that_produced_
     assert macro[102]["workbook_version_id"] is None
 
 
-@pytest.mark.parametrize(("table_name", "ids"), [("raw_data", (1, 2)), ("mac-1", (101, 102))])
-@pytest.mark.parametrize("export_format", ["csv", "ndjson", "parquet"])
-def test_exports_keep_populated_and_null_workbook_versions(
+class _Files:
+    def create_directory(self, path: str) -> None:
+        Path(path).mkdir(parents=True, exist_ok=True)
+
+    def upload(self, path: str, contents: IO[bytes], overwrite: bool) -> None:
+        Path(path).write_bytes(contents.read())
+
+
+class _WorkspaceClient:
+    files = _Files()
+
+
+class _Fs:
+    def ls(self, directory: str) -> list[SimpleNamespace]:
+        return [
+            SimpleNamespace(name=path.name, size=path.stat().st_size) for path in Path(directory).iterdir()
+        ]
+
+    def rm(self, path: str, recurse: bool) -> None:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+class _DbUtils:
+    """The Databricks utilities the export task calls, over a local folder."""
+
+    def __init__(self) -> None:
+        self.fs = _Fs()
+        self.exits: list[str] = []
+        self.notebook = SimpleNamespace(exit=self.exits.append)
+
+
+_TASK = _VIEWS.parent / "tasks/data_export_task.py"
+_TASK_SETTINGS = {
+    "EXPORT_ID",
+    "EXPERIMENT_ID",
+    "TABLE_NAME",
+    "CATALOG_NAME",
+    "FORMAT",
+    "spark",
+    "dbutils",
+    "OUTPUT_PATH",
+    "SNAPSHOT_PATH",
+    "SNAPSHOT_AT",
+}
+_SPARK_FORMATS = ("csv", "ndjson", "parquet")
+_FORMATS = (*_SPARK_FORMATS, "json-array", "xlsx")
+
+
+def _runs_locally(node: ast.stmt) -> bool:
+    """Everything in the task but its widget settings, its Databricks-only import and its calls."""
+    if isinstance(node, (ast.Expr, ast.Try)):
+        return False
+    if isinstance(node, ast.ImportFrom):
+        return node.module != "pyspark.dbutils"
+    if isinstance(node, ast.Assign):
+        return not any(
+            isinstance(target, ast.Name) and target.id in _TASK_SETTINGS for target in node.targets
+        )
+    return True
+
+
+@pytest.fixture
+def export_task(
+    spark: SparkSession, centrum: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Callable[..., dict[str, Any]]:
+    """The export task loaded for one export into a local folder, ready for its ``main``."""
+    sdk = types.ModuleType("databricks.sdk")
+    sdk.WorkspaceClient = _WorkspaceClient  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "databricks", types.ModuleType("databricks"))
+    monkeypatch.setitem(sys.modules, "databricks.sdk", sdk)
+    body = [node for node in ast.parse(_TASK.read_text()).body if _runs_locally(node)]
+
+    def load(table_name: str, export_format: str, experiment_id: str = "e1", anonymize: bool = False):
+        output = tmp_path / table_name / export_format
+        namespace: dict[str, Any] = {
+            "EXPORT_ID": "export-1",
+            "EXPERIMENT_ID": experiment_id,
+            "TABLE_NAME": table_name,
+            "CATALOG_NAME": _CATALOG,
+            "FORMAT": export_format,
+            "ANONYMIZE_CONTRIBUTORS": anonymize,
+            "OUTPUT_PATH": str(output),
+            "SNAPSHOT_PATH": f"{output}-snapshot",
+            "SNAPSHOT_AT": "2026-11-16T08:00:00+00:00",
+            "spark": spark,
+            "dbutils": _DbUtils(),
+        }
+        exec(compile(ast.Module(body=body, type_ignores=[]), _TASK, "exec"), namespace)
+        return namespace
+
+    return load
+
+
+def _run(task: dict[str, Any]) -> dict[str, Any]:
+    """Run the export and return its manifest."""
+    task["main"]()
+    return json.loads(task["dbutils"].exits[-1])
+
+
+def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    return [
+        {name: None if pd.isna(value) else value for name, value in row.items()}
+        for row in frame.to_dict("records")
+    ]
+
+
+def _part_rows(spark: SparkSession, export_format: str, path: Path) -> list[dict[str, Any]]:
+    """One part's rows as a reader of that format gets them."""
+    if export_format == "csv":
+        return _records(pd.read_csv(path, compression="gzip", dtype=str))
+    if export_format == "ndjson":
+        with gzip.open(path, "rt") as lines:
+            return [json.loads(line) for line in lines]
+    if export_format == "parquet":
+        return [row.asDict(recursive=True) for row in _readable(spark.read.parquet(str(path))).collect()]
+    if export_format == "json-array":
+        return json.loads(path.read_text())
+    return _records(pd.read_excel(path, dtype=str))
+
+
+def _exported_rows(
+    spark: SparkSession, task: dict[str, Any], manifest: dict[str, Any]
+) -> list[dict[str, Any]]:
+    output = Path(task["OUTPUT_PATH"])
+    return [
+        row
+        for part in manifest["parts"]
+        for row in _part_rows(spark, manifest["format"], output / part["name"])
+    ]
+
+
+def _json(value: Any) -> Any:
+    """A nested value a flat format holds as JSON text."""
+    return json.loads(value) if isinstance(value, str) else value
+
+
+@pytest.mark.parametrize(
+    ("table_name", "ids", "annotations"),
+    [
+        ("raw_data", [1, 2], [["payload-1", "a1", "a2"], []]),
+        ("mac-1", [101, 102], [["payload-1", "a5"], []]),
+    ],
+)
+@pytest.mark.parametrize("export_format", _FORMATS)
+def test_an_export_writes_each_row_in_order_with_its_annotations_and_custom_metadata(
     spark: SparkSession,
-    centrum: str,
-    tmp_path: Path,
+    export_task: Callable[..., dict[str, Any]],
     table_name: str,
-    ids: tuple[int, int],
+    ids: list[int],
+    annotations: list[list[str]],
     export_format: str,
 ) -> None:
-    """Read the actual views through the export loader and check the task's written parts."""
-    frame = load_experiment_table("e1", table_name, _CATALOG, parts=1)
-    expected = {ids[0]: "v1", ids[1]: None}
-    assert {
-        row.id: row.workbook_version_id for row in frame.select("id", "workbook_version_id").collect()
-    } == expected
+    task = export_task(table_name, export_format)
+    task["ROWS_PER_PART"] = 1
 
-    # Load the notebook's writers without executing its Databricks widgets or main().
-    task_path = _VIEWS.parent / "tasks/data_export_task.py"
-    module = ast.parse(task_path.read_text())
-    writers: list[ast.stmt] = [
-        node
-        for node in module.body
-        if isinstance(node, ast.FunctionDef) and node.name in {"flatten_complex_columns", "write_parts"}
+    manifest = _run(task)
+    rows = _exported_rows(spark, task, manifest)
+
+    assert manifest["rowCount"] == len(rows) == 2
+    assert len(manifest["parts"]) == (2 if export_format in _SPARK_FORMATS else 1)
+    # A writer may leave out a null field, so the columns are those any row has.
+    assert set().union(*rows) == set(load_experiment_table("e1", table_name, _CATALOG).columns)
+    assert [int(row["id"]) for row in rows] == ids
+    assert [[annotation["id"] for annotation in _json(row["annotations"])] for row in rows] == annotations
+    assert [_json(row["custom_metadata"]) for row in rows] == [
+        {"soil": "clay", "color": "blue"},
+        {"soil": "sand"},
     ]
-    output_path = str(tmp_path / "export")
-    namespace: dict[str, Any] = {
-        "FORMAT": export_format,
-        "OUTPUT_PATH": output_path,
-        "col": F.col,
-        "to_json": F.to_json,
-        "StructType": T.StructType,
-        "ArrayType": T.ArrayType,
-        "MapType": T.MapType,
-        "VariantType": T.VariantType,
-    }
-    exec(compile(ast.Module(body=writers, type_ignores=[]), task_path, "exec"), namespace)
-    namespace["write_parts"](frame)
+    assert [row.get("workbook_version_id") for row in rows] == ["v1", None]
 
-    reader = spark.read.option("header", True).option("escape", '"') if export_format == "csv" else spark.read
-    written = reader.format("json" if export_format == "ndjson" else export_format).load(output_path)
-    assert {
-        int(row.id): row.workbook_version_id for row in written.select("id", "workbook_version_id").collect()
-    } == expected
+
+def test_an_anonymized_export_shows_each_contributor_by_their_pseudonym(
+    spark: SparkSession, export_task: Callable[..., dict[str, Any]]
+) -> None:
+    task = export_task("raw_data", "csv", anonymize=True)
+
+    rows = _exported_rows(spark, task, _run(task))
+
+    pseudonym = f"Contributor-{hashlib.sha256(b'e1:u1').hexdigest()[:6].upper()}"
+    [contributor, without_contributor] = [_json(row["contributor"]) for row in rows]
+    assert (contributor["id"], contributor["name"], contributor.get("avatar")) == (pseudonym, pseudonym, None)
+    assert without_contributor is None
+
+
+def test_an_export_writes_its_parts_from_its_snapshot_not_from_the_views(
+    export_task: Callable[..., dict[str, Any]],
+) -> None:
+    task = export_task("raw_data", "parquet")
+    write_parts = task["write_parts"]
+    read: list[str] = []
+
+    def write_recording_what_it_reads(frame: DataFrame) -> None:
+        read.extend(frame.inputFiles())
+        write_parts(frame)
+
+    task["write_parts"] = write_recording_what_it_reads
+    _run(task)
+
+    assert read
+    assert {Path(urlparse(path).path).parent.name for path in read} == {
+        f"{Path(task['OUTPUT_PATH']).name}-snapshot"
+    }
+
+
+@pytest.mark.parametrize("export_format", _FORMATS)
+def test_an_export_removes_its_snapshot_when_it_is_done(
+    export_task: Callable[..., dict[str, Any]], export_format: str
+) -> None:
+    task = export_task("raw_data", export_format)
+
+    _run(task)
+
+    assert not Path(task["SNAPSHOT_PATH"]).exists()
+
+
+def test_a_refused_export_removes_its_snapshot_and_writes_no_part(
+    export_task: Callable[..., dict[str, Any]],
+) -> None:
+    task = export_task("raw_data", "xlsx")
+    task["DRIVER_FORMAT_MAX_ROWS"] = 1
+
+    with pytest.raises(task["ExportError"], match=r"too_many_rows_for_format"):
+        _run(task)
+
+    assert not Path(task["SNAPSHOT_PATH"]).exists()
+    assert not Path(task["OUTPUT_PATH"]).exists()
+
+
+def test_an_experiment_without_rows_exports_an_empty_manifest(
+    spark: SparkSession, export_task: Callable[..., dict[str, Any]]
+) -> None:
+    spark.sql(
+        f"""
+        INSERT INTO {_CATALOG}.centrum.experiment_table_metadata
+        SELECT 'e-empty', identifier, table_type, macro_schema, questions_schema, custom_metadata_schema,
+          upload_schema
+        FROM {_CATALOG}.centrum.experiment_table_metadata
+        WHERE experiment_id = 'e1' AND identifier = 'raw_data'
+        """
+    )
+    task = export_task("raw_data", "csv", experiment_id="e-empty")
+
+    manifest = _run(task)
+
+    assert (manifest["rowCount"], manifest["parts"]) == (0, [])
 
 
 def test_macro_results_keep_their_error_and_get_the_same_enrichment(
