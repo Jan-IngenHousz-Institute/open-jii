@@ -278,7 +278,7 @@ describe("ServingStoreAdapter", () => {
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
   });
 
-  it("sends the experiment setting with a chart read and never with a page read", async () => {
+  it("sends the experiment setting with every read of a table and never with a read of views alone", async () => {
     const stream = vi.spyOn(client, "stream").mockResolvedValue(success({ complete: true }));
     const read: StoreQueryParams = {
       tableName: "raw_data",
@@ -287,18 +287,39 @@ describe("ServingStoreAdapter", () => {
     };
     const page = adapter.buildExperimentQuery({ ...read, limit: 10 });
     const chart = adapter.buildExperimentQuery({ ...read, plotsValues: true });
+    const joinedPage = adapter.buildExperimentQuery({
+      ...read,
+      limit: 10,
+      join: {
+        matchColumn: "device_id",
+        toleranceMinutes: 60,
+        secondary: { tableName: "m2", tableType: "macro" },
+        primaryColumns: ["id", "device_id", "timestamp"],
+        secondaryColumns: [{ name: "id", alias: "matched_id" }],
+        primaryTimeColumn: "timestamp",
+        primaryTimeType: "TIMESTAMP",
+        secondaryTimeColumn: "timestamp",
+        secondaryTimeType: "TIMESTAMP",
+      },
+    });
     assertSuccess(page);
     assertSuccess(chart);
+    assertSuccess(joinedPage);
 
     await adapter.executeQuery(page.value);
     await adapter.executeQuery(adapter.countQuery(page.value));
     await adapter.executeQuery(chart.value);
+    await adapter.executeQuery(joinedPage.value);
+    await adapter.executeQuery(adapter.countQuery(joinedPage.value));
 
-    const [pageCall, countCall, chartCall] = stream.mock.calls;
+    const [pageCall, countCall, chartCall, joinedCall, joinedCountCall] = stream.mock.calls;
     expect(pageCall[0]).not.toContain(EXPERIMENT_SETTING);
     expect(pageCall[1]).toEqual({});
     expect(countCall[1]).toEqual({});
     expect(chartCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
+    expect(joinedCall[0]).toContain("macro_results FINAL");
+    expect(joinedCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
+    expect(joinedCountCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
   });
 
   it("counts a read as text", () => {

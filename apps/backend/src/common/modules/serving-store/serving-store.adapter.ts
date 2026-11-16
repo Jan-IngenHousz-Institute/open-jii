@@ -154,9 +154,6 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     const identifier = params.tableType === "static" ? undefined : params.tableName;
-    // Only a chart reads the tables, whose row policy needs the setting; a page reads the views,
-    // so a store whose config lags the backend still serves pages.
-    const experiment = params.plotsValues === true ? params.experimentId : undefined;
     const builder = new StoreQueryBuilder();
     if (params.plotsValues) {
       builder.readForChart(table, params.experimentId, identifier);
@@ -205,7 +202,7 @@ export class ServingStoreAdapter implements ServingStorePort {
           offset: params.offset,
           idOrder: params.orderByIds,
         });
-        return success({ ...aggregated, experiment });
+        return success({ ...aggregated, experiment: this.policyExperiment(builder, params) });
       }
       if (params.ordering) {
         builder.orderBy(params.ordering, params.orderByIds);
@@ -219,7 +216,7 @@ export class ServingStoreAdapter implements ServingStorePort {
       const query = {
         sql: builder.build(),
         columns: builder.outputColumns(),
-        experiment,
+        experiment: this.policyExperiment(builder, params),
       };
 
       // The flagged ids are written into the statement, and a flagged page also sends its count,
@@ -241,6 +238,18 @@ export class ServingStoreAdapter implements ServingStorePort {
       }
       throw error;
     }
+  }
+
+  /**
+   * A statement that reads a table, a chart's or a joined read's second table, names its
+   * experiment to the reader's row policy; one that reads only views sends none, so a store whose
+   * config lags the backend still serves pages.
+   */
+  private policyExperiment(
+    builder: StoreQueryBuilder,
+    params: StoreQueryParams,
+  ): string | undefined {
+    return builder.readsTables() ? params.experimentId : undefined;
   }
 
   /** The second table of an as-of read, from the same experiment and its devices. */
@@ -331,8 +340,6 @@ export class ServingStoreAdapter implements ServingStorePort {
     return success({ columns, rows, totalRows: rows.length, truncated: !read.value.complete });
   }
 
-  /** A chart's read of the tables names its experiment to the reader's row policy, which reads no
-   *  rows without it. */
   private settingsOf({ experiment }: StoreQuery): Record<string, string> {
     return experiment === undefined ? {} : { [EXPERIMENT_SETTING]: experiment };
   }

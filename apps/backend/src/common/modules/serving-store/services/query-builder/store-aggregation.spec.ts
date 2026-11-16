@@ -244,6 +244,25 @@ describe("StoreAggregation", () => {
     }
   });
 
+  it("sends the experiment with every statement that reads a table, a page's or a chart's", () => {
+    const table = /\b(?:measurements|macro_results|uploads)\b/;
+    const pagesOfTables: string[] = [];
+    for (const name of Object.keys(FIXTURE.cases)) {
+      for (const plotsValues of [true, false]) {
+        const query = adapter.buildExperimentQuery({ ...storeRead(name), plotsValues });
+        assertSuccess(query);
+
+        const readsTable = table.test(query.value.sql);
+        const sends = query.value.experiment !== undefined;
+        expect({ name, plotsValues, sends }).toEqual({ name, plotsValues, sends: readsTable });
+        if (!plotsValues && readsTable) {
+          pagesOfTables.push(name);
+        }
+      }
+    }
+    expect(pagesOfTables).toContain("timeMatchedRows");
+  });
+
   it("sends the experiment as the setting the module's row policies read and its server allows", () => {
     const config = readFileSync(resolve(MODULE, "templates/config.xml.tftpl"), "utf-8");
     const prefix = /<custom_settings_prefixes>([^<]+)<\/custom_settings_prefixes>/.exec(
@@ -695,6 +714,14 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
         ["2", BEN, '["phone-a","Ambit (d2)"]'],
         ["3", null, null],
       ]);
+    });
+
+    it("reads a joined page through the reader, its second table under the row policy", async () => {
+      const data = await rowsOf(
+        joinedRead({ plotsValues: false, columns: ["id", "w"], limit: 10, offset: 0 }),
+      );
+
+      expect(data.rows.map(([id]) => id)).toEqual(["1", "2", "3"]);
     });
 
     it("filters by the second table's device label, from that table's own names", async () => {

@@ -46,6 +46,7 @@ export interface FirstRows {
 export interface StoreAsOfSecondary {
   sql: string;
   columns: StoreOutputColumn[];
+  readsTable: boolean;
 }
 
 /** The names of the id lists a statement's WITH clause holds, which no payload field may take. */
@@ -102,6 +103,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   /** The table a chart reads with FINAL, which an alias must come before. */
   private finalTable?: string;
+  private joinsTable = false;
   private firstRows?: FirstRows & { count: number };
   private columns: StoreColumn[] = [];
   private key: string[] = [];
@@ -148,6 +150,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.plotsValues = true;
     this.finalTable = table.table;
     return this.from(`${table.table} FINAL`);
+  }
+
+  /** Whether the statement names a table rather than a view, which the reader's row policy guards. */
+  readsTables(): boolean {
+    return this.finalTable !== undefined || this.joinsTable;
   }
 
   private columnsOf(table: StoreTable, experimentId: string, identifier?: string): void {
@@ -642,7 +649,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       `ORDER BY ${ASOF_KEY}, ${ASOF_TIME}, ${this.columnExpression("id")} ASC`,
       `LIMIT 1 BY ${ASOF_KEY}, ${ASOF_TIME}`,
     ]);
-    return { sql, columns: values.map(({ column }) => column) };
+    return {
+      sql,
+      columns: values.map(({ column }) => column),
+      readsTable: this.finalTable !== undefined,
+    };
   }
 
   /**
@@ -662,6 +673,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         ? `${this.fromClause} AS ${ASOF_PRIMARY}`
         : `${this.finalTable} AS ${ASOF_PRIMARY} FINAL`;
     this.fromClause = `${primary} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
+    this.joinsTable = secondary.readsTable;
     this.columns = [
       ...this.columns,
       ...secondary.columns.map(({ name, type, idOf }) => {
