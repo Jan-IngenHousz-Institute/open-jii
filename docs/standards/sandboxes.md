@@ -11,9 +11,15 @@ returning.
 
 ## Read first
 
-- `apps/macro-sandbox/README.md` and `apps/calibration-sandbox/README.md`, whose trust model section
-  is the thing to read before changing anything.
-- `infrastructure/modules/macro-sandbox` and the calibration sandbox module, which deploy them.
+- `apps/calibration-sandbox/README.md`, whose trust model section is the thing to read before
+  changing anything, and `apps/macro-sandbox/README.md`, whose architecture section says how a macro
+  is bounded.
+- `apps/docs/content/developers/design-decisions/macro-sandbox-adr.mdx`, the record of why macros
+  run in isolated runtimes.
+- `infrastructure/modules/macro-sandbox` and `calibration-sandbox`, with the `macro-lambda` and
+  `calibration-lambda` modules they compose, which create the functions.
+  `.github/workflows/deploy-macro-sandbox.yml` and `deploy-calibration-sandbox.yml` build, scan and
+  deploy the images.
 
 ## Shape
 
@@ -24,13 +30,15 @@ corpus and a compose file for running them locally.
 apps/macro-sandbox/functions/{python,javascript,r}/   one Dockerfile and handler each
 apps/macro-sandbox/lib/{helpers,wrappers}/            shared helpers, the per-language wrapper
 apps/macro-sandbox/test/{data,scripts}/               the fixture corpus and the scripts that keep it
-apps/calibration-sandbox/functions/                   the single generic handler
-apps/calibration-sandbox/lib/                         the wrapper, the quality gates
-apps/calibration-sandbox/tests/                        pytest
+apps/calibration-sandbox/functions/python/            the one generic handler and its Dockerfile
+apps/calibration-sandbox/lib/{helpers,wrappers}/      the quality gates, the wrapper
+apps/calibration-sandbox/test/event.json              the event `invoke` posts
+apps/calibration-sandbox/tests/                       unittest, run inside the built image
 ```
 
-There is no build step beyond `docker build`. `dev` is `docker compose up --build`, and an
-`invoke` script posts a fixture event to the local Lambda runtime interface.
+There is no build step beyond `docker build`. `dev` is `docker compose up --build`, and the
+`invoke` scripts post a fixture event to the local Lambda runtime interface, one per language for
+the macro runtimes.
 
 ## Rules
 
@@ -44,8 +52,8 @@ There is no build step beyond `docker build`. `dev` is `docker compose up --buil
    account, so anything the handler does with its output is validation, not trust. The calibration
    handler validating submitted blocks against the event's schema is that rule made concrete.
    [review]
-4. Fixtures under `test/data/` are maintained by the scripts in `test/scripts/`, not hand-edited.
-   [review]
+4. Fixture scripts under `test/data/` are encrypted with `MACRO_SB_TEST_KEY` and maintained by the
+   scripts in `test/scripts/`, so they are never hand-edited. [review]
 5. A test that needs the composed stack skips with a message when its key is absent rather than
    failing. Silence is worse than either, because a skipped suite that looks green hides the fact
    nothing ran. [review]
@@ -54,23 +62,36 @@ There is no build step beyond `docker build`. `dev` is `docker compose up --buil
 7. Nothing family-specific or device-specific lives in a sandbox. The calibration runtime is generic
    and the event carries everything it needs, which is what keeps one Lambda serving every device
    family. [review]
+8. A sandbox image is built and scanned on every pull request that touches it, and again before it
+   ships. An accepted finding goes in the `.trivyignore.yaml` beside the function with a written
+   statement and an expiry date, and is renewed or removed when the date passes.
+   [ci: Docker Build (Calibration Sandbox)] [ci: Docker Build (Macro Sandbox - <language>)]
+9. A sandbox image is deployed by its workflow, never by changing an image reference in OpenTofu.
+   OpenTofu creates the function and ignores `image_uri`. [review]
+10. The function timeout in the infrastructure module is set above the handler's own limit, so a
+    script that overruns fails with the handler's message and not with a killed invocation.
+    [review]
 
 ## Tests
 
-`macro-sandbox` has two vitest configurations: the default one runs against the composed stack,
-brought up by `test:up` and gated on `MACRO_SB_TEST_KEY` being present, and the container
-configuration runs the handler inside its image. `calibration-sandbox` uses pytest, three files
-today.
+`macro-sandbox` has two vitest configurations. The default one runs the encrypted corpus against the
+composed stack, brought up by `test:up` and gated on `MACRO_SB_TEST_KEY`. The container
+configuration builds the three images and checks the shared data contract in each, and it is opt-in
+(`pnpm test:container`) and not run by CI. `calibration-sandbox` runs three `unittest` files inside
+its own image, and skips with a message when Docker is not available.
 
 ## Known debt
 
-A single spec covers the three macro runtimes that execute untrusted code. The gap worth closing
-first is a shared conformance suite: the same fixture through all three handlers, asserting
-identical output, which would catch the drift rule 1 exists to prevent. Needs a ticket.
+The three macro runtimes have a shared contract suite in
+`apps/macro-sandbox/test/handler-container.spec.ts`, but it is opt-in and CI does not run it, so the
+drift that rule 1 exists to prevent is only caught when someone remembers to run
+`pnpm test:container`. The corpus in `test/test.ts` is written per language, with each case naming
+one. Wire the contract suite into CI. Needs a ticket.
 
-The two sandboxes solve the same problem twice, with their own wrapper, their own fixture handling
-and their own compose file. That is defensible while their event shapes differ, and worth revisiting
-if a third one ever appears. No ticket.
+The two sandboxes solve the same problem twice. Each Python wrapper has its own copy of the module
+proxies and the audit hook, so a change to one has to be repeated in the other. That is defensible
+while the event shapes differ, and worth revisiting if a third sandbox appears or the copies
+diverge. No ticket.
 
 ## Decisions
 
@@ -79,3 +100,4 @@ if a third one ever appears. No ticket.
   Python invocation.
 - 2026-09-22. `apps/calibration-sandbox` is documented here rather than in its own standard, because
   the rules that matter for it are the boundary rules it shares with the macro runtimes.
+- 2026-11-16. This document was reconciled with main on 16 November 2026.

@@ -5,6 +5,7 @@ paths:
   - "packages/cms/**"
   - "packages/analytics/**"
   - "packages/transactional/**"
+  - "packages/monitoring/**"
 ---
 
 Before changing one of the small shared packages here, read `docs/standards/shared-packages.md`.

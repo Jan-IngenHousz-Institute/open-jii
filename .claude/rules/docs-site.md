@@ -1,6 +1,10 @@
 ---
 paths:
   - "apps/docs/content/**"
+  - "apps/docs/scripts/**"
+  - "apps/docs/media/**"
+  - "apps/docs/redirects.json"
+  - "asyncapi.yaml"
 ---
 
 Before changing documentation a user reads here, read `docs/standards/docs-site.md`. It has the

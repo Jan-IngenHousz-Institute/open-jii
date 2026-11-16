@@ -5,17 +5,19 @@ Developers and agents read the same ones, so there is a single answer to "how is
 instead of one answer per person.
 
 They describe the rules, not the code as it stands. A fair amount of what is in the repo breaks
-them, which is why every document ends with a list of the places that do, each with a path. When you
+them, which is why every document keeps a list of the places that do, each with a path. When you
 run into one of those, add a line to the list. It is not licence to add another.
 
 ## Reading one
 
-The sections are the same everywhere and come in this order: scope, what to read first, the shape of
-the directory, the numbered rules, patterns for the jobs that come up often, testing, known debt,
-and any contradictions that have been settled, each with a date.
+Each document opens with a short paragraph on its scope. After that the headings come in this order
+where they apply: read first, shape, rules, patterns, tests, known debt and decisions, which holds
+any contradiction that has been settled, each with a date. A document leaves out a heading that has
+nothing to say, and testing.md and shared-packages.md use headings of their own where the common
+shape does not fit.
 
-Scope and rules are the two worth reading before you touch a component. Shape and patterns matter
-more when you are adding files than when you are changing them.
+The opening paragraph and the rules are the two worth reading before you touch a component. Shape
+and patterns matter more when you are adding files than when you are changing them.
 
 ## Enforcement
 
@@ -26,7 +28,7 @@ saying which it is.
 | Tag              | What it means                                                               |
 | ---------------- | --------------------------------------------------------------------------- |
 | `[lint: <rule>]` | An ESLint or ruff rule fails the build. The rule name is in the tag.        |
-| `[ci: <job>]`    | A CI job fails, named as it appears in `.github/workflows`.                 |
+| `[ci: <job>]`    | A CI job fails, named by its `name:` in `.github/workflows`.                |
 | `[hook: <name>]` | A hook under `.claude/hooks` warns or blocks. Agents see it, people do not. |
 | `[review]`       | Nothing catches it automatically.                                           |
 | `[aspiration]`   | Where we want to end up, but most of the code is not there yet.             |
@@ -35,9 +37,12 @@ A `[lint]` or `[ci]` tag means a check that runs today. If we want one and have 
 rule gets `[review]` and the missing check goes into the debt list, so nobody is misled about what
 is actually being enforced.
 
+Name a CI job as GitHub shows it, such as `Validate PR title` or `Build, Lint, & Test`. A workflow
+whose only job has no name is named by the workflow, which is the case for `Linear ref check`.
+
 ## Debt
 
-The last section of every document lists the code that breaks its own rules, one line each:
+The known debt section of every document lists the code that breaks its own rules, one line each:
 
 ```text
 - `path/to/thing.ts` does X, against rule 4. Do Y instead. OJD-1234.
@@ -52,25 +57,30 @@ rather than on the published docs site.
 
 ## The documents
 
-| Document                                 | Covers                                                                      |
-| ---------------------------------------- | --------------------------------------------------------------------------- |
-| [prose.md](prose.md)                     | Comments, documentation, commit messages, user-facing copy.                 |
-| [code.md](code.md)                       | TypeScript rules that hold everywhere.                                      |
-| [backend.md](backend.md)                 | `apps/backend`.                                                             |
-| [api.md](api.md)                         | `packages/api`, the contract layer.                                         |
-| [database.md](database.md)               | `packages/database`, schema and migrations.                                 |
-| [web.md](web.md)                         | `apps/web`.                                                                 |
-| [ui.md](ui.md)                           | `packages/ui` and the theme tokens.                                         |
-| [i18n.md](i18n.md)                       | `packages/i18n`, and how web and mobile use it.                             |
-| [testing.md](testing.md)                 | Test policy across every workspace.                                         |
-| [mobile.md](mobile.md)                   | `apps/mobile`.                                                              |
-| [data.md](data.md)                       | `apps/data`, the pipelines and the libraries.                               |
-| [sandboxes.md](sandboxes.md)             | `apps/macro-sandbox` and `apps/calibration-sandbox`.                        |
-| [docs-site.md](docs-site.md)             | Writing for `apps/docs`.                                                    |
-| [shared-packages.md](shared-packages.md) | `packages/auth`, `iot`, `cms`, `analytics`, `transactional`.                |
-| [tooling.md](tooling.md)                 | `tooling/*`, `turbo.json`, the root scripts.                                |
-| [infrastructure.md](infrastructure.md)   | `infrastructure/`.                                                          |
-| [git.md](git.md)                         | Branches, commits, pull requests, and what to run before calling work done. |
+| Document                                 | Covers                                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| [prose.md](prose.md)                     | Comments, documentation, commit messages, user-facing copy.                      |
+| [code.md](code.md)                       | TypeScript rules that hold everywhere.                                           |
+| [backend.md](backend.md)                 | `apps/backend`.                                                                  |
+| [api.md](api.md)                         | `packages/api`, the contract layer.                                              |
+| [database.md](database.md)               | `packages/database`, schema and migrations.                                      |
+| [web.md](web.md)                         | `apps/web` and `apps/status`.                                                    |
+| [ui.md](ui.md)                           | `packages/ui` and the theme tokens.                                              |
+| [i18n.md](i18n.md)                       | `packages/i18n`, and how web and the status page use it.                         |
+| [testing.md](testing.md)                 | Test policy across every workspace.                                              |
+| [mobile.md](mobile.md)                   | `apps/mobile`.                                                                   |
+| [data.md](data.md)                       | `apps/data`, the pipelines and the libraries.                                    |
+| [sandboxes.md](sandboxes.md)             | `apps/macro-sandbox` and `apps/calibration-sandbox`.                             |
+| [docs-site.md](docs-site.md)             | Writing for `apps/docs`.                                                         |
+| [shared-packages.md](shared-packages.md) | `packages/auth`, `iot`, `cms`, `analytics`, `transactional` and `monitoring`.    |
+| [tooling.md](tooling.md)                 | `tooling/*`, `turbo.json`, the root scripts and the hooks under `.claude/hooks`. |
+| [infrastructure.md](infrastructure.md)   | `infrastructure/`.                                                               |
+| [git.md](git.md)                         | Branches, commits, pull requests, and what to run before calling work done.      |
+
+Each document for a part of the codebase has a pointer file in `.claude/rules/` whose `paths` say
+which files it applies to, so an agent that opens one of those files is told to read the document
+first. The pointer holds no rule of its own. When you add such a document, add its pointer in the
+same change.
 
 ## Things that already have a home
 
@@ -80,9 +90,13 @@ than restating it:
 - `apps/web/TESTING.md` for testing the web app, which is detailed enough that summarising it would
   lose the point.
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) for pull request titles, Linear relations and how a
-  release is cut from them.
+  release is cut from them, and for its "Review standards" section, which lists the judgement calls
+  a reviewer checks that no tool can, such as keeping a fix in the narrowest layer and keeping
+  environment differences in configuration.
 - `docs/agents/ticket-standard.md` for the shape of a ticket or a project, and the bar for anything
   written into Linear.
+- `docs/agents/roles.md` and `docs/agents/cloud-access.md` for how an agent session is scoped and
+  why it may read cloud state but never change it.
 - `apps/mobile/docs/styling.md` for mobile styling.
 - The glossary at `apps/docs/content/guide/reference/glossary.mdx`, which the root `CONTEXT.md`
   points to, for the words we use for things.

@@ -26,17 +26,20 @@ live in the component's own document. This is about the language.
    that fails, write one named helper with a short TSDoc explaining the gap rather than scattering
    casts at call sites. [review]
 3. Do not use `any`, and do not reach for it to get out of a generic that fights you.
-   [lint: @typescript-eslint/no-explicit-any] The unsafe assignment, call, member access, return and
-   argument rules from the type-checked preset back this up, so a stray `any` tends to fail in
-   several places at once.
+   [lint: @typescript-eslint/no-explicit-any] The rule is on everywhere except `apps/backend` and
+   `apps/mobile`. The unsafe assignment, call, member access, return and argument rules from the
+   type-checked preset back it up everywhere except `apps/mobile`, where all five are off, and a
+   stray `any` in the backend only warns on unsafe arguments.
 4. No non-null assertions. Narrow with a type guard, or throw an error that says what was missing
    and where it should have come from. [lint: @typescript-eslint/no-non-null-assertion]
 5. Object shapes are declared with `interface`. A `type` alias is for unions, intersections,
    mapped and conditional types, and function signatures.
    [lint: @typescript-eslint/consistent-type-definitions]
 6. Import types with `import type`, kept as their own statement rather than mixed into a value
-   import. [lint: @typescript-eslint/consistent-type-imports]
-   [lint: import/consistent-type-specifier-style]
+   import. [lint: import/consistent-type-specifier-style] The sibling rule
+   `@typescript-eslint/consistent-type-imports` only warns in every workspace except `apps/mobile`,
+   where it is off, and `apps/backend` and `apps/mobile` lint with `--fix`, so there the specifier
+   rule rewrites the import instead of failing.
 
 ### Structure within a file
 
@@ -75,7 +78,9 @@ live in the component's own document. This is about the language.
     Everything inside those edges trusts its inputs. [review]
 14. Do not guard against states that cannot happen. A `if (!x) return` for a value the types say is
     always present is noise, and the linter will often say so.
-    [lint: @typescript-eslint/no-unnecessary-condition]
+    [lint: @typescript-eslint/no-unnecessary-condition] The rule is an error everywhere except
+    `apps/mobile`, `packages/cms` and `apps/web/components/cms`, where it is off, and `packages/ui`,
+    where `src` is not linted with it.
 15. Read environment variables through the validated env module, never `process.env` directly, so
     a missing variable fails at boot with a name rather than at runtime as `undefined`.
     [lint: no-restricted-properties]
@@ -95,9 +100,14 @@ live in the component's own document. This is about the language.
     scheduler usually means something upstream is shaped wrong, and the upstream shape is the thing
     to fix. [review]
 20. Prefix a deliberately unused binding with an underscore, which is how the linter is configured
-    to recognise intent. [lint: @typescript-eslint/no-unused-vars]
+    to recognise intent. [lint: @typescript-eslint/no-unused-vars] The rule is a warning in
+    `apps/mobile`.
 21. Formatting, including import order and grouping, is prettier's job and is not up for debate in
-    review. [lint: prettier/prettier]
+    review. [lint: prettier/prettier] [ci: Prettier Format Check]
+22. Derive a value while rendering instead of copying props or state into other state inside an
+    effect. [lint: react-hooks/set-state-in-effect] [lint: react-hooks/no-deriving-state-in-effects]
+23. Do not branch on which environment you are in. Anything that differs between development and
+    production is a configuration value, read once at the edge and passed in. [review]
 
 ## Patterns
 
@@ -123,44 +133,53 @@ any single line of it. Nothing in prettier produces that; it is a choice the aut
 
 ## Known debt
 
-There are 926 type assertions in non-test source, plus another 1,211 in test files, so rule 1 is
-aspiration-shaped in practice even though it is the rule going forward. They are spread as follows:
-284 in `packages/ui`, 257 in `apps/web`, 159 in `apps/mobile`, 91 in `apps/backend`, 35 in
-`packages/iot`, and the rest in single digits across the other packages. Most are narrowing casts
-rather than `any`, which is the milder half of the problem. No ticket for the backlog itself.
+There are 762 type assertions in non-test source, counted with the TypeScript compiler and leaving
+out `as const`, plus another 1,433 in test files, so rule 1 is aspiration-shaped in practice even
+though it is the rule going forward. They are spread as follows: 257 in `apps/web`, 178 in
+`packages/ui`, 131 in `apps/mobile`, 86 in `apps/backend`, 35 in `packages/iot`, 21 in
+`packages/api`, 20 in `packages/auth`, and the rest in single digits across the other workspaces.
+Most are narrowing casts rather than `any`, which is the milder half of the problem. No ticket for
+the backlog itself.
 
-A lint rule for rule 1 cannot land as an error while those 926 exist. The plan is
+A lint rule for rule 1 cannot land as an error while those 762 exist. The plan is
 `@typescript-eslint/consistent-type-assertions` with `assertionStyle: "never"`, introduced as a
 warning, then promoted to an error per package as each one reaches zero, starting with the packages
 already in single digits. Needs a ticket.
 
-`packages/ui/eslint.config.js` ignores `src/**` entirely, so all 63 components are linted for theme
-tokens only and nothing else. That is where 58 of the repo's 67 `as any` casts sit, unseen by the
-type-checked rules every other package gets. Replacing the blanket ignore with an explicit list of
-legacy files would put new code under the real config. Needs a ticket.
+`packages/ui/eslint.config.js` ignores `src/**` entirely, and a second config lints the 66
+top-level components for theme tokens and three React hooks rules only, with no type-aware rules.
+That is where 56 of the repo's 64 `as any` casts and 23 of its 25 non-null assertions in non-test
+source sit, unseen by the type-checked rules every other package gets. Replacing the blanket ignore
+with an explicit list of legacy files would put new code under the real config. Needs a ticket.
 
-Only `apps/web` opts into `restrictEnvAccess`, so rule 15 is enforced in one workspace out of
-sixteen. The backend, mobile and every package can still read `process.env` directly. Needs a
-ticket.
+Only `apps/web` opts into `restrictEnvAccess`, so rule 15 is enforced in one of the 19 workspaces
+that have an ESLint configuration. The backend, mobile and every package can still read
+`process.env` directly, and 78 lines in their sources outside tests mention it. Needs a ticket.
 
-Nine `export *` statements remain, in three files: `packages/database/src/index.ts`,
+Nine `export *` statements remain, in three files: `packages/database/src/postgres/index.ts`,
 `packages/i18n/src/index.ts` and
 `packages/api/src/domains/experiment/experiment.schema.ts`. The i18n one is the clearest break with
 rule 8, since `@repo/i18n/client` and `@repo/i18n/server` already exist and consumers could import
 them directly. Needs a ticket.
 
+`packages/iot/src/index.ts` is a 248-line root barrel of 70 re-exports that both mobile and web
+import from, against rule 8. Splitting it into subpaths in the `exports` map would let importers
+name the module they want. Needs a ticket.
+
 Eleven files are named for a grab bag rather than a responsibility, against rule 7, including
-`apps/backend/src/common/utils/stream-utils.ts`, `apps/web/components/react-flow/flow-utils.ts` and
+`apps/web/components/react-flow/flow-utils.ts`,
+`apps/web/components/data-table/data-table-utils.tsx` and
 `apps/mobile/src/features/connection/services/device-connection-manager/device-utils.ts`.
 `fp-utils.ts` is the deliberate exception: it is the `Result` and `AppError` implementation and the
-name is historical. Move an item onto its owner when you next touch it. No ticket.
+name is historical. `column-type-utils.ts` sits in the exempt `transforms` directory, and the two
+`test-utils.tsx` files are render helpers for tests. Move an item onto its owner when you next touch
+it. No ticket.
 
-Rule 10 describes the house style rather than correcting it. There are 1,625 braceless single-line
-`if` statements in non-test source, 718 of them in `apps/web` and 330 in `apps/mobile`, and almost
-all of them are guard clauses: 334 end in `return`, 160 in a bare `return;`, 39 in `continue;` and
-14 in a `throw`. A handful do real work on the same line, such as the three in
-`apps/backend/src/common/utils/orpc-fp.ts` that assign to a log object, and those are the ones to
-put braces on when you are next in the file. No ticket.
+Rule 10 describes the house style rather than correcting it. There are 1,935 braceless single-line
+`if` statements in non-test source, 805 of them in `apps/web` and 364 in `apps/mobile`, and most are
+guard clauses: 1,599 end in `return`, `continue`, `break` or `throw`. The other 336 do real work on
+the same line, such as the three in `apps/backend/src/common/utils/orpc-fp.ts` that assign to a log
+object, and those are the ones to put braces on when you are next in the file. No ticket.
 
 ## Decisions
 
@@ -181,3 +200,5 @@ put braces on when you are next in the file. No ticket.
   enables the rule today. The backend reads it directly in at least
   `apps/backend/src/common/utils/orpc-fp.ts`, which is the kind of place a missing variable turns
   into silently different behaviour rather than a boot failure.
+- 2026-11-16. Reconciled with main, where there are 762 type assertions and 1,935 braceless `if`
+  statements, so the counts in the earlier decisions are the 2026-09-21 ones.

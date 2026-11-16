@@ -6,6 +6,9 @@
 Testing it is `apps/web/TESTING.md` and [testing.md](testing.md). The shared components and the
 colour tokens are [ui.md](ui.md), and translations are [i18n.md](i18n.md).
 
+`apps/status`, the public status page, follows the same rules for components, translations and
+colour, and has its own tests under `apps/status/test`.
+
 ## Read first
 
 - `apps/web/README.md`, then `apps/web/TESTING.md`.
@@ -21,11 +24,15 @@ project.
 ```text
 app/[locale]/              routes, with (auth) and (info) groups and platform/ underneath
 app/actions/               server actions
+app/api/                   route handlers for Contentful draft mode and release notes
+proxy.ts                   locale routing, decided per viewer before any layout renders
+providers/                 the query and PostHog providers
 components/<feature>/      one directory per feature, one component per file
 components/<name>.tsx      single-file components that have no feature to belong to
+components/cms/            the Contentful rendering for the public pages
 hooks/<domain>/use<Name>/  one directory per hook, with its test beside it
 hooks/<name>.ts            generic hooks with no domain
-lib/                       the orpc clients, query keys, integrations
+lib/                       the oRPC clients, integrations and device code
 util/                      small pure helpers
 test/                      the harness: test-utils, factories, msw
 ```
@@ -53,13 +60,15 @@ The references to copy: `components/auth/email-login-form.tsx` for a form,
 7. A mutation that changes something on screen follows the optimistic pattern in
    `useExperimentUpdate`: cancel in-flight queries, snapshot, write the optimistic value in
    `onMutate`, restore the snapshot in `onError`, invalidate in `onSettled`. [review]
-8. A server component reads through `lib/server-orpc.ts`, which forwards the incoming cookie. Never
-   import it from a client component: it imports `next/headers` on purpose so that mistake fails at
-   build time. [review]
+8. A server component reads through `lib/server-orpc.ts`. Use `createServerOrpcClient` for data
+   that depends on the caller, which forwards the incoming cookie, and
+   `createAnonymousServerOrpcClient` for data on a page every visitor shares, so the page can still
+   be cached. Never import either from a client component: the module imports `next/headers` on
+   purpose so that mistake fails at build time. [review]
 9. Forms use react-hook-form with `zodResolver` over the schema from `packages/api`, rendered with
    the form primitives from `@repo/ui/components/form`. Never a `useState` per field, and a
    multi-step form is one `useForm` shared across the steps rather than one per step. [review]
-10. Every string a user sees comes from `useTranslation`. 531 files already do this, so there is
+10. Every string a user sees comes from `useTranslation`. 647 files already do this, so there is
     always an example nearby. [review]
 11. Import from `@repo/ui` by its deep subpath, for example
     `@repo/ui/components/button`. There is no barrel to import from. [review]
@@ -76,49 +85,63 @@ The references to copy: `components/auth/email-login-form.tsx` for a form,
 work in a feature component. If it needs new data, the contract comes first in `packages/api`, then
 the hook, then the component.
 
+**Making a page arrive with its data.** Wrap the page body in `PrefetchedQueries` from
+`components/server-prefetch/prefetched-queries.tsx`, passing the same query-option builders the
+client hook uses so the keys match, and add a `loading.tsx` beside the route. Prefetch only the
+default view, since the client parses every other filter state.
+
 **Adding a chart type.** Before writing anything, work out the configuration it needs, how it
 aggregates, what a researcher is actually trying to see, and whether it has to work in a combination
 chart. The chart type lives in `packages/ui/src/components/charts/`, and the web side adds the
 dynamic wrapper in `components/charts/` plus whatever transform the data needs. Keep a new transform
 structurally similar to its siblings, because they are read as a family.
 
+**Adding a list page.** Build it from `components/resource-list/resource-list.tsx` and
+`hooks/useResourceList.ts`. The hook keeps search, sort and filters in the URL through
+`hooks/useListUrlState.ts`, and the component draws the Filter menu and its chips from `@repo/ui`
+through `components/list-filter-bar.tsx`. Do not hold list state in component state, because a
+shared link has to reopen the same view.
+
 **Finding the precedent.** Nearly every interaction in this app already exists somewhere. Find the
 sibling that solves it and mirror it rather than inventing a second way to do the same thing.
 
 ## Tests
 
-Vitest with jsdom, colocated `.test.tsx`, 970 files. The suite runs with `isolate: false`, which has
-real consequences for mocking, all of them explained in `apps/web/TESTING.md`. Use MSW through
-`test/msw/mount.ts`, which takes a contract procedure rather than a URL, and build fixtures from
-`test/factories.ts`.
+Vitest with jsdom, colocated `.test.ts` and `.test.tsx` files, 1,086 of them. The suite runs with
+`isolate: false`, which has real consequences for mocking, all of them explained in
+`apps/web/TESTING.md`. Use MSW through `test/msw/mount.ts`, which takes a contract procedure rather
+than a URL, and build fixtures from `test/factories.ts`.
 
 ## Known debt
 
-The app addresses itself three ways. 1,510 files use `@/`, 220 use `~/` and 672 use a `../`
+The app addresses itself three ways. 1,733 files use `@/`, 320 use `~/` and 744 use a `../`
 relative. This is structural rather than sloppy: `tsconfig.json` maps `~/*` to the app root as a
 wildcard but enumerates `@/` per folder, so `~/env` and anything under `app/` have no `@/`
 equivalent, and the `restrictEnvAccess` lint message tells people to write `~/env`. Adding a `@/*`
 wildcard and banning `~/` would end it. Needs a ticket.
 
-`util/` has 31 files and `lib/` has 29, and the split between them is not obvious from either name.
-Nothing new should go into `util/`. No ticket.
+`util/` has 32 entries and `lib/` has 38, and the split between them is not obvious from either
+name. Nothing new should go into `util/`. No ticket.
 
-Four files are large enough to be hard to hold in your head:
-`hooks/workbook/useWorkbookExecution/useWorkbookExecution.ts` at 906 lines,
-`components/experiment-visualizations/charts/cartesian/cartesian-transform.ts` at 784,
-`lib/multispeq/pipeline.ts` at 639 and `components/workbook/workbook-editor.tsx` at 634. No ticket.
+Five files are large enough to be hard to hold in your head:
+`components/iot-devices/calibration/wizard/calibration-wizard.tsx` at 1,081 lines,
+`hooks/workbook/useWorkbookExecution/useWorkbookExecution.ts` at 909,
+`components/experiment-visualizations/charts/cartesian/cartesian-transform.ts` at 792,
+`lib/multispeq/pipeline.ts` at 738 and `components/workbook/workbook-editor.tsx` at 685. No ticket.
 
 `components/experiment-overview.tsx:59` holds commented-out JSX with a TODO saying the backend
 implementation is pending, which breaks the no-commented-out-code rule in [prose.md](prose.md).
 Either the backend work is tracked and this waits in a ticket, or the markup goes. No ticket.
 
-There are 257 type assertions in non-test source here, the second highest in the repo after
-`packages/ui`. See [code.md](code.md) for how that gets unwound. No ticket.
+There are 264 type assertions in non-test source here, not counting `as const`, the second highest
+in the repo after `apps/backend`. See [code.md](code.md) for how that gets unwound. No ticket.
 
 ## Decisions
 
-- 2026-09-21. `@/` is the alias this app standardises on, because 1,510 files already use it and
-  220 use `~/`. `apps/mobile` keeps `~/` because its import-boundary lint rules are written
+- 2026-09-21. `@/` is the alias this app standardises on, because 1,733 files already use it and
+  320 use `~/`. `apps/mobile` keeps `~/` because its import-boundary lint rules are written
   against it, so the two apps differ on purpose.
-- 2026-09-21. The 83 tests under `app/**/__tests__/` stay there so route directories hold only the
-  files Next treats specially. Everywhere else, tests sit next to their subject.
+- 2026-09-21. The 36 tests under `app/**/__tests__/` stay there. Everywhere else, tests sit next to
+  their subject, which includes the 69 other tests under `app/`, beside their route files.
+- 2026-11-16. This document was reconciled with `main` on 16 November 2026, and the counts and paths
+  that had drifted were corrected.

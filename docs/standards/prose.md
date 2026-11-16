@@ -82,12 +82,15 @@ The prose standard inside `docs/agents/ticket-standard.md` covers the same groun
 ### Commits and pull requests
 
 25. A commit subject is one line in Conventional Commit form, with no body, no co-author trailer and
-    no emoji. [review] [ci: Validate PR]
+    no emoji. [review]
 26. The pull request title is what the release tooling reads, so it takes the same form and
-    describes the change rather than the branch. `CONTRIBUTING.md` has the rest, including the Linear
-    relation lines. [ci: Linear ref check]
+    describes the change rather than the branch. Keep it within about 72 characters, since it
+    becomes the commit subject on `main` and a line in the release notes. `CONTRIBUTING.md` has the
+    rest, including the Linear relation lines. [ci: Validate PR title] [ci: Linear ref check]
 27. Write the body for somebody who has not seen the work: what changed, why, what you checked and
-    how, and where a reviewer should start. [review]
+    how, and where a reviewer should start. The pull request template in
+    `.github/pull_request_template.md` sets the headings, and the relation lines go under Linear
+    issues. [review]
 
 ### Writing to the person you are working with
 
@@ -108,37 +111,54 @@ again would cost an afternoon. The usual failure looks nothing like this: a comm
 statement underneath it.
 
 `apps/mobile/docs/styling.md` is worth copying the shape of. In 91 lines it says what the app uses
-for styling, lists the rules, gives a table of tokens, and closes with one sentence on what to do
-when the tokens run out. It gives the rule and the way out, then stops.
+for styling, lists the rules, gives a table of tokens, spells out the few approved exceptions, and
+ends with the CI check that enforces the two hard rules. It gives the rule and the way out, then
+stops.
+
+`apps/backend/src/common/modules/email/services/email.adapter.ts` is the pattern for rule 20. It
+logs the operation and the resource ids and never the recipient, and the send failure in
+`notifications/notifications.service.ts` says `Email could not be sent` without the address.
 
 Anything longer than a paragraph goes through the `unslop` skill before it ships. That is where the
 puffery, the padded groups of three and the giveaway vocabulary come out.
 
 ## Known debt
 
-Em dashes are the large one. 62 tracked markdown and MDX files contain them, the worst being
-`apps/docs/content/guide/reference/access-troubleshooting.mdx` with 36 and `apps/mobile/CONTEXT.md`
-with 30, and both `AGENTS.md` and `apps/web/TESTING.md` are in the list. Another 548 TypeScript,
-TSX and Python files have them inside comments and TSDoc. None of that is worth sweeping, because
-replacing an em dash changes the grammar around it and each one needs a person to decide, so fix
-them in the files you were editing anyway. No ticket.
+Em dashes are the large one. 61 tracked markdown and MDX files contain em or en dashes, the worst
+being `apps/docs/content/guide/reference/access-troubleshooting.mdx` with 37 and
+`apps/mobile/CONTEXT.md` with 32, and both `AGENTS.md` and `apps/web/TESTING.md` are in the list.
+Another 583 TypeScript, TSX and Python files have them inside comments and TSDoc. None of that is
+worth sweeping, because replacing an em dash changes the grammar around it and each one needs a
+person to decide, so fix them in the files you were editing anyway. No ticket.
 
-The exception is the 39 em dashes sitting in copy users actually read, spread over the shared locale files and the
-mobile ones. That
-set is small enough to fix in one pass, and it is the only part of this debt a researcher ever sees.
-Needs a ticket.
+The exception is the 38 dashes sitting in copy users actually read, spread over the shared locale
+files and the mobile ones. That set is small enough to fix in one pass, and it is the only part of
+this debt a researcher ever sees. Needs a ticket.
 
-Nothing checks for em dashes today, so more keep arriving. The plan is a CI step that looks only at
-the lines a pull request adds, which keeps the 610 files already in the tree from blocking it on the
-first day. Needs a ticket.
+No CI step checks the tree as a whole for em dashes, so more keep arriving. The devkit already flags
+them in Linear text and in the role sources under `.agents/roles` through `pnpm roles:check`, and
+the plan is a CI step that runs the same check over only the lines a pull request adds, which keeps
+the 644 files already in the tree from blocking it on the first day. Needs a ticket.
 
 `CONTRIBUTING.md` and `apps/docs/content/developers/contributing/index.mdx` are two hand-maintained
 copies of the same guide, and they already disagree about which commands verify a change.
 `CONTRIBUTING.md` should stay the real one and the published page should shrink to a pointer. Needs
 a ticket.
 
-Two rules need no debt line, because the repo already keeps them. There are no divider comments in
-it, and only two files contain a TODO or a FIXME.
+Twenty files carry divider comments, against rule 11, among them
+`apps/backend/src/common/utils/error-codes.ts`, `packages/api/src/domains/macro/macro.schema.ts` and
+`packages/iot/src/driver/multispeq/commands.ts`. Delete the banners when you are next in the file.
+No ticket.
+
+Six files carry a TODO or a FIXME, which breaks rule 12 where the note only promises work:
+`apps/web/components/experiment-overview.tsx`, `apps/web/app/[locale]/(info)/blog/not-found.tsx`,
+`tooling/tailwind/eslint.config.js` and three OpenTofu files. Do the work or delete the note when
+you are next in the file. No ticket.
+
+Sixteen `t()` calls in `apps/web/components/auth/email-login-form.tsx`,
+`apps/web/components/navigation/unified-navbar/unified-navbar.tsx` and
+`apps/web/components/shared/autosave/autosave-indicator.tsx` pass fallback text, against rule 22.
+Delete the second argument and add the key to each locale if it is missing. No ticket.
 
 ## Decisions
 
@@ -147,3 +167,5 @@ it, and only two files contain a TODO or a FIXME.
   somebody would have turned it off inside a week.
 - 2026-09-21. This document owns prose for the repo, while `docs/agents/ticket-standard.md` keeps
   owning prose written into Linear, because its budgets and heading sets only mean anything there.
+- 2026-11-16. Reconciled with main, where 644 files carry dashes, so the 610 in the first decision
+  above is the 2026-09-21 count.

@@ -1,6 +1,7 @@
 ---
 paths:
   - "apps/web/**"
+  - "apps/status/**"
 ---
 
 Before changing a screen, component or hook in the platform UI here, read `docs/standards/web.md`.
