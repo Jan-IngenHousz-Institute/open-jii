@@ -77,17 +77,59 @@ export const zLayoutTermSearchQuery = z.object({
 
 export const zLayoutTermSearchResponse = z.array(zLayoutTerm);
 
-/** Where an attribute's value came from: a saved sheet, or a cell edited after upload. */
+/** Where one version of an attribute's value came from: a sheet row, a typed edit or the phone. */
 export const zPlotAttributeSource = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("sheet"), sheetName: z.string().min(1) }),
-  z.object({ type: z.literal("edit"), sheetName: z.string().min(1) }),
+  z.object({
+    type: z.literal("sheet"),
+    sheetName: z.string().min(1),
+    row: z.number().int().positive(),
+  }),
+  z.object({ type: z.literal("edit") }),
+  z.object({ type: z.literal("phone") }),
 ]);
+
+/** One dated value of a plot attribute. Versions are added, never overwritten. */
+export const zPlotAttributeVersion = z.object({
+  value: z.string(),
+  appliesFrom: z.string().date().nullable().describe("Null for the experiment's start"),
+  source: zPlotAttributeSource,
+  recordedBy: z.string().min(1),
+  recordedAt: z.string().datetime(),
+  /** Set on a correction, which replaces the version before it for every moment that one covered. */
+  correctionReason: z.string().min(1).nullable(),
+});
 
 export const zPlotAttribute = z.object({
   name: z.string().min(1),
-  value: z.string(),
-  source: zPlotAttributeSource,
+  /** Newest first, a planned change still to come included. */
+  versions: z.array(zPlotAttributeVersion).min(1),
 });
+
+/** A later value is planned from a date, or corrects a mistake for every moment it covered. */
+export const zAttributeChangeKind = z.enum(["planned", "correction"]);
+
+const zDatedOrReasoned = z.object({
+  kind: zAttributeChangeKind,
+  appliesFrom: z.string().date().nullable(),
+  reason: z.string().trim().min(1).nullable(),
+});
+
+function hasDateOrReason(change: z.infer<typeof zDatedOrReasoned>): boolean {
+  return change.kind === "planned" ? change.appliesFrom !== null : change.reason !== null;
+}
+
+const DATE_OR_REASON = {
+  message: "A planned change needs its date, and a correction its reason",
+  path: ["kind"],
+};
+
+/** A change typed on one attribute of one plot. */
+export const zPlotAttributeChange = zDatedOrReasoned
+  .extend({ value: z.string().trim().min(1) })
+  .refine(hasDateOrReason, DATE_OR_REASON);
+
+/** How a sheet attached while plots already carry values applies to them. */
+export const zLayoutSheetApplication = zDatedOrReasoned.refine(hasDateOrReason, DATE_OR_REASON);
 
 export const zExperimentLayoutPlot = z.object({
   unit: zExperimentUnit,
@@ -98,6 +140,8 @@ export const zExperimentLayoutPlot = z.object({
 /** Every plot's attribute values at once, which Color by draws on the grid. */
 export const zLayoutAttributes = z.object({
   names: z.array(z.string().min(1)).describe("Attribute names in the order the sheet gave them"),
+  /** Attributes the app shows measurers beside the plot's position, none until switched on. */
+  shownToMeasurers: z.array(z.string().min(1)),
   plots: z.array(
     z.object({
       unitId: z.string().uuid(),
@@ -182,5 +226,9 @@ export type DeviceSensor = z.infer<typeof zDeviceSensor>;
 export type LayoutPlacementCreate = z.infer<typeof zLayoutPlacementCreate>;
 export type PlotAttributeSource = z.infer<typeof zPlotAttributeSource>;
 export type PlotAttribute = z.infer<typeof zPlotAttribute>;
+export type PlotAttributeVersion = z.infer<typeof zPlotAttributeVersion>;
+export type AttributeChangeKind = z.infer<typeof zAttributeChangeKind>;
+export type PlotAttributeChange = z.infer<typeof zPlotAttributeChange>;
+export type LayoutSheetApplication = z.infer<typeof zLayoutSheetApplication>;
 export type ExperimentLayoutPlot = z.infer<typeof zExperimentLayoutPlot>;
 export type LayoutAttributes = z.infer<typeof zLayoutAttributes>;

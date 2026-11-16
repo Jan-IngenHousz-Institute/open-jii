@@ -8,13 +8,14 @@ export const zWalkingStrategy = z.enum([
   "treatmentBalanced",
 ]);
 
-/** What the walking order reads about each plot, until the layout carries plot attributes itself. */
+/** One plot's attribute values by attribute name, as the layout's attributes give them. */
 export const zPlotAttributes = z.object({
   unitId: z.string().uuid(),
-  treatment: z.string().nullable(),
-  genotype: z.string().nullable(),
-  block: z.string().nullable(),
+  values: z.record(z.string(), z.string()),
 });
+
+/** An attribute a walking order reads, by name. Null until one is chosen or a header suggests one. */
+const zAttributeRole = z.string().min(1).nullable();
 
 export const zWalkingOrder = z.object({
   strategy: zWalkingStrategy.nullable(),
@@ -22,6 +23,12 @@ export const zWalkingOrder = z.object({
   orderCode: z.string().nullable(),
   /** Unit ids in the order a phone walks them, empty until a strategy is saved. */
   order: z.array(z.string().uuid()),
+  /** Attribute names in the order the sheet gave them. */
+  attributes: z.array(z.string().min(1)),
+  /** The attribute walks, shares and progress balance and count by. */
+  balanceOn: zAttributeRole,
+  /** The attribute Random by block and row bands group plots by. */
+  blocksFrom: zAttributeRole,
   plots: z.array(zPlotAttributes),
 });
 
@@ -29,6 +36,8 @@ export const zWalkingOrder = z.object({
 export const zWalkingOrderSettings = z.object({
   strategy: zWalkingStrategy,
   orderCode: z.string().min(1).max(64).nullable(),
+  balanceOn: zAttributeRole,
+  blocksFrom: zAttributeRole,
 });
 
 export const zMeasurer = z.object({

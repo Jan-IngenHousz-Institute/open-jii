@@ -2,45 +2,51 @@ import { z } from "zod";
 
 import { zExperimentIdPathParam } from "../experiment.schema";
 
-/** Every standard the platform reports on, by its own name. */
+/**
+ * Every profile the platform reports on, by its own name. Vocabularies such as Crop Ontology are
+ * preferred by a profile rather than followed on their own.
+ */
 export const zStandardId = z.enum([
   "miappe",
-  "crop-ontology",
-  "common-greenhouse-ontology",
   "openaire",
+  "ro-crate",
   "brapi",
   "ogc-sensorthings",
   "fair",
 ]);
 
-/** The standards a researcher step can exist for, so an experiment may choose to follow them. */
-export const zFollowableStandardId = zStandardId.extract([
-  "miappe",
-  "crop-ontology",
-  "common-greenhouse-ontology",
-]);
+/** The profiles a researcher step can exist for, so an experiment may choose to follow them. */
+export const zFollowableStandardId = zStandardId.extract(["miappe"]);
 
 export const zReadinessState = z.enum(["not-assessed", "not-applicable", "partial", "met"]);
 
 const zCount = z.number().int().nonnegative();
 
-/** The columns, plots or people a step acts on, by the names a researcher knows them by. */
+/** The columns, plots, fields or people a step acts on, by the names a researcher knows them by. */
 const zSubjects = z.array(z.string().min(1));
 
-/** Why a step exists, as a code from the mapping's fixed list. Each code has one fix. */
+/** Why a step exists, as a code from the mapping's fixed list of twelve. Each code has one fix. */
 export const zStepReason = z.discriminatedUnion("code", [
   z.object({ code: z.literal("no-location") }),
   z.object({ code: z.literal("no-layout") }),
+  z.object({ code: z.literal("study-details-missing"), subjects: zSubjects }),
   z.object({ code: z.literal("columns-not-described"), subjects: zSubjects }),
+  z.object({ code: z.literal("columns-without-method-or-scale"), subjects: zSubjects }),
   z.object({ code: z.literal("columns-without-term"), subjects: zSubjects }),
-  z.object({ code: z.literal("unit-without-greenhouse-term"), subjects: zSubjects }),
-  z.object({ code: z.literal("plots-without-treatment"), subjects: zSubjects }),
+  z.object({ code: z.literal("unit-without-type"), unitName: z.string().min(1) }),
+  /** The plot attributes with no role yet, which a profile that reads the design needs. */
+  z.object({ code: z.literal("attributes-without-role"), subjects: zSubjects }),
   z.object({ code: z.literal("plots-measured-twice"), subjects: zSubjects }),
   z.object({ code: z.literal("plots-left-skipped"), subjects: zSubjects }),
   z.object({
     code: z.literal("members-without-orcid"),
     subjects: zSubjects,
     /** Only these members can connect their own iD, so only they are offered the action. */
+    includesViewer: z.boolean(),
+  }),
+  z.object({
+    code: z.literal("members-without-affiliation"),
+    subjects: zSubjects,
     includesViewer: z.boolean(),
   }),
 ]);
@@ -56,11 +62,10 @@ export const zStandardsStep = z.object({
 /** Where one standard stands, in words the mapping can back for this experiment. */
 export const zStandardStatus = z.discriminatedUnion("code", [
   z.object({ code: z.literal("all-filled") }),
-  z.object({ code: z.literal("fields-missing"), count: zCount }),
-  z.object({ code: z.literal("columns-without-term"), count: zCount }),
-  z.object({ code: z.literal("applies-to-greenhouses") }),
-  z.object({ code: z.literal("unit-without-greenhouse-term"), unitName: z.string().min(1) }),
+  /** Counted over the profile's required fields, the same basis as its field panel. */
+  z.object({ code: z.literal("fields-missing"), count: zCount, total: zCount }),
   z.object({ code: z.literal("filled-while-publishing") }),
+  z.object({ code: z.literal("every-frozen-dataset") }),
   z.object({ code: z.literal("calls-answer"), count: zCount }),
   z.object({ code: z.literal("under-evaluation") }),
   z.object({ code: z.literal("scored-after-publishing") }),
@@ -93,6 +98,9 @@ export const zFieldSource = z.enum([
   "layout",
   "data-dictionary",
   "profile",
+  "author-list",
+  /** Set by the standard itself, such as the version of its checklist. */
+  "standard",
 ]);
 
 export const zStandardField = z.discriminatedUnion("status", [
@@ -109,7 +117,7 @@ export const zStandardField = z.discriminatedUnion("status", [
   }),
 ]);
 
-/** The official validator's verdict on the latest package exported for this experiment. */
+/** The official validator's verdict on the package of the latest frozen dataset. */
 export const zValidatorVerdict = z.object({
   passed: z.boolean(),
   checkedAt: z.string().datetime(),
@@ -118,6 +126,7 @@ export const zValidatorVerdict = z.object({
 export const zStandardFields = z.object({
   standard: zStandardId,
   filled: zCount,
+  /** The profile's required fields, the basis every count of this standard uses. */
   total: zCount,
   /** Only the plant phenotyping checklist has a validator, and it is null until a package exists. */
   validator: zValidatorVerdict.nullable(),

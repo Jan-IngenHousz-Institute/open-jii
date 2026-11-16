@@ -15,6 +15,7 @@ import {
   zExperimentLocationInput,
   zExperimentLocationList,
 } from "./locations/experiment-locations.schema";
+import { zRelatedWork, zStudySubject } from "./study/experiment-study.schema";
 
 // Define Zod schemas for experiment models
 export const zExperimentStatus = z.enum(["active", "stale", "archived", "published"]);
@@ -22,7 +23,10 @@ export const zExperimentStatus = z.enum(["active", "stale", "archived", "publish
 export const zExperimentVisibility = z.enum(["private", "public"]);
 
 /** SPDX identifiers of the licenses the platform offers for datasets. */
-export const zDataLicense = z.enum(["CC0-1.0", "CC-BY-4.0"]);
+export const zDataLicense = z.enum(["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"]);
+
+/** The registries DataCite's FundingReference accepts for a funder identifier. */
+export const zFunderIdentifierType = z.enum(["ROR", "Crossref Funder ID"]);
 
 /** Who funded the study, as DataCite records it: only the funder is required. */
 export const zFundingReference = z.object({
@@ -31,11 +35,23 @@ export const zFundingReference = z.object({
     .trim()
     .min(1, "The funder is required")
     .max(255, "The funder must be at most 255 characters"),
+  funderIdentifier: z
+    .string()
+    .trim()
+    .max(255, "The funder identifier must be at most 255 characters")
+    .nullish(),
+  funderIdentifierType: zFunderIdentifierType.nullish(),
   awardNumber: z
     .string()
     .trim()
     .max(64, "The grant or award number must be at most 64 characters")
     .nullable(),
+  awardTitle: z
+    .string()
+    .trim()
+    .max(255, "The award title must be at most 255 characters")
+    .nullish(),
+  awardUri: z.string().trim().url("Write the award's link as a full address").nullish(),
 });
 
 export const zFundingReferenceList = z.array(zFundingReference);
@@ -344,6 +360,7 @@ export type ExperimentMembershipStatus = z.infer<typeof zExperimentMembershipSta
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type DataLicense = z.infer<typeof zDataLicense>;
 export type FundingReference = z.infer<typeof zFundingReference>;
+export type FunderIdentifierType = z.infer<typeof zFunderIdentifierType>;
 export type Experiment =z.infer<typeof zExperiment>;
 export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentCallerRole = z.infer<typeof zExperimentCallerRole>;
@@ -519,6 +536,14 @@ export const zUpdateExperimentBody = z.object({
   fundingReferences: zFundingReferenceList
     .optional()
     .describe("Updated funding references, replacing the stored list"),
+  subjects: z
+    .array(zStudySubject)
+    .optional()
+    .describe("Updated study subjects, replacing the stored list"),
+  relatedWork: z
+    .array(zRelatedWork)
+    .optional()
+    .describe("Updated related work, replacing the stored list"),
   status: zExperimentStatus.optional().describe("Updated experiment status"),
   // `visibility` is deliberately absent: publishing is one-way and goes through the
   // dedicated `setVisibility` route. Allowing it here would permit public→private.

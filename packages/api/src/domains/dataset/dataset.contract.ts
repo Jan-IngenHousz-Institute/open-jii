@@ -5,14 +5,18 @@ import {
   zDataset,
   zDatasetIdPathParam,
   zDatasetList,
+  zDatasetMemberList,
   zDatasetPlotChecks,
   zDatasetReadiness,
+  zDatasetReviewDetail,
   zDatasetScope,
   zFlaggedReadingList,
   zListDatasetsQuery,
   zPublicDataset,
   zPublishDatasetBody,
   zRelatedPublication,
+  zReturnDatasetBody,
+  zReviewQueue,
   zWithdrawDatasetBody,
 } from "./dataset.schema";
 
@@ -37,6 +41,11 @@ const datasetRoutes = {
     .route({ method: "GET", path: "/api/v1/datasets/{id}/scope", successStatus: 200 })
     .input(zDatasetIdPathParam)
     .output(zDatasetScope),
+  // Everyone Describe offers as an author, a contributor or neither, before anyone is named.
+  listDatasetMembers: oc
+    .route({ method: "GET", path: "/api/v1/datasets/{id}/members", successStatus: 200 })
+    .input(zDatasetIdPathParam)
+    .output(zDatasetMemberList),
   listDatasetFlaggedReadings: oc
     .route({ method: "GET", path: "/api/v1/datasets/{id}/flagged-readings", successStatus: 200 })
     .input(zDatasetIdPathParam)
@@ -52,6 +61,27 @@ const datasetRoutes = {
   publishDataset: oc
     .route({ method: "POST", path: "/api/v1/datasets/{id}/publish", successStatus: 200 })
     .input(zDatasetIdPathParam.merge(zPublishDatasetBody))
+    .output(zDataset),
+  // Answered only to data stewards, whom JII names.
+  listReviewQueue: oc
+    .route({ method: "GET", path: "/api/v1/dataset-reviews", successStatus: 200 })
+    .output(zReviewQueue),
+  getDatasetReview: oc
+    .route({ method: "GET", path: "/api/v1/dataset-reviews/{id}", successStatus: 200 })
+    .input(zDatasetIdPathParam)
+    .output(zDatasetReviewDetail),
+  approveDataset: oc
+    .route({ method: "POST", path: "/api/v1/dataset-reviews/{id}/approve", successStatus: 200 })
+    .input(zDatasetIdPathParam)
+    .output(zDataset),
+  returnDataset: oc
+    .route({ method: "POST", path: "/api/v1/dataset-reviews/{id}/return", successStatus: 200 })
+    .input(zDatasetIdPathParam.merge(zReturnDatasetBody))
+    .output(zDataset),
+  // Returns a dataset In review to Draft before a data steward has decided.
+  cancelDatasetReview: oc
+    .route({ method: "POST", path: "/api/v1/datasets/{id}/cancel-review", successStatus: 200 })
+    .input(zDatasetIdPathParam)
     .output(zDataset),
   withdrawDataset: oc
     .route({ method: "POST", path: "/api/v1/datasets/{id}/withdraw", successStatus: 200 })
