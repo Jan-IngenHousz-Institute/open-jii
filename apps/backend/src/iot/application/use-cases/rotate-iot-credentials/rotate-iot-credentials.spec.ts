@@ -1,6 +1,10 @@
+import { experimentDataOutbox } from "@repo/database";
+
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { RotateIotCredentialsUseCase } from "./rotate-iot-credentials";
@@ -44,24 +48,29 @@ describe("RotateIotCredentialsUseCase", () => {
 
   const createDevice = async (status: "registered" | "active") => {
     seq++;
-    const created = await repo.create(
-      {
-        thingName: `ambyte_rotate_${seq}`,
-        thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/ambyte_rotate_${seq}`,
-        serialNumber: `SN-ROTATE-${seq}`,
-        name: null,
-        deviceType: "ambyte",
-      },
-      userId,
+    const created = await repo.transaction((tx) =>
+      repo.create(
+        tx,
+        {
+          thingName: `ambyte_rotate_${seq}`,
+          thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/ambyte_rotate_${seq}`,
+          serialNumber: `SN-ROTATE-${seq}`,
+          name: null,
+          deviceType: "ambyte",
+        },
+        userId,
+      ),
     );
     assertSuccess(created);
-    const device = created.value[0];
+    const device = created.value;
     if (status === "active") {
-      await repo.update(device.id, {
-        status: "active",
-        certificateId: "cert-old",
-        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
-      });
+      await repo.transaction((tx) =>
+        repo.update(tx, device.id, {
+          status: "active",
+          certificateId: "cert-old",
+          certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
+        }),
+      );
     }
     return device;
   };
@@ -205,7 +214,7 @@ describe("RotateIotCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
     const device = await createDevice("active");
-    vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("write failed")));
+    vi.spyOn(repo, "update").mockRejectedValue(AppError.internal("write failed"));
 
     const result = await useCase.execute(device.id, userId);
 
@@ -220,7 +229,7 @@ describe("RotateIotCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
     const device = await createDevice("active");
-    vi.spyOn(repo, "update").mockResolvedValue(success(null));
+    vi.spyOn(repo, "update").mockResolvedValue(null);
 
     const result = await useCase.execute(device.id, userId);
 
@@ -241,11 +250,55 @@ describe("RotateIotCredentialsUseCase", () => {
       failure(AppError.internal("revoke failed")),
     );
     const device = await createDevice("active");
-    vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("revert failed")));
+    vi.spyOn(repo, "update").mockRejectedValue(AppError.internal("revert failed"));
 
     const result = await useCase.execute(device.id, userId);
 
     assertFailure(result);
     expect(result.error.message).toBe("policy failed");
+  });
+
+  describe("the registry's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+
+    beforeEach(() => {
+      vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(NEW_CERT));
+      vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+    });
+
+    it("is owed the rotation in the same transaction, and the worker nudged", async () => {
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await createDevice("active");
+
+      assertSuccess(await useCase.execute(device.id, userId));
+
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "device",
+          recordId: device.id,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the old certificate on the row when the copy it owes cannot be written", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await createDevice("active");
+
+      assertFailure(await useCase.execute(device.id, userId));
+
+      const stored = await repo.findById(device.id);
+      assertSuccess(stored);
+      expect(stored.value?.certificateId).toBe("cert-old");
+      expect(nudge).not.toHaveBeenCalled();
+    });
   });
 });

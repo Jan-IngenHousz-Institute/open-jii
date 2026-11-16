@@ -2,6 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
@@ -15,7 +17,11 @@ import { IotDeviceRepository } from "../../../core/repositories/iot-device.repos
 export class ReinstateIotDeviceUseCase {
   private readonly logger = new Logger(ReinstateIotDeviceUseCase.name);
 
-  constructor(private readonly deviceRepository: IotDeviceRepository) {}
+  constructor(
+    private readonly deviceRepository: IotDeviceRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
+  ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<IotDeviceDto>> {
     this.logger.log({
@@ -50,7 +56,15 @@ export class ReinstateIotDeviceUseCase {
 
     // Phones never hold a certificate, so nothing is missing once reinstated.
     const status = device.deviceType === "mobile" ? "active" : "registered";
-    const updateResult = await this.deviceRepository.update(deviceId, { status });
+    const updateResult = await this.deviceRepository.transaction(async (tx) => {
+      const updated = await this.deviceRepository.update(tx, deviceId, { status });
+      if (updated) {
+        await this.outboxRepository.owe(tx, [
+          { recordType: "device", recordId: deviceId, experimentId: null },
+        ]);
+      }
+      return updated;
+    });
     if (updateResult.isFailure() || !updateResult.value) {
       return updateResult.isFailure()
         ? failure(updateResult.error)
@@ -62,6 +76,7 @@ export class ReinstateIotDeviceUseCase {
           );
     }
 
+    this.outboxWorker.nudge();
     return success(updateResult.value);
   }
 }

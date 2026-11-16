@@ -1,3 +1,5 @@
+import { experimentDataOutbox } from "@repo/database";
+
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import {
@@ -7,6 +9,8 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { EnsureMobileDeviceUseCase } from "./ensure-mobile-device";
@@ -66,6 +70,42 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(attach).toHaveBeenCalledWith(THING_NAME, IDENTITY_ID);
   });
 
+  describe("the registry's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+
+    it("is owed a new phone in the same transaction, and the worker nudged, but not a phone already there", async () => {
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      const result = await useCase.execute(body, userId);
+      await useCase.execute(body, userId);
+
+      assertSuccess(result);
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "device",
+          recordId: result.value.id,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps no phone, and removes its Thing, when the copy it owes cannot be written", async () => {
+      const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+
+      assertFailure(await useCase.execute(body, userId));
+
+      const stored = await repo.findBySerialNumber(INSTALL_ID);
+      assertSuccess(stored);
+      expect(stored.value).toBeNull();
+      expect(deleteThing).toHaveBeenCalledWith(THING_NAME);
+    });
+  });
+
   it("is idempotent: a second ensure returns the same row and re-attaches", async () => {
     const createThing = vi.spyOn(awsAdapter, "createThing");
     const attach = vi.spyOn(awsAdapter, "attachThingPrincipal");
@@ -85,7 +125,9 @@ describe("EnsureMobileDeviceUseCase", () => {
     const first = await useCase.execute(body, userId);
     assertSuccess(first);
     const repo = testApp.module.get(IotDeviceRepository);
-    assertSuccess(await repo.update(first.value.id, { status: "retired" }));
+    assertSuccess(
+      await repo.transaction((tx) => repo.update(tx, first.value.id, { status: "retired" })),
+    );
     attach.mockClear();
 
     const second = await useCase.execute(body, userId);
@@ -128,23 +170,12 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(result.value.name).toBeNull();
   });
 
-  it("rolls the Thing back when the insert returns no row at all", async () => {
-    const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
-    vi.spyOn(repo, "create").mockResolvedValue(success([]));
-
-    const result = await useCase.execute(body, userId);
-
-    assertFailure(result);
-    expect(result.error.statusCode).toBe(500);
-    expect(deleteThing).toHaveBeenCalledWith(THING_NAME);
-  });
-
   it("loses the name race to a concurrent rename and returns the fresher row", async () => {
     const first = await useCase.execute({ installId: body.installId }, userId);
     assertSuccess(first);
     // A rename lands between the null read and the fill: the conditional
     // update must not apply.
-    await repo.update(first.value.id, { name: "Field phone 3" });
+    await repo.transaction((tx) => repo.update(tx, first.value.id, { name: "Field phone 3" }));
 
     const result = await useCase.execute({ installId: body.installId, name: "iPhone 15" }, userId);
 
@@ -177,7 +208,7 @@ describe("EnsureMobileDeviceUseCase", () => {
 
   it("rolls the Thing back when the row cannot be persisted", async () => {
     const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
-    vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("db down")));
+    vi.spyOn(repo, "create").mockRejectedValue(AppError.internal("db down"));
 
     const result = await useCase.execute(body, userId);
 
@@ -194,8 +225,8 @@ describe("EnsureMobileDeviceUseCase", () => {
     const deleteThing = vi.spyOn(awsAdapter, "deleteThing");
     // One mocked miss; later calls fall through to the real repository.
     vi.spyOn(repo, "findBySerialNumber").mockResolvedValueOnce(success(null));
-    vi.spyOn(repo, "create").mockResolvedValue(
-      failure(AppError.internal("duplicate key value violates unique constraint")),
+    vi.spyOn(repo, "create").mockRejectedValue(
+      AppError.internal("duplicate key value violates unique constraint"),
     );
 
     const result = await useCase.execute(body, userId);

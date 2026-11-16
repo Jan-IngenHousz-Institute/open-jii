@@ -1,3 +1,5 @@
+import { experimentDataOutbox } from "@repo/database";
+
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import {
   AppError,
@@ -6,6 +8,8 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { RetireIotDeviceUseCase } from "./retire-iot-device";
@@ -154,9 +158,47 @@ describe("RetireIotDeviceUseCase", () => {
 
   it("reports a row that vanished between the read and the write", async () => {
     vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
-    vi.spyOn(repo, "update").mockResolvedValue(success(null));
+    vi.spyOn(repo, "update").mockResolvedValue(null);
     const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
 
     assertFailure(await useCase.execute(device.id, userId));
+  });
+
+  describe("the registry's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+
+    it("is owed the retirement in the same transaction, and the worker nudged", async () => {
+      vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
+
+      assertSuccess(await useCase.execute(device.id, userId));
+
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "device",
+          recordId: device.id,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the device in service when the copy it owes cannot be written", async () => {
+      vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
+
+      assertFailure(await useCase.execute(device.id, userId));
+
+      const stored = await repo.findById(device.id);
+      assertSuccess(stored);
+      expect(stored.value?.status).toBe("registered");
+      expect(nudge).not.toHaveBeenCalled();
+    });
   });
 });

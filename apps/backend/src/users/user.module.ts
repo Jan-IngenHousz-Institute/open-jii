@@ -22,6 +22,7 @@ import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-se
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
 import { NotifyCredentialAddedUseCase } from "./application/use-cases/notify-credential-added/notify-credential-added";
 import { NotifyPendingOrganizationInvitationsUseCase } from "./application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
+import { ReactivateProfileUseCase } from "./application/use-cases/reactivate-profile/reactivate-profile";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
@@ -74,6 +75,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     GetUsersMetadataUseCase,
     GetWhatsNewSeenUseCase,
     MarkWhatsNewSeenUseCase,
+    ReactivateProfileUseCase,
     AcceptPendingInvitationsUseCase,
     NotifyPendingOrganizationInvitationsUseCase,
     NotifyCredentialAddedUseCase,

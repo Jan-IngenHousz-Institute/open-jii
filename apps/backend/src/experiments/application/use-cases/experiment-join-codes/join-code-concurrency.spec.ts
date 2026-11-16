@@ -19,7 +19,6 @@ import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
-import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { CreateJoinCodeUseCase } from "./create-join-code";
@@ -424,7 +423,8 @@ describe("join code concurrency", () => {
 
   it("refuses a redemption by an account that has already been deleted", async () => {
     const { experiment, code } = await seedCode();
-    assertSuccess(await testApp.module.get(UserRepository).delete(studentId));
+    const users = testApp.module.get(UserRepository);
+    assertSuccess(await users.transaction((tx) => users.delete(tx, studentId)));
 
     const redeemed = await redeemUseCase.execute(code.code, studentId);
 
@@ -442,7 +442,7 @@ describe("join code concurrency", () => {
       const [{ pid: deleterPid }] = await deleter.database.execute<{ pid: number }>(
         sql`SELECT pg_backend_pid() AS pid`,
       );
-      let deleting: ReturnType<UserRepository["delete"]> | undefined;
+      let deleting: ReturnType<UserRepository["transaction"]> | undefined;
       let deletionWaited = false;
 
       const redeemed = await redeemWhileBlocked(
@@ -452,11 +452,9 @@ describe("join code concurrency", () => {
           // The redemption is queued on the experiment row, past the point where it
           // claims the account. A deletion started now has to wait for it to commit.
           const deletion = { settled: false };
-          deleting = new UserRepository(
-            deleter.database,
-            testApp.module.get(ExperimentDataOutboxRepository),
-          )
-            .delete(studentId)
+          const users = new UserRepository(deleter.database);
+          deleting = users
+            .transaction((tx) => users.delete(tx, studentId))
             .finally(() => {
               deletion.settled = true;
             });

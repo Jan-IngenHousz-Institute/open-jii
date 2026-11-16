@@ -1,11 +1,9 @@
+import { experimentDataOutbox } from "@repo/database";
+
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
-import {
-  AppError,
-  assertFailure,
-  assertSuccess,
-  failure,
-  success,
-} from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { RegisterIotDeviceUseCase } from "./register-iot-device";
@@ -81,7 +79,7 @@ describe("RegisterIotDeviceUseCase", () => {
   it("rolls back the Thing when the DB insert fails", async () => {
     const createSpy = mockCreateThing();
     const deleteSpy = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
-    vi.spyOn(repo, "create").mockResolvedValue(failure(AppError.internal("DB error")));
+    vi.spyOn(repo, "create").mockRejectedValue(AppError.internal("DB error"));
 
     const result = await useCase.execute(body, userId);
 
@@ -90,5 +88,46 @@ describe("RegisterIotDeviceUseCase", () => {
     expect(createSpy).toHaveBeenCalled();
     expect(deleteSpy).toHaveBeenCalledWith(RETURNED_THING.thingName);
     vi.restoreAllMocks();
+  });
+
+  describe("the registry's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+
+    it("is owed a registered device in the same transaction, and the worker nudged", async () => {
+      mockCreateThing();
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      const result = await useCase.execute(body, userId);
+
+      assertSuccess(result);
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "device",
+          recordId: result.value.id,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+      vi.restoreAllMocks();
+    });
+
+    it("keeps no device, and removes its Thing, when the copy it owes cannot be written", async () => {
+      mockCreateThing();
+      const deleteThing = vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      assertFailure(await useCase.execute(body, userId));
+
+      const stored = await repo.findBySerialNumber(body.serialNumber);
+      assertSuccess(stored);
+      expect(stored.value).toBeNull();
+      expect(deleteThing).toHaveBeenCalledWith(RETURNED_THING.thingName);
+      expect(nudge).not.toHaveBeenCalled();
+      vi.restoreAllMocks();
+    });
   });
 });

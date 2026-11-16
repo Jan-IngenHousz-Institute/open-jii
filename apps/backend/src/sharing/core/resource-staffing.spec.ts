@@ -206,19 +206,23 @@ describe("last-admin invariant (sharing use-cases)", () => {
     it("seeds a member registering a device an admin grant, so they can revoke its certificate", async () => {
       const { org, subject } = await sharedOrgWith("member");
 
-      const result = await testApp.module.get(IotDeviceRepository).create(
-        {
-          thingName: `test-device_${crypto.randomUUID()}`,
-          thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/test-device",
-          serialNumber: crypto.randomUUID(),
-          name: "Registered device",
-          deviceType: "generic",
-        },
-        subject,
-        org,
+      const devices = testApp.module.get(IotDeviceRepository);
+      const result = await devices.transaction((tx) =>
+        devices.create(
+          tx,
+          {
+            thingName: `test-device_${crypto.randomUUID()}`,
+            thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/test-device",
+            serialNumber: crypto.randomUUID(),
+            name: "Registered device",
+            deviceType: "generic",
+          },
+          subject,
+          org,
+        ),
       );
       assertSuccess(result);
-      const device = result.value[0];
+      const device = result.value;
 
       // Registering into an org you are merely a member of would otherwise leave you
       // read-only on your own hardware — unable to issue, rotate or revoke the

@@ -42,7 +42,7 @@ import {
   resourceGrants,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, Transaction } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, trigramMatch } from "../../../common/utils/fts";
@@ -53,7 +53,6 @@ import {
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
-import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import {
   findBlockingOrganizations,
   findBlockingResources,
@@ -86,18 +85,17 @@ export const SOLE_RESOURCE_ADMIN_MESSAGE =
 export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
 
-/**
- * A write that changes a profile, or whether it is activated, owes the contributor's current state
- * to its lakehouse copy in the same transaction; the pipelines join that copy to name the people
- * behind an experiment's rows.
- */
 @Injectable()
 export class UserRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
-    private readonly outbox: ExperimentDataOutboxRepository,
   ) {}
+
+  /** Runs `work` as one transaction, so a write and the copy it owes land together or not at all. */
+  async transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<Result<T>> {
+    return tryCatch(() => this.database.transaction(work));
+  }
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
     return tryCatch(() => this.database.insert(users).values(createUserDto).returning());
@@ -419,85 +417,81 @@ export class UserRepository {
     );
   }
 
-  async delete(id: string): Promise<Result<void>> {
-    return tryCatch(async () => {
-      await this.database.transaction(async (tx) => {
-        // 0. Claim the account exclusively first. Creation takes the same row
-        //    (shared), so either a create commits first and its grant is swept up
-        //    below, or it queues behind this and refuses. Without the lock a create
-        //    could land a grant *after* the teardown, and nothing revisits those.
-        await lockUserAccount(tx, id, "update");
+  /** Closes the account. Run it inside `transaction`, which its locks and re-checks rely on. */
+  async delete(tx: Transaction, id: string): Promise<void> {
+    // 0. Claim the account exclusively first. Creation takes the same row
+    //    (shared), so either a create commits first and its grant is swept up
+    //    below, or it queues behind this and refuses. Without the lock a create
+    //    could land a grant *after* the teardown, and nothing revisits those.
+    await lockUserAccount(tx, id, "update");
 
-        // 1. Revoke every credential and browser session. The user row is kept
-        //    for referential integrity, so its credential FKs never cascade.
-        await tx.delete(apiKeys).where(eq(apiKeys.referenceId, id));
-        await tx.delete(passkeys).where(eq(passkeys.userId, id));
-        await tx.delete(accounts).where(eq(accounts.userId, id));
-        await tx.delete(sessions).where(eq(sessions.userId, id));
+    // 1. Revoke every credential and browser session. The user row is kept
+    //    for referential integrity, so its credential FKs never cascade.
+    await tx.delete(apiKeys).where(eq(apiKeys.referenceId, id));
+    await tx.delete(passkeys).where(eq(passkeys.userId, id));
+    await tx.delete(accounts).where(eq(accounts.userId, id));
+    await tx.delete(sessions).where(eq(sessions.userId, id));
 
-        // 2. Re-check the deletion blockers inside the transaction. The pre-flight
-        //    checks in DeleteUserUseCase drive the hand-off UX but are raceable on
-        //    their own: two last admins — or two co-owners of one organization —
-        //    deleting at once would both see the other and both commit.
-        await this.assertDeletionUnblocked(tx, id);
+    // 2. Re-check the deletion blockers inside the transaction. The pre-flight
+    //    checks in DeleteUserUseCase drive the hand-off UX but are raceable on
+    //    their own: two last admins — or two co-owners of one organization —
+    //    deleting at once would both see the other and both commit.
+    await this.assertDeletionUnblocked(tx, id);
 
-        // Clear the dormant roster rows and every grant. `can()` reads
-        // resource_grants, so leaving grants behind keeps a deleted account's access
-        // alive — and nothing cascades on the grantee side.
+    // Clear the dormant roster rows and every grant. `can()` reads
+    // resource_grants, so leaving grants behind keeps a deleted account's access
+    // alive — and nothing cascades on the grantee side.
 
-        await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
-        await deleteGranteeGrants(tx, id, "user");
-        // The user row survives the soft-delete, so its visits do not cascade away.
-        await tx.delete(resourceVisits).where(eq(resourceVisits.userId, id));
+    await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
+    await deleteGranteeGrants(tx, id, "user");
+    // The user row survives the soft-delete, so its visits do not cascade away.
+    await tx.delete(resourceVisits).where(eq(resourceVisits.userId, id));
 
-        await this.sweepOrganizationAssociations(tx, id);
+    await this.sweepOrganizationAssociations(tx, id);
 
-        // 3. Scrub PII and mark deleted. An upsert, not an update: `deleted_at` is
-        //    the only closed-account marker, and an UPDATE does nothing for someone
-        //    who never onboarded — leaving them a living owner forever.
-        await tx
-          .insert(profiles)
-          .values({
-            userId: id,
-            firstName: "Deleted",
-            lastName: "User",
-            bio: null,
-            avatarUrl: null,
-            deletedAt: sql`now() AT TIME ZONE 'UTC'`,
-          })
-          .onConflictDoUpdate({
-            target: profiles.userId,
-            set: {
-              firstName: "Deleted",
-              lastName: "User",
-              bio: null,
-              avatarUrl: null,
-              deletedAt: sql`now() AT TIME ZONE 'UTC'`,
-            },
-          });
-        await this.oweContributorCopy(tx, id);
-
-        // 4. Soft-delete user: scrub PII
-        await tx
-          .update(users)
-          .set({
-            name: `Deleted User`,
-            email: sql`'deleted-' || ${users.id} || '@example.com'`,
-            image: null,
-            emailVerified: false,
-          })
-          .where(eq(users.id, id));
-
-        // 5. Scrub the personal org name (embeds the real name as
-        //    "<First Last>'s workspace"). The personal org and its membership are the
-        //    two the sweep above keeps: soft-delete keeps the user row, and the org
-        //    retains ownership of what it owns, which needs an owner to stay reachable.
-        await tx
-          .update(organizations)
-          .set({ name: personalOrgName("Deleted User") })
-          .where(eq(organizations.slug, personalOrgSlug(id)));
+    // 3. Scrub PII and mark deleted. An upsert, not an update: `deleted_at` is
+    //    the only closed-account marker, and an UPDATE does nothing for someone
+    //    who never onboarded — leaving them a living owner forever.
+    await tx
+      .insert(profiles)
+      .values({
+        userId: id,
+        firstName: "Deleted",
+        lastName: "User",
+        bio: null,
+        avatarUrl: null,
+        deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+      })
+      .onConflictDoUpdate({
+        target: profiles.userId,
+        set: {
+          firstName: "Deleted",
+          lastName: "User",
+          bio: null,
+          avatarUrl: null,
+          deletedAt: sql`now() AT TIME ZONE 'UTC'`,
+        },
       });
-    });
+
+    // 4. Soft-delete user: scrub PII
+    await tx
+      .update(users)
+      .set({
+        name: `Deleted User`,
+        email: sql`'deleted-' || ${users.id} || '@example.com'`,
+        image: null,
+        emailVerified: false,
+      })
+      .where(eq(users.id, id));
+
+    // 5. Scrub the personal org name (embeds the real name as
+    //    "<First Last>'s workspace"). The personal org and its membership are the
+    //    two the sweep above keeps: soft-delete keeps the user row, and the org
+    //    retains ownership of what it owns, which needs an owner to stay reachable.
+    await tx
+      .update(organizations)
+      .set({ name: personalOrgName("Deleted User") })
+      .where(eq(organizations.slug, personalOrgSlug(id)));
   }
 
   /**
@@ -555,53 +549,43 @@ export class UserRepository {
     );
   }
 
+  /**
+   * Run it inside `transaction`: a first profile also names the personal org after it, and a
+   * failed rename must roll the profile back.
+   */
   async createOrUpdateUserProfile(
+    tx: DbOrTx,
     userId: string,
     createUserProfileDto: CreateUserProfileDto,
-  ): Promise<Result<UserProfileDto>> {
-    return tryCatch(async () => {
-      const result = await this.database
-        .select()
-        .from(profiles)
-        .where(eq(profiles.userId, userId))
-        .limit(1);
+  ): Promise<UserProfileDto> {
+    const result = await tx.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
 
-      if (result.length > 0) {
-        // Update profile — org name is set once at registration, not synced here.
-        await this.database.transaction(async (tx) => {
-          await tx
-            .update(profiles)
-            .set({
-              ...createUserProfileDto,
-            })
-            .where(eq(profiles.userId, userId));
-          await this.oweContributorCopy(tx, userId);
-        });
-      } else {
-        // First registration: create the profile and name the personal org from
-        // it (first + last) in one transaction, so a failed sync rolls the
-        // profile insert back too.
-        await this.database.transaction(async (tx) => {
-          await tx.insert(profiles).values({
-            ...createUserProfileDto,
-            userId,
-          });
+    if (result.length > 0) {
+      // The org name is set once at registration, not synced here.
+      await tx
+        .update(profiles)
+        .set({
+          ...createUserProfileDto,
+        })
+        .where(eq(profiles.userId, userId));
+    } else {
+      await tx.insert(profiles).values({
+        ...createUserProfileDto,
+        userId,
+      });
 
-          await syncPersonalOrganizationName(tx, {
-            id: userId,
-            name: `${createUserProfileDto.firstName} ${createUserProfileDto.lastName}`,
-          });
-          await this.oweContributorCopy(tx, userId);
-        });
-      }
+      await syncPersonalOrganizationName(tx, {
+        id: userId,
+        name: `${createUserProfileDto.firstName} ${createUserProfileDto.lastName}`,
+      });
+    }
 
-      return {
-        firstName: createUserProfileDto.firstName,
-        lastName: createUserProfileDto.lastName,
-        bio: createUserProfileDto.bio,
-        activated: createUserProfileDto.activated,
-      } as UserProfileDto;
-    });
+    return {
+      firstName: createUserProfileDto.firstName,
+      lastName: createUserProfileDto.lastName,
+      bio: createUserProfileDto.bio,
+      activated: createUserProfileDto.activated,
+    } as UserProfileDto;
   }
 
   async findUserProfile(userId: string): Promise<Result<UserProfileDto | null>> {
@@ -665,27 +649,12 @@ export class UserRepository {
   }
 
   /** Activates a deactivated profile again, which unmasks its name. False when it was active. */
-  async reactivateProfile(userId: string): Promise<Result<boolean>> {
-    return tryCatch(() =>
-      this.database.transaction(async (tx) => {
-        const reactivated = await tx
-          .update(profiles)
-          .set({ activated: true })
-          .where(and(eq(profiles.userId, userId), eq(profiles.activated, false)))
-          .returning({ userId: profiles.userId });
-        if (reactivated.length === 0) {
-          return false;
-        }
-
-        await this.oweContributorCopy(tx, userId);
-        return true;
-      }),
-    );
-  }
-
-  private oweContributorCopy(tx: Transaction, userId: string): Promise<void> {
-    return this.outbox.owe(tx, [
-      { recordType: "contributor", recordId: userId, experimentId: null },
-    ]);
+  async reactivateProfile(tx: DbOrTx, userId: string): Promise<boolean> {
+    const reactivated = await tx
+      .update(profiles)
+      .set({ activated: true })
+      .where(and(eq(profiles.userId, userId), eq(profiles.activated, false)))
+      .returning({ userId: profiles.userId });
+    return reactivated.length > 0;
   }
 }

@@ -2,6 +2,8 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { failure, AppError, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import {
   UserDto,
   CreateUserProfileDto,
@@ -19,6 +21,8 @@ export class CreateUserProfileUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(data: CreateUserProfileDto, userId: string) {
@@ -48,8 +52,17 @@ export class CreateUserProfileUseCase {
         return existingProfileResult;
       }
 
-      // Create or update the profile
-      const userProfileResult = await this.userRepository.createOrUpdateUserProfile(userId, data);
+      const userProfileResult = await this.userRepository.transaction(async (tx) => {
+        const profile = await this.userRepository.createOrUpdateUserProfile(tx, userId, data);
+        await this.outboxRepository.owe(tx, [
+          { recordType: "contributor", recordId: userId, experimentId: null },
+        ]);
+        return profile;
+      });
+      if (userProfileResult.isSuccess()) {
+        this.outboxWorker.nudge();
+      }
+
       return userProfileResult.chain(async (userProfile: UserProfileDto) => {
         // Update the user with the registered flag
         const updatedUser: UpdateUserDto = {

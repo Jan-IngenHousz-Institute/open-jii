@@ -118,7 +118,6 @@ export enum ErrorCodes {
 
   // ==================== Domain Operations - IoT Devices ====================
   // Location: src/iot/application/use-cases/
-  IOT_DEVICE_REGISTER_FAILED = "IOT_DEVICE_REGISTER_FAILED", // Failed to register device
   IOT_DEVICE_DELETE_FAILED = "IOT_DEVICE_DELETE_FAILED", // Failed to delete device
   IOT_DEVICE_NOT_FOUND = "IOT_DEVICE_NOT_FOUND", // Device not found
   IOT_DEVICE_ALREADY_EXISTS = "IOT_DEVICE_ALREADY_EXISTS", // Device serial number or thing name already registered

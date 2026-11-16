@@ -4,6 +4,8 @@ import type { EnsureMobileDeviceBody } from "@repo/api/domains/iot/iot.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -26,6 +28,8 @@ export class EnsureMobileDeviceUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(body: EnsureMobileDeviceBody, userId: string): Promise<Result<IotDeviceDto>> {
@@ -57,20 +61,27 @@ export class EnsureMobileDeviceUseCase {
     }
 
     const thing = thingResult.value;
-    const createResult = await this.deviceRepository.create(
-      {
-        thingName: thing.thingName,
-        thingArn: thing.thingArn,
-        serialNumber: body.installId,
-        name: body.name ?? null,
-        deviceType: MOBILE_DEVICE_TYPE,
-        status: "active",
-      },
-      userId,
-      null,
-    );
+    const createResult = await this.deviceRepository.transaction(async (tx) => {
+      const device = await this.deviceRepository.create(
+        tx,
+        {
+          thingName: thing.thingName,
+          thingArn: thing.thingArn,
+          serialNumber: body.installId,
+          name: body.name ?? null,
+          deviceType: MOBILE_DEVICE_TYPE,
+          status: "active",
+        },
+        userId,
+        null,
+      );
+      await this.outboxRepository.owe(tx, [
+        { recordType: "device", recordId: device.id, experimentId: null },
+      ]);
+      return device;
+    });
 
-    if (createResult.isFailure() || createResult.value.length === 0) {
+    if (createResult.isFailure()) {
       // A concurrent ensure may have won the serial's unique constraint. Only
       // roll the Thing back when there is genuinely no row, otherwise the
       // rollback would delete the winner's Thing.
@@ -80,16 +91,13 @@ export class EnsureMobileDeviceUseCase {
       }
 
       await this.awsPort.deleteThing(thing.thingName);
-      return createResult.isFailure()
-        ? failure(createResult.error)
-        : failure(
-            AppError.internal("Failed to persist device", ErrorCodes.IOT_DEVICE_REGISTER_FAILED),
-          );
+      return failure(createResult.error);
     }
 
+    this.outboxWorker.nudge();
     await this.attachIdentity(thing.thingName, userId);
 
-    return success(createResult.value[0]);
+    return success(createResult.value);
   }
 
   // A row owned by the caller is simply returned (with a healing re-attach); a

@@ -17,7 +17,7 @@ import {
   ensurePersonalOrganization,
   experimentDevices,
 } from "@repo/database";
-import type { DatabaseInstance, Transaction } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, searchScore, tsQuery } from "../../../common/utils/fts";
@@ -25,7 +25,6 @@ import {
   accessibleResourceCondition,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
-import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
@@ -44,17 +43,11 @@ export function deviceRungSql() {
     else ${status}::text end`;
 }
 
-/**
- * Creating, updating or deleting a device owes its current state to the registry's lakehouse copy
- * in the same transaction; the pipelines join that copy to name the devices behind an experiment's
- * rows. The copy holds no name, so filling one in owes nothing.
- */
 @Injectable()
 export class IotDeviceRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
-    private readonly outbox: ExperimentDataOutboxRepository,
   ) {}
 
   private buildListing({ userId, search, status, family, sort }: DeviceListingParams) {
@@ -133,31 +126,32 @@ export class IotDeviceRepository {
     });
   }
 
+  /** Runs `work` as one transaction, so a write and the copy it owes land together or not at all. */
+  async transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<Result<T>> {
+    return tryCatch(() => this.database.transaction(work));
+  }
+
   async create(
+    tx: DbOrTx,
     createIotDeviceDto: CreateIotDeviceDto,
     userId: string,
     targetOrganizationId?: string | null,
-  ): Promise<Result<IotDeviceDto[]>> {
-    return tryCatch(async () => {
-      // Own the device with the requested org, falling back to the creator's
-      // personal org so there is never an org-less device.
-      const organizationId =
-        targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
+  ): Promise<IotDeviceDto> {
+    // Own the device with the requested org, falling back to the creator's
+    // personal org so there is never an org-less device.
+    const organizationId =
+      targetOrganizationId ?? (await ensurePersonalOrganization(tx, { id: userId }));
 
-      return this.database.transaction(async (tx) => {
-        const results = await tx
-          .insert(iotDevices)
-          .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
-          .returning(deviceColumns);
+    const [device] = await tx
+      .insert(iotDevices)
+      .values({ ...createIotDeviceDto, createdBy: userId, organizationId })
+      .returning(deviceColumns);
 
-        // A plain org `member` may register a device but is read-only, so without a
-        // grant they could not manage certificates on the device they just added.
-        await seedCreatorControl(tx, "device", results[0].id, organizationId, userId);
-        await this.oweCopies(tx, results);
+    // A plain org `member` may register a device but is read-only, so without a
+    // grant they could not manage certificates on the device they just added.
+    await seedCreatorControl(tx, "device", device.id, organizationId, userId);
 
-        return results;
-      });
-    });
+    return device;
   }
 
   /**
@@ -315,45 +309,28 @@ export class IotDeviceRepository {
     });
   }
 
-  async update(deviceId: string, patch: UpdateIotDeviceDto): Promise<Result<IotDeviceDto | null>> {
-    return tryCatch(() =>
-      this.database.transaction(async (tx) => {
-        const results = await tx
-          .update(iotDevices)
-          .set(patch)
-          .where(eq(iotDevices.id, deviceId))
-          .returning(deviceColumns);
-        await this.oweCopies(tx, results);
-
-        return results.length === 0 ? null : results[0];
-      }),
-    );
+  async update(
+    tx: DbOrTx,
+    deviceId: string,
+    patch: UpdateIotDeviceDto,
+  ): Promise<IotDeviceDto | null> {
+    const results = await tx
+      .update(iotDevices)
+      .set(patch)
+      .where(eq(iotDevices.id, deviceId))
+      .returning(deviceColumns);
+    return results.length === 0 ? null : results[0];
   }
 
-  async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
-    return tryCatch(() =>
-      // Grants are polymorphic (no FK cascade), so they need cleaning by hand. One
-      // transaction, or a failure here strips access while the API reports failure.
-      this.database.transaction(async (tx) => {
-        await lockStaffedResource(tx, "device", deviceId, "update");
+  /**
+   * Grants are polymorphic (no FK cascade), so they need cleaning by hand. Run it inside
+   * `transaction`, or a failure here strips access while the API reports failure.
+   */
+  async delete(tx: DbOrTx, deviceId: string): Promise<IotDeviceDto[]> {
+    await lockStaffedResource(tx, "device", deviceId, "update");
 
-        await deleteResourceGrants(tx, "device", deviceId);
+    await deleteResourceGrants(tx, "device", deviceId);
 
-        const deleted = await tx
-          .delete(iotDevices)
-          .where(eq(iotDevices.id, deviceId))
-          .returning(deviceColumns);
-        await this.oweCopies(tx, deleted);
-
-        return deleted;
-      }),
-    );
-  }
-
-  private oweCopies(tx: Transaction, devices: IotDeviceDto[]): Promise<void> {
-    return this.outbox.owe(
-      tx,
-      devices.map(({ id }) => ({ recordType: "device", recordId: id, experimentId: null })),
-    );
+    return tx.delete(iotDevices).where(eq(iotDevices.id, deviceId)).returning(deviceColumns);
   }
 }

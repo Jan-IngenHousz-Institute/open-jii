@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { eq, iotDevices, notifications } from "@repo/database";
+import { eq, experimentDataOutbox, iotDevices, notifications } from "@repo/database";
 
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import {
@@ -10,6 +10,8 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import {
@@ -197,8 +199,44 @@ describe("DeleteIotDeviceUseCase", () => {
     expect(result.error.message).toBe("delete thing failed");
   });
 
+  describe("the registry's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+
+    it("is owed the device's removal in the same transaction, and the worker nudged", async () => {
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      assertSuccess(await useCase.execute(device.id, userId));
+
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "device",
+          recordId: device.id,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the device when the copy its removal owes cannot be written", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      assertFailure(await useCase.execute(device.id, userId));
+
+      const stored = await repo.findById(device.id);
+      assertSuccess(stored);
+      expect(stored.value?.id).toBe(device.id);
+      expect(nudge).not.toHaveBeenCalled();
+    });
+  });
+
   it("propagates the failure when the repository delete fails", async () => {
-    vi.spyOn(repo, "delete").mockResolvedValue(failure(AppError.internal("db delete failed")));
+    vi.spyOn(repo, "delete").mockRejectedValue(AppError.internal("db delete failed"));
     const device = await testApp.createIotDevice({ createdBy: userId });
 
     const result = await useCase.execute(device.id, userId);

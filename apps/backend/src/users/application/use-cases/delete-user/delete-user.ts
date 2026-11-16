@@ -2,6 +2,8 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import type { NewsletterPort } from "../../../../newsletter/core/ports/newsletter.port";
 import { NEWSLETTER_PORT } from "../../../../newsletter/core/ports/newsletter.port";
 import { UserDto } from "../../../core/models/user.model";
@@ -21,6 +23,8 @@ export class DeleteUserUseCase {
     private readonly userRepository: UserRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
     @Inject(NEWSLETTER_PORT) private readonly newsletterPort: NewsletterPort,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(id: string): Promise<Result<void>> {
@@ -81,11 +85,18 @@ export class DeleteUserUseCase {
           operation: "deleteUser",
           userId: id,
         });
-        const deleteResult = await this.userRepository.delete(id);
+        const deleteResult = await this.userRepository.transaction(async (tx) => {
+          await this.userRepository.delete(tx, id);
+          await this.outboxRepository.owe(tx, [
+            { recordType: "contributor", recordId: id, experimentId: null },
+          ]);
+        });
 
         if (deleteResult.isFailure()) {
           return deleteResult;
         }
+
+        this.outboxWorker.nudge();
 
         this.logger.log({
           msg: "User soft-deleted successfully",
