@@ -13,8 +13,6 @@ import {
 
 import { ComponentRow } from "./component-row";
 
-const TODAY = "2026-11-03";
-
 function renderRow(
   document: StatusDocument,
   id: StatusComponent["id"],
@@ -24,7 +22,7 @@ function renderRow(
     <ComponentRow
       component={{ ...componentOf(document, id), ...overrides }}
       incidents={document.incidents}
-      today={TODAY}
+      generatedAt={document.generatedAt}
       isStale={false}
     />,
   );
@@ -232,6 +230,15 @@ describe("ComponentRow", () => {
           "November 3, 2026: Outage for 38 min, related incidents: Measurements are not reaching the platform",
         ),
       ).toBeInTheDocument();
+    });
+
+    it("leaves out the incidents that name other components", () => {
+      renderRow(incidentStatusDocument, "website");
+
+      expect(bars().at(-1)).toHaveAttribute(
+        "aria-label",
+        "November 3, 2026, today so far: no downtime recorded",
+      );
     });
 
     it("says so when there were none in the last 90 days", async () => {

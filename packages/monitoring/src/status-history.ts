@@ -53,7 +53,6 @@ function emptyDay(date: string): DayRecord {
     degradedMinutes: 0,
     maintenanceMinutes: 0,
     unknownMinutes: 0,
-    incidentIds: [],
   };
 }
 
@@ -62,12 +61,7 @@ function trimDays(days: DayRecord[]): DayRecord[] {
   return [...days].sort((a, b) => a.date.localeCompare(b.date)).slice(-STATUS_HISTORY_DAYS);
 }
 
-function addToDay(
-  days: DayRecord[],
-  date: string,
-  added: DayCounts,
-  incidentIds: string[],
-): DayRecord[] {
+function addToDay(days: DayRecord[], date: string, added: DayCounts): DayRecord[] {
   const current = days.find((day) => day.date === date) ?? emptyDay(date);
   const counts: DayCounts = {
     recordedMinutes: current.recordedMinutes + added.recordedMinutes,
@@ -80,7 +74,6 @@ function addToDay(
     ...counts,
     date,
     state: dayState(counts),
-    incidentIds: [...new Set([...current.incidentIds, ...incidentIds])],
   };
 
   return trimDays([...days.filter((day) => day.date !== date), updated]);
@@ -91,7 +84,6 @@ export function recordMinute(
   days: DayRecord[],
   minute: number,
   outcome: ComponentState,
-  incidentIds: string[],
 ): DayRecord[] {
   const added: DayCounts = {
     recordedMinutes: 1,
@@ -101,7 +93,7 @@ export function recordMinute(
     unknownMinutes: 0,
   };
 
-  return addToDay(days, dateOfMinute(minute), added, incidentIds);
+  return addToDay(days, dateOfMinute(minute), added);
 }
 
 /**
@@ -124,18 +116,13 @@ export function recordUnknown(
     const end = Math.min(toMinute, firstMinuteOfDayAfter(start) - 1);
     const unknown = end - start + 1;
 
-    result = addToDay(
-      result,
-      dateOfMinute(start),
-      {
-        recordedMinutes: unknown,
-        downMinutes: 0,
-        degradedMinutes: 0,
-        maintenanceMinutes: 0,
-        unknownMinutes: unknown,
-      },
-      [],
-    );
+    result = addToDay(result, dateOfMinute(start), {
+      recordedMinutes: unknown,
+      downMinutes: 0,
+      degradedMinutes: 0,
+      maintenanceMinutes: 0,
+      unknownMinutes: unknown,
+    });
   }
 
   return result;

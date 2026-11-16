@@ -2,7 +2,11 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { NOW, QueryWrapper, stubStatusFetch } from "~/test/test-utils";
 
-import { operationalStatusDocument, staleStatusDocument } from "@repo/monitoring/status-fixtures";
+import {
+  incidentStatusDocument,
+  operationalStatusDocument,
+  staleStatusDocument,
+} from "@repo/monitoring/status-fixtures";
 
 import { useStatusDocument } from "./use-status-document";
 
@@ -152,6 +156,24 @@ describe("useStatusDocument", () => {
 
       expect(hook.result.current.hasFailed).toBe(false);
       expect(hook.result.current.document?.components).toHaveLength(5);
+    });
+
+    it("drops a component this page does not know from an incident, and the incident naming only those", async () => {
+      const [incident] = incidentStatusDocument.incidents;
+      const { hook } = await mountWith({
+        raw: {
+          ...incidentStatusDocument,
+          incidents: [
+            { ...incident, components: [...incident.components, "mobile-app"] },
+            { ...incident, id: "newer-only", components: ["mobile-app"] },
+          ],
+        },
+      });
+
+      expect(hook.result.current.hasFailed).toBe(false);
+      expect(hook.result.current.document?.incidents.map((entry) => entry.components)).toEqual([
+        incident.components,
+      ]);
     });
 
     it("never replaces a document with an older one", async () => {

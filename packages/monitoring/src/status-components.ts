@@ -44,6 +44,7 @@ export const STATUS_SIGNAL_IDS = [
   "devicePublishesBeforeIdle",
   "collectorHeartbeat",
   "ingestIteratorAge",
+  "ingestIteratorAgeFloor",
   "macroPlatformFailures",
   "macroLatencyP95",
   "macroBacklog",
@@ -57,12 +58,12 @@ type StatusSignalId = (typeof STATUS_SIGNAL_IDS)[number];
 export type StatusReadings = Partial<Record<StatusSignalId, number>>;
 
 /**
- * How a signal's datapoints inside its lookback become one reading. A count is summed, a
- * level the rules compare with a limit is the highest, and so is a dependency check, which then
- * reads down only when every check in its window failed. A gauge published every few minutes is
- * its newest point, so a recovered value stops counting as soon as the next one lands.
+ * How a signal's datapoints inside its lookback become one reading. A count is summed. A
+ * dependency check is the highest, so it reads down only when every check in its window failed. A
+ * level is its newest point, so a recovered value stops counting as soon as the next one lands and
+ * a one-minute spike lasts one minute. A floor is its lowest, which tells a jump from a climb.
  */
-type SignalReduction = "sum" | "max" | "latest";
+type SignalReduction = "sum" | "max" | "min" | "latest";
 
 /** CloudFront publishes its metrics in us-east-1 whatever region serves the site. */
 const CLOUDFRONT_REGION: StatusRegion = "us-east-1";
@@ -87,8 +88,11 @@ export const MACRO_FAILURE_WINDOW_MINUTES = 60;
  */
 export const DEPENDENCY_WINDOW_MINUTES = 10;
 
-/** Iterator age moves slowly, so a few minutes is enough to read its level. */
+/** Iterator age lands every minute the pipeline reads, so a few minutes cover one CloudWatch has not filled yet. */
 export const LAG_WINDOW_MINUTES = 5;
+
+/** Reaches back past the pause a resuming reader takes, about ten minutes when a cluster restarts. */
+export const ITERATOR_AGE_FLOOR_MINUTES = 20;
 
 /**
  * The heartbeat export publishes every half hour. Latencies are stamped at the start of the bucket
@@ -149,6 +153,7 @@ export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
       "devicePublishesBeforeIdle",
       "collectorHeartbeat",
       "ingestIteratorAge",
+      "ingestIteratorAgeFloor",
       "databricksUp",
     ],
   },
@@ -326,7 +331,15 @@ export function statusSignals(config: StatusConfig): StatusSignal[] {
       ...awsCount,
       id: "ingestIteratorAge",
       lookbackMinutes: LAG_WINDOW_MINUTES,
-      reduce: "max",
+      // A reader that resumes after a pause can report a high age for the one minute it catches up in.
+      reduce: "latest",
+      read: stream("GetRecords.IteratorAgeMilliseconds", "Maximum"),
+    }),
+    define({
+      ...awsCount,
+      id: "ingestIteratorAgeFloor",
+      lookbackMinutes: ITERATOR_AGE_FLOOR_MINUTES,
+      reduce: "min",
       read: stream("GetRecords.IteratorAgeMilliseconds", "Maximum"),
     }),
 

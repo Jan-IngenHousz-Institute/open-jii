@@ -11,6 +11,9 @@ The platform heartbeat's tested logic: the metrics forwarder's parsing, the cost
 | `status-readings.ts`          | Turn a region's GetMetricData results into one reading per signal                            |
 | `status-judge.ts`             | Judge each component from a run's probes and readings and build the status document          |
 | `status-history.ts`           | Keep each component's 90 days of minute tallies and compute uptime from them                 |
+| `status-content.ts`           | Query Contentful for incidents and notices and map them onto the status document             |
+| `status-events.ts`            | Work out what changed since subscribers were last told, for a channel such as Slack          |
+| `status-feed.ts`              | The state the publisher keeps beside its history: what was announced and the last content    |
 | `status-probes.ts`            | What a healthy answer from the website and the API looks like                                |
 | `catalog.ts`                  | Parse `docs/monitoring/metrics-catalog.yaml`                                                 |
 | `catalog-consistency.test.ts` | Fail when the catalogue, the exporter's metric names, the rules or the dashboards diverge    |

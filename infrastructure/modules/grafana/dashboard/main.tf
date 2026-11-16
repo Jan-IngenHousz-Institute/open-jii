@@ -3981,7 +3981,7 @@ resource "grafana_rule_group" "status_publisher_health" {
     for            = "5m"
 
     annotations = {
-      description      = "The status publisher threw, so the public status page has stopped updating."
+      description      = "The status publisher keeps failing, so the status page or its incident notes are going stale."
       summary          = "Status publisher is failing to publish"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/status-publisher-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid

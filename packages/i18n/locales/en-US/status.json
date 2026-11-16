@@ -177,8 +177,8 @@
   "howWeMeasure": {
     "title": "How we measure",
     "states": "Degraded means a component is slow or only partly working. Outage, also called down, means it is not working.",
-    "checks": "We test the website and the platform from outside every minute. For the rest we use the platform's own numbers. The platform checks its connections every five minutes, and the data pipeline reports every half hour. Open a component to see exactly what counts as degraded and as down.",
-    "uptime": "Availability is the share of minutes in the last 90 UTC days in which a component was not down. Minutes when our own checks could not run count as down. Degraded time is shown beside it. Planned maintenance appears on the bars but is left out of the figure. A day is marked Degraded from five degraded minutes, and shorter blips stay visible in that day's details."
+    "checks": "We test the website and the platform from outside every minute. For the rest we use the platform's own numbers. The platform checks its connections every five minutes, and the data pipeline reports every half hour. A problem has to last two minutes in a row before a component shows Degraded, and three before it shows Outage, so a single bad minute changes nothing. Open a component to see exactly what counts as degraded and as down.",
+    "uptime": "Availability is the share of minutes in the last 90 UTC days in which a component was not down. Minutes when our own checks could not run count as down. While an incident is open, a component shows at least the state we declared for it, and declared down time lowers the figure as measured down time does. Degraded time is shown beside it. Planned maintenance appears on the bars but is left out of the figure. A day is marked Degraded from five degraded minutes, and shorter blips stay visible in that day's details."
   },
   "past": {
     "title": "Past incidents",

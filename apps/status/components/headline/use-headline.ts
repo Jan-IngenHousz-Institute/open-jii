@@ -7,7 +7,7 @@ import { useTranslation } from "@repo/i18n/client";
 import type { Incident, StatusComponent } from "@repo/monitoring/status-document";
 
 export interface HeadlineInput {
-  components: StatusComponent[];
+  components: Pick<StatusComponent, "id" | "state">[];
   openWindows: Incident[];
   generatedAt: string;
   isStale: boolean;
