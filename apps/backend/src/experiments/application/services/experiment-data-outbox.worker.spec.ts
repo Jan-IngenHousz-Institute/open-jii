@@ -415,7 +415,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const stopping = realWorker();
     vi.spyOn(testApp.module.get(ExperimentMetadataWarehouseRepository), "merge").mockImplementation(
       () => {
-        void stopping.onApplicationShutdown();
+        void stopping.beforeApplicationShutdown();
         return Promise.resolve(success("merged"));
       },
     );
@@ -572,7 +572,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const stopped: { promise?: Promise<void>; later?: AnnotationRecord[] } = {};
     // Shutdown arrives while the first copy is in flight, with a second record owed meanwhile.
     merge.mockImplementationOnce(async () => {
-      stopped.promise = stopping.onApplicationShutdown();
+      stopped.promise = stopping.beforeApplicationShutdown();
       stopped.later = await annotate("2");
       return success(undefined);
     });
@@ -600,7 +600,7 @@ describe("ExperimentDataOutboxWorker", () => {
     vi.spyOn(outbox, "claimDue").mockImplementationOnce(async (leaseMs, limit) => {
       const claiming = shared.claimDue(leaseMs, limit);
       await Promise.resolve();
-      shutdown = stopping.onApplicationShutdown().then(() => {
+      shutdown = stopping.beforeApplicationShutdown().then(() => {
         order.push("shut down");
       });
       return claiming;

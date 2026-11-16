@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { OnApplicationShutdown } from "@nestjs/common";
+import type { BeforeApplicationShutdown } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
@@ -59,7 +59,7 @@ export interface OutboxDrainCounts {
  * copy. Every task runs this loop; Postgres hands each one different rows.
  */
 @Injectable()
-export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
+export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
   private readonly logger = new Logger(ExperimentDataOutboxWorker.name);
   private draining = false;
   /** The latest drain, which a task shutting down waits for. */
@@ -104,9 +104,10 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
 
   /**
    * Nothing new is claimed or started, and the drain running finishes: a claim in flight still
-   * commits, and its rows go back rather than wait out the lease.
+   * commits, and its rows go back rather than wait out the lease. It runs before the clients close,
+   * which they do on application shutdown.
    */
-  async onApplicationShutdown(): Promise<void> {
+  async beforeApplicationShutdown(): Promise<void> {
     this.stopping = true;
     await this.running;
   }

@@ -1423,7 +1423,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     afterAll(async () => {
-      await copier.onModuleDestroy();
+      await copier.onApplicationShutdown();
     });
 
     it("keeps a sheet's current rows, so the rows an edit dropped and a deleted sheet read no more", async () => {

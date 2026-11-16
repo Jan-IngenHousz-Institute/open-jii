@@ -1,6 +1,7 @@
 import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
+import type { OnApplicationShutdown } from "@nestjs/common";
 import type { z } from "zod";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -8,9 +9,9 @@ import { AppError, failure, success, tryCatch } from "../../../../utils/fp-utils
 import type { Result } from "../../../../utils/fp-utils";
 import { ServingStoreConfigService } from "../config/config.service";
 
-/** The outbox's connection to the store, as the copier, which may read and insert its two tables. */
+/** The outbox's connection to the store, as the copier, which may insert into its two tables. */
 @Injectable()
-export class ServingStoreCopierClientService implements OnModuleDestroy {
+export class ServingStoreCopierClientService implements OnApplicationShutdown {
   private readonly logger = new Logger(ServingStoreCopierClientService.name);
 
   // A copy runs inside the outbox's two-minute claim, and its statements are small.
@@ -80,7 +81,8 @@ export class ServingStoreCopierClientService implements OnModuleDestroy {
     );
   }
 
-  async onModuleDestroy(): Promise<void> {
+  /** After the outbox worker's own shutdown hook, so a copy in flight keeps its connection. */
+  async onApplicationShutdown(): Promise<void> {
     await this.client?.close();
   }
 
