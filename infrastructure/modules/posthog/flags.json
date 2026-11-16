@@ -57,10 +57,24 @@
     "filters": { "groups": [{ "rollout_percentage": 0 }] }
   },
   "store-experiment-reads": {
-    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts stay on the warehouse. Off until a clean comparison of both read paths.",
+    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts stay on the warehouse. On for one organisation's members while both read paths are compared, off for everyone else.",
     "active": true,
     "continuity": false,
     "tags": ["backend", "serving-store"],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
+    "filters": {
+      "groups": [
+        {
+          "properties": [
+            {
+              "key": "organization_ids",
+              "type": "person",
+              "value": "2ec3531a-d938-408b-ab77-6cd47ad86e59",
+              "operator": "icontains"
+            }
+          ],
+          "rollout_percentage": 100
+        }
+      ]
+    }
   }
 }
