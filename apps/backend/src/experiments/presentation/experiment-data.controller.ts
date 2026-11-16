@@ -36,7 +36,7 @@ export class ExperimentDataController {
         source,
       );
       if (result.isSuccess()) {
-        return result.value;
+        return { headers: { "x-data-source": source }, body: result.value };
       }
       return throwOrpcFailure(result, this.logger);
     });

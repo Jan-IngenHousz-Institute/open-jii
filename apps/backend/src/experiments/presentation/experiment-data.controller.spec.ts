@@ -68,11 +68,27 @@ describe("ExperimentDataController", () => {
         .expect(200);
 
       expect(response.body).toEqual(mockTables);
+      expect(response.headers["x-data-source"]).toBe("warehouse");
       expect(getExperimentTablesUseCase.execute).toHaveBeenCalledWith(
         experimentId,
         testUserId,
         "warehouse",
       );
+    });
+
+    it("names the store in its header when the store answered", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      vi.spyOn(getExperimentTablesUseCase, "execute").mockResolvedValue(success([]));
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(200);
+
+      expect(response.body).toEqual([]);
+      expect(response.headers["x-data-source"]).toBe("store");
     });
 
     it("should map a use-case failure to its HTTP status", async () => {
