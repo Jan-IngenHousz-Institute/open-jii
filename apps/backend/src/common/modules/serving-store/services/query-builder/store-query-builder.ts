@@ -26,9 +26,15 @@ import { VariantSchema } from "../../../databricks/services/query-builder/schema
 import type { VariantField } from "../../../databricks/services/query-builder/schema/variant-schema";
 import type { StoreColumn, StoreTable } from "./store-tables";
 
-export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf"> & {
+export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "isPairText"> & {
   text?: { column: string; key?: string };
 };
+
+/** Another table's rows, one per key and time, for this table's rows to match. */
+export interface StoreMatchable {
+  sql: string;
+  columns: StoreOutputColumn[];
+}
 
 interface StoreOrdering extends QueryOrdering {
   idOrder?: string[];
@@ -67,6 +73,13 @@ const SAMPLE_SPREADS: Partial<Record<AggregateExpression["function"], string>> =
 
 /** Lag and row numbers count rows, so they see every row before this one, never its peers. */
 const ROWS_SO_FAR = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+
+/** The names a time-matched read gives its two tables and the matched table's own columns. */
+const ROWS = "__rows";
+const MATCHED = "__matched";
+const MATCH_KEY = "__match_key";
+const MATCH_TIME = "__match_time";
+const MATCH_FOUND = "__match_found";
 
 /**
  * Reads one experiment table from the store's views in the warehouse's shape: the view's columns
@@ -487,9 +500,79 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     ]);
   }
 
-  private valueOf({ name, idOf }: StoreOutputColumn): string {
+  /**
+   * These rows for another table's to match by time: per key and time the one with the lowest
+   * id, as the warehouse breaks a tie, each named column under its alias. A device comes as the
+   * JSON text of its pair and an array as its JSON, since a missing match makes either null.
+   */
+  buildMatchable(match: {
+    column: string;
+    time: string;
+    columns: { name: string; alias: string }[];
+  }): StoreMatchable {
+    const key = this.columnExpression(match.column);
+    const at = this.instantOf(this.columnExpression(match.time));
+    const values = match.columns.map(({ name, alias }) => {
+      const column = this.outputColumn(name);
+      return { column: { ...column, name: alias }, sql: this.matchableValueOf(column) };
+    });
+    const projection = [
+      `${key} AS ${MATCH_KEY}`,
+      `${at} AS ${MATCH_TIME}`,
+      `1 AS ${MATCH_FOUND}`,
+      ...values.map(({ column, sql }) => `${sql} AS ${this.quoteName(column.name)}`),
+    ];
+    const where = [...this.whereConditions, `${key} IS NOT NULL`, `${at} IS NOT NULL`];
+    const sql = this.joinClauses([
+      this.withClause(),
+      `SELECT ${projection.join(", ")}`,
+      `FROM ${this.fromClause}`,
+      `WHERE ${where.join(" AND ")}`,
+      `ORDER BY ${MATCH_KEY}, ${MATCH_TIME}, ${this.columnExpression("id")} ASC`,
+      `LIMIT 1 BY ${MATCH_KEY}, ${MATCH_TIME}`,
+    ]);
+    return { sql, columns: values.map(({ column }) => column) };
+  }
+
+  /**
+   * Adds another table's columns, each from its latest row with the same key at or before this
+   * row's time, and null where there is none or it is older than the tolerance.
+   */
+  joinAsOf(
+    matchable: StoreMatchable,
+    match: { column: string; time: string; toleranceMinutes: number },
+  ): this {
+    const key = this.columnExpression(match.column);
+    const at = this.instantOf(this.columnExpression(match.time));
+    const isRecent = `${MATCHED}.${MATCH_FOUND} = 1 AND ${MATCHED}.${MATCH_TIME} >= ${at} - INTERVAL ${match.toleranceMinutes} MINUTE`;
+    const on = `${key} = ${MATCHED}.${MATCH_KEY} AND ${at} >= ${MATCHED}.${MATCH_TIME}`;
+    this.fromClause = `${this.fromClause} AS ${ROWS} ASOF LEFT JOIN (${matchable.sql}) AS ${MATCHED} ON ${on}`;
+    this.columns = [
+      ...this.columns,
+      ...matchable.columns.map(({ name, type, idOf }) => ({
+        name,
+        type,
+        idOf,
+        isPairText: idOf === "device",
+        expression: `if(${isRecent}, ${MATCHED}.${this.quoteName(name)}, NULL)`,
+      })),
+    ];
+    return this;
+  }
+
+  private matchableValueOf(column: StoreOutputColumn): string {
+    const expression = this.projectedExpression(column.name);
+    if (column.idOf === "device") {
+      return `toJSONString(tuple(${expression}, ${this.deviceLabelOf(expression)}))`;
+    }
+    const isField = this.fieldExpressions().has(column.name);
+    const isNested = column.type.startsWith("ARRAY<") || column.type.startsWith("STRUCT<");
+    return isNested && !isField ? `toJSONString(${expression})` : expression;
+  }
+
+  private valueOf({ name, idOf, isPairText }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
-    return idOf === "device" ? this.deviceKeyOf(expression) : expression;
+    return idOf === "device" && !isPairText ? this.deviceKeyOf(expression) : expression;
   }
 
   /**
@@ -527,7 +610,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     ]);
     const base = this.columns
       .filter(({ name }) => !hidden.has(name))
-      .map(({ name, type, idOf }) => ({ name, type, idOf }));
+      .map(({ name, type, idOf, isPairText }) => ({ name, type, idOf, isPairText }));
     const flattened = [...this.flattenedFields().values()];
     const fields = this.variantColumns.flatMap((variant) =>
       VariantSchema.isObject(variant.schema)
@@ -730,8 +813,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (path !== undefined) {
       return { name, type: this.typeOf(name) };
     }
-    const { type, idOf } = this.baseColumn(base);
-    return { name, type, idOf };
+    const { type, idOf, isPairText } = this.baseColumn(base);
+    return { name, type, idOf, isPairText };
   }
 
   /**
@@ -739,9 +822,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * writes 1.5 at scale 2 as 1.50. A device comes back as its client id and the label its row's own
    * names give, which the backend finishes with the registry's serial number.
    */
-  private projectedValue({ name, type, idOf }: StoreOutputColumn): string {
+  private projectedValue({ name, type, idOf, isPairText }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
-    if (idOf === "device") {
+    if (idOf === "device" && !isPairText) {
       return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
     }
     const isInteger = type === "BIGINT" || type === "INT";

@@ -33,24 +33,26 @@ def chart_rows(spark: SparkSession) -> Iterator[None]:
     zone = spark.conf.get("spark.sql.session.timeZone")
     # A Databricks SQL warehouse runs in UTC.
     spark.conf.set("spark.sql.session.timeZone", "UTC")
-    rows = [
-        (row["id"], row["timestamp"], row["device_name"], row["latitude"], row["output"])
-        for row in _PARITY["rows"]
-    ]
-    frame = spark.createDataFrame(
-        rows, "id BIGINT, timestamp_text STRING, device_name STRING, latitude DOUBLE, output STRING"
-    )
-    frame.select(
-        F.lit("charts").alias("experiment_id"),
-        "id",
-        F.to_timestamp("timestamp_text").alias("timestamp"),
-        F.to_date(F.to_timestamp("timestamp_text")).alias("date"),
-        "device_name",
-        "latitude",
-        F.parse_json("output").alias("macro_output"),
-    ).createOrReplaceTempView("chart_rows")
+    for view, key in (("chart_rows", "rows"), ("chart_matches", "matches")):
+        rows = [
+            (row["id"], row["timestamp"], row["device_name"], row["latitude"], row["output"])
+            for row in _PARITY[key]
+        ]
+        frame = spark.createDataFrame(
+            rows, "id BIGINT, timestamp_text STRING, device_name STRING, latitude DOUBLE, output STRING"
+        )
+        frame.select(
+            F.lit("charts").alias("experiment_id"),
+            "id",
+            F.to_timestamp("timestamp_text").alias("timestamp"),
+            F.to_date(F.to_timestamp("timestamp_text")).alias("date"),
+            "device_name",
+            "latitude",
+            F.parse_json("output").alias("macro_output"),
+        ).createOrReplaceTempView(view)
     yield
     spark.catalog.dropTempView("chart_rows")
+    spark.catalog.dropTempView("chart_matches")
     spark.conf.set("spark.sql.session.timeZone", zone)
 
 

@@ -675,6 +675,79 @@
       ]
     ]
   },
+  "timeMatchedAverages": {
+    "columns": [
+      "device_name",
+      "w_avg",
+      "count_count"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "B",
+        40.0,
+        2
+      ]
+    ]
+  },
+  "timeMatchedRows": {
+    "columns": [
+      "id",
+      "w",
+      "matched_id"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        1,
+        null,
+        null
+      ],
+      [
+        2,
+        10.0,
+        11
+      ],
+      [
+        3,
+        10.0,
+        11
+      ],
+      [
+        4,
+        40.0,
+        14
+      ],
+      [
+        5,
+        null,
+        15
+      ],
+      [
+        6,
+        null,
+        null
+      ],
+      [
+        7,
+        null,
+        null
+      ],
+      [
+        8,
+        40.0,
+        14
+      ]
+    ]
+  },
   "timeWidth": {
     "columns": [
       "day_index",

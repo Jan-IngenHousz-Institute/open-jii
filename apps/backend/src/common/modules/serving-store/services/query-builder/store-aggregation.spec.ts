@@ -23,7 +23,17 @@ import { MACRO_RESULTS_TABLE } from "./store-tables";
 const FIXTURES = resolve(__dirname, "../../../../../../../data/tests/fixtures");
 const MIGRATIONS = resolve(__dirname, "../../../../../../../../packages/database/clickhouse/migrations");
 
+const zRow = z.object({
+  id: z.number(),
+  timestamp: z.string(),
+  device_name: z.string().nullable(),
+  latitude: z.number().nullable(),
+  output: z.string(),
+});
+
 const zCase = z.object({
+  columns: z.array(z.string()).optional(),
+  join: z.object({ matchColumn: z.string(), toleranceMinutes: z.number() }).optional(),
   filters: z
     .array(
       z.object({
@@ -33,8 +43,9 @@ const zCase = z.object({
       }),
     )
     .optional(),
-  aggregation: z.object({
-    groupBy: z
+  aggregation: z
+    .object({
+      groupBy: z
       .array(
         z.object({
           column: z.string(),
@@ -58,22 +69,17 @@ const zCase = z.object({
         }),
       )
       .optional(),
-  }),
+    })
+    .optional(),
   ordering: z.object({ column: z.string(), direction: z.enum(["ASC", "DESC"]) }).optional(),
   compare: z.array(z.string()).optional(),
 });
 
 const zFixture = z.object({
   schema: z.string(),
-  rows: z.array(
-    z.object({
-      id: z.number(),
-      timestamp: z.string(),
-      device_name: z.string().nullable(),
-      latitude: z.number().nullable(),
-      output: z.string(),
-    }),
-  ),
+  rows: z.array(zRow),
+  matchSchema: z.string(),
+  matches: z.array(zRow),
   cases: z.record(z.string(), zCase),
 });
 
@@ -96,16 +102,44 @@ const STORE_COLUMNS = MACRO_RESULTS_TABLE.columns
   .filter((name) => name !== "macro_output");
 
 const VARIANTS = [{ columnName: "macro_output", schema: FIXTURE.schema, suffix: "output" }];
+const MATCH_VARIANTS = [
+  { columnName: "macro_output", schema: FIXTURE.matchSchema, suffix: "output" },
+];
+
+/** The second table's columns a time-matched case reads, under the names the join gives them. */
+const MATCHED_COLUMNS = [
+  { name: "w", alias: "w" },
+  { name: "id", alias: "matched_id" },
+];
 
 /** A chart read's ceiling and one more, as the repository asks for. */
 const CHART_LIMIT = 100_001;
 
 function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
-  const { filters, aggregation, ordering } = FIXTURE.cases[name];
+  const { columns, join, filters, aggregation, ordering } = FIXTURE.cases[name];
   return {
     tableName: "m1",
     tableType: "macro",
     experimentId,
+    columns,
+    join:
+      join === undefined
+        ? undefined
+        : {
+            ...join,
+            secondary: {
+              tableName: "m2",
+              tableType: "macro",
+              variants: MATCH_VARIANTS,
+              reservedColumns: STORE_COLUMNS,
+            },
+            primaryColumns: [],
+            secondaryColumns: MATCHED_COLUMNS,
+            primaryTimeColumn: "timestamp",
+            primaryTimeType: "TIMESTAMP",
+            secondaryTimeColumn: "timestamp",
+            secondaryTimeType: "TIMESTAMP",
+          },
     variants: VARIANTS,
     reservedColumns: STORE_COLUMNS,
     filters,
@@ -120,11 +154,31 @@ function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
 // against chart-results.json; the store's spec below expects the same results.
 it("keeps the Spark chart fixture in sync with the warehouse's generated queries", async () => {
   const service = new QueryBuilderService();
+  const scoped = { whereConditions: [["experiment_id", "charts"]] satisfies [string, string][] };
   const queries = Object.fromEntries(
-    Object.entries(FIXTURE.cases).map(([name, { filters, aggregation, ordering }]) => {
+    Object.entries(FIXTURE.cases).map(([name, { columns, join, filters, aggregation, ordering }]) => {
       const built = service.buildQuery({
         table: "chart_rows",
-        whereConditions: [["experiment_id", "charts"]],
+        ...scoped,
+        columns,
+        join:
+          join === undefined
+            ? undefined
+            : {
+                ...join,
+                secondary: {
+                  table: "chart_matches",
+                  ...scoped,
+                  variants: MATCH_VARIANTS,
+                  reservedColumns: SPARK_COLUMNS,
+                },
+                primaryColumns: [...SPARK_COLUMNS, "n", "v"],
+                secondaryColumns: MATCHED_COLUMNS,
+                primaryTimeColumn: "timestamp",
+                primaryTimeType: "TIMESTAMP",
+                secondaryTimeColumn: "timestamp",
+                secondaryTimeType: "TIMESTAMP",
+              },
         variants: VARIANTS,
         reservedColumns: SPARK_COLUMNS,
         filters,
@@ -227,23 +281,24 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
     for (const statement of migrationStatements()) {
       await admin.command({ query: statement });
     }
+    const macroRow = (macroId: string) => (row: z.infer<typeof zRow>) => ({
+      experiment_id: "charts",
+      id: row.id,
+      raw_id: row.id,
+      timestamp: row.timestamp,
+      device_name: row.device_name,
+      latitude: row.latitude,
+      macro_id: macroId,
+      macro_output: JSON.parse(row.output),
+      macro_output_text: row.output,
+      questions_data: {},
+      annotations: [],
+      _commit_version: 1,
+      _commit_timestamp: "2027-01-02 00:00:00",
+    });
     await admin.insert({
       table: "macro_results",
-      values: FIXTURE.rows.map((row) => ({
-        experiment_id: "charts",
-        id: row.id,
-        raw_id: row.id,
-        timestamp: row.timestamp,
-        device_name: row.device_name,
-        latitude: row.latitude,
-        macro_id: "m1",
-        macro_output: JSON.parse(row.output),
-        macro_output_text: row.output,
-        questions_data: {},
-        annotations: [],
-        _commit_version: 1,
-        _commit_timestamp: "2027-01-02 00:00:00",
-      })),
+      values: [...FIXTURE.rows.map(macroRow("m1")), ...FIXTURE.matches.map(macroRow("m2"))],
       format: "JSONEachRow",
     });
 

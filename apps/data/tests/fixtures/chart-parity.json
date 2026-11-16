@@ -10,6 +10,15 @@
     { "id": 7, "timestamp": "2027-01-01 00:00:00.000", "device_name": "D", "latitude": 2.0, "output": "{\"n\":7}" },
     { "id": 8, "timestamp": "2026-09-08 10:15:00.000", "device_name": "B", "latitude": 5.5, "output": "{\"n\":4,\"v\":6.0}" }
   ],
+  "matchSchema": "OBJECT<w: DOUBLE>",
+  "matches": [
+    { "id": 11, "timestamp": "2026-09-07 00:00:00.000", "device_name": "A", "latitude": null, "output": "{\"w\":10.0}" },
+    { "id": 12, "timestamp": "2026-09-07 00:00:00.000", "device_name": "A", "latitude": null, "output": "{\"w\":20.0}" },
+    { "id": 13, "timestamp": "2026-09-08 08:00:00.000", "device_name": "B", "latitude": null, "output": "{\"w\":30.0}" },
+    { "id": 14, "timestamp": "2026-09-08 10:15:00.000", "device_name": "B", "latitude": null, "output": "{\"w\":40.0}" },
+    { "id": 15, "timestamp": "2026-10-01 11:30:00.000", "device_name": "C", "latitude": null, "output": "{\"w\":null}" },
+    { "id": 16, "timestamp": "2026-12-31 23:00:00.000", "device_name": null, "latitude": null, "output": "{\"w\":50.0}" }
+  ],
   "cases": {
     "groupedStats": {
       "aggregation": {
@@ -214,6 +223,23 @@
           { "column": "v", "function": "corr", "secondColumn": "latitude" }
         ]
       }
+    },
+    "timeMatchedRows": {
+      "columns": ["id", "w", "matched_id"],
+      "join": { "matchColumn": "device_name", "toleranceMinutes": 60 },
+      "ordering": { "column": "id", "direction": "ASC" }
+    },
+    "timeMatchedAverages": {
+      "join": { "matchColumn": "device_name", "toleranceMinutes": 60 },
+      "filters": [{ "column": "w", "operator": "greater_than", "value": 15 }],
+      "aggregation": {
+        "groupBy": [{ "column": "device_name" }],
+        "functions": [
+          { "column": "w", "function": "avg" },
+          { "column": "*", "function": "count" }
+        ]
+      },
+      "ordering": { "column": "device_name", "direction": "ASC" }
     },
     "filteredByPayload": {
       "filters": [{ "column": "v", "operator": "greater_than_or_equal", "value": 2 }],

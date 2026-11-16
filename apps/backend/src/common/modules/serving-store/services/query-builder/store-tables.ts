@@ -13,6 +13,8 @@ export interface StoreColumn {
   expression: string;
   /** A contributor or device the store holds as an id, whose details the backend fills in. */
   idOf?: "contributor" | "device";
+  /** A matched table's device, already the JSON text of its client id and label. */
+  isPairText?: boolean;
 }
 
 export interface StoreTable {

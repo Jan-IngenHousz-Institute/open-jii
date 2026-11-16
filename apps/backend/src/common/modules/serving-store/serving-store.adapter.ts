@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 
 import type {
+  ExperimentAsOfJoin,
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../experiments/core/models/experiment-data.model";
@@ -23,6 +24,7 @@ import { CellValues } from "./services/client/cell-values";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { StoreAggregation } from "./services/query-builder/store-aggregation";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
+import type { StoreMatchable } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
 
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
@@ -174,6 +176,17 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     try {
+      if (params.join !== undefined) {
+        const matchable = this.matchable(params, params.join);
+        if (matchable.isFailure()) {
+          return matchable;
+        }
+        builder.joinAsOf(matchable.value, {
+          column: params.join.matchColumn,
+          time: params.join.primaryTimeColumn,
+          toleranceMinutes: params.join.toleranceMinutes,
+        });
+      }
       for (const filter of params.filters ?? []) {
         builder.filter(filter);
       }
@@ -216,6 +229,35 @@ export class ServingStoreAdapter implements ServingStorePort {
       }
       throw error;
     }
+  }
+
+  /** The second table of a time-matched read, from the same experiment and its devices. */
+  private matchable(params: StoreQueryParams, join: ExperimentAsOfJoin): Result<StoreMatchable> {
+    const { secondary } = join;
+    const table = StoreTables.of(secondary.tableType, secondary.tableName);
+    if (table === null) {
+      return failure(AppError.notFound(`The store holds no table '${secondary.tableName}'`));
+    }
+
+    const identifier = secondary.tableType === "static" ? undefined : secondary.tableName;
+    const builder = new StoreQueryBuilder()
+      .read(table, params.experimentId, identifier)
+      .reserve(secondary.reservedColumns ?? [])
+      .serialNumbers(params.deviceSerials ?? [])
+      .plotValues();
+    for (const { columnName, schema, suffix } of secondary.variants ?? []) {
+      builder.parseVariant(columnName, schema, suffix);
+    }
+    if (secondary.exceptColumns && secondary.exceptColumns.length > 0) {
+      builder.except(secondary.exceptColumns);
+    }
+    return success(
+      builder.buildMatchable({
+        column: join.matchColumn,
+        time: join.secondaryTimeColumn,
+        columns: join.secondaryColumns,
+      }),
+    );
   }
 
   countQuery(query: StoreQuery): StoreQuery {
@@ -281,7 +323,8 @@ export class ServingStoreAdapter implements ServingStorePort {
         return CellValues.payloadCell(payloads.get(text.column), text.key, type);
       }
       if (idOf === "device") {
-        return JSON.stringify(value);
+        // A matched table's device comes as its pair's JSON text already, or null without a match.
+        return typeof value === "string" || value === null ? value : JSON.stringify(value);
       }
       if (idOf === "contributor") {
         return typeof value === "string" ? value : null;

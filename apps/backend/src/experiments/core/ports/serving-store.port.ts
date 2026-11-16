@@ -39,7 +39,7 @@ export interface StoreMetadataSheet {
   version: string;
 }
 
-export interface StoreQueryParams extends Omit<ExperimentQueryParams, "join"> {
+export interface StoreQueryParams extends ExperimentQueryParams {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
   /** Each registered device's client id with the serial number its label shows, or none, for the
