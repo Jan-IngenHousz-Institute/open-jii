@@ -58,8 +58,9 @@ A finding from memory, from a tool's summary or from the pull request descriptio
 reason. Then re-run only what the fix touches.
 
 **Report honestly.** List a finding you chose not to fix with the reason. Name a problem that was
-already there as pre-existing. Do not fix it silently, because that takes the branch outside its
-scope, and do not claim it as something this change introduced.
+already there as pre-existing, and do not claim it as something this change introduced. Fix it only
+where the debt rule in Pass 2 allows, because anything more takes the branch outside its scope
+[git.md rule 9].
 
 ## Survey the work
 
@@ -150,7 +151,13 @@ here makes the details moot, so it comes first.
    exists is a finding that names both. Check that the work fits the platform rather than bolting a
    separate product onto its infrastructure. Check too that it does not close a door later, such as
    a format or a contract that only today's case can ever fit.
-2. **The timing.** Compare the work with the project's milestones and priority in Linear. Say so if
+2. **The footprint.** List the layers the work touches, such as a migration, the pipelines, mobile,
+   web, the backend and the release procedure, and compare them with the least the user story
+   needs. When the gap is large, the review leads with it. It recommends the smallest shape that
+   meets the story, and puts the line findings after that or leaves them out. Check whether the
+   author also wrote the ticket, because then its criteria are no independent support for the
+   scope. This check needs only the survey, so it runs at depth 1 too.
+3. **The timing.** Compare the work with the project's milestones and priority in Linear. Say so if
    it jumps ahead of something more urgent.
 
 At depth 5, also brief two agents with the problem and the code, but not the current approach or
@@ -233,6 +240,15 @@ Required, not a nit.
   `@repo/i18n` [prose.md rule 21].
 - **Observability.** Does a new failure path log enough to find it later, at the right level, with
   no personal data in the line? Is a new analytics event named like its neighbours?
+- **Debt.** A change that adds another instance of a pattern a standard lists under Known debt is
+  Required, however common the pattern already is, because the debt list "is not licence to add
+  another" (`docs/standards/README.md`). Examples are another type assertion, another grab-bag
+  file, or another file in a directory its standard says to add nothing to. When the branch touches
+  a file whose standard lists a debt item there and says to fix it on the next touch, that fix is in
+  scope. In your own work it goes in its own commit, and in someone else's it is an Optional
+  finding. Any other pre-existing break of a standard stays out of the branch. If the standard's
+  debt list does not name it yet, propose the line it should gain in the report's pre-existing
+  section.
 
 ## Pass 3: what it costs
 
@@ -393,7 +409,8 @@ The main thread does the survey, the scope and the approach itself, except the d
 It runs depths 1 and 2 alone. From depth 3 the agents only report. They never fix, even in your own
 work.
 
-The agents for a stack of three branches add up as follows.
+For a single branch, depth 3 is one reviewer and one refuter, and depth 4 adds the reality audit and
+the two large-tier security agents. The agents for a stack of three branches add up as follows.
 
 - Depth 3 has four reviewers, one per branch and one for the combined reviews, and two refuters
   that take two reviewers' findings each. That makes six mid-tier agents.
@@ -464,7 +481,7 @@ or pull request before the path.
 ```text
 ## Review of <branch, stack or PR> against <merge base sha, or one per branch>
 
-Verdict: approve | request changes | rethink the approach
+Verdict: approve | request changes | scope first | rethink the approach
 Depth: <1 to 5>, chosen by the developer | run at the recommended depth
 
 ### Scope
@@ -480,8 +497,14 @@ The triggers the diff hit, and the security findings by ID.
 One section per review in a stack. Findings under Pass 1 to Pass 5 headings in the format above,
 or "Nothing to comment on". What is done well, and where.
 
+### Draft review
+Someone else's pull request only: the summary, then each inline comment numbered, with its label,
+path and line.
+
+### Questions for the developer
+### For the developer only
 ### Fixed: the IDs, each with the test that pins it
-### Deliberately left: the IDs, each with its reason, and for a security finding its owner and ticket
+### Left out: deliberately left, refuted, or not worth raising, each with its reason
 ### Could not verify from here, and the step that would settle it
 ### Pre-existing and out of scope
 ### Verification
@@ -492,12 +515,38 @@ results.
 At depth 1 the report has no Scope or Approach section, and its findings fall under Pass 1, Pass 2
 and Pass 5.
 
+Questions for the developer are decisions that are theirs to make, kept apart from the findings so
+they can answer them in one go. "For the developer only" holds what the author should not read in a
+posted review, such as a decision that belongs to someone else, or a change made by hand in an
+environment that needs checking. A security finding that is left out names its owner and its
+ticket.
+
 The verdict is approve when the change leaves the code better than it found it and no Critical or
 Required finding remains. Optional findings and nits do not block.
 
 Keep the report short enough to act on. If the text gives a count, make it match the list under it.
 When someone will paste the report elsewhere, write it as one block they can paste without editing.
 Say what is good when it is, because a review that only lists faults hides which parts to keep.
+
+## Where the report goes
+
+The report goes in the conversation, unless another session will do the fixes. Then it goes into a
+review file: one markdown file per pull request or branch, `.claude/reviews/pr-<n>-<slug>.md`, which
+git ignores, with a `README.md` index beside it. The file names the branch, the worktree by absolute
+path, the head and base it reviewed, the ticket, the depth and the verdict, so the session that
+picks it up needs nothing else. A review of someone else's pull request gets a file too, marked
+report-only.
+
+The index carries the rules for the session that picks a file up:
+
+- Work only in the worktree and on the branch the file names.
+- Fix each finding marked for fixing, with a test that pins it where the area has tests, and re-run
+  only what the fix touches. Run the touched package's lint, typecheck and tests once at the end.
+- Commit locally, one focused commit per finding or group, with a single-line subject.
+- Do not push, open or edit a pull request, or write to Linear. The developer does those.
+- Leave a question for the developer alone until it is answered.
+- Say when a fix changes something a branch further up the stack relies on.
+- Finish by listing each finding ID with what was done and what ran.
 
 ## Posting on someone else's pull request
 
@@ -514,13 +563,15 @@ outside the diff in the summary.
 
 The summary says the review was AI-driven. Write it for the author: plain words, no rule numbers, no
 review-tool headers, and the `unslop` pass over all of it. Each comment is about the code rather
-than the person, gives its reason, and asks as a request or a question. Leave nits out of a posted
-review. A problem found along the way that predates the pull request is described that way, not as
-the author's fault.
+than the person, gives its reason, and asks as a request or a question. Each one is labelled Ask,
+for what the author has to address before merge, or Optional. Leave nits out of a posted review. A
+problem found along the way that predates the pull request is described that way, not as the
+author's fault.
 
-When the author answers, check each claim like "fixed in <sha>" at that commit. Once every point is
-addressed and the developer says so, approve with `event: APPROVE`, no body, and the verified head
-as `commit_id`.
+When the author answers, check each claim like "fixed in <sha>" at that commit, and record the
+re-check in the review file with the head it was done at, what is fixed and anything new. Once every
+point is addressed and the developer says so, approve with `event: APPROVE`, no body, and the
+verified head as `commit_id`.
 
 ## Review-bot comments on your own branch
 

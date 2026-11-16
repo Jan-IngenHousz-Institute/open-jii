@@ -85,7 +85,7 @@ instead, and without it refuses every command.
 | `openjii-backlog-triage`   | Gate, label and state hygiene across many tickets, never their bodies.                                        |
 | `openjii-daily-round`      | Once a day, or coming back after time away, and you need to know whether the platform needs a person.         |
 | `openjii-triage`           | A Grafana alert, a report panel or a runbook points at a metric id and you need evidence rather than a guess. |
-| `openjii-review`           | Reviewing an implementation, someone else's or your own before you call it ready.                             |
+| `openjii-review`           | Reviewing an implementation at a depth from 1 to 5, someone else's or your own before it is ready.            |
 | `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.                                      |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with
