@@ -60,8 +60,6 @@ export function PersonIdentity({
           )}
         </NameLine>
         {identityLine === undefined ? (
-          // Without a name of their own, the name line already shows the email.
-          own &&
           person.email && (
             <div className="text-muted-foreground truncate text-xs" title={person.email}>
               {person.email}

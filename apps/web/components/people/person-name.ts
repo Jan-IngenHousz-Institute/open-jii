@@ -8,7 +8,7 @@ export interface PersonLike {
   avatarUrl?: string | null;
 }
 
-type NamedPerson = Pick<PersonLike, "firstName" | "lastName" | "displayName" | "email">;
+type NamedPerson = Pick<PersonLike, "firstName" | "lastName" | "displayName">;
 
 export type NamePlacement = "row" | "text" | "byline";
 
@@ -23,8 +23,8 @@ export function ownName(
 }
 
 /**
- * The only way a person becomes text. Falls back to the email the server returned, then to
- * a placement-specific fallback; never to an id, and a pseudonym comes back as sent.
+ * The only way a person becomes text. Without a name of their own it falls back by
+ * placement; never to their email or an id, and a pseudonym comes back as sent.
  */
 export function personName(
   person: NamedPerson,
@@ -41,7 +41,7 @@ export function personName(
   t: Translate,
   { placement = "row" }: { placement?: NamePlacement } = {},
 ): string | null {
-  const name = ownName(person) ?? person.email?.trim();
+  const name = ownName(person);
   if (name) return name;
 
   if (placement === "byline") return null;
