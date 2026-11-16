@@ -554,18 +554,43 @@ export class ExperimentDataRepository {
     source: ExperimentDataSource,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     return tryCatch(async () => {
-      const rows = await this.cachePort.tryCache(
-        `table-metadata:${source}:${experimentId}`,
-        async () => {
-          const result = await this.sourceReads(source).tablesMetadata(experimentId);
-          if (result.isFailure()) {
-            throw result.error;
-          }
-          return result.value;
-        },
+      const rows = await this.cachePort.tryCache(`table-metadata:${source}:${experimentId}`, () =>
+        this.loadTablesMetadata(experimentId, source),
       );
       return rows ?? [];
     });
+  }
+
+  /**
+   * The snapshot the tables listing serves. A source that lists cheaply is read afresh and its
+   * snapshot replaced, so a page checking it sees what the source holds at that moment and its
+   * next read uses the count it saw. Any other source's listing is served from the cache.
+   */
+  listedTablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    if (!this.sourceReads(source).listsTablesAfresh) {
+      return this.tablesMetadata(experimentId, source);
+    }
+
+    return tryCatch(async () => {
+      const rows = await this.cachePort.refresh(`table-metadata:${source}:${experimentId}`, () =>
+        this.loadTablesMetadata(experimentId, source),
+      );
+      return rows ?? [];
+    });
+  }
+
+  private async loadTablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<ExperimentTableMetadata[]> {
+    const result = await this.sourceReads(source).tablesMetadata(experimentId);
+    if (result.isFailure()) {
+      throw result.error;
+    }
+    return result.value;
   }
 
   private async tableMetadata(

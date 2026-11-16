@@ -425,4 +425,46 @@ describe("CacheAdapter", () => {
       release?.();
     });
   });
+
+  describe("refresh", () => {
+    const namespace = { prefix: "refresh:", ttlMs: 60_000, staleMs: 60_000 };
+    let adapter: CacheAdapter;
+
+    beforeEach(() => {
+      adapter = new CacheAdapter(cacheManager, namespace);
+    });
+
+    it("loads past a fresh value and keeps the answer for the next read", async () => {
+      await cacheManager.set("refresh:fresh", { value: "old", freshUntil: Date.now() + 60_000 });
+      const fetchFn = vi.fn().mockResolvedValue("new");
+
+      expect(await adapter.refresh("fresh", fetchFn)).toBe("new");
+      expect(await adapter.tryCache("fresh", fetchFn)).toBe("new");
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for the source on a stale value rather than serving it", async () => {
+      await cacheManager.set("refresh:stale", { value: "old", freshUntil: Date.now() - 1 });
+
+      expect(await adapter.refresh("stale", () => Promise.resolve("new"))).toBe("new");
+    });
+
+    it("joins a load already running for the key", async () => {
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("value");
+          }),
+      );
+
+      const read = adapter.tryCache("running", fetchFn);
+      const refreshed = adapter.refresh("running", fetchFn);
+      await vi.waitFor(() => expect(release).toBeDefined());
+      release?.();
+
+      expect(await Promise.all([read, refreshed])).toEqual(["value", "value"]);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+  });
 });

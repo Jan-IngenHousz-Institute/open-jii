@@ -63,6 +63,7 @@ function setup(
   });
   const cache: CachePort = {
     tryCache: async (_key, fetch) => fetch(),
+    refresh: async (_key, fetch) => fetch(),
     invalidate: () => Promise.resolve(),
   };
   const repository = new ExperimentDataRepository(

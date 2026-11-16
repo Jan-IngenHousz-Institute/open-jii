@@ -81,6 +81,10 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     return this.awaitWithin(load, this.namespace.waitMs);
   }
 
+  refresh<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
+    return this.startLoad(`${this.namespace.prefix}${key}`, fetchFn);
+  }
+
   /**
    * One load per key at a time, outliving the caller that started it. A read
    * behind a short TTL is otherwise repeated by every caller that arrives

@@ -70,7 +70,10 @@ export class GetExperimentTablesUseCase {
 
     // Read authorization is enforced by the `@CanAccess({ resource: "experiment",
     // action: "read" })` route guard.
-    const metadataResult = await this.experimentDataRepository.tablesMetadata(experimentId, source);
+    const metadataResult = await this.experimentDataRepository.listedTablesMetadata(
+      experimentId,
+      source,
+    );
 
     if (metadataResult.isFailure()) {
       this.logger.error({

@@ -25,6 +25,9 @@ export interface ExperimentTableReads {
   /** Whether a page of a large table is better picked by id before its rows are read in full. */
   readonly picksLargePagesById: boolean;
 
+  /** Whether the tables listing is cheap enough to read afresh on every check an open page makes. */
+  readonly listsTablesAfresh: boolean;
+
   /** Whether the source holds the table at all; a read of one it lacks goes to the warehouse. */
   readsTable(tableName: string): boolean;
 

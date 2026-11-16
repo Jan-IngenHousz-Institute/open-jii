@@ -3396,6 +3396,50 @@ describe("ExperimentDataRepository", () => {
       expect(fromWarehouse.value[0].rowCount).toBe(5);
       expect(warehouseListing).toHaveBeenCalledTimes(1);
     });
+
+    it("lists the store's tables as it holds them now, and reads with the count it listed", async () => {
+      const storeListing = vi
+        .spyOn(servingStore, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([largeTable]))
+        .mockResolvedValue(success([{ ...largeTable, rowCount: 1_000_001 }]));
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+      );
+
+      const cached = await repository.tablesMetadata(experimentId, "store");
+      const listed = await repository.listedTablesMetadata(experimentId, "store");
+      const page = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(cached);
+      assertSuccess(listed);
+      assertSuccess(page);
+      expect(cached.value[0].rowCount).toBe(1_000_000);
+      expect(listed.value[0].rowCount).toBe(1_000_001);
+      expect(page.value[0].totalRows).toBe(1_000_001);
+      expect(storeListing).toHaveBeenCalledTimes(2);
+    });
+
+    it("lists the warehouse's tables from the cached snapshot", async () => {
+      const warehouseListing = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([{ ...largeTable, rowCount: 5 }]))
+        .mockResolvedValue(success([{ ...largeTable, rowCount: 6 }]));
+
+      const cached = await repository.tablesMetadata(experimentId, "warehouse");
+      const listed = await repository.listedTablesMetadata(experimentId, "warehouse");
+
+      assertSuccess(cached);
+      assertSuccess(listed);
+      expect(listed.value[0].rowCount).toBe(5);
+      expect(warehouseListing).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("a row's annotations", () => {

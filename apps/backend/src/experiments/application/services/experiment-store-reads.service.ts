@@ -63,6 +63,7 @@ const zDevicePair = z.tuple([z.string().nullable(), z.string().nullable()]);
 export class ExperimentStoreReadsService implements ExperimentTableReads {
   // One statement reads any page.
   readonly picksLargePagesById = false;
+  readonly listsTablesAfresh = true;
 
   constructor(
     @Inject(SERVING_STORE_PORT) private readonly store: ServingStorePort,
