@@ -1,5 +1,7 @@
 # Adopts what the prod root created before this root existed, and the foundation role an admin
-# created by hand. Delete this file once the first apply has run.
+# created by hand. Delete this file once the first apply has run. The saved-plan lifecycle rule is
+# not imported: no prod release applied it before this root took the bucket over, so this root
+# creates it.
 
 data "aws_caller_identity" "current" {}
 
@@ -37,11 +39,6 @@ import {
 
 import {
   to = module.terraform_state_s3.aws_s3_bucket_public_access_block.block
-  id = local.state_bucket
-}
-
-import {
-  to = module.terraform_state_s3.aws_s3_bucket_lifecycle_configuration.lifecycle[0]
   id = local.state_bucket
 }
 

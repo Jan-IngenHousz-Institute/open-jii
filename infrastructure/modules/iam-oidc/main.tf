@@ -1281,9 +1281,10 @@ resource "aws_iam_role_policy" "plan_role_reads" {
   })
 }
 
-# Applies the foundation root: CI's roles, the GitHub trust and the state backend. It is the one
-# identity that can change CI's access, so it can change nothing else. It may edit its own policy,
-# so the boundary, which no CI role can edit, caps what that policy can grant.
+# Applies the foundation root: CI's roles, the GitHub trust and the state backend. It may edit its
+# own policy, so the boundary, which no CI role can edit, caps what that policy can grant. A
+# GithubActions* role it creates can still carry any policy, so it is admin by delegation and the
+# environment's reviewers are the real gate.
 resource "aws_iam_role" "foundation_role" {
   count = var.foundation_role_github_environment == null ? 0 : 1
 
@@ -1447,7 +1448,8 @@ resource "aws_iam_role_policy" "foundation_role" {
 }
 
 # The deploy role's broad IAM, S3 and DynamoDB rights would otherwise let an environment root
-# change CI's access. A deny outranks every allow, so only the foundation role can.
+# change CI's existing access. A deny outranks every allow, so only the foundation role can change
+# the objects named here. New users and roles are OJD-2011's work.
 resource "aws_iam_role_policy" "oidc_role_ci_access_guard" {
   count = length(aws_iam_role.foundation_role)
 

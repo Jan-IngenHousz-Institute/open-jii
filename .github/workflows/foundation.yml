@@ -93,11 +93,25 @@ jobs:
             BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
             aws s3 cp "$RUNNER_TEMP/tfplan" "${BUCKET}/${KEY}.tfplan" --only-show-errors
             aws s3 cp .terraform.lock.hcl "${BUCKET}/${KEY}.lock.hcl" --only-show-errors
+            mkdir -p "$RUNNER_TEMP/plan-digest"
+            sha256sum "$RUNNER_TEMP/tfplan" | cut -d' ' -f1 > "$RUNNER_TEMP/plan-digest/tfplan.sha256"
+            sha256sum .terraform.lock.hcl | cut -d' ' -f1 > "$RUNNER_TEMP/plan-digest/lock.sha256"
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "No foundation changes, so nothing to apply."
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # The deploy role can write to the state bucket, so the saved plan could be replaced while
+      # the apply waits for review. Only this run can write its artifacts.
+      - name: Record the plan's digest
+        if: steps.save-plan.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: foundation-plan-digest-${{ inputs.environment }}
+          path: ${{ runner.temp }}/plan-digest
+          retention-days: 7
+          if-no-files-found: error
 
   apply:
     name: Foundation Apply
@@ -133,6 +147,24 @@ jobs:
           BUCKET="s3://open-jii-terraform-state-${TARGET_ENV}"
           aws s3 cp "${BUCKET}/${KEY}.tfplan" "$RUNNER_TEMP/tfplan" --only-show-errors
           aws s3 cp "${BUCKET}/${KEY}.lock.hcl" "infrastructure/foundation/${TARGET_ENV}/.terraform.lock.hcl" --only-show-errors
+
+      - name: Download the plan's digest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: foundation-plan-digest-${{ inputs.environment }}
+          path: ${{ runner.temp }}/plan-digest
+
+      - name: Check the plan is the one reviewed
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          PLAN_SHA=$(sha256sum "$RUNNER_TEMP/tfplan" | cut -d' ' -f1)
+          LOCK_SHA=$(sha256sum "infrastructure/foundation/${TARGET_ENV}/.terraform.lock.hcl" | cut -d' ' -f1)
+          if [ "$PLAN_SHA" != "$(cat "$RUNNER_TEMP/plan-digest/tfplan.sha256")" ] \
+            || [ "$LOCK_SHA" != "$(cat "$RUNNER_TEMP/plan-digest/lock.sha256")" ]; then
+            echo "::error::The saved plan changed after it was planned. Plan again before applying."
+            exit 1
+          fi
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
