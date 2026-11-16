@@ -105,6 +105,9 @@ export const envManifest: readonly EnvVar[] = [
   env("SERVING_STORE_URL", unset, undefined, backend),
   env("SERVING_STORE_USERNAME", unset, undefined, backend),
   env("SERVING_STORE_PASSWORD", unset, undefined, backend),
+  // Without the copier the outbox owes the store no copies of annotations or metadata sheets.
+  env("SERVING_STORE_COPIER_USERNAME", unset, undefined, backend),
+  env("SERVING_STORE_COPIER_PASSWORD", unset, undefined, backend),
 
   env("EMAIL_BASE_URL", set, "http://localhost:3000", backend),
   // The sentinel is intentionally closed; no local SMTP service listens on port 9.

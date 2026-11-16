@@ -11,6 +11,7 @@ import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
+import { ServingStoreCopiesAdapter } from "../common/modules/serving-store/serving-store-copies.adapter";
 import { ServingStoreAdapter } from "../common/modules/serving-store/serving-store.adapter";
 import { ServingStoreModule } from "../common/modules/serving-store/serving-store.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
@@ -25,6 +26,7 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 import { AnnotationMergerService } from "./application/services/annotation-merger.service";
 // Services
 import { AnnotationsLakehouseCopier } from "./application/services/annotations-lakehouse-copier";
+import { AnnotationsStoreCopier } from "./application/services/annotations-store-copier";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
@@ -33,6 +35,7 @@ import { ExperimentStoreReadsService } from "./application/services/experiment-s
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MetadataSheetsLakehouseCopier } from "./application/services/metadata-sheets-lakehouse-copier";
+import { MetadataSheetsStoreCopier } from "./application/services/metadata-sheets-store-copier";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { NumberAnswersService } from "./application/services/number-answers.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
@@ -102,6 +105,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { SERVING_STORE_COPIES_PORT } from "./core/ports/serving-store-copies.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 // Repositories
 import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/experiment-annotations-warehouse.repository";
@@ -186,6 +190,10 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
       useExisting: ServingStoreAdapter,
     },
     {
+      provide: SERVING_STORE_COPIES_PORT,
+      useExisting: ServingStoreCopiesAdapter,
+    },
+    {
       provide: AWS_PORT,
       useExisting: AwsAdapter,
     },
@@ -247,6 +255,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataOutboxWorker,
     AnnotationsLakehouseCopier,
     MetadataSheetsLakehouseCopier,
+    AnnotationsStoreCopier,
+    MetadataSheetsStoreCopier,
     AnnotationMergerService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,

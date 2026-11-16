@@ -8,17 +8,21 @@ import { AppError, assertSuccess, failure, success } from "../../../common/utils
 import { TestHarness } from "../../../test/test-harness";
 import type { AnnotationRecord } from "../../core/models/experiment-data-annotation.model";
 import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
+import { SERVING_STORE_COPIES_PORT } from "../../core/ports/serving-store-copies.port";
+import type { ServingStoreCopiesPort } from "../../core/ports/serving-store-copies.port";
 import { ExperimentAnnotationsWarehouseRepository } from "../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
 import { AnnotationsLakehouseCopier } from "./annotations-lakehouse-copier";
+import { AnnotationsStoreCopier } from "./annotations-store-copier";
 import {
   EXPERIMENT_DATA_OUTBOX_INTERVAL,
   ExperimentDataOutboxWorker,
 } from "./experiment-data-outbox.worker";
 import { MetadataSheetsLakehouseCopier } from "./metadata-sheets-lakehouse-copier";
+import { MetadataSheetsStoreCopier } from "./metadata-sheets-store-copier";
 
 describe("ExperimentDataOutboxWorker", () => {
   const testApp = TestHarness.App;
@@ -84,6 +88,8 @@ describe("ExperimentDataOutboxWorker", () => {
       outbox,
       testApp.module.get(AnnotationsLakehouseCopier),
       testApp.module.get(MetadataSheetsLakehouseCopier),
+      testApp.module.get(AnnotationsStoreCopier),
+      testApp.module.get(MetadataSheetsStoreCopier),
     );
   }
 
@@ -161,6 +167,87 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(await outboxRows()).toEqual([]);
   });
 
+  it("owes the store no copy where the environment has no copier", async () => {
+    await annotate("1");
+
+    expect((await outboxRows()).map((row) => row.destination)).toEqual(["lakehouse"]);
+  });
+
+  describe("where the environment has the store's copier", () => {
+    const store = () => testApp.module.get<ServingStoreCopiesPort>(SERVING_STORE_COPIES_PORT);
+
+    beforeEach(() => {
+      vi.spyOn(store(), "isConfigured").mockReturnValue(true);
+    });
+
+    it("owes each record to the lakehouse and the store, and copies each to its own", async () => {
+      const merge = mergeAnnotations();
+      const write = vi.spyOn(store(), "writeAnnotations").mockResolvedValue(success(undefined));
+      const remove = vi.spyOn(store(), "removeAnnotations").mockResolvedValue(success(undefined));
+      const [kept] = await annotate("1");
+      const gone = await oweGone("annotation");
+
+      const destinations = (await outboxRows()).map((row) => row.destination).sort();
+      expect(destinations).toEqual(["lakehouse", "lakehouse", "serving_store", "serving_store"]);
+      expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
+
+      expect(merge).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
+      expect(write).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
+      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }]);
+      expect(await outboxRows()).toEqual([]);
+    });
+
+    it("copies a sheet to the store and removes the store's copy of a gone one", async () => {
+      const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
+      vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+      vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
+      const write = vi.spyOn(store(), "writeSheets").mockResolvedValue(success(undefined));
+      const remove = vi.spyOn(store(), "removeSheets").mockResolvedValue(success(undefined));
+      const sheet: MetadataSheetRecord = {
+        id: faker.string.uuid(),
+        experimentId,
+        metadata: { name: "Plots" },
+        createdBy: userId,
+        createdAt: created,
+        updatedAt: created,
+      };
+      const sheets = testApp.module.get(ExperimentMetadataRepository);
+      const outbox = testApp.module.get(ExperimentDataOutboxRepository);
+      assertSuccess(
+        await sheets.transaction(async (tx) => {
+          await sheets.insert(tx, sheet);
+          await outbox.owe(tx, [
+            { recordType: "metadata_sheet", recordId: sheet.id, experimentId },
+          ]);
+        }),
+      );
+      const gone = await oweGone("metadata_sheet");
+
+      expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
+
+      expect(write).toHaveBeenCalledWith([sheet]);
+      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }]);
+    });
+
+    it("keeps the lakehouse's copy landing when the store refuses its own", async () => {
+      mergeAnnotations();
+      vi.spyOn(store(), "writeAnnotations").mockResolvedValue(
+        failure(AppError.internal("The serving store could not take the copy")),
+      );
+      await annotate("1");
+
+      expect(await worker.drain()).toEqual({ applied: 1, retried: 1, released: 0 });
+
+      expect(await outboxRows()).toEqual([
+        expect.objectContaining({
+          destination: "serving_store",
+          attempts: 1,
+          lastError: "The serving store could not take the copy",
+        }),
+      ]);
+    });
+  });
+
   it("copies a batch of annotations in one statement", async () => {
     const warehouse = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
@@ -201,6 +288,8 @@ describe("ExperimentDataOutboxWorker", () => {
       testApp.module.get(ExperimentDataOutboxRepository),
       testApp.module.get(AnnotationsLakehouseCopier),
       testApp.module.get(MetadataSheetsLakehouseCopier),
+      testApp.module.get(AnnotationsStoreCopier),
+      testApp.module.get(MetadataSheetsStoreCopier),
     );
   }
 
@@ -380,7 +469,12 @@ describe("ExperimentDataOutboxWorker", () => {
     const secondary = createSecondaryDatabase();
 
     try {
-      const otherTask = realWorker(new ExperimentDataOutboxRepository(secondary.database));
+      const otherTask = realWorker(
+        new ExperimentDataOutboxRepository(
+          secondary.database,
+          testApp.module.get(SERVING_STORE_COPIES_PORT),
+        ),
+      );
 
       const [first, second] = await Promise.all([worker.drain(), otherTask.drain()]);
 
@@ -568,7 +662,8 @@ describe("ExperimentDataOutboxWorker", () => {
 
     expect(error).toHaveBeenCalledWith(
       expect.objectContaining({
-        msg: "Could not copy experiment data to the lakehouse; will retry",
+        msg: "Could not copy experiment data; will retry",
+        destination: "lakehouse",
         attempts: 5,
       }),
     );

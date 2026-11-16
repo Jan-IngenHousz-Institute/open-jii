@@ -5,12 +5,15 @@ import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
+import type { AnnotationCopy } from "../../../experiments/core/models/experiment-data-annotation.model";
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
+import type { MetadataSheetRecord } from "../../../experiments/core/models/experiment-metadata.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
+import { ServingStoreCopierClientService } from "./services/client/copier-client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
 import {
@@ -18,6 +21,7 @@ import {
   MEASUREMENTS_TABLE,
   UPLOADS_TABLE,
 } from "./services/query-builder/store-tables";
+import { ServingStoreCopiesAdapter } from "./serving-store-copies.adapter";
 import { ServingStoreAdapter } from "./serving-store.adapter";
 
 describe("ServingStoreAdapter", () => {
@@ -1371,6 +1375,104 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     assertSuccess(devices);
     expect(contributors.value.sort()).toEqual([ADA, BEN]);
     expect(devices.value.sort()).toEqual(["PST-client", "thing-1"]);
+  });
+
+  describe("the outbox's copies", () => {
+    let copier: ServingStoreCopierClientService;
+    let copies: ServingStoreCopiesAdapter;
+
+    const sheet: MetadataSheetRecord = {
+      id: "s1",
+      experimentId: EXPERIMENT,
+      metadata: {
+        identifierColumnId: "plot",
+        experimentQuestionId: "plot",
+        rows: [
+          { _id: "r1", plot: "A1", soil: "clay" },
+          { _id: "r2", plot: "B2", soil: "sand" },
+        ],
+      },
+      createdBy: ADA,
+      createdAt: new Date("2026-09-01T08:00:00.123Z"),
+      updatedAt: new Date("2026-09-01T08:00:00.123Z"),
+    };
+
+    async function viewRows(view: string, columns: string) {
+      const result = await admin.query({
+        query: `SELECT ${columns} FROM ${view}(experiment = '${EXPERIMENT}') ORDER BY ${columns}`,
+        format: "JSONEachRow",
+      });
+      return result.json();
+    }
+
+    beforeAll(() => {
+      // The admin stands in for the copier, whose grants the infrastructure sets.
+      const config = new ConfigService({
+        servingStore: {
+          url: STORE_URL,
+          username: STORE_USER,
+          password: STORE_PASSWORD,
+          copierUsername: STORE_USER,
+          copierPassword: STORE_PASSWORD,
+        },
+      });
+      copier = new ServingStoreCopierClientService(new ServingStoreConfigService(config));
+      copies = new ServingStoreCopiesAdapter(copier);
+    });
+
+    afterAll(async () => {
+      await copier.onModuleDestroy();
+    });
+
+    it("keeps a sheet's current rows, so the rows an edit dropped and a deleted sheet read no more", async () => {
+      assertSuccess(await copies.writeSheets([sheet]));
+      assertSuccess(
+        await copies.writeSheets([
+          {
+            ...sheet,
+            metadata: { ...sheet.metadata, rows: [{ _id: "r1", plot: "A1", soil: "loam" }] },
+          },
+        ]),
+      );
+
+      expect(
+        await viewRows("experiment_metadata_rows", "identifier, fields, sheet_created_at"),
+      ).toEqual([
+        {
+          identifier: "A1",
+          fields: '{"soil":"loam"}',
+          sheet_created_at: "2026-09-01 08:00:00.123000",
+        },
+      ]);
+
+      assertSuccess(await copies.removeSheets([{ id: sheet.id, experimentId: EXPERIMENT }]));
+      expect(await viewRows("experiment_metadata_rows", "identifier")).toEqual([]);
+    });
+
+    it("reads an annotation at its newest copy, and not at all once it is removed", async () => {
+      const annotation: AnnotationCopy = {
+        id: "a1",
+        experimentId: EXPERIMENT,
+        tableName: "raw_data",
+        rowId: "1",
+        type: "flag",
+        contentText: "Outlier",
+        flagType: "outlier",
+        createdBy: ADA,
+        createdAt: new Date("2026-09-01T08:00:00Z"),
+        updatedAt: new Date("2026-09-01T08:00:00Z"),
+        userName: "Ada Lovelace",
+      };
+      assertSuccess(await copies.writeAnnotations([annotation]));
+      assertSuccess(await copies.writeAnnotations([{ ...annotation, flagType: "needs_review" }]));
+
+      expect(await viewRows("experiment_annotations", "id, row_id, flag_type")).toEqual([
+        { id: "a1", row_id: "1", flag_type: "needs_review" },
+      ]);
+
+      assertSuccess(await copies.removeAnnotations([{ id: "a1", experimentId: EXPERIMENT }]));
+      expect(await viewRows("experiment_annotations", "id")).toEqual([]);
+    });
   });
 });
 
