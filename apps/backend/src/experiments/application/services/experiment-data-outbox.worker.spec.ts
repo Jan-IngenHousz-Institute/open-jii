@@ -223,6 +223,7 @@ describe("ExperimentDataOutboxWorker", () => {
         createdBy: userId,
         status: "active",
         deviceType: "multispeq",
+        registeredAt: device.createdAt,
       },
     ]);
     expect(remove).toHaveBeenCalledWith([gone]);

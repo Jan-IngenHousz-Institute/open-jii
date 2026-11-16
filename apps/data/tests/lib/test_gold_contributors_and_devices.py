@@ -33,9 +33,11 @@ _COPIES = {
     """,
     "device_registry": f"""
         SELECT * FROM VALUES
-          ('{_MULTISPEQ}', 'multispeq_SN1', 'SN1', '{_ADA}', 'active', 'multispeq'),
-          ('{_AMBYTE}', 'ambyte_SN2', 'SN2', '{_MASKED}', 'retired', 'ambyte')
-        AS t(id, thing_name, serial_number, created_by, status, device_type)
+          ('{_MULTISPEQ}', 'multispeq_SN1', 'SN1', '{_ADA}', 'active', 'multispeq',
+           TIMESTAMP'2026-10-01 08:00:00'),
+          ('{_AMBYTE}', 'ambyte_SN2', 'SN2', '{_MASKED}', 'retired', 'ambyte',
+           TIMESTAMP'2026-10-02 08:00:00')
+        AS t(id, thing_name, serial_number, created_by, status, device_type, registered_at)
     """,
 }
 

@@ -45,6 +45,7 @@ describe("ExperimentDeviceRegistryRepository", () => {
         createdBy: owner,
         status: "registered",
         deviceType: "ambyte",
+        registeredAt: device.createdAt,
       },
     ]);
   });
@@ -77,6 +78,7 @@ describe("ExperimentDeviceRegistryRepository", () => {
         createdBy: owner,
         status: "active",
         deviceType: "multispeq",
+        registeredAt: device.createdAt,
       },
     ]);
   });

@@ -1800,6 +1800,7 @@ module "device_registry_table" {
     { name = "created_by", type = "STRING" },
     { name = "status", type = "STRING" },
     { name = "device_type", type = "STRING" },
+    { name = "registered_at", type = "TIMESTAMP", nullable = false },
   ]
 
   grants = {

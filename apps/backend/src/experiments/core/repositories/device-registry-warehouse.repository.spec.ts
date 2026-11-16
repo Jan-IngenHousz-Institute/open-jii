@@ -20,6 +20,7 @@ describe("DeviceRegistryWarehouseRepository", () => {
   let databricksPort: DatabricksPort;
 
   const nothing: SchemaData = { columns: [], rows: [], totalRows: 0, truncated: false };
+  const registeredAt = new Date("2026-11-01T08:00:00.000Z");
 
   function device(overrides: Partial<RegisteredDevice> = {}): RegisteredDevice {
     return {
@@ -29,6 +30,7 @@ describe("DeviceRegistryWarehouseRepository", () => {
       createdBy: faker.string.uuid(),
       status: "active",
       deviceType: "multispeq",
+      registeredAt,
       ...overrides,
     };
   }
@@ -73,6 +75,7 @@ describe("DeviceRegistryWarehouseRepository", () => {
       expect(statement).toContain("ON target.thing_name = source.thing_name");
       expect(statement).toContain("id = source.id");
       expect(statement).toContain("WHEN NOT MATCHED THEN INSERT");
+      const timestamp = { value: registeredAt.toISOString(), type: "TIMESTAMP" };
       expect(parameters).toEqual([
         { name: "id_0", value: active.id },
         { name: "thing_name_0", value: "multispeq_SN1" },
@@ -80,13 +83,29 @@ describe("DeviceRegistryWarehouseRepository", () => {
         { name: "created_by_0", value: active.createdBy },
         { name: "status_0", value: "active" },
         { name: "device_type_0", value: "multispeq" },
+        { name: "registered_at_0", ...timestamp },
         { name: "id_1", value: retired.id },
         { name: "thing_name_1", value: "ambyte_SN2" },
         { name: "serial_number_1", value: "SN2" },
         { name: "created_by_1", value: retired.createdBy },
         { name: "status_1", value: "retired" },
         { name: "device_type_1", value: "ambyte" },
+        { name: "registered_at_1", ...timestamp },
       ]);
+    });
+
+    it("lets a row take only a registration as recent as its own, so a late copy of a deleted device leaves the one registered again in its place", async () => {
+      const execute = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(nothing));
+
+      assertSuccess(await repository.merge([device()]));
+
+      const [, statement] = execute.mock.calls[0];
+      expect(statement).toContain(
+        "WHEN MATCHED AND source.registered_at >= target.registered_at THEN UPDATE SET",
+      );
+      expect(statement).toContain("registered_at = source.registered_at");
     });
 
     it("keeps a serial number out of the statement, as a parameter", async () => {

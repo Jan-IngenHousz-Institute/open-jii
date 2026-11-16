@@ -21,6 +21,8 @@ export class DeviceRegistryWarehouseRepository {
   /**
    * Writes each device as Postgres holds it. Matched by thing name, the key the pipelines join on,
    * so a serial registered again after its device was deleted replaces the row that device left.
+   * A row only takes a registration as recent as its own, so a late copy of the deleted device
+   * cannot overwrite the new one's row, and that device's removal then matches nothing.
    */
   async merge(devices: RegisteredDevice[]): Promise<Result<void>> {
     if (devices.length === 0) {
@@ -33,26 +35,33 @@ export class DeviceRegistryWarehouseRepository {
         { name: `id_${i}`, value: device.id },
         { name: `thing_name_${i}`, value: device.thingName },
         { name: `serial_number_${i}`, value: device.serialNumber },
-        { name: `created_by_${i}`, value: device.createdBy ?? undefined },
+        { name: `created_by_${i}`, value: device.createdBy },
         { name: `status_${i}`, value: device.status },
         { name: `device_type_${i}`, value: device.deviceType },
+        {
+          name: `registered_at_${i}`,
+          value: device.registeredAt.toISOString(),
+          type: "TIMESTAMP",
+        },
       );
-      return `(:id_${i}, :thing_name_${i}, :serial_number_${i}, CAST(:created_by_${i} AS STRING), :status_${i}, :device_type_${i})`;
+      return `(:id_${i}, :thing_name_${i}, :serial_number_${i}, :created_by_${i}, :status_${i}, :device_type_${i}, :registered_at_${i})`;
     });
 
     const statement = `
       MERGE INTO device_registry AS target
       USING (
         SELECT * FROM VALUES ${rows.join(", ")}
-        AS copy(id, thing_name, serial_number, created_by, status, device_type)
+        AS copy(id, thing_name, serial_number, created_by, status, device_type, registered_at)
       ) AS source
       ON target.thing_name = source.thing_name
-      WHEN MATCHED THEN UPDATE SET
+      WHEN MATCHED AND source.registered_at >= target.registered_at THEN UPDATE SET
         id = source.id, serial_number = source.serial_number, created_by = source.created_by,
-        status = source.status, device_type = source.device_type
-      WHEN NOT MATCHED THEN INSERT (id, thing_name, serial_number, created_by, status, device_type)
+        status = source.status, device_type = source.device_type,
+        registered_at = source.registered_at
+      WHEN NOT MATCHED THEN INSERT
+        (id, thing_name, serial_number, created_by, status, device_type, registered_at)
         VALUES (source.id, source.thing_name, source.serial_number, source.created_by, source.status,
-                source.device_type)
+                source.device_type, source.registered_at)
     `;
 
     return this.execute(statement, parameters, "merge registered devices");

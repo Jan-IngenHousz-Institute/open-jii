@@ -10,9 +10,10 @@ export interface RegisteredDevice {
   thingName: string;
   id: string;
   serialNumber: string;
-  createdBy: string | null;
+  createdBy: string;
   status: string;
   deviceType: string;
+  registeredAt: Date;
 }
 
 /**
@@ -45,6 +46,7 @@ export class ExperimentDeviceRegistryRepository {
         createdBy: iotDevices.createdBy,
         status: iotDevices.status,
         deviceType: iotDevices.deviceType,
+        registeredAt: iotDevices.createdAt,
       })
       .from(iotDevices)
       .where(condition);
