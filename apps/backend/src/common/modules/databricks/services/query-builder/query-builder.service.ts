@@ -1,7 +1,5 @@
 import { Injectable } from "@nestjs/common";
 
-import { requiresGroupBy } from "@repo/api/domains/experiment/data/experiment-data.schema";
-
 import type { Result } from "../../../../utils/fp-utils";
 import { AppError, failure, success } from "../../../../utils/fp-utils";
 import { hasAggregationContent, wrapWithAggregation } from "./expressions/aggregation";
@@ -93,36 +91,10 @@ export class QueryBuilderService {
       primaryNames.has(column) || join.primaryColumns.some((name) => column.startsWith(`${name}.`));
     const primaryFilters = filters?.filter((filter) => isPrimary(filter.column));
     const secondaryFilters = filters?.filter((filter) => !isPrimary(filter.column));
-    const rowAggregation =
-      (aggregation?.groupBy?.length ?? 0) > 0 ||
-      aggregation?.functions?.some((fn) => requiresGroupBy(fn.function));
-    const allNames = new Set([
-      ...join.primaryColumns,
-      ...join.secondaryColumns.map((column) => column.alias),
-    ]);
-    const references = [
-      ...(columns ?? []),
-      ...(secondaryFilters?.map((filter) => filter.column) ?? []),
-      ...(ordering ? [ordering.column] : []),
-      ...(aggregation?.groupBy?.map((group) => group.column) ?? []),
-      ...(aggregation?.functions?.flatMap((fn) => [
-        fn.column,
-        ...(fn.secondColumn ? [fn.secondColumn] : []),
-        ...(fn.partitionColumn ? [fn.partitionColumn] : []),
-        ...(fn.orderColumn ? [fn.orderColumn] : []),
-      ]) ?? []),
-      ...(aggregation?.explode ? [aggregation.explode.column] : []),
-    ];
-    const selectedSecondary =
-      !columns?.length && !rowAggregation
-        ? join.secondaryColumns
-        : join.secondaryColumns.filter((column) =>
-            references.some(
-              (reference) =>
-                reference === column.alias ||
-                (!allNames.has(reference) && reference.startsWith(`${column.alias}.`)),
-            ),
-          );
+    const selectedSecondary = this.query().secondaryColumnsRead(
+      { columns, filters: secondaryFilters, ordering, aggregation },
+      join,
+    );
     const base = this.buildQuery({
       ...primary,
       columnNames: join.primaryColumns,

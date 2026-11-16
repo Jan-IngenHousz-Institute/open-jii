@@ -7,8 +7,28 @@ import {
 
 import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
-import type { AggregateExpression, AggregationSpec, QueryOrdering } from "../query-builder.types";
+import type {
+  AggregateExpression,
+  AggregationSpec,
+  GroupByExpression,
+  QueryOrdering,
+} from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
+
+/** What an aggregated read groups, computes, sorts and pages by. */
+interface AggregationRead {
+  columnNames?: string[];
+  aggregation?: AggregationSpec;
+  ordering?: QueryOrdering;
+  limit?: number;
+  offset?: number;
+}
+
+/** One output of an aggregated read, or every column of its rows where nothing groups. */
+export type AggregationOutput =
+  | { kind: "group"; name: string; item: GroupByExpression }
+  | { kind: "aggregate"; name: string; item: AggregateExpression }
+  | { kind: "rows" };
 
 /** True when the spec has any grouping or aggregate functions to apply. */
 export function hasAggregationContent(spec: AggregationSpec | undefined): boolean {
@@ -48,13 +68,13 @@ export function buildAggregateExpression(
       : order;
     return {
       sql: `${fn}(${builder.escapeIdentifier(agg.column)}, ${key})`,
-      alias: agg.alias ?? `${agg.column}_${agg.function}`,
+      alias: builder.aggregateAlias(agg),
     };
   }
   if (agg.function === "count_distinct") {
     return {
       sql: `COUNT(DISTINCT ${builder.escapeIdentifier(agg.column)})`,
-      alias: agg.alias ?? `${agg.column}_count_distinct`,
+      alias: builder.aggregateAlias(agg),
     };
   }
   if (agg.function === "corr") {
@@ -63,7 +83,7 @@ export function buildAggregateExpression(
     }
     return {
       sql: `CORR(${builder.escapeIdentifier(agg.column)}, ${builder.escapeIdentifier(agg.secondColumn)})`,
-      alias: agg.alias ?? `${agg.column}_${agg.function}_${agg.secondColumn}`,
+      alias: builder.aggregateAlias(agg),
     };
   }
   // Exhaustive Record: adding an AggregateFunction without also handling it
@@ -94,11 +114,9 @@ export function buildAggregateExpression(
 
   const sqlFn = ROW_AGGREGATE_SQL[agg.function];
   const colSql = agg.column === "*" ? "*" : builder.escapeIdentifier(agg.column);
-  const aliasBase = agg.column === "*" ? "count" : agg.column;
-
   return {
     sql: `${sqlFn}(${colSql})`,
-    alias: agg.alias ?? `${aliasBase}_${agg.function}`,
+    alias: builder.aggregateAlias(agg),
   };
 }
 
@@ -139,16 +157,22 @@ function sortTarget(
  */
 export function wrapWithAggregation(
   innerSql: string,
-  opts: {
-    columnNames?: string[];
-    aggregation?: AggregationSpec;
-    ordering?: QueryOrdering;
-    limit?: number;
-    offset?: number;
-  },
-  builder: BaseQueryBuilder = new SqlQueryBuilder(opts.columnNames),
+  opts: AggregationRead,
+  builder?: BaseQueryBuilder,
 ): string {
+  return buildAggregation(innerSql, opts, builder).sql;
+}
+
+/** The aggregated statement and its outputs in their order, each with the item it came from. */
+export function buildAggregation(
+  innerSql: string,
+  opts: AggregationRead,
+  builder: BaseQueryBuilder = new SqlQueryBuilder(opts.columnNames),
+): { sql: string; outputs: AggregationOutput[] } {
   const outputNames = new Set<string>();
+  const groupOutputs: AggregationOutput[] = [];
+  const rowOutputs: AggregationOutput[] = [];
+  const windowOutputs: AggregationOutput[] = [];
   const quoteAlias = (name: string) =>
     opts.columnNames === undefined ? builder.escapeIdentifier(name) : builder.quoteName(name);
   const selectClauses: string[] = [];
@@ -177,6 +201,7 @@ export function wrapWithAggregation(
 
       selectClauses.push(`${expr.sql} AS ${quoteAlias(expr.alias)}`);
       outputNames.add(expr.alias);
+      groupOutputs.push({ kind: "group", name: expr.alias, item });
       groupByClauses.push(expr.sql);
 
       firstGroupBySql ??= expr.sql;
@@ -198,6 +223,7 @@ export function wrapWithAggregation(
         });
 
         outputNames.add(expr.alias);
+        windowOutputs.push({ kind: "aggregate", name: expr.alias, item });
         windowProjections.push(`${expr.sql} AS ${quoteAlias(expr.alias)}`);
         continue;
       }
@@ -205,12 +231,14 @@ export function wrapWithAggregation(
       if (aggregateKind(item.function) === "rowWindow") {
         const expr = builder.buildRowWindowExpression(item);
         outputNames.add(expr.alias);
+        windowOutputs.push({ kind: "aggregate", name: expr.alias, item });
         windowProjections.push(`${expr.sql} AS ${builder.quoteName(expr.alias)}`);
         continue;
       }
 
       const expr = builder.buildAggregateExpression(item);
       outputNames.add(expr.alias);
+      rowOutputs.push({ kind: "aggregate", name: expr.alias, item });
       selectClauses.push(`${expr.sql} AS ${builder.quoteName(expr.alias)}`);
     }
   }
@@ -228,7 +256,8 @@ export function wrapWithAggregation(
       : `(${innerSql}) LATERAL VIEW EXPLODE(${builder.escapeIdentifier(explode.column)}) AS ${quoteAlias(explode.alias)}`;
 
   let sql: string;
-  if (groupByClauses.length === 0 && selectClauses.length === 0) {
+  const isWindowOnly = groupByClauses.length === 0 && selectClauses.length === 0;
+  if (isWindowOnly) {
     // Window-only path: keep every raw column from the inner subquery so
     // non-aggregated series still have their values to plot.
     sql = `SELECT *, ${windowProjections.join(", ")} FROM ${from}`;
@@ -241,15 +270,12 @@ export function wrapWithAggregation(
     }
   }
 
-  if (orderSql !== undefined) {
-    const direction = opts.ordering?.direction ?? "ASC";
+  if (opts.ordering !== undefined && orderSql !== undefined) {
     const outputOrder =
-      opts.columnNames !== undefined &&
-      opts.ordering?.column !== undefined &&
-      outputNames.has(opts.ordering.column)
+      opts.columnNames !== undefined && outputNames.has(opts.ordering.column)
         ? builder.quoteName(opts.ordering.column)
         : orderSql;
-    sql += ` ORDER BY ${outputOrder} ${builder.sortDirection(direction)}`;
+    sql += ` ORDER BY ${builder.aggregateOrdering(outputOrder, opts.ordering)}`;
   }
 
   if (opts.limit !== undefined) {
@@ -259,5 +285,8 @@ export function wrapWithAggregation(
     }
   }
 
-  return sql;
+  const outputs: AggregationOutput[] = isWindowOnly
+    ? [{ kind: "rows" }, ...windowOutputs]
+    : [...groupOutputs, ...rowOutputs, ...windowOutputs];
+  return { sql, outputs };
 }

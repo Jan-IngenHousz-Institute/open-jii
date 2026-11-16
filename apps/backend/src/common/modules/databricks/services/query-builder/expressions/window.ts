@@ -31,7 +31,7 @@ export function buildRowWindowExpression(
 ): { sql: string; alias: string } {
   const order = orderExpression(item, builder);
   const window = `OVER (${buildWindowSpec(item, builder)})`;
-  const alias = item.alias ?? `${item.column}_${item.function}`;
+  const alias = builder.aggregateAlias(item);
   const result = (sql: string) => ({
     sql: `CASE WHEN ${order} IS NULL THEN NULL ELSE ${sql} END`,
     alias,

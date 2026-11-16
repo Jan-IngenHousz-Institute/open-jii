@@ -1,3 +1,7 @@
+import {
+  aggregateKind,
+  requiresGroupBy,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import { buildAggregateExpression } from "./expressions/aggregation";
@@ -14,9 +18,11 @@ import { buildWidthBucketExpression } from "./expressions/width-bucket";
 import { buildRowWindowExpression } from "./expressions/window";
 import type {
   AggregateExpression,
+  AsOfJoin,
   FilterCondition,
   FilterValue,
   QueryOrdering,
+  QueryParams,
   TimeBucketUnit,
   WidthBucket,
 } from "./query-builder.types";
@@ -211,9 +217,61 @@ export abstract class BaseQueryBuilder {
     return buildRowWindowExpression(item, this);
   }
 
-  /** An ordering's direction with where its nulls go, which Spark puts first going up. */
-  sortDirection(direction: "ASC" | "DESC"): string {
-    return direction;
+  /**
+   * The second table's columns an as-of read names, by a column, a filter, its sort or its
+   * aggregation; a read that names no column and groups nothing shows them all.
+   */
+  secondaryColumnsRead(
+    read: Pick<QueryParams, "columns" | "filters" | "ordering" | "aggregation">,
+    join: Pick<AsOfJoin, "primaryColumns" | "secondaryColumns">,
+  ): AsOfJoin["secondaryColumns"] {
+    const { columns, filters, ordering, aggregation } = read;
+    const rowAggregation =
+      (aggregation?.groupBy?.length ?? 0) > 0 ||
+      aggregation?.functions?.some((fn) => requiresGroupBy(fn.function));
+    const allNames = new Set([
+      ...join.primaryColumns,
+      ...join.secondaryColumns.map((column) => column.alias),
+    ]);
+    const references = [
+      ...(columns ?? []),
+      ...(filters?.map((filter) => filter.column) ?? []),
+      ...(ordering ? [ordering.column] : []),
+      ...(aggregation?.groupBy?.map((group) => group.column) ?? []),
+      ...(aggregation?.functions?.flatMap((fn) => [
+        fn.column,
+        ...(fn.secondColumn ? [fn.secondColumn] : []),
+        ...(fn.partitionColumn ? [fn.partitionColumn] : []),
+        ...(fn.orderColumn ? [fn.orderColumn] : []),
+      ]) ?? []),
+      ...(aggregation?.explode ? [aggregation.explode.column] : []),
+    ];
+    return !columns?.length && !rowAggregation
+      ? join.secondaryColumns
+      : join.secondaryColumns.filter((column) =>
+          references.some(
+            (reference) =>
+              reference === column.alias ||
+              (!allNames.has(reference) && reference.startsWith(`${column.alias}.`)),
+          ),
+        );
+  }
+
+  /** The sort of an aggregated read by `target`, the SQL its ordering's column reads as. */
+  aggregateOrdering(target: string, { direction = "ASC" }: QueryOrdering): string {
+    return `${target} ${direction}`;
+  }
+
+  /** The name an aggregate's output takes when the read gives it none. */
+  aggregateAlias(agg: AggregateExpression): string {
+    if (agg.alias !== undefined) {
+      return agg.alias;
+    }
+    if (agg.function === "corr") {
+      return `${agg.column}_${agg.function}_${agg.secondColumn ?? ""}`;
+    }
+    const isRowCount = agg.column === "*" && aggregateKind(agg.function) !== "rowWindow";
+    return `${isRowCount ? "count" : agg.column}_${agg.function}`;
   }
 
   /** AND-joined `column = value` equality conditions from [column, value] tuples. */
