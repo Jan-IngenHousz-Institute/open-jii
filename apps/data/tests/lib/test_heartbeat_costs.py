@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from openjii.heartbeat import (
@@ -75,6 +76,42 @@ def billing(spark: SparkSession) -> Iterator[tuple[str, str]]:
 
     spark.catalog.dropTempView("usage")
     spark.catalog.dropTempView("list_prices")
+
+
+_RUNBOOK = Path(__file__).parents[4] / "docs/runbooks/procedures/monthly-cost.md"
+
+
+def _runbook_month_sql(first_day: str, workspace_id: str, usage: str, prices: str) -> str:
+    """The runbook's monthly query as an operator runs it, on the fixture tables."""
+    after_marker = _RUNBOOK.read_text().split("<!-- monthly-cost-databricks -->", 1)[1]
+    sql = after_marker.split("```sql\n", 1)[1].split("\n```", 1)[0]
+    return (
+        sql.replace("system.billing.usage", usage)
+        .replace("system.billing.list_prices", prices)
+        .replace("<first day>", first_day)
+        .replace("<workspace id>", workspace_id)
+    )
+
+
+@pytest.mark.spark
+def test_the_runbooks_monthly_query_prices_a_month_as_the_heartbeat_does(
+    spark: SparkSession, billing: tuple[str, str]
+):
+    usage, prices = billing
+    # Early November, so the heartbeat's whole month before is October.
+    november = cost_windows(datetime(2026, 11, 2, 6, 0, tzinfo=timezone.utc))
+
+    heartbeat = {
+        row["component"]: row["previous_month_usd"]
+        for row in spark.sql(cost_windows_sql(NAMED, "w1", november, usage, prices)).collect()
+    }
+    runbook = {
+        row["billed_under"]: row["usd"]
+        for row in spark.sql(_runbook_month_sql("2026-10-01", "w1", usage, prices)).collect()
+    }
+
+    assert runbook[CENTRUM] == heartbeat["centrum"] == 57.0
+    assert runbook[WAREHOUSE] == heartbeat["warehouse"] == 1.0
 
 
 @pytest.mark.spark
