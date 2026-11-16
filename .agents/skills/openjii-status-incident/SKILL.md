@@ -30,7 +30,9 @@ the person has read the exact text and said publish.
   https://status.dev.openjii.org. Write to production only when the person says production in this
   conversation, and never on a guess.
 - In Claude Code, `.claude/settings.json` makes `pnpm status:incident publish` and
-  `pnpm cms:models apply` ask before they run, so the person approves the exact command.
+  `pnpm cms:models apply` ask before they run, from the root or through
+  `pnpm --filter @repo/devkit`, so the person approves the exact command. Run them only in one of
+  those two forms. Any other way of starting them, such as `tsx` directly, skips the question.
 - Every write names its environment. `publish` takes `--environment <name>`, which has to equal the
   configured `CONTENTFUL_SPACE_ENVIRONMENT`, and refuses otherwise. Take the name from what the
   person told you about where this is going, not from `preflight` alone.
