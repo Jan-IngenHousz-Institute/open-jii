@@ -1,0 +1,53 @@
+# The same lines as the permissions in .claude/settings.json. The cloud and secret-file checks run in
+# the shared guard hook, registered in .codex/hooks.json, because a prefix rule cannot read a path or
+# a flag. Check a change with: codex execpolicy check --pretty --rules .codex/rules/openjii.rules -- <command>
+
+prefix_rule(
+    pattern = ["pnpm", "analyst:prod-window"],
+    decision = "forbidden",
+    justification = "Only the developer opens the production window, in their own terminal.",
+    match = ["pnpm analyst:prod-window", "pnpm analyst:prod-window --close"],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "--filter", "@repo/devkit", "analyst:prod-window"],
+    decision = "forbidden",
+    justification = "Only the developer opens the production window, in their own terminal.",
+)
+
+prefix_rule(
+    pattern = ["gh", "secret"],
+    decision = "forbidden",
+    justification = "Repository secrets are set by a person, never from a session.",
+    match = ["gh secret set X", "gh secret list"],
+)
+
+prefix_rule(
+    pattern = ["gh", "workflow", ["run", "enable"]],
+    decision = "prompt",
+    justification = "A workflow run can deploy or apply infrastructure.",
+)
+
+prefix_rule(
+    pattern = ["gh", "run", ["rerun", "cancel"]],
+    decision = "prompt",
+    justification = "Rerunning or cancelling a run changes what CI deploys.",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "merge"],
+    decision = "prompt",
+    justification = "Merging is the developer's call.",
+)
+
+prefix_rule(
+    pattern = ["gh", "release", "create"],
+    decision = "prompt",
+    justification = "A release is cut by a person.",
+)
+
+prefix_rule(
+    pattern = ["gh", "variable", ["set", "delete"]],
+    decision = "prompt",
+    justification = "Repository variables feed CI and deploys.",
+)

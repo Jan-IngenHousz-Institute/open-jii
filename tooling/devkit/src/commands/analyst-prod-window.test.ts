@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  CONFIRMATION,
   WINDOW_SECONDS,
   closeWindow,
   describeRemaining,
@@ -37,7 +38,13 @@ beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), "openjii-window-"));
   await mkdir(join(root, ".claude"), { recursive: true });
   written = [];
-  deps = { root, now: () => NOW, write: (text) => written.push(text) };
+  deps = {
+    root,
+    now: () => NOW,
+    write: (text) => written.push(text),
+    interactive: true,
+    ask: () => Promise.resolve(CONFIRMATION),
+  };
 });
 
 describe("remainingSeconds", () => {
@@ -76,6 +83,20 @@ describe("openWindow", () => {
     const stats = await stat(markerPath(root));
     expect(stats.mode & 0o777).toBe(0o600);
     expect(written.join("")).toContain("120 minutes");
+  });
+
+  it("refuses without a terminal, which is how an agent's shell runs it", async () => {
+    await expect(openWindow({ ...deps, interactive: false })).resolves.toBe(1);
+
+    await expect(stat(markerPath(root))).rejects.toThrow();
+    expect(written.join("")).toContain("your own shell");
+  });
+
+  it("stays closed unless the developer types the confirmation", async () => {
+    await expect(openWindow({ ...deps, ask: () => Promise.resolve("yes") })).resolves.toBe(1);
+
+    await expect(stat(markerPath(root))).rejects.toThrow();
+    expect(written.join("")).toContain("stay closed");
   });
 
   it("says the agent still cannot change anything", async () => {

@@ -1,4 +1,41 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/.env.production)",
+      "Read(**/*.tfvars)",
+      "Read(**/*.tfvars.json)",
+      "Read(**/*.tfstate)",
+      "Read(**/*.tfstate.backup)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.aws/sso/cache/**)",
+      "Read(~/.databrickscfg)",
+      "Edit(**/analyst-prod.ok)",
+      "Bash(pnpm analyst:prod-window *)",
+      "Bash(pnpm --filter @repo/devkit analyst:prod-window *)",
+      "Bash(gh secret *)"
+    ],
+    "ask": [
+      "Bash(gh workflow run *)",
+      "Bash(gh workflow enable *)",
+      "Bash(gh run rerun *)",
+      "Bash(gh run cancel *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh release create *)",
+      "Bash(gh variable set *)",
+      "Bash(gh variable delete *)",
+      "Bash(gh api * --method *)",
+      "Bash(gh api * -X *)",
+      "Bash(gh api * --input *)",
+      "Bash(gh api * -f *)",
+      "Bash(gh api * -F *)",
+      "Bash(gh api * --field *)",
+      "Bash(gh api * --raw-field *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

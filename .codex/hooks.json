@@ -9,6 +9,11 @@
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/protect-main.sh\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/analyst-guard.sh\"",
+            "timeout": 20
           }
         ]
       }
