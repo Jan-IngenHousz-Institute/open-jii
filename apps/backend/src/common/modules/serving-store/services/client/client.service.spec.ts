@@ -2,6 +2,7 @@ import { ConfigService } from "@nestjs/config";
 import { createServer } from "http";
 import type { Server } from "http";
 
+import { PAGE_TOO_LARGE_MESSAGE } from "../../../../../experiments/core/models/experiment-data.model";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { ServingStoreConfigService } from "../config/config.service";
 import { ServingStoreClientService } from "./client.service";
@@ -77,12 +78,12 @@ describe("ServingStoreClientService", () => {
     });
   });
 
-  it("asks the store to refuse a result past 25 MiB before it sends any of it", async () => {
+  it("asks the store to refuse a result past 100 MiB, 4 times the page limit, before it sends any of it", async () => {
     answer = { status: 200, body: "" };
 
     await client.query(STATEMENT);
 
-    expect(requested.get("max_result_bytes")).toBe("26214400");
+    expect(requested.get("max_result_bytes")).toBe("104857600");
     expect(requested.get("result_overflow_mode")).toBe("throw");
     expect(requested.get("wait_end_of_query")).toBe("1");
   });
@@ -111,16 +112,17 @@ describe("ServingStoreClientService", () => {
     expect(requested.get("precise_float_parsing")).toBe("1");
   });
 
-  it("answers a result past the store's limit as a page too large", async () => {
+  it("answers a result past the store's guard as a page too large", async () => {
     answer = {
       status: 500,
-      body: "Code: 396. DB::Exception: Limit for result exceeded, max bytes: 25.00 MiB, current bytes: 63.38 MiB. (TOO_MANY_ROWS_OR_BYTES) (version 25.8.33.6)",
+      body: "Code: 396. DB::Exception: Limit for result exceeded, max bytes: 100.00 MiB, current bytes: 163.38 MiB. (TOO_MANY_ROWS_OR_BYTES) (version 25.8.33.6)",
     };
 
     const result = await client.query(STATEMENT);
 
     assertFailure(result);
     expect(result.error.code).toBe("PAGE_TOO_LARGE");
+    expect(result.error.message).toBe(PAGE_TOO_LARGE_MESSAGE);
     expect(result.error.statusCode).toBe(400);
   });
 

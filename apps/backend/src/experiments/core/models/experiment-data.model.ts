@@ -24,6 +24,12 @@ export type ExperimentDataSource = "warehouse" | "store";
 export const PAGE_TOO_LARGE_MESSAGE =
   "This page holds more data than one read can return. Choose a smaller page size.";
 
+/**
+ * The most one read may return: the warehouse statement API's inline limit, which it measures on
+ * the JSON array of rows of cell texts it sends. Store reads are held to it the same way.
+ */
+export const PAGE_BYTE_LIMIT = 26_214_400;
+
 export interface TableConfig {
   displayName: string;
   defaultSortColumn?: string;

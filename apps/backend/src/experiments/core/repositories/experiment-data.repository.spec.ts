@@ -20,6 +20,7 @@ import {
 import { TestHarness } from "../../../test/test-harness";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { AnnotationRecord } from "../models/experiment-data-annotation.model";
+import { PAGE_BYTE_LIMIT, PAGE_TOO_LARGE_MESSAGE } from "../models/experiment-data.model";
 import type {
   ExperimentDataSource,
   ExperimentTableMetadata,
@@ -3007,6 +3008,33 @@ describe("ExperimentDataRepository", () => {
       expect(execute).toHaveBeenCalledTimes(2);
       expect(result.value[0].totalRows).toBe(3);
       expect(result.value[0].data?.rows).toEqual([{ id: "1", plot: "A1" }]);
+    });
+
+    it("refuses a store page whose cells pass the read limit, as the warehouse refuses one", async () => {
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: storeColumns,
+          rows: [["1", "x".repeat(PAGE_BYTE_LIMIT)]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertFailure(result);
+      expect(result.error).toMatchObject({
+        statusCode: 400,
+        code: "PAGE_TOO_LARGE",
+        message: PAGE_TOO_LARGE_MESSAGE,
+      });
     });
 
     it("keeps charts' reads on the warehouse until the store aggregates", async () => {

@@ -5,6 +5,7 @@ import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
+import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
@@ -1059,6 +1060,25 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ["1", '["a"]'],
       ["2", null],
     ]);
+  });
+
+  it("serves a read the store holds in more than 25 MiB when its cells, as text, hold less", async () => {
+    // Four null text cells take 36 bytes a row in the store's memory and 22 as JSON text.
+    await admin.command({
+      query: `INSERT INTO measurements (experiment_id, id, timestamp, questions_data, annotations, _commit_version, _commit_timestamp)
+        SELECT 'big-page', number, toDateTime64('2026-09-13 01:00:00', 6, 'UTC'), map(), [], 1, toDateTime64('2026-09-13 01:11:00', 6, 'UTC')
+        FROM numbers(800000)`,
+    });
+
+    const data = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "big-page",
+      columns: ["device_id", "device_name", "protocol_id", "workbook_run_id"],
+    });
+
+    expect(data.rows).toHaveLength(800_000);
+    expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
   });
 
   it("counts a read and lists the experiment's ids", async () => {

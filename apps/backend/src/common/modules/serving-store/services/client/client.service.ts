@@ -3,7 +3,10 @@ import type { ClickHouseClient } from "@clickhouse/client";
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { z } from "zod";
 
-import { PAGE_TOO_LARGE_MESSAGE } from "../../../../../experiments/core/models/experiment-data.model";
+import {
+  PAGE_BYTE_LIMIT,
+  PAGE_TOO_LARGE_MESSAGE,
+} from "../../../../../experiments/core/models/experiment-data.model";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AppError, failure, tryCatch } from "../../../../utils/fp-utils";
 import type { Result } from "../../../../utils/fp-utils";
@@ -21,6 +24,13 @@ export class ServingStoreClientService implements OnModuleDestroy {
 
   /** The reader may run for 30 s, so the store's own refusal ends a slow read, not the socket. */
   private static readonly REQUEST_TIMEOUT_MS = 35_000;
+
+  /**
+   * The backend refuses a page by its cells as the warehouse writes them; this limit only guards
+   * memory. An empty text cell, 9 bytes in the store's memory against 3 as JSON text, is the widest
+   * ratio a page can have, so the guard sits 4 times above the page limit and never refuses first.
+   */
+  private static readonly RESULT_BYTES_GUARD = 4 * PAGE_BYTE_LIMIT;
 
   private readonly client: ClickHouseClient | null;
 
@@ -43,10 +53,10 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // A payload field is projected under its own name, which may be a column's, such as
               // user_id; the column must still read as the column everywhere else in the query.
               prefer_column_name_to_alias: 1,
-              // The client holds the whole result, so a page past 25 MiB is refused rather than
+              // The client holds the whole result, so one past the guard is refused rather than
               // read. The store refuses it before sending only when it waits for the end of the
               // query; otherwise the refusal arrives mid-stream, which the client reads from 25.11.
-              max_result_bytes: "26214400",
+              max_result_bytes: String(ServingStoreClientService.RESULT_BYTES_GUARD),
               result_overflow_mode: "throw",
               wait_end_of_query: 1,
               // Copies of a row always land in the same month, so FINAL can merge each month

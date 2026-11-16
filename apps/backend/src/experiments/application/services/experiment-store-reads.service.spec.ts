@@ -3,6 +3,7 @@ import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experime
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { assertSuccess, success } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
+import { PAGE_BYTE_LIMIT } from "../../core/models/experiment-data.model";
 import type { ExperimentQueryParams } from "../../core/models/experiment-data.model";
 import type { FlowGraphDto } from "../../core/models/flow.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
@@ -294,6 +295,47 @@ describe("ExperimentStoreReadsService", () => {
     await reads.buildQuery({ ...page, columns: ["contributor"], distinct: true, limit: 2 });
 
     expect(build).toHaveBeenCalledWith(expect.objectContaining({ limit: 2 }));
+  });
+
+  it("marks a read truncated once its cells, as the warehouse writes them, pass the read limit", async () => {
+    const name = { name: "device_name", type_name: "STRING", type_text: "STRING", position: 0 };
+    const query = await reads.buildQuery({ ...page, columns: ["device_name"] });
+    assertSuccess(query);
+    const truncatedWith = async (cell: string) => {
+      storeRows([name], [[cell]]);
+      const result = await reads.runQuery(query.value);
+      assertSuccess(result);
+      return result.value.truncated;
+    };
+
+    // The read's JSON is the cell between `[["` and `"]]`.
+    const atLimit = "x".repeat(PAGE_BYTE_LIMIT - 6);
+    expect(await truncatedWith(atLimit)).toBe(false);
+    expect(await truncatedWith(`${atLimit}x`)).toBe(true);
+  });
+
+  it("measures a read's contributors filled in, as the warehouse sends them", async () => {
+    const ada = await testApp.createTestUser({ name: "Ada Lovelace" });
+    storeRows(
+      [
+        {
+          name: "contributor",
+          type_name: "STRUCT",
+          type_text: WellKnownColumnTypes.CONTRIBUTOR,
+          position: 0,
+        },
+        { name: "device_name", type_name: "STRING", type_text: "STRING", position: 1 },
+      ],
+      // At the limit while the contributor is still its id.
+      [[ada, "x".repeat(PAGE_BYTE_LIMIT - ada.length - 9)]],
+    );
+
+    const query = await reads.buildQuery({ ...page, columns: ["contributor", "device_name"] });
+    assertSuccess(query);
+    const result = await reads.runQuery(query.value);
+
+    assertSuccess(result);
+    expect(result.value.truncated).toBe(true);
   });
 
   it("types a Number question's answers as DOUBLE in its listing, as the warehouse's does", async () => {

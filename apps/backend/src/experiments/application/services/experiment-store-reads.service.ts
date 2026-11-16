@@ -5,6 +5,7 @@ import type { SchemaData } from "../../../common/modules/databricks/services/sql
 import { success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 import { UserRepository } from "../../../users/core/repositories/user.repository";
+import { PAGE_BYTE_LIMIT } from "../../core/models/experiment-data.model";
 import type {
   ExperimentQueryParams,
   ExperimentTableMetadata,
@@ -133,6 +134,10 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return { ...this.store.deviceLabelsQuery(query, limit, offset), distinct: false };
   }
 
+  /**
+   * The rows in the warehouse's cells, marked truncated, as the warehouse marks a result it cuts,
+   * when those cells pass the limit one read may return, so the same pages are refused.
+   */
   async runQuery(query: TableQuery): Promise<Result<SchemaData>> {
     const result = await this.store.executeQuery(query);
     if (result.isFailure()) {
@@ -140,13 +145,15 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     }
 
     const filled = await this.fillDetails(result.value, query.columns);
-    if (filled.isFailure() || !query.distinct) {
+    if (filled.isFailure()) {
       return filled;
     }
 
-    const distinct = this.withoutRepeats(filled.value);
-    const rows = distinct.rows.slice(0, query.limitAfterDetails);
-    return success({ ...distinct, rows, totalRows: rows.length });
+    const data = query.distinct
+      ? this.withoutRepeats(filled.value, query.limitAfterDetails)
+      : filled.value;
+    const exceedsLimit = Buffer.byteLength(JSON.stringify(data.rows)) > PAGE_BYTE_LIMIT;
+    return success({ ...data, truncated: exceedsLimit });
   }
 
   /**
@@ -337,14 +344,15 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   /** Rows that fill in alike read as one, as the warehouse's DISTINCT reads them. */
-  private withoutRepeats(data: SchemaData): SchemaData {
+  private withoutRepeats(data: SchemaData, limit?: number): SchemaData {
     const seen = new Set<string>();
-    const rows = data.rows.filter((row) => {
+    const distinct = data.rows.filter((row) => {
       const key = JSON.stringify(row);
       const isRepeat = seen.has(key);
       seen.add(key);
       return !isRepeat;
     });
+    const rows = distinct.slice(0, limit);
     return { ...data, rows, totalRows: rows.length };
   }
 

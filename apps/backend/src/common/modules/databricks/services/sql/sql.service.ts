@@ -2,6 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
 import { AxiosResponse, isAxiosError } from "axios";
 
+import { PAGE_BYTE_LIMIT } from "../../../../../experiments/core/models/experiment-data.model";
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
@@ -32,7 +33,7 @@ export class DatabricksSqlService {
    * The most an INLINE result may hold. Without a byte limit a larger result fails the statement
    * as a BAD_REQUEST; with one the warehouse returns what fits and marks it truncated.
    */
-  private static readonly INLINE_BYTE_LIMIT = 26_214_400;
+  private static readonly INLINE_BYTE_LIMIT = PAGE_BYTE_LIMIT;
 
   /**
    * The edge drops the client 60 s after its request started, a little before this statement did,
