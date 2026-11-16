@@ -4,9 +4,9 @@
 the events it posts to subscribers may have stopped.** It runs every minute. It requests the web app
 and the API, reads the load balancer, CloudFront, IoT and Kinesis metrics, the backend's dependency
 checks and the pipeline heartbeat metrics from CloudWatch, reads the incidents and notices people
-wrote in Contentful every five minutes and keeps the last read in between, judges each component, rewrites the data file, and posts what changed to the
-`status-events-<env>` SNS topic. The page shows when it was last checked, so a stale file shows as a
-stale time.
+wrote in Contentful every five minutes and keeps the last read in between, judges each component,
+rewrites the data file, and posts what changed to the `status-events-<env>` SNS topic. The page
+shows when it was last checked, so a stale file shows as a stale time.
 
 The run validates the document against its schema before it writes anything, so a run that throws on
 a check, a read or the schema writes nothing and the file stays as the last good run left it. A run
