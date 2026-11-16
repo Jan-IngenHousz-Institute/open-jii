@@ -827,7 +827,7 @@ async function publish(
     published: true,
     updates: published,
     incident: { id: entry.sys.id, version: incidentVersion },
-    note: "The status publisher picks this up within about two minutes and posts each new update to Slack once. Slack posts are final.",
+    note: "The status publisher picks this up within about seven minutes and posts each new update to Slack once. Slack posts are final.",
     warnings,
   };
 }

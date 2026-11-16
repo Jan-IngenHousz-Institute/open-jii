@@ -249,7 +249,7 @@ describe("renderPreview", () => {
 
     it("notes that the real message may be the started one", () => {
       expect(nearly({ startsAt: "2026-11-04T10:01:30.000Z" })).toContain(
-        "Note: The window starts within two minutes of now. By the time the publisher reads this, the real message may be Maintenance started",
+        "Note: The window starts within seven minutes of now. By the time the publisher reads this, the real message may be Maintenance started",
       );
       expect(nearly({ startsAt: "2026-11-04T09:58:30.000Z" })).toContain("Maintenance started");
     });
@@ -261,7 +261,7 @@ describe("renderPreview", () => {
     });
 
     it("says nothing about a window that is further away", () => {
-      expect(nearly({ startsAt: "2026-11-04T10:02:01.000Z" })).not.toContain("Note:");
+      expect(nearly({ startsAt: "2026-11-04T10:07:01.000Z" })).not.toContain("Note:");
       expect(nearly({})).not.toContain("Note:");
     });
 

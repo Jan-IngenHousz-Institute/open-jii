@@ -19,7 +19,9 @@ const PAGE_URLS: Record<Target, string> = {
   dev: "https://status.dev.openjii.org",
 };
 
-const EDGE_MS = 120_000;
+// The publisher reads Contentful every five minutes and runs once a minute, so it can read an entry
+// up to about seven minutes after it is published.
+const EDGE_MS = 7 * 60_000;
 
 const TIME = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
@@ -164,12 +166,12 @@ function edgeNotes({ after, now }: PreviewInput): string[] {
 
   if (isNear(after.startsAt, nowMs)) {
     notes.push(
-      "The window starts within two minutes of now. By the time the publisher reads this, the real message may be Maintenance started instead of the one above.",
+      "The window starts within seven minutes of now. By the time the publisher reads this, the real message may be Maintenance started instead of the one above.",
     );
   }
   if (isNear(after.endsAt, nowMs)) {
     notes.push(
-      "The window ends within two minutes of now. By the time the publisher reads this, the real message may be Maintenance completed instead of the one above.",
+      "The window ends within seven minutes of now. By the time the publisher reads this, the real message may be Maintenance completed instead of the one above.",
     );
   }
 
