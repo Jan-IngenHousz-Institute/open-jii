@@ -17,6 +17,7 @@ import { GetDeletionBlockersUseCase } from "./application/use-cases/get-deletion
 import { GetInvitationsUseCase } from "./application/use-cases/get-invitations/get-invitations";
 import { GetUserProfileUseCase } from "./application/use-cases/get-user-profile/get-user-profile";
 import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
+import { GetUsersMetadataUseCase } from "./application/use-cases/get-users-metadata/get-users-metadata";
 import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-seen/get-whats-new-seen";
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
 import { NotifyCredentialAddedUseCase } from "./application/use-cases/notify-credential-added/notify-credential-added";
@@ -30,6 +31,7 @@ import { UserRepository } from "./core/repositories/user.repository";
 import { AccountSecurityAuthHook } from "./presentation/hooks/account-security-auth.hook";
 import { UserAuthHook } from "./presentation/hooks/user-auth.hook";
 import { InvitationController } from "./presentation/user-invitation.controller";
+import { UserWebhookController } from "./presentation/user-webhook.controller";
 // Controllers
 import { UserController } from "./presentation/user.controller";
 import { WhatsNewController } from "./presentation/whats-new.controller";
@@ -42,7 +44,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     NotificationModule,
     forwardRef(() => ExperimentModule),
   ],
-  controllers: [UserController, InvitationController, WhatsNewController],
+  controllers: [UserController, UserWebhookController, InvitationController, WhatsNewController],
   providers: [
     // Repositories
     UserRepository,
@@ -69,6 +71,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     SearchUsersUseCase,
     CreateUserProfileUseCase,
     GetUserProfileUseCase,
+    GetUsersMetadataUseCase,
     GetWhatsNewSeenUseCase,
     MarkWhatsNewSeenUseCase,
     AcceptPendingInvitationsUseCase,
@@ -84,6 +87,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
   ],
   exports: [
     UserRepository,
+    GetUsersMetadataUseCase,
     InvitationRepository,
     CreateInvitationUseCase,
     GetInvitationsUseCase,

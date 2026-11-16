@@ -33,6 +33,7 @@ import { GetDeviceMeasurementsUseCase } from "./application/use-cases/get-device
 import { GetDeviceMonitoringUseCase } from "./application/use-cases/get-device-monitoring/get-device-monitoring";
 import { GetDeviceObservedExperimentsUseCase } from "./application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetDevicePayloadStatsUseCase } from "./application/use-cases/get-device-payload-stats/get-device-payload-stats";
+import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
 import { GetDeviceSessionsUseCase } from "./application/use-cases/get-device-sessions/get-device-sessions";
 import { GetDeviceThroughputUseCase } from "./application/use-cases/get-device-throughput/get-device-throughput";
 import { GetExperimentDeviceSeriesUseCase } from "./application/use-cases/get-experiment-device-series/get-experiment-device-series";
@@ -79,6 +80,7 @@ import { IotCalibrationDefinitionRepository } from "./core/repositories/iot-cali
 import { IotCalibrationRunRepository } from "./core/repositories/iot-calibration-run.repository";
 import { IotDeviceGroupRepository } from "./core/repositories/iot-device-group.repository";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
+import { DeviceRegistryWebhookController } from "./presentation/device-registry-webhook.controller";
 import { ExperimentDeviceController } from "./presentation/experiment-device.controller";
 import { IotCalibrationRunController } from "./presentation/iot-calibration-run.controller";
 import { IotCalibrationController } from "./presentation/iot-calibration.controller";
@@ -103,6 +105,7 @@ import { IotController } from "./presentation/iot.controller";
     IotDeviceController,
     IotDeviceGroupController,
     ExperimentDeviceController,
+    DeviceRegistryWebhookController,
     IotFirmwareController,
     IotCalibrationController,
     IotCalibrationRunController,
@@ -112,6 +115,7 @@ import { IotController } from "./presentation/iot.controller";
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
     },
+    GetDeviceRegistryUseCase,
     GetIotCredentialsUseCase,
     GetIotUploadUrlUseCase,
     RegisterIotDeviceUseCase,

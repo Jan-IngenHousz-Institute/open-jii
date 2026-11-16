@@ -201,6 +201,28 @@ export const zEnsureMobileDeviceBody = z.object({
   name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
 });
 
+// --- Device registry webhook (Databricks lineage: thing_name -> registry) ---
+export const zDeviceRegistryWebhookPayload = z.object({
+  thingNames: z.array(z.string()).min(1).max(500),
+});
+
+export const zDeviceRegistryEntry = z.object({
+  thingName: z.string(),
+  id: z.string().guid(),
+  serialNumber: z.string(),
+  deviceType: zDeviceType,
+  status: zIotDeviceStatus,
+  createdBy: z.string().guid(),
+});
+
+export const zDeviceRegistryWebhookResponse = z.object({
+  devices: z.array(zDeviceRegistryEntry),
+  success: z.boolean(),
+});
+
+export type DeviceRegistryEntry = z.infer<typeof zDeviceRegistryEntry>;
+export type DeviceRegistryWebhookResponse = z.infer<typeof zDeviceRegistryWebhookResponse>;
+
 export const zIotDevicePathParam = z.object({
   deviceId: z.string().guid().describe("ID of the device"),
 });
