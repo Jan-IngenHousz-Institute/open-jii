@@ -34,7 +34,13 @@ _READER_VIEWS = (
     "experiment_payload_schemas",
     "experiment_metadata_rows",
     "experiment_metadata_sheets",
+    "device_measurements",
+    "device_newest_measurements",
+    "device_lifecycle_events",
+    "device_last_activity",
 )
+
+_DEVICE_MIGRATION = "0010_device_reads.sql"
 
 _COMMIT = "_commit_version, _commit_timestamp"
 
@@ -82,11 +88,16 @@ class _User:
 
 
 @pytest.fixture
-def admin(store_migrations: list[str]) -> Iterator[_User]:
+def store_admin() -> _User:
     url = os.environ.get("CLICKHOUSE_TEST_URL")
     if not url:
         pytest.skip("CLICKHOUSE_TEST_URL is not set")
-    admin = _User(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
+    return _User(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
+
+
+@pytest.fixture
+def admin(store_admin: _User, store_migrations: list[str]) -> Iterator[_User]:
+    admin = store_admin
     admin.ok(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     admin.ok(f"DROP USER IF EXISTS {_READER}")
     admin.ok(f"DROP SETTINGS PROFILE IF EXISTS {_READER_PROFILE}")
@@ -111,6 +122,12 @@ def admin(store_migrations: list[str]) -> Iterator[_User]:
     admin.ok(
         f"INSERT INTO {_DATABASE}.uploads (experiment_id, id, uploaded_at, created_by, {_COMMIT}) "
         "VALUES ('e1', 21, '2026-10-19 09:00:00', 'u5', 5, '2026-10-19 09:00:01')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.device_events (client_id, event_type, event_timestamp, session_identifier, {_COMMIT}) "
+        "VALUES ('c1', 'connected', '2026-10-19 09:30:00', 's1', 6, '2026-10-19 09:30:01'), "
+        "('c1', 'disconnected', '2026-10-19 12:30:00', 's1', 6, '2026-10-19 12:30:01'), "
+        "('c9', 'connected', '2026-10-19 08:00:00', 's9', 6, '2026-10-19 08:00:01')"
     )
 
     yield admin
@@ -144,9 +161,13 @@ def test_the_reader_reads_one_experiments_rows_through_each_view(reader: _User) 
         f"SELECT count() FROM {_DATABASE}.measurements",
         f"SELECT count() FROM {_DATABASE}.contributor_ids",
         f"SELECT count() FROM {_DATABASE}.payload_schemas",
+        f"SELECT count() FROM {_DATABASE}.measurements_by_device",
+        f"SELECT count() FROM {_DATABASE}.device_events",
     ],
 )
-def test_the_reader_cannot_read_a_table_without_naming_an_experiment(reader: _User, statement: str) -> None:
+def test_the_reader_cannot_read_a_table_without_naming_an_experiment_or_devices(
+    reader: _User, statement: str
+) -> None:
     response = reader.run(statement)
 
     assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
@@ -157,6 +178,16 @@ def test_a_view_refuses_a_read_that_names_no_experiment(reader: _User) -> None:
 
     assert not response.ok
     assert "experiment" in response.text
+
+
+@pytest.mark.parametrize(
+    "view",
+    ["device_measurements", "device_newest_measurements", "device_lifecycle_events", "device_last_activity"],
+)
+def test_a_device_view_refuses_a_read_that_names_no_device(reader: _User, view: str) -> None:
+    response = reader.run(f"SELECT * FROM {_DATABASE}.{view}")
+
+    assert not response.ok
 
 
 @pytest.mark.parametrize(
@@ -322,3 +353,150 @@ def test_the_reader_reads_the_sheet_rows_only_through_their_view(reader: _User) 
     response = reader.run(f"SELECT count() FROM {_DATABASE}.metadata_rows")
 
     assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
+
+
+def test_the_reader_reads_devices_rows_across_experiments_through_the_device_views(reader: _User) -> None:
+    measurements = reader.rows(
+        f"SELECT experiment_id, id FROM {_DATABASE}.device_measurements(devices = {{devices:Array(String)}}) "
+        "ORDER BY id",
+        devices="['c1', 'c3']",
+    )
+    events = reader.rows(
+        f"SELECT client_id, event_type FROM {_DATABASE}.device_lifecycle_events(devices = ['c1']) "
+        "ORDER BY event_timestamp"
+    )
+
+    assert [(row["experiment_id"], int(row["id"])) for row in measurements] == [
+        ("e1", 1),
+        ("e1", 2),
+        ("e2", 3),
+    ]
+    assert events == [
+        {"client_id": "c1", "event_type": "connected"},
+        {"client_id": "c1", "event_type": "disconnected"},
+    ]
+
+
+def test_a_devices_newest_rows_in_a_window_read_whole_with_their_payload(admin: _User, reader: _User) -> None:
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, client_id, data, {_COMMIT}) VALUES "
+        "('e2', 5, '2026-10-19 13:00:00', 'c1', '{\"par\": 120}', 3, '2026-10-19 13:00:01'), "
+        "('e1', 6, '2026-10-19 14:00:00', 'c1', '{\"par\": 130}', 3, '2026-10-19 14:00:01'), "
+        "('e1', 7, '2026-10-20 09:00:00', 'c1', '{\"par\": 140}', 3, '2026-10-20 09:00:01')"
+    )
+
+    rows = reader.rows(
+        f"SELECT experiment_id, id, data FROM {_DATABASE}.device_newest_measurements(device = 'c1', "
+        "from = '2026-10-19 00:00:00', to = '2026-10-19 23:59:59', rows = 2) ORDER BY timestamp DESC"
+    )
+
+    assert [(row["experiment_id"], int(row["id"]), row["data"]) for row in rows] == [
+        ("e1", 6, '{"par": 130}'),
+        ("e2", 5, '{"par": 120}'),
+    ]
+
+
+def test_last_activity_is_each_devices_newest_row_and_newest_event(reader: _User) -> None:
+    rows = reader.rows(
+        f"SELECT * FROM {_DATABASE}.device_last_activity(devices = ['c1', 'c3', 'c9', 'c0']) ORDER BY client_id"
+    )
+
+    assert rows == [
+        {
+            "client_id": "c1",
+            "last_data_at": "2026-10-19 11:00:00.000000",
+            "last_event_type": "disconnected",
+            "last_event_at": "2026-10-19 12:30:00.000000",
+        },
+        {
+            "client_id": "c3",
+            "last_data_at": "2026-10-19 12:00:00.000000",
+            "last_event_type": None,
+            "last_event_at": None,
+        },
+        {
+            "client_id": "c9",
+            "last_data_at": None,
+            "last_event_type": "connected",
+            "last_event_at": "2026-10-19 08:00:00.000000",
+        },
+    ]
+
+
+def test_a_devices_row_or_event_sent_again_reads_once_at_its_newest_commit_before_any_merge(
+    admin: _User, reader: _User
+) -> None:
+    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.measurements_by_device")
+    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.device_events")
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, client_id, device_battery, {_COMMIT}) "
+        "VALUES ('e1', 1, '2026-10-19 10:00:00', 'c1', 41.5, 4, '2026-10-19 10:00:09')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.device_events (client_id, event_type, event_timestamp, session_identifier, "
+        f"disconnect_reason, {_COMMIT}) VALUES "
+        "('c1', 'disconnected', '2026-10-19 12:30:00', 's1', 'CLIENT_INITIATED_DISCONNECT', 7, '2026-10-19 12:30:09')"
+    )
+
+    measurements = reader.rows(
+        f"SELECT id, device_battery, _commit_version FROM {_DATABASE}.device_measurements(devices = ['c1']) "
+        "ORDER BY id"
+    )
+    events = reader.rows(
+        f"SELECT event_type, disconnect_reason, _commit_version FROM {_DATABASE}.device_lifecycle_events("
+        "devices = ['c1']) ORDER BY event_timestamp"
+    )
+
+    assert [(int(row["id"]), row["device_battery"], int(row["_commit_version"])) for row in measurements] == [
+        (1, 41.5, 4),
+        (2, None, 3),
+    ]
+    assert [(row["event_type"], row["disconnect_reason"], int(row["_commit_version"])) for row in events] == [
+        ("connected", None, 6),
+        ("disconnected", "CLIENT_INITIATED_DISCONNECT", 7),
+    ]
+
+
+def test_a_row_without_a_client_reaches_no_device(admin: _User) -> None:
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, client_id, {_COMMIT}) "
+        "VALUES ('e1', 8, '2026-10-19 15:00:00', NULL, 3, '2026-10-19 15:00:01')"
+    )
+
+    assert admin.rows(f"SELECT id FROM {_DATABASE}.measurements_by_device WHERE id = 8") == []
+
+
+def test_the_device_copy_starts_with_the_rows_measurements_held_before_it(
+    store_admin: _User, store_migration_files: dict[str, list[str]]
+) -> None:
+    database = f"{_DATABASE}_before_devices"
+    store_admin.ok(f"DROP DATABASE IF EXISTS {database} SYNC")
+    store_admin.ok(f"CREATE DATABASE {database}")
+    try:
+        for name, statements in store_migration_files.items():
+            if name < _DEVICE_MIGRATION:
+                for statement in statements:
+                    store_admin.ok(statement, database=database)
+        store_admin.ok(
+            f"INSERT INTO {database}.measurements (experiment_id, id, timestamp, client_id, device_battery, "
+            f"{_COMMIT}) VALUES "
+            "('e1', 1, '2026-10-19 10:00:00', 'c1', 80, 3, '2026-10-19 10:00:01'), "
+            "('e1', 2, '2026-10-19 11:00:00', NULL, 70, 3, '2026-10-19 11:00:01')"
+        )
+        store_admin.ok(
+            f"INSERT INTO {database}.measurements (experiment_id, id, timestamp, client_id, device_battery, "
+            f"{_COMMIT}) VALUES ('e1', 1, '2026-10-19 10:00:00', 'c1', 81, 4, '2026-10-19 10:00:09')"
+        )
+
+        for statement in store_migration_files[_DEVICE_MIGRATION]:
+            store_admin.ok(statement, database=database)
+
+        rows = store_admin.rows(
+            f"SELECT client_id, id, device_battery, _commit_version FROM {database}.measurements_by_device FINAL"
+        )
+    finally:
+        store_admin.ok(f"DROP DATABASE {database} SYNC")
+
+    assert [
+        (row["client_id"], int(row["id"]), row["device_battery"], int(row["_commit_version"])) for row in rows
+    ] == [("c1", 1, 81, 4)]

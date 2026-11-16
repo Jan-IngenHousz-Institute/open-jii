@@ -107,11 +107,12 @@ _STORE_MIGRATIONS = Path(__file__).parents[3] / "packages/database/clickhouse/mi
 
 
 @pytest.fixture(scope="session")
-def store_migrations() -> list[str]:
-    """The serving store's migrations as their runner applies them: file by file, one statement at a
-    time, a statement ending at a line that ends with a semicolon."""
-    statements = []
+def store_migration_files() -> dict[str, list[str]]:
+    """Each of the serving store's migrations, by file name in the order the runner applies them, as
+    the statements it runs one at a time, a statement ending at a line that ends with a semicolon."""
+    files = {}
     for migration in sorted(_STORE_MIGRATIONS.glob("*.sql")):
+        statements = []
         lines: list[str] = []
         for line in migration.read_text().splitlines():
             lines.append(line)
@@ -120,4 +121,11 @@ def store_migrations() -> list[str]:
                 lines = []
         if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
             statements.append("\n".join(lines))
-    return statements
+        files[migration.name] = statements
+    return files
+
+
+@pytest.fixture(scope="session")
+def store_migrations(store_migration_files: dict[str, list[str]]) -> list[str]:
+    """The serving store's migrations as their runner applies them, statement by statement."""
+    return [statement for statements in store_migration_files.values() for statement in statements]

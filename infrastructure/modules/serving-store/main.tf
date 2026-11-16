@@ -44,14 +44,18 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
-  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
-  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
+  # The views that name an experiment or devices (packages/database/clickhouse/migrations), the
+  # reader's only way to measurement data, and the tables a reload replaces rows of or removes ids from.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
     "experiment_metadata_rows", "experiment_metadata_sheets",
+    "device_measurements", "device_newest_measurements", "device_lifecycle_events", "device_last_activity",
   ]
-  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
+  reloaded_tables = [
+    "measurements", "measurements_by_device", "macro_results", "uploads", "device_events", "payload_schemas",
+    "contributor_ids", "client_ids",
+  ]
 
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
