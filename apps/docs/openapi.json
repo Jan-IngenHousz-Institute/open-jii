@@ -3280,6 +3280,21 @@
             "allowReserved": true
           },
           {
+            "name": "flagged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "only",
+                "exclude"
+              ],
+              "type": "string",
+              "description": "Only rows with a flag, or only rows without one, counting flags recorded on the phone and those added afterwards. Needs the serving store; without one the read answers 400"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,

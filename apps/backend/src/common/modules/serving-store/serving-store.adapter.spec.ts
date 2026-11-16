@@ -1473,6 +1473,64 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       assertSuccess(await copies.removeAnnotations([{ id: "a1", experimentId: EXPERIMENT }]));
       expect(await viewRows("experiment_annotations", "id")).toEqual([]);
     });
+
+    it("filters a page by its rows' flags, the phone's and those added afterwards alike", async () => {
+      const experiment = "flagged-e";
+      const reading = (id: number, annotations: unknown[]) => ({
+        experiment_id: experiment,
+        id,
+        timestamp: `2026-09-14 10:00:0${id % 10}`,
+        questions_data: {},
+        annotations,
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-14 10:01:00",
+      });
+      const phoneFlag = {
+        id: "p1",
+        rowId: "21",
+        type: "flag",
+        content: { text: null, flagType: "outlier" },
+        createdBy: null,
+        createdByName: null,
+        createdAt: null,
+        updatedAt: null,
+      };
+      await admin.insert({
+        table: "measurements",
+        values: [reading(21, [phoneFlag]), reading(22, []), reading(23, [])],
+        format: "JSONEachRow",
+      });
+      assertSuccess(
+        await copies.writeAnnotations([
+          {
+            id: "a23",
+            experimentId: experiment,
+            tableName: "raw_data",
+            rowId: "23",
+            type: "flag",
+            contentText: null,
+            flagType: "outlier",
+            createdBy: ADA,
+            createdAt: new Date("2026-09-14T10:02:00Z"),
+            updatedAt: new Date("2026-09-14T10:02:00Z"),
+            userName: "Ada Lovelace",
+          },
+        ]),
+      );
+
+      const read = (flagged: "only" | "exclude") =>
+        rowsOf({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: experiment,
+          columns: ["id"],
+          ordering: { column: "id" },
+          flagged,
+        });
+
+      expect((await read("only")).rows).toEqual([["21"], ["23"]]);
+      expect((await read("exclude")).rows).toEqual([["22"]]);
+    });
   });
 });
 

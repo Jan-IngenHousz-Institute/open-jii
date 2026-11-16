@@ -1,3 +1,4 @@
+import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
@@ -47,6 +48,8 @@ const STORE_SCALARS: Record<string, string> = {
  * field names and schema parsing a page depends on stay one implementation for both reads.
  */
 export class StoreQueryBuilder extends BaseQueryBuilder {
+  private table?: StoreTable;
+  private experiment = "";
   private fromClause = "";
   private columns: StoreColumn[] = [];
   private key: string[] = [];
@@ -62,11 +65,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private offsetValue?: number;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
+    this.table = table;
+    this.experiment = this.escapeValue(experimentId);
     this.columns = table.columns;
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
     this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS);
-    this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
+    this.from(`${table.view}(experiment = ${this.experiment})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
     }
@@ -109,6 +114,21 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   where(condition: string): this {
     this.whereConditions.push(condition);
     return this;
+  }
+
+  /**
+   * Keeps the rows with a flag, or the rows without one. A flag counts whether the phone recorded
+   * it with the measurement or someone added it afterwards, which the store copies from Postgres
+   * and finds by the row's id.
+   */
+  flagged(kind: ExperimentDataFlagged, tableName: string): this {
+    const added = `toString(id) IN (SELECT row_id FROM experiment_annotations(experiment = ${this.experiment}) WHERE table_name = ${this.escapeValue(tableName)} AND type = 'flag')`;
+    const phoneColumn = this.table?.phoneAnnotations;
+    const isFlagged =
+      phoneColumn === undefined
+        ? added
+        : `(${added} OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', ${phoneColumn}))`;
+    return this.where(kind === "only" ? isFlagged : `NOT ${isFlagged}`);
   }
 
   /**

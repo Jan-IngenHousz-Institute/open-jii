@@ -16,6 +16,7 @@ import type {
 import { ExperimentDto } from "../../../../core/models/experiment.model";
 import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../../core/repositories/experiment.repository";
+import { ExperimentDataSourceService } from "../../../services/experiment-data-source.service";
 
 export type ExperimentDataDto = TableDataDto[];
 
@@ -30,6 +31,7 @@ export class GetExperimentDataUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDataRepository: ExperimentDataRepository,
+    private readonly dataSource: ExperimentDataSourceService,
   ) {}
 
   async execute(
@@ -75,7 +77,13 @@ export class GetExperimentDataUseCase {
         aggregation,
         join,
         limit,
+        flagged,
       } = query;
+
+      const readSource = flagged === undefined ? success(source) : this.dataSource.flaggedSource();
+      if (readSource.isFailure()) {
+        return readSource;
+      }
 
       if (!tableName) {
         this.logger.warn({
@@ -104,7 +112,8 @@ export class GetExperimentDataUseCase {
         page,
         pageSize,
         limit,
-        source,
+        flagged,
+        source: readSource.value,
       });
       if (result.isFailure()) return result;
       const tables = result.value;

@@ -23,6 +23,8 @@ export interface StoreTable {
   columns: StoreColumn[];
   /** The column holding each JSON payload's text as Spark writes it, from which pages show it. */
   payloadTexts?: Record<string, string>;
+  /** The column the phone's own annotations travel in, on a table whose rows carry them. */
+  phoneAnnotations?: string;
 }
 
 const MACROS = "ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>";
@@ -77,6 +79,7 @@ const CUSTOM_METADATA: StoreColumn = {
 export const MEASUREMENTS_TABLE: StoreTable = {
   view: "experiment_measurements",
   key: ["timestamp", "id", "ifNull(device_id, '')"],
+  phoneAnnotations: "annotations",
   columns: [
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },
     { name: "id", type: "BIGINT", expression: "id" },
@@ -102,6 +105,7 @@ export const MEASUREMENTS_TABLE: StoreTable = {
 export const MACRO_RESULTS_TABLE: StoreTable = {
   view: "experiment_macro_results",
   identifierColumn: "macro_id",
+  phoneAnnotations: "annotations",
   key: [
     "ifNull(macro_id, '')",
     "timestamp",

@@ -17,6 +17,29 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
+  it("keeps the rows flagged on the phone or afterwards, or only the rows neither flagged", () => {
+    const only = measurements().select(["id"]).flagged("only", "raw_data").build();
+    const exclude = measurements().select(["id"]).flagged("exclude", "raw_data").build();
+
+    const isFlagged =
+      "(toString(id) IN (SELECT row_id FROM experiment_annotations(experiment = 'e1') WHERE table_name = 'raw_data' AND type = 'flag') OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', annotations))";
+    expect(only).toContain(`WHERE ${isFlagged}`);
+    expect(exclude).toContain(`WHERE NOT ${isFlagged}`);
+  });
+
+  it("looks for an upload table's flags only among those added afterwards", () => {
+    const sql = new StoreQueryBuilder()
+      .read(UPLOADS_TABLE, "e1", "t1")
+      .select(["id"])
+      .flagged("only", "t1")
+      .build();
+
+    expect(sql).toContain(
+      "AND toString(id) IN (SELECT row_id FROM experiment_annotations(experiment = 'e1') WHERE table_name = 't1' AND type = 'flag')",
+    );
+    expect(sql).not.toContain("arrayExists");
+  });
+
   it("projects the view's columns in its order, hiding the payloads and the excepted ones", () => {
     const builder = measurements()
       .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")

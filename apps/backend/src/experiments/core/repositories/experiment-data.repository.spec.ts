@@ -3037,6 +3037,75 @@ describe("ExperimentDataRepository", () => {
       });
     });
 
+    it("pages and counts a flagged read in the store, both by its flags", async () => {
+      const countSql = "SELECT toString(count()) AS total";
+      const execute = vi.spyOn(servingStore, "executeQuery").mockImplementation(({ sql }) =>
+        Promise.resolve(
+          sql.startsWith(countSql)
+            ? success({
+                columns: [{ name: "total", type_name: "LONG", type_text: "BIGINT", position: 0 }],
+                rows: [["1"]],
+                totalRows: 1,
+                truncated: false,
+              })
+            : success({
+                columns: storeColumns,
+                rows: [["1", "A1"]],
+                totalRows: 1,
+                truncated: false,
+              }),
+        ),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        flagged: "only",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(execute).toHaveBeenCalledTimes(2);
+      for (const [query] of execute.mock.calls) {
+        expect(query.sql).toContain("FROM experiment_annotations(");
+      }
+      expect(result.value[0].totalRows).toBe(1);
+    });
+
+    it("refuses a flagged read the warehouse would answer: a chart, or a table the store lacks", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+
+      const chart = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: { groupBy: [{ column: "plot" }] },
+        flagged: "only",
+        source: "store",
+      });
+      const warehousePage = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        flagged: "exclude",
+        page: 1,
+        pageSize: 10,
+        source: "warehouse",
+      });
+
+      for (const result of [chart, warehousePage]) {
+        assertFailure(result);
+        expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
+      }
+      expect(warehouse).not.toHaveBeenCalled();
+    });
+
     it("keeps charts' reads on the warehouse until the store aggregates", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([largeTable]),

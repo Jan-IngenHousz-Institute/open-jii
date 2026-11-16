@@ -136,6 +136,10 @@ export class ServingStoreAdapter implements ServingStorePort {
       builder.except(params.exceptColumns);
     }
 
+    if (params.flagged !== undefined) {
+      builder.flagged(params.flagged, params.tableName);
+    }
+
     try {
       for (const filter of params.filters ?? []) {
         builder.filter(filter);
