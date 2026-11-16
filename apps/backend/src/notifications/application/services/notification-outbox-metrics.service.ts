@@ -10,6 +10,15 @@ import type { DrainCounts } from "./notification-outbox.worker";
 
 export const NOTIFICATION_METRICS_NAMESPACE = "OpenJII/Backend";
 
+/** A key added to `DrainCounts` starts no metric series until it is listed here too. */
+const PUBLISHED_OUTCOMES = [
+  "sent",
+  "retried",
+  "deferred",
+  "skipped",
+  "failed",
+] as const satisfies readonly (keyof DrainCounts)[];
+
 /**
  * Publishes what the outbox is doing to CloudWatch: how many emails each drain sent or
  * set back, and how many are still owed and for how long. Only a deployed service
@@ -62,16 +71,14 @@ export class NotificationOutboxMetricsService {
       return;
     }
 
-    const metrics = (Object.keys(counts) as (keyof DrainCounts)[])
-      .filter((outcome) => counts[outcome] > 0)
-      .map(
-        (outcome): NotificationMetric => ({
-          name: "NotificationEmails",
-          value: counts[outcome],
-          unit: "Count",
-          dimensions: { Environment: environment, Outcome: outcome },
-        }),
-      );
+    const metrics = PUBLISHED_OUTCOMES.filter((outcome) => counts[outcome] > 0).map(
+      (outcome): NotificationMetric => ({
+        name: "NotificationEmails",
+        value: counts[outcome],
+        unit: "Count",
+        dimensions: { Environment: environment, Outcome: outcome },
+      }),
+    );
 
     if (metrics.length > 0) {
       await this.publish(metrics);

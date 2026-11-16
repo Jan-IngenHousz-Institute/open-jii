@@ -6,7 +6,8 @@ one at a time. A row is waiting while it is `pending` or `sending`. Every five m
 publishes `NotificationEmailsWaiting`, how many rows are waiting, and
 `NotificationEmailOldestWaitingSeconds`, how long since the oldest of them was queued (its
 `created_at`, on the database's clock). The age is 0 when nothing waits. The rule fires when the
-age stays above 900 seconds for 5 minutes. An email usually leaves within a second of being queued.
+age stays above 900 seconds for 5 minutes, and also when no point has arrived at all (see below).
+An email usually leaves within a second of being queued.
 
 ## One old email, or all of them
 
@@ -55,6 +56,24 @@ The fifth failure turns the row `failed` and the age drops back. That email is n
 nothing replays it: the in-app notification is still there, and if the email mattered, the
 recipient has to be told some other way. `email-failures` counts these.
 
+## No data at all
+
+Every task publishes the age every five minutes, 0 when nothing waits, so an empty chart means the
+job that reports the outbox stopped, not that email did. The rule then fires about 20 minutes after
+the last point: the query looks back 15 minutes, then the rule holds for 5 more. Either the backend
+is not running, and `api-hosts-unhealthy` or `dependency-health` fires alongside, or it runs but
+cannot read the outbox or publish what it read:
+
+```bash
+aws logs tail /aws/ecs/backend-service-<env> --since 1h --filter-pattern '{ $.operation = "notification-outbox-metrics" }'
+```
+
+A failed count points at the database; a publish refused for permissions points at the task role's
+`OpenJII/Backend` policy in `infrastructure/modules/ecs/main.tf`, the one `dependency-health` uses.
+The outbox may still be draining normally meanwhile: the worker's "Drained the notification
+outbox" lines and the delivery rows say whether email is leaving.
+
 ## Closing
 
-Do not close until the age has read 0 for 15 minutes.
+Do not close until the age has read 0 for 15 minutes, which after no data also means the
+reporting is back.
