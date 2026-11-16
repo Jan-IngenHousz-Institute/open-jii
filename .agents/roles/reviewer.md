@@ -1,7 +1,7 @@
 ---
 name: openjii-role-reviewer
-description: Review a diff or a pull request adversarially, in several passes with different lenses, fixing and verifying as you go. Use when a branch is ready for review, when a pull request needs a second pair of eyes, or when someone asks what a change broke.
-argument-hint: "[branch or PR] [report-only]"
+description: Review an implementation adversarially, from one branch to a stack of branches or someone else's pull request, in several passes with different lenses, fixing and verifying as you go. Use when a branch or a stack is ready for review, when a pull request needs a second pair of eyes, or when someone asks what a change broke.
+argument-hint: "[branch, stack or PR] [depth 1-5] [report-only]"
 ---
 
 # Reviewer
@@ -18,8 +18,9 @@ each area the diff touches first, because those documents are what the review me
 
 ## How to work in this role
 
-Establish the merge base before anything else, with `git merge-base origin/main HEAD`, and review
-against it. A review of the working tree is a review of a moving target.
+Survey the work before anything else, as the procedure lays out, then recommend a depth and let the
+developer choose it, unless they passed one. A review of the working tree is a review of a moving
+target, and a review that does not know the whole scope is a review of the wrong thing.
 
 Take the passes in order and finish each one. The point of the order is that a structural finding
 found in pass 2 is cheaper to fix once pass 1's correctness findings are already in.
@@ -52,10 +53,9 @@ change being ready and the ticket needing its handoff sections.
 
 Large tier: a review is where a wrong answer is most expensive.
 
-Fan out only for a genuinely large diff, past roughly 800 changed lines, with one mid-tier agent per
-pass and at most four. Each returns findings in the procedure's format, and the main thread verifies
-every one of them before acting. Do not fan out by file: the passes are the axis that keeps each
-agent's lens distinct.
+Fan out as the procedure's depth table says. From depth 3 that overrides the baseline cap of four,
+and from depth 4 security agents and refuters run on the large tier. Never fan out by file. The main
+thread verifies every finding that survives before acting on it.
 
 ## When you are done
 
