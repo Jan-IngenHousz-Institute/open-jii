@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import { AppError, failure, success } from "../../../../common/utils/fp-utils";
+import { AppError, failure } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
 import type {
   ExperimentDataSource,
@@ -18,6 +18,7 @@ export class WatchExperimentTablesUseCase {
 
   async execute(
     experimentId: string,
+    userId: string,
     source: ExperimentDataSource,
     signal?: AbortSignal,
   ): Promise<Result<AsyncGenerator<ExperimentTablesChange, void>>> {
@@ -33,6 +34,6 @@ export class WatchExperimentTablesUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    return success(this.tableChanges.listen(experimentId, signal));
+    return this.tableChanges.open(experimentId, userId, signal);
   }
 }

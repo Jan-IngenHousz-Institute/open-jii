@@ -50,7 +50,12 @@ export class ExperimentDataController {
     return implement(experimentDataContract.watchExperimentTables).handler(
       async ({ input, signal }) => {
         const source = await this.dataSource.sourceFor(session.user);
-        const result = await this.watchExperimentTablesUseCase.execute(input.id, source, signal);
+        const result = await this.watchExperimentTablesUseCase.execute(
+          input.id,
+          session.user.id,
+          source,
+          signal,
+        );
         if (result.isSuccess()) {
           return result.value;
         }
