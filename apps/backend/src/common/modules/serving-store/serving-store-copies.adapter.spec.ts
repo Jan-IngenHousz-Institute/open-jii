@@ -76,6 +76,26 @@ describe("ServingStoreCopiesAdapter", () => {
     );
   });
 
+  it("removes the rows a large sheet lost without stalling on how many it held", async () => {
+    const held = Array.from({ length: 100_000 }, (_, index) => ({
+      sheet_id: "s1",
+      identifier: `plot-${index}`,
+    }));
+    const { adapter, insert } = adapterHolding(held);
+    const kept = {
+      ...plots,
+      rows: [{ _id: "r1", plot: "plot-0", soil: "clay" }],
+    };
+
+    assertSuccess(await adapter.writeSheets([sheet(kept)]));
+
+    const [, written] = insert.mock.calls[0];
+    expect(written).toHaveLength(100_000);
+    expect(written.filter((row) => "is_deleted" in row && row.is_deleted === 1)).toHaveLength(
+      99_999,
+    );
+  });
+
   it("copies no rows of a sheet saved before its shape was checked", async () => {
     const { adapter, insert } = adapterHolding();
 

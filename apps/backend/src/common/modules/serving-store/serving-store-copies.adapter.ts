@@ -122,7 +122,12 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
 
     const bySheet = new Map<string, string[]>();
     for (const { sheet_id, identifier } of held.value) {
-      bySheet.set(sheet_id, [...(bySheet.get(sheet_id) ?? []), identifier]);
+      const identifiers = bySheet.get(sheet_id);
+      if (identifiers) {
+        identifiers.push(identifier);
+      } else {
+        bySheet.set(sheet_id, [identifier]);
+      }
     }
     return success(bySheet);
   }
