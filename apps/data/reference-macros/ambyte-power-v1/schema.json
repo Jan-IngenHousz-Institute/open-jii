@@ -1,0 +1,77 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "power_valid",
+      "type": "boolean",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_reason",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_battery_v",
+      "type": "double",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_system_v",
+      "type": "double",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_charge_status",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_charge_ma",
+      "type": "double",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_protect_state",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_protect_reason",
+      "type": "string",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_protect_since_utc",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_protect_skipped_flash_runs",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_protect_skipped_ambit_runs",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    },
+    {
+      "name": "power_protect_skipped_ota",
+      "type": "long",
+      "nullable": true,
+      "metadata": {}
+    }
+  ]
+}

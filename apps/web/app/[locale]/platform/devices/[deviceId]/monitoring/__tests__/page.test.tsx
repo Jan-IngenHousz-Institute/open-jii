@@ -117,13 +117,14 @@ describe("DeviceMonitoringPage", () => {
     expect(screen.getAllByText("MQTT_KEEP_ALIVE_TIMEOUT").length).toBeGreaterThan(0);
   });
 
-  it("hides the battery panel when the family never reports battery", async () => {
+  it("explains missing battery data instead of hiding the panel", async () => {
     mountAll({ battery: [] });
 
     render(<DeviceMonitoringContent />);
 
     await screen.findByText("iot.devices.monitoring.availabilityTitle");
-    expect(screen.queryByText("iot.devices.monitoring.batteryTitle")).not.toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.batteryTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.batteryUnavailable")).toBeInTheDocument();
   });
 
   it("shows unknown uptime and an empty event state for a silent range", async () => {

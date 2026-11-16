@@ -1,3 +1,5 @@
+import type { DevicePower } from "@repo/api/domains/iot/device-power.schema";
+
 import type { Result } from "../../../common/utils/fp-utils";
 import type { DeviceLifecycleEventRow } from "../models/device-lifecycle-event.model";
 
@@ -72,6 +74,11 @@ export interface DeviceThroughputRow {
 export interface DeviceBatteryRow {
   bucketStart: string | null;
   averageBattery: number | null;
+  sampleCount?: number;
+  reportedCount?: number;
+  latestAt?: string | null;
+  latestBattery?: number | null;
+  lastReportedAt?: string | null;
 }
 
 /** Measurement counts and metadata coverage per payload-shape combination. */
@@ -180,6 +187,7 @@ export interface DatabricksPort {
     to: string,
     bucket: "hour" | "day",
   ): Promise<Result<DeviceBatteryRow[]>>;
+  getDevicePower(thingName: string, from: string, to: string): Promise<Result<DevicePower>>;
   getDevicePayloadBreakdown(
     thingName: string,
     from: string,

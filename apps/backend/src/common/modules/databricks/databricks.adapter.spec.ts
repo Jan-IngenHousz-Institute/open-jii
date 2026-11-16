@@ -1032,10 +1032,26 @@ describe("DatabricksAdapter", () => {
 
     it("maps the battery series, keeping null averages for battery-less buckets", async () => {
       mockSql(
-        ["timestamp_day", "average_battery"],
         [
-          ["2026-08-13T00:00:00.000Z", "87.5"],
-          ["2026-08-14T00:00:00.000Z", null],
+          "bucket_start",
+          "average_battery",
+          "sample_count",
+          "reported_count",
+          "latest_at",
+          "latest_battery",
+          "last_reported_at",
+        ],
+        [
+          [
+            "2026-08-13T00:00:00.000Z",
+            "87.5",
+            "1",
+            "1",
+            "2026-08-13T00:15:00.000Z",
+            "87.5",
+            "2026-08-13T00:15:00.000Z",
+          ],
+          ["2026-08-14T00:00:00.000Z", null, "1", "0", "2026-08-14T00:15:00.000Z", null, null],
         ],
       );
 
@@ -1048,8 +1064,24 @@ describe("DatabricksAdapter", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual([
-        { bucketStart: "2026-08-13T00:00:00.000Z", averageBattery: 87.5 },
-        { bucketStart: "2026-08-14T00:00:00.000Z", averageBattery: null },
+        {
+          bucketStart: "2026-08-13T00:00:00.000Z",
+          averageBattery: 87.5,
+          sampleCount: 1,
+          reportedCount: 1,
+          latestAt: "2026-08-13T00:15:00.000Z",
+          latestBattery: 87.5,
+          lastReportedAt: "2026-08-13T00:15:00.000Z",
+        },
+        {
+          bucketStart: "2026-08-14T00:00:00.000Z",
+          averageBattery: null,
+          sampleCount: 1,
+          reportedCount: 0,
+          latestAt: "2026-08-14T00:15:00.000Z",
+          latestBattery: null,
+          lastReportedAt: null,
+        },
       ]);
     });
 

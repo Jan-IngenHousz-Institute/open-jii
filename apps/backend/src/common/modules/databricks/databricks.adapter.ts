@@ -1,6 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { DevicePower, DevicePowerReading } from "@repo/api/domains/iot/device-power.schema";
+import { extractAmbytePower, hasUsableBattery } from "@repo/api/transforms/ambyte-power";
 
 import type {
   ExperimentAsOfJoin,
@@ -50,6 +52,10 @@ import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
 import { deviceDisplaySource } from "./services/query-builder/expressions/device-label";
+import {
+  deviceBatteryQuery,
+  devicePowerQuery,
+} from "./services/query-builder/expressions/device-power";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import type {
   AggregationSpec,
@@ -541,31 +547,62 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     to: string,
     bucket: "hour" | "day",
   ): Promise<Result<DeviceBatteryRow[]>> {
-    const bucketAlias = `timestamp_${bucket}`;
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
-      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
-      aggregation: {
-        groupBy: [{ column: "timestamp", timeBucket: bucket }],
-        functions: [{ column: "device_battery", function: "avg", alias: "average_battery" }],
-      },
-      ordering: { column: bucketAlias, direction: "ASC" },
-    });
-    if (result.isFailure()) {
-      return failure(result.error);
-    }
-
-    const { rows, index } = result.value;
-    return success(
-      rows.map((row) => {
-        const raw = row[index.average_battery];
-        return {
-          bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
-          averageBattery: raw === null ? null : Number(raw),
-        };
-      }),
+    const result = await this.executeSqlQuery(
+      this.CENTRUM_SCHEMA_NAME,
+      deviceBatteryQuery(`${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`, bucket),
+      this.deviceRangeParameters(thingName, from, to),
     );
+    if (result.isFailure()) return failure(result.error);
+    const index = this.columnIndex(result.value.columns);
+    return success(
+      result.value.rows.map((row) => ({
+        bucketStart: cellUtcIso(row[index.bucket_start]),
+        averageBattery: cellNumber(row[index.average_battery]),
+        sampleCount: cellNumber(row[index.sample_count]) ?? 0,
+        reportedCount: cellNumber(row[index.reported_count]) ?? 0,
+        latestAt: cellUtcIso(row[index.latest_at]),
+        latestBattery: cellNumber(row[index.latest_battery]),
+        lastReportedAt: cellUtcIso(row[index.last_reported_at]),
+      })),
+    );
+  }
+
+  async getDevicePower(thingName: string, from: string, to: string): Promise<Result<DevicePower>> {
+    const result = await this.executeSqlQuery(
+      this.CENTRUM_SCHEMA_NAME,
+      devicePowerQuery(`${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`),
+      this.deviceRangeParameters(thingName, from, to),
+    );
+    if (result.isFailure()) return failure(result.error);
+    const index = this.columnIndex(result.value.columns);
+    const row = result.value.rows[0] ?? [];
+    const read = (at: string, entry: string): DevicePowerReading | null => {
+      const capturedAt = cellUtcIso(row[index[at]]);
+      const sample = row[index[entry]];
+      if (capturedAt === null || !sample) return null;
+      try {
+        return extractAmbytePower(JSON.parse(sample), capturedAt);
+      } catch {
+        return null;
+      }
+    };
+    const latest = read("latest_at", "latest_entry");
+    const last = read("last_valid_at", "last_valid_entry");
+    return success({
+      latest,
+      lastValidBattery:
+        last && hasUsableBattery(last) && last.batteryV !== null
+          ? { capturedAt: last.capturedAt, batteryV: last.batteryV }
+          : null,
+    });
+  }
+
+  private deviceRangeParameters(thingName: string, from: string, to: string): StatementParameter[] {
+    return [
+      { name: "thingName", value: thingName, type: "STRING" },
+      { name: "from", value: from, type: "TIMESTAMP" },
+      { name: "to", value: to, type: "TIMESTAMP" },
+    ];
   }
 
   /**

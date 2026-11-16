@@ -22,7 +22,7 @@ import {
 
 export interface LineSeriesData extends BaseSeries {
   x: (string | number | Date)[];
-  y: (string | number)[];
+  y: (string | number | null)[];
   /** Facet routing: pins this trace to a specific subplot cell. */
   xaxisId?: string;
   yaxisId?: string;
