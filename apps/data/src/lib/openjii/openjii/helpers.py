@@ -186,8 +186,8 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
 
 
 class ExperimentTable:
-    """One experiment table read in two steps, so the rows :meth:`rows` reads from the source can be
-    held, in a snapshot say, before :meth:`shape` orders them and lifts their payloads' fields."""
+    """One experiment table, read from its source by :meth:`rows` and ordered and flattened by
+    :meth:`shape`, so the rows can be held between the two."""
 
     def __init__(self, experiment_id, table_name, catalog_name, schema_name="centrum"):
         metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
