@@ -1,5 +1,6 @@
 import { render, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
+import { env } from "~/env";
 
 import { ErrorContent } from "./error-content";
 
@@ -42,6 +43,14 @@ describe("ErrorContent", () => {
       "/en-US",
     );
     expect(screen.getByText("auth.errorSupport")).toBeInTheDocument();
+  });
+
+  it("links to the status page in a new tab", () => {
+    render(<ErrorContent locale="en-US" />);
+
+    const status = screen.getByRole("link", { name: "auth.errorStatus" });
+    expect(status).toHaveAttribute("href", env.NEXT_PUBLIC_STATUS_URL);
+    expect(status).toHaveAttribute("target", "_blank");
   });
 
   it("adapts links to locale", () => {

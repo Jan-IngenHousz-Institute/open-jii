@@ -110,7 +110,8 @@
     "support": null,
     "documentation": null,
     "breadcrumbs": null,
-    "faq": null
+    "faq": null,
+    "status": "Systeemstatus"
   },
   "experiments": {
     "clearSearch": null,
@@ -1027,6 +1028,7 @@
     "errorTryAgain": "Probeer opnieuw",
     "errorGoHome": "Naar Homepage",
     "errorSupport": "Als dit probleem aanhoudt, neem dan contact op met ons ondersteuningsteam.",
+    "errorStatus": "Controleer op de statuspagina of openJII werkt",
     "checkEmail": null,
     "loginWith-passkey": null,
     "lastUsed": null,
