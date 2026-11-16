@@ -36,6 +36,8 @@ export type MountFn = <T extends AnyContractProcedure>(
      * never sent as a literal body.
      */
     body?: unknown;
+    /** Response headers, for a procedure whose contract declares some. */
+    headers?: Record<string, string>;
     /** Artificial delay in ms (or "infinite" to hang forever). */
     delay?: number | "infinite";
     /** Hold the response until this promise resolves (deterministic in-flight windows). */
@@ -106,6 +108,7 @@ export function createMount(server: SetupServer): MountFn {
     endpoint: RouteCarrier,
     options: {
       body?: unknown;
+      headers?: Record<string, string>;
       status?: number;
       delay?: number | "infinite";
       unblock?: Promise<unknown>;
@@ -179,8 +182,11 @@ export function createMount(server: SetupServer): MountFn {
         typeof options.body === "function"
           ? (options.body as (call: SpyCall) => unknown)(call)
           : options.body;
-      if (status >= 400) return HttpResponse.json(responseBody ?? { message: "Error" }, { status });
-      return HttpResponse.json(responseBody ?? null, { status });
+      const { headers } = options;
+      if (status >= 400) {
+        return HttpResponse.json(responseBody ?? { message: "Error" }, { status, headers });
+      }
+      return HttpResponse.json(responseBody ?? null, { status, headers });
     });
 
     server.use(handler);

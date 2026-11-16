@@ -97,7 +97,7 @@ function setup(
   if (tables) {
     queryClient.setQueryData(
       orpc.experiments.getExperimentTables.queryKey({ input: { id: EXPERIMENT_ID } }),
-      tables,
+      { headers: { "x-data-source": "warehouse" }, body: tables },
     );
   }
   function Wrapper({ children }: { children: ReactNode }) {

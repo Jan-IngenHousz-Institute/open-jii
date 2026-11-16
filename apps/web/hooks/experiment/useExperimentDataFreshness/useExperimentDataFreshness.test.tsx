@@ -213,42 +213,79 @@ describe("useExperimentDataFreshness", () => {
     expect(result.current.status).toBe("live");
   });
 
-  it("pauses, and catches up at once on resume", async () => {
-    const spy = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
-
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
-    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
-
-    act(() => result.current.togglePaused());
-    expect(result.current.status).toBe("paused");
-    const callsWhilePaused = spy.callCount;
-
-    act(() => result.current.togglePaused());
-    expect(result.current.status).toBe("live");
-    await waitFor(() => expect(spy.callCount).toBe(callsWhilePaused + 1));
-  });
-
-  it("stops polling after ten idle minutes and catches up on the next input", async () => {
+  it.each([
+    { source: "store", pollMs: 5_000 },
+    { source: "warehouse", pollMs: 30_000 },
+  ])("checks a listing the $source answered every $pollMs ms", async ({ source, pollMs }) => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    const spy = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+    const spy = server.mount(contract.experiments.getExperimentTables, {
+      body: [RAW],
+      headers: { "x-data-source": source },
+    });
 
     const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+    const callsAfterLoad = spy.callCount;
 
-    await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
-    expect(result.current.status).toBe("paused");
-    expect(result.current.isPaused).toBe(false);
-    const callsWhileIdle = spy.callCount;
+    await act(() => vi.advanceTimersByTimeAsync(pollMs - 1_000));
+    expect(spy.callCount).toBe(callsAfterLoad);
 
-    await act(() => vi.advanceTimersByTimeAsync(5 * 60_000));
-    expect(spy.callCount).toBe(callsWhileIdle);
-
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent("keydown"));
-    });
-    expect(result.current.status).toBe("live");
-    await waitFor(() => expect(spy.callCount).toBe(callsWhileIdle + 1));
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    await waitFor(() => expect(spy.callCount).toBe(callsAfterLoad + 1));
   });
+
+  it.each(["store", "warehouse"])(
+    "stops checking a %s listing while paused, and catches up at once on resume",
+    async (source) => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const spy = server.mount(contract.experiments.getExperimentTables, {
+        body: [RAW],
+        headers: { "x-data-source": source },
+      });
+
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
+      await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+
+      act(() => result.current.togglePaused());
+      expect(result.current.status).toBe("paused");
+      const callsWhilePaused = spy.callCount;
+
+      await act(() => vi.advanceTimersByTimeAsync(60_000));
+      expect(spy.callCount).toBe(callsWhilePaused);
+
+      act(() => result.current.togglePaused());
+      expect(result.current.status).toBe("live");
+      await waitFor(() => expect(spy.callCount).toBe(callsWhilePaused + 1));
+    },
+  );
+
+  it.each(["store", "warehouse"])(
+    "stops checking a %s listing after ten idle minutes and catches up on the next input",
+    async (source) => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const spy = server.mount(contract.experiments.getExperimentTables, {
+        body: [RAW],
+        headers: { "x-data-source": source },
+      });
+
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
+      await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+
+      await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+      expect(result.current.status).toBe("paused");
+      expect(result.current.isPaused).toBe(false);
+      const callsWhileIdle = spy.callCount;
+
+      await act(() => vi.advanceTimersByTimeAsync(5 * 60_000));
+      expect(spy.callCount).toBe(callsWhileIdle);
+
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent("keydown"));
+      });
+      expect(result.current.status).toBe("live");
+      await waitFor(() => expect(spy.callCount).toBe(callsWhileIdle + 1));
+    },
+  );
 
   it("says it is behind after two minutes without a successful refresh", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
