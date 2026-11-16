@@ -13,6 +13,17 @@ import type {
   StoreQueryColumn,
   StoreQueryParams,
 } from "../../../experiments/core/ports/serving-store.port";
+import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
+import type {
+  DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
+  DeviceMeasurementRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+  ExperimentDeviceSeriesRow,
+} from "../../../iot/core/ports/device-reads.port";
+import type { ServingStorePort as IotServingStorePort } from "../../../iot/core/ports/serving-store.port";
 import { AppError, failure, success } from "../../utils/fp-utils";
 import type { Result } from "../../utils/fp-utils";
 import { QueryBuilderInputError } from "../databricks/services/query-builder/query-builder.types";
@@ -30,7 +41,7 @@ const TABLE_TYPES: Record<string, ExperimentTableType> = {
 };
 
 @Injectable()
-export class ServingStoreAdapter implements ServingStorePort {
+export class ServingStoreAdapter implements ServingStorePort, IotServingStorePort {
   private readonly logger = new Logger(ServingStoreAdapter.name);
 
   constructor(private readonly client: ServingStoreClientService) {}
@@ -304,8 +315,308 @@ export class ServingStoreAdapter implements ServingStorePort {
     return success(result.value.rows.flatMap(([id]) => (typeof id === "string" ? [id] : [])));
   }
 
+  async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
+    const result = await this.client.query(
+      `SELECT last_data_at FROM device_last_activity(${this.deviceArgument(thingName)})`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const lastDataAt = result.value.rows.at(0)?.at(0);
+    return success({ lastDataAt: CellValues.text(lastDataAt, "TIMESTAMP") });
+  }
+
+  /** Scoped on both keys, so it never returns traffic into other experiments. */
+  async getExperimentDeviceSeries(
+    experimentId: string,
+    clientId: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<ExperimentDeviceSeriesRow[]>> {
+    const experiment = new StoreQueryBuilder().escapeValue(experimentId);
+    const result = await this.client.query(
+      [
+        `SELECT ${this.timeBucket(bucket)} AS bucket_start, count()`,
+        `FROM device_measurements(${this.deviceArgument(clientId)})`,
+        `WHERE experiment_id = ${experiment} AND ${this.window("timestamp", from, to)}`,
+        "GROUP BY bucket_start",
+        "ORDER BY bucket_start ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([bucketStart, count]) => ({
+        bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
+        count: Number(count),
+      })),
+    );
+  }
+
+  async getDeviceLifecycleEvents(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceLifecycleEventRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT event_type, event_timestamp, disconnect_reason, session_identifier",
+        `FROM device_lifecycle_events(${this.deviceArgument(thingName)})`,
+        `WHERE ${this.window("event_timestamp", from, to)}`,
+        "ORDER BY event_timestamp ASC",
+        `LIMIT ${limit}`,
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([eventType, eventTimestamp, disconnectReason, sessionIdentifier]) => ({
+        eventType: this.textOrNull(eventType),
+        eventTimestamp: CellValues.text(eventTimestamp, "TIMESTAMP"),
+        disconnectReason: this.textOrNull(disconnectReason),
+        sessionIdentifier: this.textOrNull(sessionIdentifier),
+      })),
+    );
+  }
+
+  async getDeviceThroughput(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceThroughputRow[]>> {
+    const result = await this.client.query(
+      [
+        `SELECT ${this.timeBucket(bucket)} AS bucket_start, experiment_id, count()`,
+        `FROM device_measurements(${this.deviceArgument(thingName)})`,
+        `WHERE ${this.window("timestamp", from, to)}`,
+        "GROUP BY bucket_start, experiment_id",
+        "ORDER BY bucket_start ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([bucketStart, experimentId, count]) => ({
+        bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
+        experimentId: this.textOrNull(experimentId),
+        count: Number(count),
+      })),
+    );
+  }
+
+  /** avg skips nulls, so a bucket without a reported battery is null. */
+  async getDeviceBatterySeries(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceBatteryRow[]>> {
+    const result = await this.client.query(
+      [
+        `SELECT ${this.timeBucket(bucket)} AS bucket_start, avg(device_battery)`,
+        `FROM device_measurements(${this.deviceArgument(thingName)})`,
+        `WHERE ${this.window("timestamp", from, to)}`,
+        "GROUP BY bucket_start",
+        "ORDER BY bucket_start ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([bucketStart, averageBattery]) => ({
+        bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
+        averageBattery: this.numberOrNull(averageBattery),
+      })),
+    );
+  }
+
+  /** count of a column skips nulls, which is what makes the coverage counts work. */
+  async getDevicePayloadBreakdown(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DevicePayloadBreakdownRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT device_version, protocol_id, workbook_version_id, workbook_run_id, count(),",
+        "  count(latitude), count(device_battery)",
+        `FROM device_measurements(${this.deviceArgument(thingName)})`,
+        `WHERE ${this.window("timestamp", from, to)}`,
+        "GROUP BY device_version, protocol_id, workbook_version_id, workbook_run_id",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(
+        ([version, protocolId, workbookVersionId, workbookRunId, count, withGps, withBattery]) => ({
+          deviceVersion: this.textOrNull(version),
+          protocolId: this.textOrNull(protocolId),
+          workbookVersionId: this.textOrNull(workbookVersionId),
+          workbookRunId: this.textOrNull(workbookRunId),
+          count: Number(count),
+          withGps: Number(withGps),
+          withBattery: Number(withBattery),
+        }),
+      ),
+    );
+  }
+
+  /** A measurement can carry several macros, so counts can exceed the measurement total. */
+  async getDeviceMacroBreakdown(
+    thingName: string,
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceMacroRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT tupleElement(macro, 'id') AS macro_id, count()",
+        `FROM device_measurements(${this.deviceArgument(thingName)})`,
+        "ARRAY JOIN macros AS macro",
+        `WHERE ${this.window("timestamp", from, to)}`,
+        "GROUP BY macro_id",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([macroId, count]) => ({
+        macroId: this.textOrNull(macroId),
+        count: Number(count),
+      })),
+    );
+  }
+
+  /** Per (time bucket, version): by version alone a rollback would read as two overlapping runs. */
+  async getDeviceFirmwareHistory(
+    thingName: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceFirmwareVersionRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT device_version, min(timestamp) AS first_seen, max(timestamp), count()",
+        `FROM device_measurements(${this.deviceArgument(thingName)})`,
+        `WHERE ${this.window("timestamp", from, to)}`,
+        `GROUP BY ${this.timeBucket(bucket)}, device_version`,
+        "ORDER BY first_seen ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([version, firstSeen, lastSeen, count]) => ({
+        version: this.textOrNull(version),
+        firstSeen: CellValues.text(firstSeen, "TIMESTAMP"),
+        lastSeen: CellValues.text(lastSeen, "TIMESTAMP"),
+        count: Number(count),
+      })),
+    );
+  }
+
+  /**
+   * Newest first. The payload is gold's parsed copy as Spark writes it out, keys in order and NaN
+   * as null, where the warehouse shows the device's own text.
+   */
+  async getDeviceRecentMeasurements(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceMeasurementRow[]>> {
+    const builder = new StoreQueryBuilder();
+    const result = await this.client.query(
+      [
+        "SELECT timestamp, experiment_id, protocol_id, workbook_version_id, device_version,",
+        "  device_battery, latitude, longitude, data",
+        "FROM device_newest_measurements(",
+        `  device = ${builder.escapeValue(thingName)},`,
+        `  from = ${this.time(from)},`,
+        `  to = ${this.time(to)},`,
+        `  rows = ${limit}`,
+        ")",
+        "ORDER BY timestamp DESC, id DESC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(
+        ([
+          timestamp,
+          experimentId,
+          protocolId,
+          workbookVersionId,
+          deviceVersion,
+          battery,
+          latitude,
+          longitude,
+          sample,
+        ]) => ({
+          timestamp: CellValues.text(timestamp, "TIMESTAMP"),
+          experimentId: this.textOrNull(experimentId),
+          protocolId: this.textOrNull(protocolId),
+          workbookVersionId: this.textOrNull(workbookVersionId),
+          deviceVersion: this.textOrNull(deviceVersion),
+          battery: this.numberOrNull(battery),
+          latitude: this.numberOrNull(latitude),
+          longitude: this.numberOrNull(longitude),
+          sample: this.textOrNull(sample),
+        }),
+      ),
+    );
+  }
+
   private experimentArgument(experimentId: string): string {
     return `experiment = ${new StoreQueryBuilder().escapeValue(experimentId)}`;
+  }
+
+  /** The device views read only the devices a read names, which the backend has authorized. */
+  private deviceArgument(clientId: string): string {
+    return `devices = [${new StoreQueryBuilder().escapeValue(clientId)}]`;
+  }
+
+  private timeBucket(bucket: "hour" | "day"): string {
+    return bucket === "hour" ? "toStartOfHour(timestamp)" : "toStartOfDay(timestamp)";
+  }
+
+  private window(column: string, from: string, to: string): string {
+    return `${column} BETWEEN ${this.time(from)} AND ${this.time(to)}`;
+  }
+
+  /** The store's plain parser reads no zone, so it refuses an ISO time's Z. */
+  private time(iso: string): string {
+    return `parseDateTime64BestEffort(${new StoreQueryBuilder().escapeValue(iso)}, 6, 'UTC')`;
+  }
+
+  private textOrNull(value: unknown): string | null {
+    return typeof value === "string" ? value : null;
+  }
+
+  /** A double JSON has no number for, such as NaN, comes back quoted and reads as no value. */
+  private numberOrNull(value: unknown): number | null {
+    return typeof value === "number" ? value : null;
   }
 
   private mergedSchemas(rows: unknown[][]): Map<string, string | null> {

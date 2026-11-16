@@ -14,13 +14,6 @@ import type {
 import type { DatabricksPort as HealthDatabricksPort } from "../../../health/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
-  DeviceBatteryRow,
-  DeviceFirmwareVersionRow,
-  DeviceMacroRow,
-  DeviceMeasurementRow,
-  DevicePayloadBreakdownRow,
-  DeviceThroughputRow,
-  ExperimentDeviceSeriesRow,
   ExperimentDeviceStatsRow,
   ExperimentPublisherRow,
   GroupExperimentRow,
@@ -28,6 +21,15 @@ import type {
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
+import type {
+  DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
+  DeviceMeasurementRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+  ExperimentDeviceSeriesRow,
+} from "../../../iot/core/ports/device-reads.port";
 import type {
   ActivityWindowsRow,
   ContributorPairRow,

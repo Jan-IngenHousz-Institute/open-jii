@@ -302,6 +302,118 @@ describe("ServingStoreAdapter", () => {
       "SELECT client_id FROM experiment_client_ids(experiment = 'e1')",
     );
   });
+
+  describe("a device's reads", () => {
+    const from = "2026-10-19T00:00:00.000Z";
+    const to = "2026-10-19T23:59:59Z";
+
+    it("reads only through the device views, naming the one device quoted", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+      const thing = "it's-1";
+
+      await adapter.getDeviceLastActivity(thing);
+      await adapter.getDeviceLifecycleEvents(thing, from, to, 1001);
+      await adapter.getDeviceThroughput(thing, from, to, "hour");
+      await adapter.getDeviceBatterySeries(thing, from, to, "day");
+      await adapter.getDevicePayloadBreakdown(thing, from, to);
+      await adapter.getDeviceMacroBreakdown(thing, from, to);
+      await adapter.getDeviceFirmwareHistory(thing, from, to, "hour");
+      await adapter.getExperimentDeviceSeries("e1", thing, from, to, "day");
+      await adapter.getDeviceRecentMeasurements(thing, from, to, 50);
+
+      const statements = query.mock.calls.map(([sql]) => sql);
+      const views = statements.map((sql) => /FROM (\w+)\(/.exec(sql)?.[1]);
+      expect(views).toEqual([
+        "device_last_activity",
+        "device_lifecycle_events",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_newest_measurements",
+      ]);
+      for (const sql of statements.slice(0, -1)) {
+        expect(sql).toContain("(devices = ['it\\'s-1'])");
+      }
+      expect(statements.at(-1)).toContain("device = 'it\\'s-1'");
+      expect(statements.at(-1)).toContain("rows = 50");
+      expect(statements[7]).toContain("experiment_id = 'e1'");
+    });
+
+    it("bounds each read by the window, parsed as UTC", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      await adapter.getDeviceThroughput("thing-1", from, to, "hour");
+
+      expect(query.mock.calls[0][0]).toContain(
+        "timestamp BETWEEN parseDateTime64BestEffort('2026-10-19T00:00:00.000Z', 6, 'UTC') AND parseDateTime64BestEffort('2026-10-19T23:59:59Z', 6, 'UTC')",
+      );
+    });
+
+    it("writes the store's times, counts and missing values as the warehouse's reads do", async () => {
+      vi.spyOn(client, "query")
+        .mockResolvedValueOnce(success({ rows: [["2026-10-19 10:00:00", "e1", 12]] }))
+        .mockResolvedValueOnce(
+          success({
+            rows: [
+              [
+                "2026-10-19 13:30:00.000000",
+                "e2",
+                null,
+                null,
+                "2.1",
+                "nan",
+                52.3,
+                5.3,
+                '{"par":150,"phi2":null}',
+              ],
+            ],
+          }),
+        );
+
+      const throughput = await adapter.getDeviceThroughput("thing-1", from, to, "hour");
+      const measurements = await adapter.getDeviceRecentMeasurements("thing-1", from, to, 50);
+
+      assertSuccess(throughput);
+      assertSuccess(measurements);
+      expect(throughput.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", experimentId: "e1", count: 12 },
+      ]);
+      expect(measurements.value).toEqual([
+        {
+          timestamp: "2026-10-19T13:30:00.000Z",
+          experimentId: "e2",
+          protocolId: null,
+          workbookVersionId: null,
+          deviceVersion: "2.1",
+          battery: null,
+          latitude: 52.3,
+          longitude: 5.3,
+          sample: '{"par":150,"phi2":null}',
+        },
+      ]);
+    });
+
+    it("answers a device without rows as one with no last data", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      const result = await adapter.getDeviceLastActivity("thing-1");
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ lastDataAt: null });
+    });
+
+    it("passes on a failed read", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(failure(AppError.internal("store down")));
+
+      const result = await adapter.getDeviceFirmwareHistory("thing-1", from, to, "day");
+
+      assertFailure(result);
+      expect(result.error.message).toBe("store down");
+    });
+  });
 });
 
 /**
@@ -2115,6 +2227,303 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         assertSuccess(count);
         expect(count.value.rows).toEqual([[String(readings / 50)]]);
       }, 60_000);
+    });
+  });
+
+  describe("a device's reads", () => {
+    const from = "2026-10-19T00:00:00.000Z";
+    const to = "2026-10-19T23:59:59.000Z";
+    const first = "device-e1";
+    const second = "device-e2";
+
+    // dev-1 runs 2.2 for one row and rolls back, reports no battery at 12:10 and has a row after the
+    // window; dev-2 has one row; dev-3 only connects.
+    const measurement = (
+      id: number,
+      experimentId: string,
+      clientId: string,
+      timestamp: string,
+      fields: Record<string, unknown>,
+    ) => ({
+      experiment_id: experimentId,
+      id,
+      device_id: `sensor-${clientId}`,
+      client_id: clientId,
+      timestamp,
+      questions_data: {},
+      annotations: [],
+      macros: [],
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-21 09:00:00",
+      ...fields,
+    });
+
+    const p1 = { protocol_id: "p1", workbook_version_id: "wv1", workbook_run_id: "wr1" };
+    const deviceMeasurements = [
+      measurement(1, first, "dev-1", "2026-10-19 10:05:00.250", {
+        ...p1,
+        device_version: "2.1",
+        device_battery: 80,
+        latitude: 52.1,
+        longitude: 5.1,
+        macros: [{ id: "m1", name: "m1", filename: "m1.js" }],
+        data: '{"PAR":120.5,"protocol_id":7,"time":1}',
+      }),
+      measurement(2, first, "dev-1", "2026-10-19 12:10:00", {
+        ...p1,
+        device_version: "2.1",
+        macros: [
+          { id: "m1", name: "m1", filename: "m1.js" },
+          { id: "m2", name: "m2", filename: "m2.js" },
+        ],
+        data: '[{"set":[{"temperature":19.5}]},{"note":null}]',
+      }),
+      measurement(3, second, "dev-1", "2026-10-19 11:10:00", {
+        protocol_id: "p2",
+        device_version: "2.2",
+        device_battery: 70,
+        latitude: 52.2,
+        longitude: 5.2,
+        data: '{"par":130}',
+      }),
+      measurement(4, second, "dev-1", "2026-10-19 13:00:00", {
+        protocol_id: "p2",
+        device_version: "2.1",
+        device_battery: 60.5,
+        macros: [{ id: "m2", name: "m2", filename: "m2.js" }],
+      }),
+      measurement(5, second, "dev-1", "2026-10-19 13:30:00", {
+        protocol_id: "p2",
+        workbook_run_id: "wr2",
+        device_version: "2.1",
+        device_battery: 61,
+        latitude: 52.3,
+        longitude: 5.3,
+        macros: [{ id: "m2", name: "m2", filename: "m2.js" }],
+        data: '{"par":150,"phi2":null}',
+      }),
+      measurement(6, first, "dev-1", "2026-10-20 09:00:00", { device_version: "2.2" }),
+      measurement(7, first, "dev-2", "2026-10-19 10:30:00", { device_version: "1.0" }),
+    ];
+
+    const deviceEvents = [
+      ["dev-1", "connected", "2026-10-19 09:59:00.125", "s1", null],
+      ["dev-1", "disconnected", "2026-10-19 12:00:00", "s1", "CONNECTION_LOST"],
+      ["dev-1", "connected", "2026-10-19 12:01:00", "s2", null],
+      ["dev-1", "disconnected", "2026-10-21 08:00:00", "s2", "CLIENT_INITIATED_DISCONNECT"],
+      ["dev-3", "connected", "2026-10-19 07:00:00", null, null],
+    ].map(([client_id, event_type, event_timestamp, session_identifier, disconnect_reason]) => ({
+      client_id,
+      event_type,
+      event_timestamp,
+      session_identifier,
+      disconnect_reason,
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-21 09:00:00",
+    }));
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: deviceMeasurements,
+        format: "JSONEachRow",
+      });
+      // The feed sends id 3 again; the store counts the capture once, at its newest commit.
+      await admin.insert({
+        table: "measurements",
+        values: [{ ...deviceMeasurements[2], device_battery: 71, _commit_version: 2 }],
+        format: "JSONEachRow",
+      });
+      await admin.insert({ table: "device_events", values: deviceEvents, format: "JSONEachRow" });
+    });
+
+    it("counts a device's rows per hour and experiment, each capture once", async () => {
+      const result = await adapter.getDeviceThroughput("dev-1", from, to, "hour");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", experimentId: first, count: 1 },
+        { bucketStart: "2026-10-19T11:00:00.000Z", experimentId: second, count: 1 },
+        { bucketStart: "2026-10-19T12:00:00.000Z", experimentId: first, count: 1 },
+        { bucketStart: "2026-10-19T13:00:00.000Z", experimentId: second, count: 2 },
+      ]);
+    });
+
+    it("counts a device's rows per day", async () => {
+      const result = await adapter.getDeviceThroughput("dev-1", from, to, "day");
+
+      assertSuccess(result);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { bucketStart: "2026-10-19T00:00:00.000Z", experimentId: first, count: 2 },
+          { bucketStart: "2026-10-19T00:00:00.000Z", experimentId: second, count: 3 },
+        ]),
+      );
+      expect(result.value).toHaveLength(2);
+    });
+
+    it("averages the battery per hour, null where none was reported", async () => {
+      const result = await adapter.getDeviceBatterySeries("dev-1", from, to, "hour");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", averageBattery: 80 },
+        { bucketStart: "2026-10-19T11:00:00.000Z", averageBattery: 71 },
+        { bucketStart: "2026-10-19T12:00:00.000Z", averageBattery: null },
+        { bucketStart: "2026-10-19T13:00:00.000Z", averageBattery: 60.75 },
+      ]);
+    });
+
+    it("groups the payload profile and counts what each group carries", async () => {
+      const result = await adapter.getDevicePayloadBreakdown("dev-1", from, to);
+
+      assertSuccess(result);
+      const row = (deviceVersion: string, protocolId: string, workbookRunId: string | null) => ({
+        deviceVersion,
+        protocolId,
+        workbookVersionId: protocolId === "p1" ? "wv1" : null,
+        workbookRunId,
+      });
+      expect(result.value).toHaveLength(4);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { ...row("2.1", "p1", "wr1"), count: 2, withGps: 1, withBattery: 1 },
+          { ...row("2.2", "p2", null), count: 1, withGps: 1, withBattery: 1 },
+          { ...row("2.1", "p2", null), count: 1, withGps: 0, withBattery: 1 },
+          { ...row("2.1", "p2", "wr2"), count: 1, withGps: 1, withBattery: 1 },
+        ]),
+      );
+    });
+
+    it("counts each macro a row carries", async () => {
+      const result = await adapter.getDeviceMacroBreakdown("dev-1", from, to);
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { macroId: "m1", count: 2 },
+          { macroId: "m2", count: 3 },
+        ]),
+      );
+    });
+
+    it("reads firmware per hour and version, so the rollback shows", async () => {
+      const result = await adapter.getDeviceFirmwareHistory("dev-1", from, to, "hour");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          version: "2.1",
+          firstSeen: "2026-10-19T10:05:00.250Z",
+          lastSeen: "2026-10-19T10:05:00.250Z",
+          count: 1,
+        },
+        {
+          version: "2.2",
+          firstSeen: "2026-10-19T11:10:00.000Z",
+          lastSeen: "2026-10-19T11:10:00.000Z",
+          count: 1,
+        },
+        {
+          version: "2.1",
+          firstSeen: "2026-10-19T12:10:00.000Z",
+          lastSeen: "2026-10-19T12:10:00.000Z",
+          count: 1,
+        },
+        {
+          version: "2.1",
+          firstSeen: "2026-10-19T13:00:00.000Z",
+          lastSeen: "2026-10-19T13:30:00.000Z",
+          count: 2,
+        },
+      ]);
+    });
+
+    it("reads a device's connects and disconnects in the window, oldest first, up to the limit", async () => {
+      const all = await adapter.getDeviceLifecycleEvents("dev-1", from, to, 10);
+      const capped = await adapter.getDeviceLifecycleEvents("dev-1", from, to, 2);
+
+      assertSuccess(all);
+      assertSuccess(capped);
+      expect(all.value).toEqual([
+        {
+          eventType: "connected",
+          eventTimestamp: "2026-10-19T09:59:00.125Z",
+          disconnectReason: null,
+          sessionIdentifier: "s1",
+        },
+        {
+          eventType: "disconnected",
+          eventTimestamp: "2026-10-19T12:00:00.000Z",
+          disconnectReason: "CONNECTION_LOST",
+          sessionIdentifier: "s1",
+        },
+        {
+          eventType: "connected",
+          eventTimestamp: "2026-10-19T12:01:00.000Z",
+          disconnectReason: null,
+          sessionIdentifier: "s2",
+        },
+      ]);
+      expect(capped.value).toEqual(all.value.slice(0, 2));
+    });
+
+    it("reads a device's newest rows in the window with their payloads, newest first", async () => {
+      const result = await adapter.getDeviceRecentMeasurements("dev-1", from, to, 3);
+
+      assertSuccess(result);
+      expect(result.value.map(({ timestamp }) => timestamp)).toEqual([
+        "2026-10-19T13:30:00.000Z",
+        "2026-10-19T13:00:00.000Z",
+        "2026-10-19T12:10:00.000Z",
+      ]);
+      expect(result.value[0]).toEqual({
+        timestamp: "2026-10-19T13:30:00.000Z",
+        experimentId: second,
+        protocolId: "p2",
+        workbookVersionId: null,
+        deviceVersion: "2.1",
+        battery: 61,
+        latitude: 52.3,
+        longitude: 5.3,
+        sample: '{"par":150,"phi2":null}',
+      });
+      expect(result.value.map(({ sample }) => sample)).toEqual([
+        '{"par":150,"phi2":null}',
+        null,
+        '[{"set":[{"temperature":19.5}]},{"note":null}]',
+      ]);
+    });
+
+    it("reads a device's last data from every row, and none for one that only connected", async () => {
+      const [withRows, onlyEvents, unseen] = await Promise.all([
+        adapter.getDeviceLastActivity("dev-1"),
+        adapter.getDeviceLastActivity("dev-3"),
+        adapter.getDeviceLastActivity("dev-9"),
+      ]);
+
+      assertSuccess(withRows);
+      assertSuccess(onlyEvents);
+      assertSuccess(unseen);
+      expect(withRows.value).toEqual({ lastDataAt: "2026-10-20T09:00:00.000Z" });
+      expect(onlyEvents.value).toEqual({ lastDataAt: null });
+      expect(unseen.value).toEqual({ lastDataAt: null });
+    });
+
+    it("counts one device's rows inside one experiment only", async () => {
+      const [inSecond, otherDevice] = await Promise.all([
+        adapter.getExperimentDeviceSeries(second, "dev-1", from, to, "hour"),
+        adapter.getExperimentDeviceSeries(first, "dev-2", from, to, "hour"),
+      ]);
+
+      assertSuccess(inSecond);
+      assertSuccess(otherDevice);
+      expect(inSecond.value).toEqual([
+        { bucketStart: "2026-10-19T11:00:00.000Z", count: 1 },
+        { bucketStart: "2026-10-19T13:00:00.000Z", count: 2 },
+      ]);
+      expect(otherDevice.value).toEqual([{ bucketStart: "2026-10-19T10:00:00.000Z", count: 1 }]);
     });
   });
 });
