@@ -7,6 +7,7 @@ import { resolve } from "path";
 
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
+import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
@@ -720,6 +721,96 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.rows).toEqual([["+1"], [" 2.5 "], ["9"], ["10"], ["abc"], [""]]);
+  });
+
+  describe("Number question answers", () => {
+    // Each answer with the double Spark's cast reads it as on the warehouse.
+    const answers: [string, string | null][] = [
+      ["20", "20.0"],
+      ["10", "10.0"],
+      ["abc", null],
+      ["", null],
+      [" 10 ", "10.0"],
+      ["10d", "10.0"],
+      ["1e3", "1000.0"],
+      ["51.986383", "51.986383"],
+    ];
+    const read = {
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "number-answers",
+      variants: [
+        {
+          columnName: "questions_data",
+          schema: "OBJECT<height: DOUBLE, plot: STRING>",
+          suffix: "answer",
+        },
+      ],
+    } satisfies Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0];
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: answers.map(([height], index) => ({
+          experiment_id: "number-answers",
+          id: 200 + index,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: { height, plot: "007" },
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+    });
+
+    it("reads each answer as Spark casts its text, and one that holds no number as null", async () => {
+      const data = await rowsOf({ ...read, columns: ["id", "height"], ordering: { column: "id" } });
+
+      expect(data.columns[1].type_text).toBe("DOUBLE");
+      expect(data.rows.map(([, height]) => height)).toEqual(answers.map(([, cell]) => cell));
+    });
+
+    it("sorts answers by value, empty ones last both ways and the row id breaking ties", async () => {
+      const sorted = async (direction: "ASC" | "DESC") =>
+        (
+          await rowsOf({
+            ...read,
+            columns: ["id"],
+            ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+            limit: 8,
+          })
+        ).rows.map(([id]) => id);
+
+      expect(await sorted("ASC")).toEqual(["201", "204", "205", "200", "207", "206", "202", "203"]);
+      expect(await sorted("DESC")).toEqual([
+        "206",
+        "207",
+        "200",
+        "201",
+        "204",
+        "205",
+        "202",
+        "203",
+      ]);
+    });
+
+    it("matches no row for text that holds no number, and compares text that does", async () => {
+      const ids = async (filters: FilterCondition[]) =>
+        (await rowsOf({ ...read, columns: ["id"], filters, ordering: { column: "id" } })).rows;
+
+      expect(await ids([{ column: "height", operator: "equals", value: "n/a" }])).toEqual([]);
+      expect(await ids([{ column: "height", operator: "in", value: ["10", ""] }])).toEqual([
+        ["201"],
+        ["204"],
+        ["205"],
+      ]);
+      expect(await ids([{ column: "height", operator: "greater_than", value: 50 }])).toEqual([
+        ["206"],
+        ["207"],
+      ]);
+      expect(await ids([{ column: "plot", operator: "equals", value: "007" }])).toHaveLength(8);
+    });
   });
 
   it("filters and sorts devices by the serial numbers it is given", async () => {

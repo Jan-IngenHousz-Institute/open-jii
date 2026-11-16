@@ -17,6 +17,7 @@ import type {
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
+import { NumberAnswersService } from "./number-answers.service";
 
 type IdColumns = Map<string, "contributor" | "device">;
 
@@ -60,14 +61,19 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     @Inject(SERVING_STORE_PORT) private readonly store: ServingStorePort,
     private readonly userRepository: UserRepository,
     private readonly deviceRepository: ExperimentDeviceRegistryRepository,
+    private readonly numberAnswers: NumberAnswersService,
   ) {}
 
   readsTable(tableName: string): boolean {
     return this.store.holdsTable(tableName);
   }
 
-  tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
-    return this.store.getExperimentTableMetadata(experimentId);
+  async tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
+    const metadata = await this.store.getExperimentTableMetadata(experimentId);
+    if (metadata.isFailure()) {
+      return metadata;
+    }
+    return this.numberAnswers.typed(experimentId, metadata.value);
   }
 
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>> {

@@ -143,15 +143,20 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** A literal of the column's own type: the store compares no text with a number, and reads a
-   *  time only in its own format. */
+   *  time only in its own format. Text compared with a payload's number reads as Spark casts it,
+   *  so text that holds no number matches no row, as on the warehouse. */
   filterLiteral(column: string, value: Exclude<FilterValue, (string | number)[]>): string {
     const type = this.typeOf(column);
     const isTime = type === "TIMESTAMP" || type === "DATE";
     if (isTime && typeof value !== "string") {
       throw new QueryBuilderInputError(`'${column}' is compared with a time given as text`);
     }
-    const isNumber = isNumericType(type);
-    if (isNumber && typeof value === "string" && !this.readsAsNumber(value, type)) {
+    const isTextAgainstNumber = isNumericType(type) && typeof value === "string";
+    const isField = this.flattenedFields().some(({ key }) => key === column);
+    if (isTextAgainstNumber && isField) {
+      return this.textAsDouble(this.escapeValue(value));
+    }
+    if (isTextAgainstNumber && !this.readsAsNumber(value, type)) {
       throw new QueryBuilderInputError(`'${column}' is compared with a number`);
     }
     if (typeof value === "string" && type === "TIMESTAMP") {
@@ -314,9 +319,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
 
     const target = this.columnExpression(column);
+    const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
+    const rowId =
+      isRowOrdered && !this.isDistinct && mode.rowId
+        ? this.columnExpression(mode.rowId)
+        : undefined;
     if (mode?.kind === "numericString") {
-      const rowId = !this.isDistinct && mode.rowId ? this.columnExpression(mode.rowId) : undefined;
       return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
+    }
+    if (mode?.kind === "number") {
+      return `${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
     }
     const sorted =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
@@ -395,12 +407,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /**
    * A scalar reads as its type and is null when the value holds another, as `try_variant_get`
    * reads it. Anything else reads as JSON, which the adapter writes out as the warehouse does.
-   * Answers are a map of text, so every answer reads by key.
+   * Answers are a map of text, so every answer reads by key, a Number question's as Spark casts
+   * its text.
    */
   private fieldExpression(column: string, field: VariantField): string {
     const type = this.variantCastType(field.type);
     if (column === "questions_data") {
       const answer = `${column}[${this.escapeValue(field.name)}]`;
+      if (type === "DOUBLE") {
+        return this.textAsDouble(answer);
+      }
       return type === "STRING" ? answer : this.typedScalar(answer, type);
     }
 
@@ -439,6 +455,17 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return `if(dynamicType(${path}) != 'None', toJSONString(${path}), ${objectJson})`;
     }
     return this.typedScalar(path, type);
+  }
+
+  /**
+   * Text as Spark casts it to a double, through Java's parser: blanks and control characters
+   * trimmed, a trailing d or f read, and null for text that holds no number.
+   */
+  private textAsDouble(textSql: string): string {
+    const trimmed = `replaceRegexpAll(${textSql}, ${this.escapeValue("^[\\x00-\\x20]+|[\\x00-\\x20]+$")}, '')`;
+    const number = "^([+-]?(?:[0-9]+[.]?[0-9]*|[.][0-9]+)(?:[eE][+-]?[0-9]+)?)[dDfF]$";
+    const unsuffixed = `replaceRegexpOne(${trimmed}, ${this.escapeValue(number)}, ${this.escapeValue("\\1")})`;
+    return `toFloat64OrNull(${unsuffixed})`;
   }
 
   private typedScalar(sql: string, type: string): string {

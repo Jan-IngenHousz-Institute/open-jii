@@ -188,6 +188,25 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain(`FROM ${answer}), 18) END) DESC, ${answer} DESC NULLS LAST, id ASC`);
   });
 
+  it("reads, sorts and filters a Number question's answers as numbers, as the warehouse does", () => {
+    const sql = measurements()
+      .parseVariant("questions_data", "OBJECT<height: DOUBLE, plot: STRING>", "answer")
+      .select(["height"])
+      .filter({ column: "height", operator: "equals", value: "n/a" })
+      .filter({ column: "height", operator: "greater_than", value: 10 })
+      .filter({ column: "plot", operator: "equals", value: "007" })
+      .orderBy({ column: "height", direction: "DESC", mode: { kind: "number", rowId: "id" } })
+      .build();
+
+    const answer = "questions_data['height']";
+    const height = `toFloat64OrNull(replaceRegexpOne(replaceRegexpAll(${answer}, `;
+    expect(sql).toContain(`SELECT ${height}`);
+    expect(sql).toContain("toFloat64OrNull(replaceRegexpOne(replaceRegexpAll('n/a', ");
+    expect(sql).toContain(") > 10");
+    expect(sql).toContain("questions_data['plot'] = '007'");
+    expect(sql).toMatch(/ORDER BY toFloat64OrNull\(.*\) DESC NULLS LAST, id ASC$/);
+  });
+
   it("sorts a contributor's name by the place of each row's id, with Spark's null order", () => {
     const sql = measurements()
       .select(["id"])

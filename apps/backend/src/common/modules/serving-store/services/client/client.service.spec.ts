@@ -103,6 +103,14 @@ describe("ServingStoreClientService", () => {
     expect(requested.get("max_query_size")).toBe("1048576");
   });
 
+  it("reads text as the nearest double, as Spark does", async () => {
+    answer = { status: 200, body: "" };
+
+    await client.query(STATEMENT);
+
+    expect(requested.get("precise_float_parsing")).toBe("1");
+  });
+
   it("answers a result past the store's limit as a page too large", async () => {
     answer = {
       status: 500,

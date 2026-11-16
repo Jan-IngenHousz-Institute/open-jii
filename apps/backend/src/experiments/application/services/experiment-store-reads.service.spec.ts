@@ -4,8 +4,10 @@ import type { SchemaData } from "../../../common/modules/databricks/services/sql
 import { assertSuccess, success } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { ExperimentQueryParams } from "../../core/models/experiment-data.model";
+import type { FlowGraphDto } from "../../core/models/flow.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
+import { FlowRepository } from "../../core/repositories/flow.repository";
 import { ExperimentStoreReadsService } from "./experiment-store-reads.service";
 
 describe("ExperimentStoreReadsService", () => {
@@ -292,6 +294,43 @@ describe("ExperimentStoreReadsService", () => {
     await reads.buildQuery({ ...page, columns: ["contributor"], distinct: true, limit: 2 });
 
     expect(build).toHaveBeenCalledWith(expect.objectContaining({ limit: 2 }));
+  });
+
+  it("types a Number question's answers as DOUBLE in its listing, as the warehouse's does", async () => {
+    const userId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({ name: "Heights", userId });
+    const graph: FlowGraphDto = {
+      nodes: [
+        {
+          id: "q1",
+          type: "question",
+          name: "Height",
+          content: { kind: "number", text: "Plant height", required: false },
+          isStart: true,
+        },
+      ],
+      edges: [],
+    };
+    assertSuccess(await testApp.module.get(FlowRepository).create(experiment.id, graph));
+    vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(
+      success([
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 3,
+          latestRowAt: null,
+          schemaRevision: "r1",
+          questionsSchema: "OBJECT<height: STRING, plot: STRING>",
+        },
+      ]),
+    );
+
+    const result = await reads.tablesMetadata(experiment.id);
+
+    assertSuccess(result);
+    expect(result.value[0].questionsSchema).toBe("OBJECT<height: DOUBLE, plot: STRING>");
+    expect(result.value[0].schemaRevision).toMatch(/^r1:[0-9a-f]{32}$/);
   });
 
   it("holds every table but the device table", () => {
