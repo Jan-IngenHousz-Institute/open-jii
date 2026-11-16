@@ -148,7 +148,11 @@ export function VisualizationWorkspace({
           <ChartTypePicker value={watchedChartType} onChange={handleChartTypeChange} />
 
           <div className="flex items-center gap-3">
-            <DataFreshness experimentId={experimentId} tableNames={freshnessTables} />
+            <DataFreshness
+              experimentId={experimentId}
+              rowsSource="warehouse"
+              tableNames={freshnessTables}
+            />
             <Button
               type="button"
               variant="outline"

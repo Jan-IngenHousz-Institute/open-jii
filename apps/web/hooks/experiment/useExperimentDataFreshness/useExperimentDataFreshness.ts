@@ -1,11 +1,17 @@
 import { useIsIdle } from "@/hooks/useIsIdle";
-import { orpc } from "@/lib/orpc";
+import { orpc, orpcClient } from "@/lib/orpc";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentDataSource,
+  ExperimentTableMetadata,
+  ExperimentTablesEvent,
+  ExperimentTableVersion,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 const POLL_MS = 30_000;
+const RECONNECT_MS = 10_000;
 /** The backend holds the listing this long, so an earlier refetch gets the same answer. */
 const BACKEND_CACHE_MS = 15_000;
 const BEHIND_AFTER_MS = 2 * 60_000;
@@ -22,23 +28,77 @@ function newestOf(
   return times.length > 0 ? times.reduce((a, b) => (a > b ? a : b)) : null;
 }
 
-function versionOf(table: ExperimentTableMetadata): string {
+function versionOf(table: ExperimentTableVersion): string {
   return `${table.totalRows}|${table.latestRowAt}|${table.schemaRevision}`;
 }
 
+function hasMoved(
+  seen: Map<string, ExperimentTableMetadata> | null,
+  tables: ExperimentTableVersion[],
+): boolean {
+  if (seen?.size !== tables.length) {
+    return true;
+  }
+  return tables.some((table) => {
+    const before = seen.get(table.identifier);
+    return before === undefined || versionOf(before) !== versionOf(table);
+  });
+}
+
+/** Listens until `signal` aborts, reconnecting after a stream that dropped. */
+async function followTableChanges(
+  experimentId: string,
+  signal: AbortSignal,
+  onEvent: (event: ExperimentTablesEvent) => void,
+  onDrop: () => void,
+): Promise<void> {
+  while (!signal.aborted) {
+    try {
+      const events = await orpcClient.experiments.watchExperimentTables(
+        { id: experimentId },
+        { signal },
+      );
+      for await (const event of events) {
+        onEvent(event);
+      }
+    } catch {
+      // The listing is checked every 30 seconds until the stream is back.
+    }
+
+    onDrop();
+    await new Promise((resolve) => {
+      const timer = setTimeout(resolve, RECONNECT_MS);
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve(undefined);
+        },
+        { once: true },
+      );
+    });
+  }
+}
+
 /**
- * Polls the experiment's table listing while the page is visible and in use, and
+ * Follows the experiment's table listing while the page is visible and in use, and
  * refetches a table's rows and charts only when its count, newest row or schema
  * moves, and its columns only when its schema does, so an open page follows the
- * pipeline without resetting what the user is doing. `tableNames` picks whose
+ * pipeline without resetting what the user is doing. Rows read from the store are
+ * followed through its change stream, others by polling. `tableNames` picks whose
  * newest data to report; omitted, the whole experiment.
  */
-export const useExperimentDataFreshness = (experimentId: string, tableNames?: string[]) => {
+export const useExperimentDataFreshness = (
+  experimentId: string,
+  rowsSource: ExperimentDataSource | undefined,
+  tableNames?: string[],
+) => {
   const queryClient = useQueryClient();
   const [isPaused, setIsPaused] = useState(false);
   // What the page showed when paused, so the newest-row time matches the rows held still.
   const [heldTables, setHeldTables] = useState<ExperimentTableMetadata[] | undefined>();
   const [overdueAt, setOverdueAt] = useState(0);
+  const [streamHeardAt, setStreamHeardAt] = useState(0);
 
   // An unattended page stops polling and catches up on the next input, since
   // re-enabling a query refetches stale data at once. A manual pause keeps the
@@ -46,6 +106,9 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   const isIdle = useIsIdle();
   const isIdlePaused = isIdle && !isPaused;
   const isPolling = !isPaused && !isIdle;
+  const isListening = isPolling && rowsSource === "store";
+  const isStreamLive = isListening && streamHeardAt > 0;
+  const isPollingListing = isPolling && !isStreamLive;
 
   // A hidden tab stops polling: refetchIntervalInBackground stays off.
   const {
@@ -57,8 +120,8 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
     orpc.experiments.getExperimentTables.queryOptions({
       input: { id: experimentId },
       enabled: !isIdlePaused,
-      refetchInterval: isPolling ? POLL_MS : false,
-      refetchOnWindowFocus: isPolling,
+      refetchInterval: isPollingListing ? POLL_MS : false,
+      refetchOnWindowFocus: isPollingListing,
       staleTime: BACKEND_CACHE_MS,
     }),
   );
@@ -123,15 +186,33 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   }, [tables, dataUpdatedAt, isPaused, experimentId, queryClient]);
 
   useEffect(() => {
-    if (!isPolling || dataUpdatedAt === 0) {
+    if (!isListening) {
       return;
     }
-    const timer = setTimeout(
-      () => setOverdueAt(dataUpdatedAt),
-      dataUpdatedAt + BEHIND_AFTER_MS - Date.now(),
+
+    // Joins a catch-up already loading, so reopening the stream fetches the listing once.
+    const handleEvent = (event: ExperimentTablesEvent) => {
+      setStreamHeardAt(Date.now());
+      if (event.type === "changed" && hasMoved(seen.current, event.tables)) {
+        void refetch({ cancelRefetch: false });
+      }
+    };
+
+    const controller = new AbortController();
+    void followTableChanges(experimentId, controller.signal, handleEvent, () =>
+      setStreamHeardAt(0),
     );
+    return () => controller.abort();
+  }, [isListening, experimentId, refetch]);
+
+  const heardAt = Math.max(dataUpdatedAt, streamHeardAt);
+  useEffect(() => {
+    if (!isPolling || heardAt === 0) {
+      return;
+    }
+    const timer = setTimeout(() => setOverdueAt(heardAt), heardAt + BEHIND_AFTER_MS - Date.now());
     return () => clearTimeout(timer);
-  }, [dataUpdatedAt, isPolling]);
+  }, [heardAt, isPolling]);
 
   const togglePaused = () => {
     // Resuming catches up at once rather than on the next interval.
@@ -143,7 +224,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   };
 
   const shownTables = isPaused ? (heldTables ?? tables) : tables;
-  const isBehind = isPolling && dataUpdatedAt > 0 && overdueAt === dataUpdatedAt;
+  const isBehind = isPolling && heardAt > 0 && overdueAt === heardAt;
   const liveStatus: DataFreshnessStatus = isBehind ? "behind" : "live";
   const status: DataFreshnessStatus = isPolling ? liveStatus : "paused";
 
@@ -151,7 +232,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
     hasLoaded: tables !== undefined,
     status,
     newestRowAt: shownTables ? newestOf(shownTables, tableNames) : null,
-    refreshedAt: new Date(dataUpdatedAt),
+    refreshedAt: new Date(heardAt),
     isChecking,
     isLoadingRows,
     isPaused,

@@ -20,7 +20,9 @@ vi.mock("../shared/autosave/autosave-indicator", () => ({
   AutosaveIndicator: () => <span data-testid="save-indicator" />,
 }));
 vi.mock("../experiment-data/data-freshness", () => ({
-  DataFreshness: () => <span data-testid="data-freshness" />,
+  DataFreshness: ({ rowsSource }: { rowsSource?: string }) => (
+    <span data-testid="data-freshness" data-rows-source={rowsSource} />
+  ),
 }));
 vi.mock("./dashboard-gradient-body", () => ({
   DashboardGradientBody: ({
@@ -128,6 +130,11 @@ describe("DashboardLayoutContent", () => {
   it("shows how current the data is while viewing", () => {
     renderLayout();
     expect(screen.getByTestId("data-freshness")).toBeInTheDocument();
+  });
+
+  it("checks for new rows as its charts read them, from the warehouse", () => {
+    renderLayout();
+    expect(screen.getByTestId("data-freshness")).toHaveAttribute("data-rows-source", "warehouse");
   });
 
   it("renders the metadata fields with formatted dates and the creator name", () => {

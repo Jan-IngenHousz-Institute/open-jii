@@ -7,6 +7,6 @@ export function experimentTablesQuery(utils: QueryUtils, experimentId: string) {
   return utils.experiments.getExperimentTables.queryOptions({
     input: { id: experimentId },
     staleTime: STALE_TIME,
-    select: (listing) => listing.body,
+    select: (listing) => ({ tables: listing.body, source: listing.headers["x-data-source"] }),
   });
 }

@@ -29,7 +29,12 @@ interface ExperimentDataPageProps {
 export default function ExperimentDataPage({ params }: ExperimentDataPageProps) {
   const { id } = use(params);
   const { data, isLoading, error } = useExperimentAccess(id);
-  const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
+  const {
+    tables,
+    source,
+    isLoading: isLoadingTables,
+    error: tablesError,
+  } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadDataOpen, setUploadDataOpen] = React.useState(false);
   const [metadataModalOpen, setMetadataModalOpen] = React.useState(false);
@@ -103,7 +108,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           <div className="space-y-1">
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
             <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
-            <DataFreshness experimentId={id} />
+            <DataFreshness experimentId={id} rowsSource={source} />
           </div>
           <div className="flex shrink-0 gap-3">
             <Button
@@ -165,7 +170,11 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         <div className="space-y-1">
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
-          <DataFreshness experimentId={id} tableNames={[activeTable.identifier]} />
+          <DataFreshness
+            experimentId={id}
+            rowsSource={source}
+            tableNames={[activeTable.identifier]}
+          />
         </div>
         <div className="flex shrink-0 gap-3">
           <Button
