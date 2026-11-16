@@ -154,10 +154,13 @@ export const useExperimentDataUpload = () => {
     onMutate: (variables: UploadInput) => {
       const transferId = crypto.randomUUID();
       trackTransfer(transferId, variables, "running");
+      // The desktop app appends openJII-Desktop/<version> to its user agent.
+      const isDesktopApp = navigator.userAgent.includes("openJII-Desktop/");
+      const startedKey = isDesktopApp
+        ? "experimentData.uploadDataModal.transfer.startedInApp"
+        : "experimentData.uploadDataModal.transfer.started";
       toast({
-        description: t("experimentData.uploadDataModal.transfer.started", {
-          table: variables.label,
-        }),
+        description: t(startedKey, { table: variables.label }),
       });
       return { transferId };
     },

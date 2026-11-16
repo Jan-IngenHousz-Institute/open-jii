@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AppWindow,
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import { User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { env } from "~/env";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
@@ -57,6 +58,10 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
   };
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+  const pathname = usePathname();
+  // The desktop app appends openJII-Desktop/<version> to its user agent.
+  const isDesktopApp =
+    typeof navigator !== "undefined" && navigator.userAgent.includes("openJII-Desktop/");
 
   if (compact) {
     return (
@@ -251,6 +256,23 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 {t("navigation.faq")}
               </Link>
             </DropdownMenuItem>
+
+            {!isDesktopApp && (
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/${locale}/open-in-app?path=${encodeURIComponent(pathname)}`}
+                  className="flex w-full cursor-default items-center"
+                  data-testid="open-in-desktop-app"
+                >
+                  <Avatar className="bg-muted mr-2 h-4 w-4">
+                    <AvatarFallback className="rounded-lg">
+                      <AppWindow className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                  {t("navigation.openInDesktopApp")}
+                </Link>
+              </DropdownMenuItem>
+            )}
 
             {/* SIGN OUT */}
             <DropdownMenuItem

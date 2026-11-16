@@ -7,6 +7,7 @@ import { DROUGHT_TRIAL_TABLE } from "./fixture-tables.js";
 import { FixtureWarehouse } from "./fixture-warehouse.js";
 import type { Fixture, Resolvable } from "./fixture.js";
 import { resolve } from "./fixture.js";
+import { DESKTOP_APP_SHOTS } from "./desktop-app-shots.js";
 import { SHOTS_A } from "./shots-a.js";
 import { SHOTS_B } from "./shots-b.js";
 import { SHOTS_C } from "./shots-c.js";
@@ -66,6 +67,7 @@ export const SHOTS: readonly TicketShot[] = [
   ...SHOTS_D,
   ...SHOTS_E,
   ...SHOTS_F,
+  ...DESKTOP_APP_SHOTS,
 ];
 
 export const SHOTS_BY_SLUG = new Map(SHOTS.map((shot) => [shot.slug, shot]));

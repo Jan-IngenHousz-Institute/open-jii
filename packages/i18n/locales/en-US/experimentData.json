@@ -155,6 +155,7 @@
       },
       "transfer": {
         "started": "Uploading to {{table}}. You can close this dialog and keep working; keep this tab open until the upload finishes.",
+        "startedInApp": "Uploading to {{table}}. You can close this dialog and keep working; keep this window open until the upload finishes.",
         "received": "Upload to {{table}} received. You'll get a notification when it's ready to query.",
         "failed": "Upload to {{table}} failed",
         "statusUploading": "Uploading",

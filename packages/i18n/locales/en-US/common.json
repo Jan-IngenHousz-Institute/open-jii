@@ -101,7 +101,8 @@
     "support": "Support",
     "documentation": "Documentation",
     "breadcrumbs": "Breadcrumbs",
-    "faq": "FAQ"
+    "faq": "FAQ",
+    "openInDesktopApp": "Open in the desktop app"
   },
   "experiments": {
     "clearSearch": "Clear search",
