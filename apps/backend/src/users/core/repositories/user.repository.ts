@@ -557,7 +557,7 @@ export class UserRepository {
     tx: DbOrTx,
     userId: string,
     createUserProfileDto: CreateUserProfileDto,
-  ): Promise<UserProfileDto> {
+  ): Promise<Pick<CreateUserProfileDto, "firstName" | "lastName" | "bio" | "activated">> {
     const result = await tx.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
 
     if (result.length > 0) {
@@ -585,7 +585,7 @@ export class UserRepository {
       lastName: createUserProfileDto.lastName,
       bio: createUserProfileDto.bio,
       activated: createUserProfileDto.activated,
-    } as UserProfileDto;
+    };
   }
 
   async findUserProfile(userId: string): Promise<Result<UserProfileDto | null>> {

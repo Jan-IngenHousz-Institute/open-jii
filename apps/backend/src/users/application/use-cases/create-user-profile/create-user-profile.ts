@@ -4,12 +4,7 @@ import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { failure, AppError, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
 import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
-import {
-  UserDto,
-  CreateUserProfileDto,
-  UserProfileDto,
-  UpdateUserDto,
-} from "../../../core/models/user.model";
+import { UserDto, CreateUserProfileDto, UpdateUserDto } from "../../../core/models/user.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { UserRepository } from "../../../core/repositories/user.repository";
@@ -63,7 +58,7 @@ export class CreateUserProfileUseCase {
         this.outboxWorker.nudge();
       }
 
-      return userProfileResult.chain(async (userProfile: UserProfileDto) => {
+      return userProfileResult.chain(async (userProfile) => {
         // Update the user with the registered flag
         const updatedUser: UpdateUserDto = {
           registered: true,
