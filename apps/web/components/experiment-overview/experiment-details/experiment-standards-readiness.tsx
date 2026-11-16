@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useLocale } from "~/hooks/useLocale";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
-import { ALWAYS_FOLLOWED } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import type { FollowableStandardId } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -36,7 +35,7 @@ export function ExperimentStandardsReadiness({ experiment }: ExperimentStandards
   const follows =
     chosen.length > 0
       ? t("line.follows", { names: formatList(locale, chosen.map(inSentence)) })
-      : t("line.followsOnly", { name: t(`standard.${ALWAYS_FOLLOWED}.inSentence`) });
+      : t("line.followsNothing");
   const progress = isHeld ? t("line.steps", { count: holding }) : t("line.ready");
   const datasetsHref = `/${locale}/platform/experiments/${experiment.id}/datasets`;
 

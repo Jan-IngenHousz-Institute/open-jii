@@ -102,7 +102,12 @@ type FieldSource =
   | "standard";
 
 function filled(field: string, value: string, source: FieldSource) {
-  return { field, status: "filled", value, source };
+  return { field, status: "filled", value, source, derived: false };
+}
+
+/** A value the platform computes from its source, such as a plot count. */
+function derived(field: string, value: string, source: FieldSource) {
+  return { ...filled(field, value, source), derived: true };
 }
 
 function missing(field: string, reason: object) {
@@ -146,10 +151,10 @@ const MIAPPE_FIELDS = {
     missing("site-name", NO_LOCATION),
     filled("organism", "Glycine max", "study-details"),
     missing("biological-material-id", NO_ROLE),
-    filled("observation-unit-id", "46 plots, A1 to F8", "layout"),
+    derived("observation-unit-id", "46 plots, A1 to F8", "layout"),
     filled("observation-unit-type", "Plot", "layout"),
-    filled("observation-unit-description", "Six rows by eight columns, two gaps", "layout"),
-    filled("variable-name", "6 columns", "data-dictionary"),
+    derived("observation-unit-description", "Six rows by eight columns, two gaps", "layout"),
+    derived("variable-name", "6 columns", "data-dictionary"),
     missing("trait", NOT_DESCRIBED),
     missing("method", NOT_DESCRIBED),
     missing("scale", NOT_DESCRIBED),
@@ -170,13 +175,6 @@ const STANDARDS = {
       filled: REQUIRED_FIELDS - MISSING_FIELDS,
       total: REQUIRED_FIELDS,
       status: { code: "fields-missing", count: MISSING_FIELDS, total: REQUIRED_FIELDS },
-    },
-    {
-      standard: "openaire",
-      state: "partial",
-      filled: null,
-      total: null,
-      status: { code: "filled-while-publishing" },
     },
     {
       standard: "ro-crate",

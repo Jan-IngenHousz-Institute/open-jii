@@ -382,9 +382,9 @@ async function openPlotC4(page: Page, keep: readonly string[] = []): Promise<Loc
   await cell.click();
   await plotPanel(page).getByText("Block", { exact: true }).first().waitFor();
 
-  // Place sensor here arrives with placing sensors, and the switches with OJD-2507. The switches
-  // render only once the attributes route answers.
-  const others = ["[data-place-sensor]", "[data-measurer-visibility]"]
+  // Place sensor here arrives with placing sensors, the switches with OJD-2507 and the roles with
+  // the standards project. The switches and roles render only once the attributes route answers.
+  const others = ["[data-place-sensor]", "[data-measurer-visibility]", "[data-attribute-roles]"]
     .filter((selector) => !keep.includes(selector))
     .map((selector) => page.locator(selector));
   const present = [];
@@ -462,6 +462,24 @@ const measurerSwitches: TicketShot = {
 
     const marker = new ChangeMarker(page);
     await marker.mark(switches, "New", "inside-top-right");
+    return marker.frame([layoutTab(page), viewSwitch(page), plotGrid(page), plotPanel(page)], 24);
+  },
+};
+
+/** The standards project's role picker, under OJD-2507's switches in the same panel. */
+const attributeRoles: TicketShot = {
+  slug: "b10-attribute-roles",
+  route: () => layoutRoute(),
+  fixtures: [exampleLayoutFixture, firstSheetFixture, plotAttributesFixture, walkingOrderRoles],
+  viewport: { width: VIEWPORT.width, height: 1900 },
+  prepare: async (page) => {
+    await openPlotC4(page, ["[data-measurer-visibility]", "[data-attribute-roles]"]);
+    const roles = page.locator("[data-attribute-roles]");
+    await roles.getByText("Studied material", { exact: true }).waitFor();
+    await hideElements([page.locator("[data-color-by]")]);
+
+    const marker = new ChangeMarker(page);
+    await marker.mark(roles, "New", "inside-top-right");
     return marker.frame([layoutTab(page), viewSwitch(page), plotGrid(page), plotPanel(page)], 24);
   },
 };
@@ -1193,6 +1211,7 @@ export const SHOTS_C: readonly TicketShot[] = [
   plotInspector,
   attributeChange,
   measurerSwitches,
+  attributeRoles,
   levelTerm,
   geoAnchor,
   sheetByPlot,

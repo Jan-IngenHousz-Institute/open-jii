@@ -5,11 +5,6 @@
       "inSentence": "the plant phenotyping checklist",
       "name": "MIAPPE"
     },
-    "openaire": {
-      "title": "OpenAIRE record",
-      "inSentence": "the OpenAIRE record",
-      "name": "OpenAIRE"
-    },
     "ro-crate": {
       "title": "File description",
       "inSentence": "the file description",
@@ -47,7 +42,6 @@
   "follows": {
     "title": "This experiment follows",
     "change": "Change",
-    "always": "Always followed",
     "stepsLeft_one": "{{count}} step left",
     "stepsLeft_other": "{{count}} steps left",
     "noStepsLeft": "No step left",
@@ -112,7 +106,7 @@
   "line": {
     "title": "Standards",
     "follows": "Follows {{names}}.",
-    "followsOnly": "Follows {{name}} only.",
+    "followsNothing": "Follows no standard.",
     "steps_one": "{{count}} step before freezing.",
     "steps_other": "{{count}} steps before freezing.",
     "ready": "Nothing holds Freeze.",
@@ -125,6 +119,7 @@
     "filled_one": "{{count}} filled field",
     "filled_other": "{{count}} filled fields",
     "from": "From {{source}}",
+    "derived": "Derived",
     "notFilled": "Not filled",
     "validatorPassed": "The official validator passed the MIAPPE package of the dataset frozen on {{date}}.",
     "validatorFailed": "The official validator failed the MIAPPE package of the dataset frozen on {{date}}.",

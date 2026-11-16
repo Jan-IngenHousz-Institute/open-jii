@@ -203,7 +203,6 @@ const PACKAGE_FILES = [
   ...FILES,
   file("analysisTable", "analysis-table.csv", 241_906),
   file("analysisTable", "analysis-table.parquet", 72_115),
-  file("analysisTable", "codebook.csv", 3_906),
   file("roCrate", "ro-crate-metadata.json", 9_480, {
     type: "conformsTo",
     profiles: ["RO-Crate 1.2", "MIAPPE 1.1"],
@@ -756,8 +755,11 @@ const freezeConfirmShot: TicketShot = {
   },
 };
 
+// A DOI Zenodo mints names Zenodo as publisher, and JII stays the hosting institution only.
+const publisherOf = (doi: string | null) => (doi === null ? PUBLISHER : "Zenodo");
+
 const citation = (doi: string | null) =>
-  `User, S., Example, A., Example, R., & Example, S. (2026). ${DATASET_TITLE} (Version 1) [Data set]. ${PUBLISHER}. ${
+  `User, S., Example, A., Example, R., & Example, S. (2026). ${DATASET_TITLE} (Version 1) [Data set]. ${publisherOf(doi)}. ${
     doi === null ? `https://data.openjii.org/datasets/${VERSION_1_ID}` : `https://doi.org/${doi}`
   }`;
 
@@ -789,7 +791,7 @@ function publicVersionOneFixture(overrides: PublicOverrides = {}): Fixture {
       [`/api/v1/datasets/${VERSION_1_ID}/public`]: {
         ...record,
         citation: citation(record.doi),
-        publisher: PUBLISHER,
+        publisher: publisherOf(record.doi),
         supersededById,
         supersededByVersion,
         excludedCount: EXCLUDED.length,

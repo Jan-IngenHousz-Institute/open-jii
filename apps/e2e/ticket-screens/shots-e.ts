@@ -356,6 +356,9 @@ const plotsMeasuredTwice = new ExperimentPathFixture("measured-twice", [
 
 const noneMeasuredTwice = new ExperimentPathFixture("measured-twice", []);
 
+/** No measurer has started a session, so there is no progress to show. */
+const noProgress = new ExperimentPathFixture("sessions/progress", null);
+
 // CSS rather than roles, since an open dialog hides the rest of the page from role queries.
 function layoutTab(page: Page): Locator {
   return page.locator("[role=tab]", { hasText: /^Layout$/ });
@@ -431,14 +434,9 @@ const layoutOrder: TicketShot = {
   },
 };
 
-async function showPath(page: Page): Promise<void> {
-  await page.getByRole("switch", { name: "Show path" }).click();
-}
-
-/** Turns Show path on and slides the stretch to start at the given walk position. */
+/** Slides the stretch to start at the given walk position. */
 async function showStretchFrom(page: Page, first: number): Promise<Locator> {
   await page.getByText("field-7Q2", { exact: true }).waitFor();
-  await showPath(page);
   const thumb = page.locator("[data-walk-stretch] [role=slider]");
   await thumb.focus();
   for (let position = 1; position < first; position++) {
@@ -490,7 +488,6 @@ const orderSerpentine: TicketShot = {
   viewport: VIEWPORT,
   prepare: async (page) => {
     await gridCard(page).getByText("End", { exact: true }).waitFor();
-    await showPath(page);
     await settle(page);
 
     const marker = new ChangeMarker(page);
@@ -731,6 +728,24 @@ const measuredTwice: TicketShot = {
   },
 };
 
+/** Field days before anyone has started a session. */
+const fieldDaysEmpty: TicketShot = {
+  slug: "d9-field-days-empty",
+  route: () => layoutTabRoute("live"),
+  fixtures: [exampleLayoutFixture, savedWalkingOrder, onlyResearcher, noAssignments, noProgress],
+  viewport: { width: 1440, height: 1000 },
+  prepare: async (page) => {
+    const title = page.getByText("No field days yet", { exact: true });
+    await title.waitFor();
+    await settle(page);
+
+    const emptyState = card(title);
+    const marker = new ChangeMarker(page);
+    await marker.mark(emptyState, "New", "below");
+    return marker.frame([layoutTab(page), viewSwitch(page), emptyState], 24);
+  },
+};
+
 /** The proposal's figure: the live progress card alone, with its whole outline, sharp enough to print. */
 const liveProgressFigure: TicketShot = {
   ...liveMonitor,
@@ -782,6 +797,7 @@ export const SHOTS_E: readonly TicketShot[] = [
   sessionOverview,
   waiting,
   measuredTwice,
+  fieldDaysEmpty,
   liveProgressFigure,
   measuredTwiceFigure,
 ];

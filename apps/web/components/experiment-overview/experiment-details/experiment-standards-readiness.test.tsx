@@ -40,7 +40,7 @@ describe("<ExperimentStandardsReadiness />", () => {
     render(<ExperimentStandardsReadiness experiment={experiment} />);
 
     expect(await screen.findByRole("link", { name: "line.openDatasets" })).toBeInTheDocument();
-    expect(screen.getByText(/line\.followsOnly/)).toBeInTheDocument();
+    expect(screen.getByText(/line\.followsNothing/)).toBeInTheDocument();
     expect(screen.getByText(/line\.ready/)).toBeInTheDocument();
   });
 

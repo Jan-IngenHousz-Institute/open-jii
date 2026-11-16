@@ -1,8 +1,5 @@
 "use client";
 
-import { Lock } from "lucide-react";
-
-import { ALWAYS_FOLLOWED } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import type {
   StandardId,
   StandardReadiness,
@@ -24,21 +21,12 @@ export function FollowedStandardCard({ readiness, stepsLeft, onOpen }: FollowedS
   const { t } = useTranslation("standards");
   const { standard, filled, total, status } = readiness;
 
-  const isAlwaysFollowed = standard === ALWAYS_FOLLOWED;
   const hasCount = filled !== null && total !== null && total > 0;
   const percent = hasCount ? (filled / total) * 100 : 0;
 
   const handleClick = () => onOpen(standard);
 
   const footer = () => {
-    if (isAlwaysFollowed) {
-      return (
-        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-          <Lock aria-hidden className="size-3 shrink-0" />
-          {t("follows.always")}
-        </p>
-      );
-    }
     if (stepsLeft > 0) {
       return (
         <p className="text-status-stale-foreground text-xs font-medium">

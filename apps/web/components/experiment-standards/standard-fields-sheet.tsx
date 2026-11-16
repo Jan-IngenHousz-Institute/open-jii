@@ -107,7 +107,9 @@ export function StandardFieldsSheet({
           </div>
         ) : null}
 
-        {filled.length > 0 ? <FilledFieldsList fields={filled} /> : null}
+        {filled.length > 0 ? (
+          <FilledFieldsList experimentId={experimentId} fields={filled} />
+        ) : null}
       </>
     );
   };

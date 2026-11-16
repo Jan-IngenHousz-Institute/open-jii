@@ -1,6 +1,5 @@
 "use client";
 
-import { ALWAYS_FOLLOWED } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import type {
   FollowableStandardId,
   StandardReadiness,
@@ -22,8 +21,7 @@ export function StandardChoiceRow({ readiness, isFollowing, onToggle }: Standard
   const { t } = useTranslation("standards");
   const { standard, status } = readiness;
 
-  const isAlwaysFollowed = standard === ALWAYS_FOLLOWED;
-  const detail = isAlwaysFollowed ? t("follows.always") : t(`status.${status.code}`, { ...status });
+  const detail = t(`status.${status.code}`, { ...status });
   const name = t(`standard.${standard}.title`);
 
   const handleChange = () => {
@@ -39,12 +37,7 @@ export function StandardChoiceRow({ readiness, isFollowing, onToggle }: Standard
       </div>
 
       {canFollow(readiness) ? (
-        <Switch
-          checked={isAlwaysFollowed || isFollowing}
-          disabled={isAlwaysFollowed}
-          onCheckedChange={handleChange}
-          aria-label={name}
-        />
+        <Switch checked={isFollowing} onCheckedChange={handleChange} aria-label={name} />
       ) : null}
     </li>
   );

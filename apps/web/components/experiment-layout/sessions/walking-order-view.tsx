@@ -56,6 +56,7 @@ export function WalkingOrderView({ experimentId, canEdit, plan, stage }: Walking
       <WalkingOrderPreview
         plan={plan}
         showsOrder={showsOrder}
+        showsPath={showsOrder}
         canEdit={canEdit}
         onRegenerate={regenerate}
       />

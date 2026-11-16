@@ -1,8 +1,12 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import { useLocale } from "~/hooks/useLocale";
 
-import type { FilledStandardField } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
+import type {
+  FieldSource,
+  FilledStandardField,
+} from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import { useTranslation } from "@repo/i18n";
 import {
   Collapsible,
@@ -13,15 +17,33 @@ import {
 import { FilledFieldRow } from "./filled-field-row";
 
 interface FilledFieldsListProps {
+  experimentId: string;
   fields: FilledStandardField[];
 }
 
 /** The fields already filled, collapsed under their count so the gaps lead. */
-export function FilledFieldsList({ fields }: FilledFieldsListProps) {
+export function FilledFieldsList({ experimentId, fields }: FilledFieldsListProps) {
   const { t } = useTranslation("standards");
+  const locale = useLocale();
+
+  // Scaffold: where each source is set, which a derived value links to. The standard sets its own.
+  const experimentPath = `/${locale}/platform/experiments/${experimentId}`;
+  const sourcePaths: Record<FieldSource, string | null> = {
+    experiment: experimentPath,
+    "study-details": experimentPath,
+    layout: `${experimentPath}/layout?view=plots`,
+    "data-dictionary": `${experimentPath}/data`,
+    profile: `/${locale}/platform/account`,
+    "author-list": `${experimentPath}/datasets`,
+    standard: null,
+  };
 
   const renderField = (field: FilledStandardField) => (
-    <FilledFieldRow key={field.field} field={field} />
+    <FilledFieldRow
+      key={field.field}
+      field={field}
+      sourceHref={field.derived ? sourcePaths[field.source] : null}
+    />
   );
 
   return (

@@ -41,7 +41,6 @@
     "summary": "{{strategy}}, order code {{code}}",
     "summaryNoCode": "{{strategy}}",
     "previewDescription": "{{count}} plots in walking order",
-    "showPath": "Show path",
     "stretchLabel": "Stretch of the walk",
     "stretchCount": "{{count}} {{value}}",
     "stretchHolds": "Plots {{first}} to {{last}} of the walk hold {{counts}}.",

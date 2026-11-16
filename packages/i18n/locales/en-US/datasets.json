@@ -375,7 +375,7 @@
     "fileDetails": {
       "snapshot": "Every reading the dataset holds, as taken",
       "dataDictionary": "Every column, with what it measures",
-      "analysisTable": "One row per reading with its plot's attributes, and a codebook for each column",
+      "analysisTable": "One row per reading with its plot's attributes, described in the data dictionary",
       "roCrate": "Describes every file of this dataset",
       "miappe": "ISA-Tab files"
     },

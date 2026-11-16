@@ -10,14 +10,11 @@ import type { WalkingStrategy } from "@repo/api/domains/experiment/sessions/expe
 import { useTranslation } from "@repo/i18n";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Label } from "@repo/ui/components/label";
-import { Switch } from "@repo/ui/components/switch";
 
 import { PlotStateLegend } from "../plot-state-legend";
 import type { FieldPlan } from "./field-plan";
@@ -35,6 +32,8 @@ interface WalkingOrderPreviewProps {
   plan: FieldPlan;
   /** Numbers the plots, marks Start and End and lays the walk out under the grid. */
   showsOrder: boolean;
+  /** Draws the walk on the grid, whole or as a stretch, wherever the order is shown. */
+  showsPath: boolean;
   canEdit: boolean;
   onRegenerate: () => void;
   shares?: FieldShares;
@@ -51,6 +50,7 @@ const WHOLE_WALK_STRATEGIES: readonly (WalkingStrategy | null)[] = ["byRow", "se
 export function WalkingOrderPreview({
   plan,
   showsOrder,
+  showsPath,
   canEdit,
   onRegenerate,
   shares,
@@ -58,7 +58,6 @@ export function WalkingOrderPreview({
 }: WalkingOrderPreviewProps) {
   const { t } = useTranslation("fieldSessions");
   const locale = useLocale();
-  const [isPathOn, setIsPathOn] = useState(false);
   const [stretchFirst, setStretchFirst] = useState(1);
   const focus = useGridFocus(plan.layout.rows, plan.layout.columns);
 
@@ -71,7 +70,7 @@ export function WalkingOrderPreview({
       : plan.order.slice(balance.outside.first - 1, balance.outside.last),
   );
 
-  const isPathShown = showsOrder && isPathOn;
+  const isPathShown = showsOrder && showsPath;
   const isWholeWalk = WHOLE_WALK_STRATEGIES.includes(plan.strategy);
   const isStretchShown = isPathShown && !isWholeWalk;
   const stretch = {
@@ -115,15 +114,6 @@ export function WalkingOrderPreview({
     />
   );
 
-  const pathSwitch = (
-    <div className="flex items-center gap-2">
-      <Label htmlFor="walk-show-path" className="text-sm font-normal">
-        {t("walkingOrder.showPath")}
-      </Label>
-      <Switch id="walk-show-path" checked={isPathOn} onCheckedChange={setIsPathOn} />
-    </div>
-  );
-
   const balanceLine = isOutside ? (
     <p className="text-status-stale-foreground flex items-center gap-1.5 text-sm">
       <TriangleAlert className="size-4 shrink-0" aria-hidden />
@@ -143,7 +133,6 @@ export function WalkingOrderPreview({
       <CardHeader>
         <CardTitle>{t("gridTitle", { level: plan.layout.levelName })}</CardTitle>
         <CardDescription>{description}</CardDescription>
-        {showsOrder ? <CardAction>{pathSwitch}</CardAction> : null}
       </CardHeader>
       <CardContent className="space-y-4">
         <SessionGrid

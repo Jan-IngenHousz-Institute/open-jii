@@ -149,6 +149,7 @@ export function DivideFieldWorkspace({
       <WalkingOrderPreview
         plan={plan}
         showsOrder={plan.hasOrder}
+        showsPath={false}
         canEdit={canEdit}
         onRegenerate={regenerate}
         shares={hasOtherMembers ? shares : undefined}

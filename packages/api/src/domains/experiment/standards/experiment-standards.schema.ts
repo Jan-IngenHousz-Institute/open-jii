@@ -6,14 +6,7 @@ import { zExperimentIdPathParam } from "../experiment.schema";
  * Every profile the platform reports on, by its own name. Vocabularies such as Crop Ontology are
  * preferred by a profile rather than followed on their own.
  */
-export const zStandardId = z.enum([
-  "miappe",
-  "openaire",
-  "ro-crate",
-  "brapi",
-  "ogc-sensorthings",
-  "fair",
-]);
+export const zStandardId = z.enum(["miappe", "ro-crate", "brapi", "ogc-sensorthings", "fair"]);
 
 /** The profiles a researcher step can exist for, so an experiment may choose to follow them. */
 export const zFollowableStandardId = zStandardId.extract(["miappe"]);
@@ -81,7 +74,7 @@ export const zStandardReadiness = z.object({
 });
 
 export const zExperimentStandards = z.object({
-  /** What the experiment chose, stored on it. The OpenAIRE record is followed without being listed. */
+  /** What the experiment chose, stored on it. A new experiment follows nothing. */
   followed: z.array(zFollowableStandardId),
   standards: z.array(zStandardReadiness),
   /** Ranked, for every standard, so a choice can be previewed before it is saved. */
@@ -109,6 +102,8 @@ export const zStandardField = z.discriminatedUnion("status", [
     status: z.literal("filled"),
     value: z.string(),
     source: zFieldSource,
+    /** Computed by the platform from its source, such as a plot count, so it changes only there. */
+    derived: z.boolean(),
   }),
   z.object({
     field: z.string().min(1),
@@ -151,6 +146,3 @@ export type MissingStandardField = Extract<StandardField, { status: "missing" }>
 export type FilledStandardField = Extract<StandardField, { status: "filled" }>;
 export type ValidatorVerdict = z.infer<typeof zValidatorVerdict>;
 export type StandardFields = z.infer<typeof zStandardFields>;
-
-/** Every experiment follows the OpenAIRE record, so it is never stored and cannot be removed. */
-export const ALWAYS_FOLLOWED: StandardId = "openaire";

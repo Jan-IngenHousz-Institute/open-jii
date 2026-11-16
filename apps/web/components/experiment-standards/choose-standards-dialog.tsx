@@ -3,7 +3,6 @@
 import { useUpdateFollowedStandards } from "@/hooks/experiment/useUpdateFollowedStandards/useUpdateFollowedStandards";
 import { useState } from "react";
 
-import { ALWAYS_FOLLOWED } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import type {
   FollowableStandardId,
   StandardReadiness,
@@ -42,11 +41,7 @@ export function ChooseStandardsDialog({
   // A failed save raises the app's error toast, and the dialog stays open to try again.
   const { mutate: saveFollowed, isPending } = useUpdateFollowedStandards();
 
-  const isAlwaysFollowed = (row: StandardReadiness) => row.standard === ALWAYS_FOLLOWED;
-  const followable = [
-    ...standards.filter(isAlwaysFollowed),
-    ...standards.filter((row) => canFollow(row) && !isAlwaysFollowed(row)),
-  ];
+  const followable = standards.filter(canFollow);
   const shownOnly = standards.filter((row) => !canFollow(row));
 
   const handleOpenChange = (open: boolean) => {

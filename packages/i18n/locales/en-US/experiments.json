@@ -491,7 +491,7 @@
     "growthFacilityHelp": "Where the plants grew, such as an open field or a greenhouse.",
     "growthFacilityPlaceholder": "e.g. Open field",
     "license": "Data license",
-    "licenseHelp": "CC BY 4.0 lets anyone reuse the data if they credit the authors. CC0 1.0 gives the data to the public domain. New datasets start with this license, and a published dataset keeps the license it was published with.",
+    "licenseHelp": "CC0 1.0 gives the data to the public domain. CC BY 4.0 lets anyone reuse the data if they credit the authors. CC BY-SA 4.0 also asks them to share what they build under the same license. New datasets start with this license, and a published dataset keeps the license it was published with.",
     "licensePlaceholder": "Select a license",
     "licenseNone": "No license",
     "licenseCc0": "CC0 1.0 (public domain)",

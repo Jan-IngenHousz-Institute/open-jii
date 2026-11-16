@@ -1,9 +1,6 @@
 import { useExperimentStandards } from "~/hooks/experiment/useExperimentStandards/useExperimentStandards";
 
-import {
-  ALWAYS_FOLLOWED,
-  zFollowableStandardId,
-} from "@repo/api/domains/experiment/standards/experiment-standards.schema";
+import { zFollowableStandardId } from "@repo/api/domains/experiment/standards/experiment-standards.schema";
 import type {
   ExperimentStandards,
   FollowableStandardId,
@@ -18,14 +15,14 @@ export function isFollowable(standard: StandardId): standard is FollowableStanda
 
 /** A standard can be followed only where a researcher step can exist for this experiment. */
 export function canFollow({ standard, state }: StandardReadiness): boolean {
-  return standard === ALWAYS_FOLLOWED || (isFollowable(standard) && state !== "not-applicable");
+  return isFollowable(standard) && state !== "not-applicable";
 }
 
 export interface FollowedStandards {
   /** Every standard the platform reports on, for choosing. */
   all: StandardReadiness[];
   chosen: FollowableStandardId[];
-  /** The chosen standards in the platform's order, then the OpenAIRE record. */
+  /** The chosen standards in the platform's order. */
   followed: StandardReadiness[];
   /** The steps that move a followed standard or hold every dataset, the ones holding Freeze first. */
   steps: StandardsStep[];
@@ -34,12 +31,8 @@ export interface FollowedStandards {
 }
 
 function narrow(answer: ExperimentStandards): FollowedStandards {
-  const followedIds: StandardId[] = [...answer.followed, ALWAYS_FOLLOWED];
-
-  const isFollowed = (standard: StandardId) => followedIds.includes(standard);
-  const isChosen = (row: StandardReadiness) =>
-    isFollowable(row.standard) && answer.followed.includes(row.standard);
-  const isAlwaysFollowed = (row: StandardReadiness) => row.standard === ALWAYS_FOLLOWED;
+  const isFollowed = (standard: StandardId) =>
+    isFollowable(standard) && answer.followed.includes(standard);
 
   // A step with no standard holds every dataset, whatever the experiment follows.
   const isShown = (step: StandardsStep) =>
@@ -56,7 +49,7 @@ function narrow(answer: ExperimentStandards): FollowedStandards {
   return {
     all: answer.standards,
     chosen: answer.followed,
-    followed: [...answer.standards.filter(isChosen), ...answer.standards.filter(isAlwaysFollowed)],
+    followed: answer.standards.filter((row) => isFollowed(row.standard)),
     steps,
     holding: steps.filter((step) => step.holdsFreeze).length,
   };
