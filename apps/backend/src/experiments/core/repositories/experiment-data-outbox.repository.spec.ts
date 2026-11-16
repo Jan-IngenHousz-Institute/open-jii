@@ -128,6 +128,19 @@ describe("ExperimentDataOutboxRepository", () => {
     expect(claimed).toHaveLength(2);
   });
 
+  it("refuses an annotation or a sheet owed without its experiment", async () => {
+    for (const recordType of ["annotation", "metadata_sheet"] as const) {
+      await expect(
+        testApp.database.insert(experimentDataOutbox).values({
+          recordType,
+          recordId: faker.string.uuid(),
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ).rejects.toThrow();
+    }
+  });
+
   it("keeps one waiting row however often a record changes", async () => {
     const record = annotation();
 

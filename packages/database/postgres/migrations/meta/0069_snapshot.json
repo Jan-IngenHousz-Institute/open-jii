@@ -1,5 +1,5 @@
 {
-  "id": "2ff33da2-126d-4368-9c72-fdc5adfe7f48",
+  "id": "1981018a-83a6-420c-ac95-7a9bd0b18343",
   "prevId": "18157c35-b93b-4f0a-a05f-23ff4ff82787",
   "version": "7",
   "dialect": "postgresql",
@@ -1573,7 +1573,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "experiment_data_outbox_experiment_check": {
+          "name": "experiment_data_outbox_experiment_check",
+          "value": "\"experiment_data_outbox\".\"experiment_id\" IS NOT NULL OR \"experiment_data_outbox\".\"record_type\" NOT IN ('annotation', 'metadata_sheet')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.experiment_devices": {
