@@ -19,7 +19,7 @@ import type { VariantField } from "../../../databricks/services/query-builder/sc
 import type { StoreColumn, StoreTable } from "./store-tables";
 
 export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf"> & {
-  reprintedNumbers?: boolean;
+  text?: { column: string; key?: string };
 };
 
 interface StoreOrdering extends QueryOrdering {
@@ -45,6 +45,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   private columns: StoreColumn[] = [];
   private key: string[] = [];
+  private payloadTexts: Partial<Record<string, string>> = {};
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
@@ -58,6 +59,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   read(table: StoreTable, experimentId: string, identifier?: string): this {
     this.columns = table.columns;
     this.key = table.key;
+    this.payloadTexts = table.payloadTexts ?? {};
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -202,18 +204,23 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       .filter(({ name }) => !hidden.has(name))
       .map(({ name, type, idOf }) => ({ name, type, idOf }));
     const flattened = this.flattenedFields();
-    const fields = this.variantColumns.flatMap((variant) => {
-      const reprintedNumbers = this.reprintsNumbers(variant.column);
-      return VariantSchema.isObject(variant.schema)
+    const fields = this.variantColumns.flatMap((variant) =>
+      VariantSchema.isObject(variant.schema)
         ? flattened
             .filter(({ column }) => column === variant.column)
             .map(({ key, field }) => ({
               name: key,
               type: this.variantCastType(field.type),
-              reprintedNumbers,
+              ...this.textSource(variant.column, field.name),
             }))
-        : [{ name: variant.column, type: this.variantCastType(variant.schema), reprintedNumbers }];
-    });
+        : [
+            {
+              name: variant.column,
+              type: this.variantCastType(variant.schema),
+              ...this.textSource(variant.column),
+            },
+          ],
+    );
     return [...base, ...fields];
   }
 
@@ -223,9 +230,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
 
     const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
-    const projection = this.outputColumns()
-      .map((column) => `${this.projectedValue(column)} AS ${this.quoteName(column.name)}`)
-      .join(", ");
+    const projection = this.projection();
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const order = this.ordering === undefined ? "" : `ORDER BY ${this.sortClause(this.ordering)}`;
@@ -267,13 +272,30 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     ]);
   }
 
+  /** Each column under its name; of the columns read from one payload's text, the first carries
+   *  the text and the rest carry nothing, so a row holds each text once. */
+  private projection(): string {
+    const carried = new Set<string>();
+    return this.outputColumns()
+      .map((column) => {
+        const text = column.text?.column;
+        if (text === undefined) {
+          return `${this.projectedValue(column)} AS ${this.quoteName(column.name)}`;
+        }
+        const carries = !carried.has(text);
+        carried.add(text);
+        return `${carries ? text : "NULL"} AS ${this.quoteName(column.name)}`;
+      })
+      .join(", ");
+  }
+
   private outputColumn(name: string): StoreOutputColumn {
     const field = this.flattenedFields().find(({ key }) => key === name);
     if (field !== undefined) {
       return {
         name,
         type: this.variantCastType(field.field.type),
-        reprintedNumbers: this.reprintsNumbers(field.column),
+        ...this.textSource(field.column, field.field.name),
       };
     }
     const whole = this.variantColumns.find(
@@ -283,7 +305,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return {
         name,
         type: this.variantCastType(whole.schema),
-        reprintedNumbers: this.reprintsNumbers(whole.column),
+        ...this.textSource(whole.column),
       };
     }
     const [base, path] = this.structPath(name);
@@ -441,9 +463,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this.typedValue(path, object, type);
   }
 
-  /** Every payload but the answers, a map of text, is one of the store's JSON columns. */
-  private reprintsNumbers(column: string): boolean {
-    return column !== "questions_data";
+  /**
+   * A page shows a JSON payload's cells from its text, since the JSON column reprints numbers and
+   * keeps no null key; filters and sorts read the JSON column. A distinct read keeps to the JSON
+   * column too, as distinct texts are not distinct values.
+   */
+  private textSource(column: string, key?: string): Pick<StoreOutputColumn, "text"> {
+    const text = this.payloadTexts[column];
+    return text === undefined || this.isDistinct ? {} : { text: { column: text, key } };
   }
 
   /** The feed stores a payload that is no object as `{"_items": [...]}` or `{"_value": x}`. */

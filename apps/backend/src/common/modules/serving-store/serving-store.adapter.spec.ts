@@ -303,6 +303,8 @@ const MACRO_RESULTS = [
       user_id: "a field, not the column",
       "Plot no.": "P1",
     },
+    macro_output_text:
+      '{"PAR":1,"Plot no.":"P1","nested":{"x":1.5,"y":"s"},"order":["red","blue"],"user_id":"a field, not the column"}',
     questions_data: { plot: "A1" },
     annotations: [],
     _commit_version: 1,
@@ -316,6 +318,7 @@ const MACRO_RESULTS = [
     user_id: BEN,
     macro_id: "mac1",
     macro_output: { PAR: 0.0000001, order: [] },
+    macro_output_text: '{"PAR":1.0E-7,"order":[]}',
     questions_data: {},
     annotations: [],
     _commit_version: 1,
@@ -328,6 +331,7 @@ const MACRO_RESULTS = [
     timestamp: "2026-09-14 16:56:31.972123",
     macro_id: "mac2",
     macro_output: { _items: [{ k: 1 }, { k: 2.5, j: "x" }] },
+    macro_output_text: '[{"k":1},{"j":"x","k":2.5}]',
     questions_data: {},
     annotations: [],
     _commit_version: 1,
@@ -344,6 +348,7 @@ const UPLOADS = [
     created_by: ADA,
     uploaded_at: "2026-09-01 10:00:00",
     uploaded_data: { "Plot no.": 7, h: 0.1 },
+    uploaded_data_text: '{"Plot no.":7,"h":0.1}',
     _commit_version: 1,
     _commit_timestamp: "2026-09-01 10:00:01",
   },
@@ -355,6 +360,7 @@ const UPLOADS = [
     created_by: ADA,
     uploaded_at: "2026-09-02 10:00:00",
     uploaded_data: { "Plot no.": 8, h: 1000 },
+    uploaded_data_text: '{"Plot no.":8,"h":1000}',
     _commit_version: 1,
     _commit_timestamp: "2026-09-02 10:00:01",
   },
@@ -628,26 +634,31 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     ]);
   });
 
-  it("writes a variant field's doubles as the warehouse holds them, though the store reprints them", async () => {
-    // Values of a macro's vH+ as gold holds them: the macro's Python json.dumps wrote -2.89e-06,
-    // which Spark keeps as a double, and the rest plainly, which it keeps as decimals or text.
-    const values: [number | string, string][] = [
-      [-0.00000289, "-2.89E-6"],
-      [0.00012345, "0.00012345"],
-      [1e-7, "1.0E-7"],
-      [12345678.9, "12345678.9"],
-      [3, "3"],
-      ["NA", '"NA"'],
+  it("shows a macro's fields from its text as Spark wrote it, a null one apart from a missing one", async () => {
+    // Each output as the feed sends it: the JSON column's value, which the store reprints and
+    // drops null keys from, and Spark's text of gold's VARIANT. Then the cell the warehouse shows.
+    const outputs: [Record<string, unknown>, string, string | null][] = [
+      [{ "vH+": -0.00000289 }, '{"vH+":-2.89E-6}', "-2.89E-6"],
+      [{ "vH+": 0.00000289 }, '{"vH+":0.00000289}', "0.00000289"],
+      [{ "vH+": null }, '{"vH+":null}', "null"],
+      [{}, "{}", null],
+      [
+        { "vH+": 1.2345678901234568e29 },
+        '{"vH+":123456789012345678901234567890}',
+        "123456789012345678901234567890",
+      ],
+      [{ "vH+": "NA" }, '{"vH+":"NA"}', '"NA"'],
     ];
     await admin.insert({
       table: "macro_results",
-      values: values.map(([value], index) => ({
+      values: outputs.map(([output, text], index) => ({
         experiment_id: "macro-numbers",
         id: 300 + index,
         raw_id: 300 + index,
         timestamp: "2026-09-13 01:00:00",
         macro_id: "mac3",
-        macro_output: { "vH+": value },
+        macro_output: output,
+        macro_output_text: text,
         questions_data: {},
         annotations: [],
         _commit_version: 1,
@@ -663,11 +674,46 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       variants: [
         { columnName: "macro_output", schema: "OBJECT<`vH+`: VARIANT>", suffix: "output" },
       ],
-      columns: ["vH+"],
+      columns: ["id", "vH+"],
       ordering: { column: "id" },
     });
 
-    expect(data.rows).toEqual(values.map(([, cell]) => [cell]));
+    expect(data.rows.map(([, cell]) => cell)).toEqual(outputs.map(([, , cell]) => cell));
+  });
+
+  it("shows an upload's doubles as Spark wrote them, which a parquet upload writes in Java's form", async () => {
+    await admin.insert({
+      table: "uploads",
+      values: [
+        {
+          experiment_id: "parquet",
+          id: 1,
+          upload_table_id: "t3",
+          uploaded_at: "2026-09-01 10:00:00",
+          uploaded_data: { ph: 0.00015, n: 12345678 },
+          uploaded_data_text: '{"n":1.2345678E7,"ph":1.5E-4}',
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-01 10:00:01",
+        },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      tableName: "t3",
+      tableType: "upload",
+      experimentId: "parquet",
+      variants: [
+        {
+          columnName: "uploaded_data",
+          schema: "OBJECT<n: VARIANT, ph: VARIANT>",
+          suffix: "upload",
+        },
+      ],
+      columns: ["ph", "n"],
+    });
+
+    expect(data.rows).toEqual([["1.5E-4", "1.2345678E7"]]);
   });
 
   it("reads a payload that is no object whole", async () => {
@@ -1040,6 +1086,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           upload_table_id: "t2",
           uploaded_at: "2026-09-01 10:00:00",
           uploaded_data: { "Temp\\": 1, order: ["a"] },
+          uploaded_data_text: JSON.stringify({ "Temp\\": 1, order: ["a"] }),
           _commit_version: 1,
           _commit_timestamp: "2026-09-01 10:00:01",
         },
@@ -1049,6 +1096,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           upload_table_id: "t2",
           uploaded_at: "2026-09-02 10:00:00",
           uploaded_data: { "Temp\\": 2 },
+          uploaded_data_text: JSON.stringify({ "Temp\\": 2 }),
           _commit_version: 1,
           _commit_timestamp: "2026-09-02 10:00:01",
         },
@@ -1136,6 +1184,19 @@ describe("StoreTables against the migrations", () => {
       expect(table.key).toContain(partitionTime);
     },
   );
+
+  it.each([
+    ["macro_results", MACRO_RESULTS_TABLE],
+    ["uploads", UPLOADS_TABLE],
+  ])("%s holds the text each payload is shown from", (name, table) => {
+    const texts = Object.values(table.payloadTexts ?? {});
+
+    expect(texts).toHaveLength(1);
+    for (const text of texts) {
+      const added = `ALTER TABLE ${name} ADD COLUMN IF NOT EXISTS ${text} Nullable(String)`;
+      expect(migrationStatements().some((statement) => statement.includes(added))).toBe(true);
+    }
+  });
 });
 
 /** The migrations as their runner applies them, one statement at a time. */

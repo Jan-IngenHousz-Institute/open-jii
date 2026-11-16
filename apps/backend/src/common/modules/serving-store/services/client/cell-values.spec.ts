@@ -20,6 +20,43 @@ describe("CellValues.javaDouble", () => {
   });
 });
 
+describe("CellValues.payloadCell", () => {
+  // A payload's text as Spark writes gold's VARIANT, which is what the warehouse shows.
+  const payload = CellValues.payload(
+    '{"ECSt":null,"big":123456789012345678901234567890,"empty":{},"plain":0.00000289,"s":"NA","vH+":-2.89E-6,"x":1.5E-4,"y":1.2345678E7}',
+  );
+
+  it("reads a field holding null as the warehouse shows it, and a missing field as no value", () => {
+    expect(CellValues.payloadCell(payload, "ECSt", "VARIANT")).toBe("null");
+    expect(CellValues.payloadCell(payload, "ECSt", "DOUBLE")).toBeNull();
+    expect(CellValues.payloadCell(payload, "missing", "VARIANT")).toBeNull();
+  });
+
+  it("writes each number as Spark wrote it, a double, a decimal or an integer past 64 bits", () => {
+    expect(CellValues.payloadCell(payload, "vH+", "VARIANT")).toBe("-2.89E-6");
+    expect(CellValues.payloadCell(payload, "plain", "VARIANT")).toBe("0.00000289");
+    expect(CellValues.payloadCell(payload, "big", "VARIANT")).toBe(
+      "123456789012345678901234567890",
+    );
+    expect(CellValues.payloadCell(payload, "x", "DOUBLE")).toBe("1.5E-4");
+    expect(CellValues.payloadCell(payload, "y", "VARIANT")).toBe("1.2345678E7");
+    expect(CellValues.payloadCell(payload, "s", "VARIANT")).toBe('"NA"');
+  });
+
+  it("reads an empty object as the warehouse does, as a variant or a struct", () => {
+    expect(CellValues.payloadCell(payload, "empty", "VARIANT")).toBe("{}");
+    expect(CellValues.payloadCell(payload, "empty", "STRUCT<a: DOUBLE>")).toBe('{"a":null}');
+  });
+
+  it("reads a whole payload, and nothing for a row without text", () => {
+    expect(CellValues.payloadCell(CellValues.payload("[0.7,1]"), undefined, "ARRAY<DOUBLE>")).toBe(
+      '["0.7","1.0"]',
+    );
+    expect(CellValues.payloadCell(CellValues.payload("null"), undefined, "VARIANT")).toBe("null");
+    expect(CellValues.payloadCell(CellValues.payload(null), "vH+", "VARIANT")).toBeNull();
+  });
+});
+
 describe("CellValues.text", () => {
   it("writes a time in UTC to the millisecond, cut rather than rounded", () => {
     expect(CellValues.text("2026-09-14 16:56:31.999600", "TIMESTAMP")).toBe(
@@ -71,18 +108,6 @@ describe("CellValues.text", () => {
     expect(CellValues.text('{"v":{"k":1.5},"b":true}', "STRUCT<v: VARIANT, b: BOOLEAN>")).toBe(
       '{"v":"{\\"k\\":1.5}","b":"true"}',
     );
-  });
-
-  it("writes a number the store reprinted as a double where Python's json.dumps gave it an exponent", () => {
-    const reprinted = '{"a":-0.00000289,"b":0.00012345,"c":1e-7,"d":12345678.9,"e":3,"f":"NA"}';
-
-    expect(CellValues.text(reprinted, "VARIANT", true)).toBe(
-      '{"a":-2.89E-6,"b":0.00012345,"c":1.0E-7,"d":12345678.9,"e":3,"f":"NA"}',
-    );
-    expect(CellValues.text("-0.00000289", "VARIANT", true)).toBe("-2.89E-6");
-    expect(CellValues.text("[0.00005,0]", "ARRAY<VARIANT>", true)).toBe('["5.0E-5","0"]');
-    // Spark's own text says which numbers are doubles.
-    expect(CellValues.text("-0.00000289", "VARIANT")).toBe("-0.00000289");
   });
 
   it("writes a variant with its keys in order and an exponent as a double", () => {

@@ -60,7 +60,7 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("nullif(trim(device_name), ''), nullif(trim(client_id), '')");
   });
 
-  it("reads a scalar field by type, anything else as JSON, and an empty object as null", () => {
+  it("reads a field from the JSON column by type for a distinct read, anything else as JSON", () => {
     const sql = new StoreQueryBuilder()
       .read(MACRO_RESULTS_TABLE, "e1", "m1")
       .parseVariant(
@@ -69,6 +69,7 @@ describe("StoreQueryBuilder", () => {
         "output",
       )
       .select(["PAR", "Plot no.", "nested", "trace", "mixed", "dead"])
+      .distinct()
       .build();
 
     expect(sql).toContain("toString(accurateCastOrNull(macro_output.`PAR`, 'Int64')) AS `PAR`");
@@ -83,19 +84,27 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("accurateCastOrNull(macro_output.`dead`, 'String') AS `dead`");
   });
 
-  it("marks the fields read from the store's JSON columns, which reprint their numbers", () => {
-    const columns = new StoreQueryBuilder()
+  it("shows a payload's fields from its text, carried once, and filters and sorts by its JSON column", () => {
+    const builder = new StoreQueryBuilder()
       .read(MACRO_RESULTS_TABLE, "e1", "m1")
-      .parseVariant("macro_output", "OBJECT<`vH+`: VARIANT>", "output")
+      .parseVariant("macro_output", "OBJECT<`vH+`: VARIANT, PAR: DOUBLE>", "output")
       .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")
-      .select(["id", "vH+", "plot"])
-      .outputColumns();
+      .select(["id", "vH+", "PAR", "plot"])
+      .filter({ column: "PAR", operator: "greater_than", value: 1 })
+      .orderBy({ column: "vH+", direction: "ASC" });
+    const sql = builder.build();
 
-    expect(columns.map(({ reprintedNumbers }) => reprintedNumbers)).toEqual([
+    expect(builder.outputColumns().map(({ text }) => text)).toEqual([
       undefined,
-      true,
-      false,
+      { column: "macro_output_text", key: "vH+" },
+      { column: "macro_output_text", key: "PAR" },
+      undefined,
     ]);
+    expect(sql).toContain(
+      "SELECT toString(id) AS `id`, macro_output_text AS `vH+`, NULL AS `PAR`, questions_data['plot'] AS `plot`",
+    );
+    expect(sql).toContain("accurateCastOrNull(macro_output.`PAR`, 'Float64') > 1");
+    expect(sql).toContain("ORDER BY if(dynamicType(macro_output.`vH+`) != 'None'");
   });
 
   it("escapes backslashes in a quoted name, which the store reads as escapes", () => {
@@ -103,6 +112,7 @@ describe("StoreQueryBuilder", () => {
       .read(UPLOADS_TABLE, "e1", "t1")
       .parseVariant("uploaded_data", "OBJECT<`Temp\\`: BIGINT, `a``b`: STRING>", "upload")
       .select(["Temp\\", "a`b"])
+      .distinct()
       .build();
 
     expect(sql).toContain("uploaded_data.`Temp\\\\`, 'Int64')) AS `Temp\\\\`");
@@ -114,6 +124,7 @@ describe("StoreQueryBuilder", () => {
       .read(MACRO_RESULTS_TABLE, "e1", "m2")
       .parseVariant("macro_output", "ARRAY<OBJECT<k: DOUBLE>>", "output")
       .select(["macro_output"])
+      .distinct()
       .build();
 
     expect(sql).toContain("toJSONString(macro_output._items) AS `macro_output`");

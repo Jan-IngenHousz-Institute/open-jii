@@ -193,19 +193,34 @@ export class ServingStoreAdapter implements ServingStorePort {
       type_text: type,
       position,
     }));
-    const rows = result.value.rows.map((row) =>
-      query.columns.map(({ type, idOf, reprintedNumbers }, index) => {
+    const rows = result.value.rows.map((row) => {
+      const payloads = this.payloads(query.columns, row);
+      return query.columns.map(({ type, idOf, text }, index) => {
         const value = row[index];
+        if (text !== undefined) {
+          return CellValues.payloadCell(payloads.get(text.column), text.key, type);
+        }
         if (idOf === "device") {
           return JSON.stringify(value);
         }
         if (idOf === "contributor") {
           return typeof value === "string" ? value : null;
         }
-        return CellValues.text(value, type, reprintedNumbers);
-      }),
-    );
+        return CellValues.text(value, type);
+      });
+    });
     return success({ columns, rows, totalRows: rows.length, truncated: false });
+  }
+
+  /** The row's payloads, each parsed once from the first column that carries its text. */
+  private payloads(columns: StoreQueryColumn[], row: unknown[]): Map<string, unknown> {
+    const payloads = new Map<string, unknown>();
+    columns.forEach(({ text }, index) => {
+      if (text !== undefined && !payloads.has(text.column)) {
+        payloads.set(text.column, CellValues.payload(row[index]));
+      }
+    });
+    return payloads;
   }
 
   async getExperimentIds(
