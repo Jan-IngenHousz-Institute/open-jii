@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -274,23 +274,22 @@ def test_a_row_sent_again_reads_once_at_its_newest_commit_before_any_merge(
     assert [(int(row["id"]), int(row["_commit_version"])) for row in rows] == [(1, 4), (2, 3)]
 
 
-def test_an_annotation_reads_at_its_newest_copy_and_a_deleted_one_not_at_all(
+def test_an_annotation_reads_at_its_newest_claims_copy_and_a_deleted_one_not_at_all(
     admin: _User, reader: _User
 ) -> None:
     admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.annotations")
+    columns = "experiment_id, id, table_name, row_id, type, flag_type, is_deleted, claimed_at"
     admin.ok(
-        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, table_name, row_id, type, flag_type) VALUES "
-        "('e1', 'a1', 'raw_data', '1', 'flag', 'outlier'), "
-        "('e1', 'a2', 'raw_data', '2', 'comment', NULL), "
-        "('e2', 'a3', 'raw_data', '3', 'flag', 'outlier')"
+        f"INSERT INTO {_DATABASE}.annotations ({columns}) VALUES "
+        "('e1', 'a1', 'raw_data', '1', 'flag', 'needs_review', 0, '2026-10-19 10:02:00'), "
+        "('e1', 'a2', 'raw_data', '2', 'comment', NULL, 0, '2026-10-19 10:01:00'), "
+        "('e2', 'a3', 'raw_data', '3', 'flag', 'outlier', 0, '2026-10-19 10:01:00')"
     )
+    # An older claim's copy that lands late, and a deletion's newer one.
     admin.ok(
-        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, table_name, row_id, type, flag_type) VALUES "
-        "('e1', 'a1', 'raw_data', '1', 'flag', 'needs_review')"
-    )
-    admin.ok(
-        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, table_name, row_id, type, is_deleted) VALUES "
-        "('e1', 'a2', '', '', '', 1)"
+        f"INSERT INTO {_DATABASE}.annotations ({columns}) VALUES "
+        "('e1', 'a1', 'raw_data', '1', 'flag', 'outlier', 0, '2026-10-19 10:01:00'), "
+        "('e1', 'a2', '', '', '', NULL, 1, '2026-10-19 10:03:00')"
     )
 
     rows = reader.rows(f"SELECT id, flag_type FROM {_DATABASE}.experiment_annotations(experiment = 'e1')")
@@ -300,14 +299,17 @@ def test_an_annotation_reads_at_its_newest_copy_and_a_deleted_one_not_at_all(
 
 def test_a_sheet_row_an_edit_removed_no_longer_reads(admin: _User, reader: _User) -> None:
     admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.metadata_rows")
-    admin.ok(
-        f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id, sheet_id, sheet_created_at, match_on, identifier, fields) "
-        "VALUES ('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-1', '{\"soil\":\"clay\"}'), "
-        "('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-2', '{\"soil\":\"sand\"}')"
+    columns = (
+        "experiment_id, sheet_id, sheet_created_at, match_on, identifier, fields, is_deleted, claimed_at"
     )
     admin.ok(
-        f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id, sheet_id, sheet_created_at, match_on, identifier, fields, is_deleted) "
-        "VALUES ('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-2', '', 1)"
+        f"INSERT INTO {_DATABASE}.metadata_rows ({columns}) "
+        "VALUES ('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-1', '{\"soil\":\"clay\"}', 0, '2026-10-19 08:01:00'), "
+        "('e1', 's1', '2026-10-19 08:00:00', 'q1', 'plot-2', '{\"soil\":\"sand\"}', 0, '2026-10-19 08:01:00')"
+    )
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.metadata_rows ({columns}) "
+        "VALUES ('e1', 's1', '1970-01-01 00:00:00', '', 'plot-2', '', 1, '2026-10-19 08:02:00')"
     )
 
     rows = reader.rows(
@@ -320,5 +322,72 @@ def test_a_sheet_row_an_edit_removed_no_longer_reads(admin: _User, reader: _User
 @pytest.mark.parametrize("table", ["annotations", "metadata_rows"])
 def test_the_reader_reads_the_copies_only_through_their_views(reader: _User, table: str) -> None:
     response = reader.run(f"SELECT count() FROM {_DATABASE}.{table}")
+
+    assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
+
+
+# The copier's and the feed writer's grants in infrastructure/modules/serving-store/main.tf.
+_COPIER_GRANTS = (
+    "GRANT INSERT ON {db}.annotations",
+    "GRANT SELECT, INSERT ON {db}.metadata_rows",
+)
+_WRITER_GRANTS = (
+    "GRANT SELECT, INSERT ON {db}.*",
+    "REVOKE INSERT ON {db}.annotations",
+    "REVOKE INSERT ON {db}.metadata_rows",
+)
+
+
+@pytest.fixture
+def user_with_grants(admin: _User) -> Iterator[Callable[[str, tuple[str, ...]], _User]]:
+    created: list[str] = []
+
+    def create(name: str, grants: tuple[str, ...]) -> _User:
+        admin.ok(f"DROP USER IF EXISTS {name}")
+        admin.ok(f"CREATE USER {name} IDENTIFIED BY 'grants-test'")
+        for grant in grants:
+            statement = grant.format(db=_DATABASE)
+            target = "FROM" if statement.startswith("REVOKE") else "TO"
+            admin.ok(f"{statement} {target} {name}")
+        created.append(name)
+        return _User(admin.url, name, "grants-test")
+
+    yield create
+
+    for name in created:
+        admin.ok(f"DROP USER {name}")
+
+
+def test_the_copier_writes_its_two_tables_and_reads_only_the_sheet_rows(
+    user_with_grants: Callable[[str, tuple[str, ...]], _User],
+) -> None:
+    copier = user_with_grants("views_test_copier", _COPIER_GRANTS)
+
+    copier.ok(
+        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, claimed_at) "
+        "VALUES ('e1', 'a9', '2026-10-19 10:00:00')"
+    )
+    copier.ok(
+        f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id, sheet_id, identifier, claimed_at) "
+        "VALUES ('e1', 's9', 'plot-9', '2026-10-19 10:00:00')"
+    )
+    held = copier.rows(f"SELECT identifier FROM {_DATABASE}.metadata_rows FINAL WHERE sheet_id = 's9'")
+
+    assert held == [{"identifier": "plot-9"}]
+    for refused in (
+        f"SELECT count() FROM {_DATABASE}.annotations",
+        f"SELECT count() FROM {_DATABASE}.measurements",
+        f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp) VALUES ('e1', 99, now())",
+    ):
+        assert copier.run(refused).headers.get("X-ClickHouse-Exception-Code") == "497", refused
+
+
+@pytest.mark.parametrize("table", ["annotations", "metadata_rows"])
+def test_the_feed_writer_cannot_write_the_copies(
+    user_with_grants: Callable[[str, tuple[str, ...]], _User], table: str
+) -> None:
+    writer = user_with_grants("views_test_writer", _WRITER_GRANTS)
+
+    response = writer.run(f"INSERT INTO {_DATABASE}.{table} (experiment_id) VALUES ('e1')")
 
     assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
