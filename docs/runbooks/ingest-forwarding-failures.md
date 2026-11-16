@@ -86,7 +86,12 @@ the broker, in UTC, not when they were measured.
   stream keeps records. Firehose writes an object up to a quarter of an hour after its first
   message, filed under that message's day, so the command reads every object written from the
   window's start to 20 minutes after its end. It therefore also reads, and can replay, messages
-  that arrived up to a quarter of an hour either side of the window.
+  that arrived up to a quarter of an hour either side of the window. When S3 delivery fails,
+  Firehose retries for up to 24 hours, so an object can be written hours after its messages. The
+  command also reads a later object whose name's time (the start of the buffer it flushed) falls in
+  the window, and lists each one under `lateObjects` in the manifest. An object written after the
+  dry run is not read: if Firehose's delivery errors overlap the incident, run the dry run again a
+  day after they stop.
 
 With `--source archive`, while the newest object read is younger than the stream's retention,
 `--apply` refuses to run until bronze holds a message that arrived after that object was written,
@@ -96,6 +101,19 @@ check's, keeps reading while bronze's flow is down. On a stream quiet since the 
 the next measurement to land, or until the newest object is older than the retention. A dry run in
 that state warns that messages the stream still holds count as `missing`. `--source errors` skips
 the check, since those messages never entered the stream.
+
+The check leaves out a shard with no bronze row since the retention began. That is right for an idle
+shard, and wrong for one bronze stopped reading while it read the others, whose records the stream
+still holds. If bronze's per-shard query below names fewer shards than
+`aws kinesis list-shards --stream-name open-jii-<env>-data-ingest-stream` lists open ones, find out
+why before `--apply`.
+
+```sql
+SELECT kinesis_shard_id, max(kinesis_arrival_time) AS latest
+FROM open_jii_<env>.centrum.raw_data
+WHERE ingest_date >= date_sub(current_date(), 3)
+GROUP BY kinesis_shard_id
+```
 
 It runs under your AWS profile for the environment, which must hold the infrastructure maintainer
 role, the one that may call `kinesis:PutRecords` on the stream, and your Databricks profile.
@@ -140,8 +158,8 @@ about 40 seconds. `kinesis-write-throttling` should stay at zero while it runs. 
 refuses is tried twice more.
 
 The command ends with exit code 1 when a record stays refused, a request fails, or you stop it. The
-first Ctrl-C finishes the batch in hand and still writes the manifest; a second quits at once and
-writes none. A failed request or a stop ends the replay early, and the manifest then holds the
+first Ctrl-C finishes the batch in hand, at most 250 records, sends no further one, and still writes
+the manifest; a second quits at once and writes none. A failed request or a stop ends the replay early, and the manifest then holds the
 messages decided until then, each marked `sent`, `refused`, `unknown` for the batch in flight, or
 `not sent`. Before running `--apply` again, wait until a dry run of the same window counts the sent
 ones as `in bronze`, and until bronze holds a message that arrived after the failure, since an

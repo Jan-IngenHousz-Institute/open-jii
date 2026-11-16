@@ -4,6 +4,7 @@ import type { ArchiveObject, ArchiveReader, StreamRecord, StreamWriter } from ".
 import type { Warehouse } from "../lib/databricks.js";
 import {
   bronzeProgressQuery,
+  bufferStartOf,
   contentQuery,
   dayPrefixes,
   isComplete,
@@ -291,6 +292,21 @@ describe("dayPrefixes", () => {
     expect(
       dayPrefixes("raw-iot", new Date("2026-10-30T23:00:00Z"), new Date("2026-11-01T01:00:00Z")),
     ).toEqual(["raw-iot/2026/10/30/", "raw-iot/2026/10/31/", "raw-iot/2026/11/01/"]);
+  });
+});
+
+describe("bufferStartOf", () => {
+  it("reads the time in a Firehose object's name as UTC", () => {
+    expect(
+      bufferStartOf(
+        "raw-iot/2026/11/15/open-jii-dev-iot-raw-archive-2-2026-11-15-00-04-47-b5a680c7-7f9b-4947-8e83-a1c352dbd223.gz",
+      ),
+    ).toEqual(new Date("2026-11-15T00:04:47Z"));
+  });
+
+  it("finds no time in any other name", () => {
+    expect(bufferStartOf("raw-iot/2026/10/07/a.gz")).toBeNull();
+    expect(bufferStartOf("iot-rule-errors/2026/10/07/12/some-error-object")).toBeNull();
   });
 });
 
@@ -589,6 +605,32 @@ describe("runReplay", () => {
     expect(isComplete(manifest)).toBe(false);
   });
 
+  it("sends no further batch once the operator stops it mid-send, and marks the rest not sent", async () => {
+    const stop = new AbortController();
+    const writer: StreamWriter = {
+      put: vi.fn((records: StreamRecord[]) => {
+        stop.abort();
+        return Promise.resolve(
+          records.map((record) => ({ sequenceNumber: `seq-${record.partitionKey}`, error: null })),
+        );
+      }),
+    };
+
+    const manifest = await runReplay(
+      args({ apply: true }),
+      deps({
+        archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(600))]),
+        stream: writer,
+        stop: stop.signal,
+      }),
+    );
+
+    expect(writer.put).toHaveBeenCalledTimes(1);
+    expect(manifest.counts).toEqual(expect.objectContaining({ sent: 250, "not sent": 350 }));
+    expect(manifest.stopped).toContain("stopped by the operator");
+    expect(isComplete(manifest)).toBe(false);
+  });
+
   it("sends the missing messages under their own partition keys, retrying a refused record", async () => {
     const writer = stream((record, call) => call === 1 && record.partitionKey.endsWith("/0"));
     const second = message({ _client_id: "rec-missing-2", timestamp: "2026-10-07T11:20:00Z" });
@@ -735,6 +777,22 @@ describe("runReplay", () => {
       "raw-iot/2026/10/07/straddling.gz",
       "raw-iot/2026/10/08/late.gz",
     ]);
+  });
+
+  it("reads an object Firehose wrote hours late when its name places it in the window, and says so", async () => {
+    const named = (time: string) =>
+      `raw-iot/2026/10/07/open-jii-dev-iot-raw-archive-2-2026-10-07-${time}-b5a680c7-7f9b-4947-8e83-a1c352dbd223.gz`;
+    const retried = named("12-30-00");
+    const reader = archive([
+      object(retried, [missing], "2026-10-07T18:00:00Z"),
+      object(named("13-30-00"), [missing], "2026-10-07T18:05:00Z"),
+      object("raw-iot/2026/10/07/unnamed.gz", [missing], "2026-10-07T18:10:00Z"),
+    ]);
+
+    const manifest = await runReplay(args(), deps({ archive: reader }));
+
+    expect(vi.mocked(reader.read).mock.calls.map(([key]) => key)).toEqual([retried]);
+    expect(manifest.lateObjects).toEqual([retried]);
   });
 
   it("lists archived objects without reading them, and refuses to send until they are restored", async () => {

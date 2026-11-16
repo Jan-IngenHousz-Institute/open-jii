@@ -82,6 +82,8 @@ export interface Manifest {
   bronzeReadUpTo: string | null;
   streamMayHold: boolean;
   restoreFirst: string[];
+  /** Objects Firehose wrote after the window's end and margin that were read, from their names. */
+  lateObjects: string[];
   stopped: string | null;
   counts: Record<string, number>;
   entries: Entry[];
@@ -143,6 +145,11 @@ const HEALTH_CHECK_EXPERIMENT = "healthcheck";
 // message's day, so the archive is listed this much wider than the window on both sides.
 const ARCHIVE_MARGIN_MS = 20 * 60_000;
 const ERRORS_MARGIN_MS = 5 * 60_000;
+
+// Firehose names an object `<stream>-<version>-YYYY-MM-DD-HH-MM-SS-<uuid>.gz`. AWS documents only the
+// day prefix (the oldest record's arrival); on dev each name's time is the previous object's write,
+// 15 minutes before its own, so it is read as the start of the buffer the object flushed.
+const FIREHOSE_NAME_TIME = /-(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-[0-9a-f-]{36}\.gz$/;
 const BRONZE_CAUGHT_UP_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -435,8 +442,9 @@ export function contentQuery(
 
 /**
  * How far bronze has read the stream: the latest arrival on its slowest shard, among the shards
- * that delivered anything since the retention began. A shard further behind than that has nothing
- * left in the stream to deliver twice.
+ * that delivered anything since the retention began. A shard with no row since then is left out,
+ * whether it was idle or bronze stopped reading it while it read the others; the runbook says how
+ * to tell the two apart.
  */
 export function bronzeProgressQuery(table: string, retentionStartMs: number): Statement {
   return {
@@ -599,20 +607,57 @@ export function dayPrefixes(root: string, from: Date, to: Date): string[] {
   return prefixes;
 }
 
-/** The objects written while the window's messages could still arrive in them. */
-async function windowObjects(args: ReplayArgs, archive: ArchiveReader): Promise<ArchiveObject[]> {
+/** When the buffer a Firehose object flushed began, from its name; null for any other object. */
+export function bufferStartOf(key: string): Date | null {
+  const match = FIREHOSE_NAME_TIME.exec(key);
+  if (match === null) {
+    return null;
+  }
+  const [year, month, day, hour, minute, second] = match.slice(1).map(Number);
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+}
+
+interface WindowObjects {
+  objects: ArchiveObject[];
+  /** Objects written after the window's end and margin, read because their names place them in it. */
+  late: string[];
+}
+
+/**
+ * The objects written while the window's messages could still arrive in them, and any Firehose
+ * wrote later, after retrying S3 for up to a day, whose buffer began in the window. A late object
+ * stays under its oldest record's day, which the listed prefixes already cover.
+ */
+async function windowObjects(args: ReplayArgs, archive: ArchiveReader): Promise<WindowObjects> {
   const isArchive = args.source === "archive";
   const root = isArchive ? "raw-iot" : "iot-rule-errors";
   const margin = isArchive ? ARCHIVE_MARGIN_MS : ERRORS_MARGIN_MS;
+  const since = new Date(args.from.getTime() - margin);
   const until = new Date(args.to.getTime() + margin);
 
-  const objects: ArchiveObject[] = [];
-  for (const prefix of dayPrefixes(root, new Date(args.from.getTime() - margin), until)) {
-    objects.push(...(await archive.list(prefix)));
+  const listed: ArchiveObject[] = [];
+  for (const prefix of dayPrefixes(root, since, until)) {
+    listed.push(...(await archive.list(prefix)));
   }
-  return objects.filter(
-    (object) => object.lastModified >= args.from && object.lastModified <= until,
-  );
+
+  const objects: ArchiveObject[] = [];
+  const late: string[] = [];
+  for (const object of listed) {
+    if (object.lastModified < args.from) {
+      continue;
+    }
+    if (object.lastModified <= until) {
+      objects.push(object);
+      continue;
+    }
+    const bufferStart = isArchive ? bufferStartOf(object.key) : null;
+    const isLate = bufferStart !== null && bufferStart >= since && bufferStart <= args.to;
+    if (isLate) {
+      objects.push(object);
+      late.push(object.key);
+    }
+  }
+  return { objects, late };
 }
 
 function isArchived(object: ArchiveObject, now: Date): boolean {
@@ -741,11 +786,13 @@ function batches(items: Outgoing[]): Outgoing[][] {
 
 /**
  * Sends missing messages a batch a second, retrying the records Kinesis refused. When a request
- * fails outright it notes which records it cannot vouch for and throws.
+ * fails outright it notes which records it cannot vouch for and throws. Once the operator stops the
+ * run it sends no further batch and marks the rest not sent.
  */
 function createSender(deps: ReplayDeps) {
   let nextKey = 0;
   let hasSent = false;
+  let isCut = false;
 
   async function put(batch: Outgoing[]): Promise<Outgoing[]> {
     if (hasSent) {
@@ -782,6 +829,13 @@ function createSender(deps: ReplayDeps) {
       }
       const refused: Outgoing[] = [];
       for (const batch of batches(pending)) {
+        if (deps.stop.aborted) {
+          for (const item of pending) {
+            item.entry.outcome ??= "not sent";
+          }
+          isCut = true;
+          return;
+        }
         try {
           refused.push(...(await put(batch)));
         } catch (error) {
@@ -799,7 +853,7 @@ function createSender(deps: ReplayDeps) {
     }
   }
 
-  return { send, hasSent: () => hasSent };
+  return { send, hasSent: () => hasSent, wasCut: () => isCut };
 }
 
 async function bronzeReadUpTo(
@@ -814,7 +868,7 @@ async function bronzeReadUpTo(
 
 export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Manifest> {
   const targets = targetsOf(args.environment);
-  const objects = await windowObjects(args, deps.archive);
+  const { objects, late } = await windowObjects(args, deps.archive);
   const restoreFirst = objects
     .filter((object) => isArchived(object, deps.now))
     .map((object) => object.key);
@@ -904,6 +958,9 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
     }
     stopped = errorText(error);
   }
+  if (stopped === null && sender.wasCut()) {
+    stopped = "stopped by the operator before every missing message was sent";
+  }
 
   const counts: Record<string, number> = { "outside the filters": outsideFilters };
   for (const entry of entries) {
@@ -928,6 +985,7 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
     bronzeReadUpTo: readUpTo === null ? null : new Date(readUpTo).toISOString(),
     streamMayHold,
     restoreFirst,
+    lateObjects: late,
     stopped,
     counts,
     entries,
@@ -986,6 +1044,11 @@ async function run(args: string[]): Promise<number> {
   if (manifest.streamMayHold) {
     process.stdout.write(
       "bronze has not read past the objects read yet, so messages the stream still holds count as missing\n",
+    );
+  }
+  if (manifest.lateObjects.length > 0) {
+    process.stdout.write(
+      `${manifest.lateObjects.length} objects Firehose wrote after the window were read, since their names place them in it\n`,
     );
   }
   if (manifest.stopped !== null) {
