@@ -74,7 +74,7 @@ Ship such a change in two deploys. First deploy a page that reads both the old a
 
 ## Rollback
 
-Run `deploy-status.yml` again with the environment and the previous good commit SHA as `ref`. Leave `ref` empty and it deploys the latest commit of the branch you picked. The run rebuilds that ref, applies the same cache headers, prunes what the newer build added, invalidates CloudFront and runs the gate. It leaves `data/` alone.
+In dev, run `deploy-status.yml` again with the previous good commit SHA as `ref`. Leave `ref` empty and it deploys the latest commit of the branch you picked. In prod, create a `release/*` branch at the previous good commit and start the PROD Release Workflow from it with `deploy_app` set to `status` and `deploy_infrastructure` off; it waits for an approval in `prod-approval`. Either run rebuilds that commit, applies the same cache headers, prunes what the newer build added, invalidates CloudFront and runs the gate. It leaves `data/` alone.
 
 Do not use the docs site's recipe in `apps/docs/ROLLBACK.md` here. It restores with `aws s3 sync --delete` and no excludes, which deletes the publisher's `data/` objects, and the file stays missing until the next publisher run. It also drops the cache headers.
 

@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: ""
+      skip_store_migrations:
+        description: "Migrate Postgres alone, for a Postgres change while the serving store is down"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ inputs.environment }}
@@ -136,9 +141,9 @@ jobs:
           BASE: ${{ steps.base.outputs.sha }}
           HEAD: ${{ steps.pin.outputs.sha }}
         run: |
-          # Did infrastructure/ or the SQL views OpenTofu reads from apps/data change?
+          # Did infrastructure/, the OpenTofu version or the SQL views OpenTofu reads from apps/data change?
           echo "Comparing ${BASE:0:7}..${HEAD:0:7}"
-          CHANGED=$(git diff --name-only "$BASE" "$HEAD" | grep -E '^(infrastructure/|apps/data/src/views/)' || true)
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" | grep -E '^(infrastructure/|apps/data/src/views/|\.opentofu-version$)' || true)
           if [ -n "$CHANGED" ]; then
             echo "Infrastructure changed:"
             echo "$CHANGED" | sed 's/^/  /'
@@ -221,6 +226,7 @@ jobs:
       environment: ${{ inputs.environment }}
       timeout_minutes: 10
       ref: ${{ needs.detect.outputs.deploy_sha }}
+      skip_store_migrations: ${{ inputs.skip_store_migrations }}
     secrets: inherit
 
   deploy-backend:

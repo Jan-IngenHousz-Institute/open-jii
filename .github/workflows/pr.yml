@@ -55,6 +55,7 @@ jobs:
           BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
           if git diff --name-only "$BASE_SHA" HEAD -- \
               infrastructure/ \
+              .opentofu-version \
               .github/workflows/tofu.yml \
               .github/actions/tofu/ | grep -q .; then
             echo "has_infrastructure_changes=true" >> $GITHUB_OUTPUT

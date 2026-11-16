@@ -30,6 +30,11 @@ on:
         required: false
         type: string
         default: ""
+      skip_store_migrations:
+        description: "Migrate Postgres alone, for a Postgres change while the serving store is down (docs/runbooks/store-answers.md)"
+        required: false
+        type: boolean
+        default: false
       dry_run:
         description: "Dry run: skip deploy, log which PRs would be labeled and which Linear tickets would be completed (for testing)"
         required: false
@@ -59,6 +64,7 @@ jobs:
       deploy_infrastructure: ${{ inputs.deploy_infrastructure }}
       deploy_all: ${{ inputs.deploy_app == '' }}
       deploy_app: ${{ inputs.deploy_app }}
+      skip_store_migrations: ${{ inputs.skip_store_migrations }}
     secrets: inherit
 
   sync-linear-release:
