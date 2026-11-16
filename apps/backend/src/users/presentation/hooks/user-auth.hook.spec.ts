@@ -1,11 +1,16 @@
 import { Logger } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import type { TestingModule } from "@nestjs/testing";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
+import type { MockInstance } from "vitest";
 
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import type { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import type { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
-import type { ReactivateProfileUseCase } from "../../application/use-cases/reactivate-profile/reactivate-profile";
-import type { UserRepository } from "../../core/repositories/user.repository";
+import { ReactivateProfileUseCase } from "../../application/use-cases/reactivate-profile/reactivate-profile";
+import { UserRepository } from "../../core/repositories/user.repository";
 import { UserAuthHook } from "./user-auth.hook";
 
 function createMockContext(
@@ -33,9 +38,9 @@ describe("UserAuthHook", () => {
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
   let mockUserRepository: { update: ReturnType<typeof vi.fn> };
   let mockNotifyUseCase: { execute: ReturnType<typeof vi.fn> };
-  let mockReactivateUseCase: { execute: ReturnType<typeof vi.fn> };
+  let reactivateProfile: MockInstance<ReactivateProfileUseCase["execute"]>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockUseCase = {
       execute: vi.fn().mockResolvedValue(success(0)),
     };
@@ -45,15 +50,25 @@ describe("UserAuthHook", () => {
     mockNotifyUseCase = {
       execute: vi.fn().mockResolvedValue(success(0)),
     };
-    mockReactivateUseCase = {
-      execute: vi.fn().mockResolvedValue(success(false)),
-    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ReactivateProfileUseCase,
+        { provide: UserRepository, useValue: {} },
+        { provide: ExperimentDataOutboxRepository, useValue: {} },
+        { provide: ExperimentDataOutboxWorker, useValue: {} },
+      ],
+    }).compile();
+    const reactivateProfileUseCase = module.get(ReactivateProfileUseCase);
+    reactivateProfile = vi
+      .spyOn(reactivateProfileUseCase, "execute")
+      .mockResolvedValue(success(false));
 
     hook = new UserAuthHook(
       mockUseCase as unknown as AcceptPendingInvitationsUseCase,
       mockUserRepository as unknown as UserRepository,
       mockNotifyUseCase as unknown as NotifyPendingOrganizationInvitationsUseCase,
-      mockReactivateUseCase as unknown as ReactivateProfileUseCase,
+      reactivateProfileUseCase,
     );
   });
 
@@ -255,7 +270,7 @@ describe("UserAuthHook", () => {
     ] as const)("reactivates the signed-in profile on %s", async (handler) => {
       await hook[handler](createMockContext());
 
-      expect(mockReactivateUseCase.execute).toHaveBeenCalledExactlyOnceWith("user-123");
+      expect(reactivateProfile).toHaveBeenCalledExactlyOnceWith("user-123");
     });
 
     it("only reactivates on a passkey sign-in, which never processed invitations", async () => {
@@ -268,19 +283,17 @@ describe("UserAuthHook", () => {
     it("leaves the profile alone when an email is only verified", async () => {
       await hook.handleOtpVerify(createMockContext());
 
-      expect(mockReactivateUseCase.execute).not.toHaveBeenCalled();
+      expect(reactivateProfile).not.toHaveBeenCalled();
     });
 
     it("reactivates nothing without a signed-in user", async () => {
       await hook.handleEmailSignIn(createMockContext({ userId: null }));
 
-      expect(mockReactivateUseCase.execute).not.toHaveBeenCalled();
+      expect(reactivateProfile).not.toHaveBeenCalled();
     });
 
     it("logs a failed reactivation and signs the user in anyway", async () => {
-      mockReactivateUseCase.execute.mockResolvedValue(
-        failure(AppError.internal("outbox unavailable")),
-      );
+      reactivateProfile.mockResolvedValue(failure(AppError.internal("outbox unavailable")));
       const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
 
       await expect(hook.handleEmailSignIn(createMockContext())).resolves.toBeUndefined();
