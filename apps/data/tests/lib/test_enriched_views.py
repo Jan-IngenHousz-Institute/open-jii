@@ -567,6 +567,33 @@ def test_a_refused_export_copies_one_row_past_the_limit_removes_it_and_writes_no
     assert not Path(task["OUTPUT_PATH"]).exists()
 
 
+def _fail_to_remove(path: str, recurse: bool) -> None:
+    raise OSError(f"could not remove {path}")
+
+
+def test_an_export_that_cannot_remove_its_snapshot_still_finishes(
+    export_task: Callable[..., dict[str, Any]],
+) -> None:
+    task = export_task("raw_data", "csv")
+    task["dbutils"].fs.rm = _fail_to_remove
+
+    manifest = _run(task)
+
+    assert manifest["rowCount"] == 2
+    assert Path(task["SNAPSHOT_PATH"]).exists()
+
+
+def test_a_refused_export_that_cannot_remove_its_snapshot_still_says_why(
+    export_task: Callable[..., dict[str, Any]],
+) -> None:
+    task = export_task("raw_data", "xlsx")
+    task["DRIVER_FORMAT_MAX_ROWS"] = 1
+    task["dbutils"].fs.rm = _fail_to_remove
+
+    with pytest.raises(task["ExportError"], match=r"too_many_rows_for_format"):
+        _run(task)
+
+
 def test_an_experiment_without_rows_exports_an_empty_manifest(
     spark: SparkSession, export_task: Callable[..., dict[str, Any]]
 ) -> None:

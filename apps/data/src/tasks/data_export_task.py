@@ -280,6 +280,15 @@ def take_snapshot(table):
     return spark.read.schema(rows.schema).parquet(SNAPSHOT_PATH)
 
 
+def remove_snapshot():
+    """The bucket's expiry rule collects a snapshot left behind, so a failed delete does not fail
+    an export whose parts and manifest are written."""
+    try:
+        dbutils.fs.rm(SNAPSHOT_PATH, True)
+    except Exception as error:
+        log(f"Could not remove the snapshot at {SNAPSHOT_PATH}: {error}", "WARN")
+
+
 def main():
     table = ExperimentTable(EXPERIMENT_ID, TABLE_NAME, CATALOG_NAME, schema_name="centrum")
 
@@ -301,7 +310,7 @@ def main():
         write_manifest(manifest)
         log(f"Wrote {len(parts)} part(s) and the manifest")
     finally:
-        dbutils.fs.rm(SNAPSHOT_PATH, True)
+        remove_snapshot()
 
     dbutils.notebook.exit(json.dumps(manifest))
 
