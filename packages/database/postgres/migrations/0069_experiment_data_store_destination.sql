@@ -1,0 +1,1 @@
+ALTER TYPE "public"."experiment_data_destination" ADD VALUE 'serving_store';

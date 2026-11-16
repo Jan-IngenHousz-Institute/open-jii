@@ -950,7 +950,10 @@ export const experimentDataRecordTypeEnum = pgEnum("experiment_data_record_type"
   "annotation",
   "metadata_sheet",
 ]);
-export const experimentDataDestinationEnum = pgEnum("experiment_data_destination", ["lakehouse"]);
+export const experimentDataDestinationEnum = pgEnum("experiment_data_destination", [
+  "lakehouse",
+  "serving_store",
+]);
 
 // Annotations and metadata sheets whose current state is still owed to a copy elsewhere. A row
 // is deleted once the copy has it.
