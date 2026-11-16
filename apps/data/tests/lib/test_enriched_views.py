@@ -48,7 +48,9 @@ _TABLES = {
           ('e1', 'raw_data', 'static', CAST(NULL AS STRING), 'STRUCT<plot: STRING>',
            CAST(NULL AS STRING), CAST(NULL AS STRING)),
           ('e1', 'mac-1', 'macro', 'STRUCT<phi2: DOUBLE>', 'STRUCT<plot: STRING>',
-           CAST(NULL AS STRING), CAST(NULL AS STRING))
+           CAST(NULL AS STRING), CAST(NULL AS STRING)),
+          ('e1', 't1', 'upload', CAST(NULL AS STRING), CAST(NULL AS STRING), CAST(NULL AS STRING),
+           'OBJECT<ph: DOUBLE>')
         AS t(experiment_id, identifier, table_type, macro_schema, questions_schema, custom_metadata_schema,
              upload_schema)
     """,
@@ -149,7 +151,11 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
         spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
-    for name in ("enriched_experiment_raw_data", "enriched_experiment_macro_data"):
+    for name in (
+        "enriched_experiment_raw_data",
+        "enriched_experiment_macro_data",
+        "enriched_experiment_uploaded_data",
+    ):
         query = (_VIEWS / f"{name}.sql").read_text().replace("${catalog}", _CATALOG)
         spark.sql(f"CREATE VIEW {_CATALOG}.centrum.{name} AS {query}")
 
@@ -421,11 +427,29 @@ def _json(value: Any) -> Any:
     return json.loads(value) if isinstance(value, str) else value
 
 
+_MATCHED_METADATA = [{"soil": "clay", "color": "blue"}, {"soil": "sand"}]
+
+
 @pytest.mark.parametrize(
-    ("table_name", "ids", "annotations"),
+    ("table_name", "ids", "payload", "annotations", "custom_metadata", "workbook_versions"),
     [
-        ("raw_data", [1, 2], [["payload-1", "a1", "a2"], []]),
-        ("mac-1", [101, 102], [["payload-1", "a5"], []]),
+        (
+            "raw_data",
+            [1, 2],
+            ("plot", ["A1", "B2"]),
+            [["payload-1", "a1", "a2"], []],
+            _MATCHED_METADATA,
+            ["v1", None],
+        ),
+        (
+            "mac-1",
+            [101, 102],
+            ("phi2", ["0.7", None]),
+            [["payload-1", "a5"], []],
+            _MATCHED_METADATA,
+            ["v1", None],
+        ),
+        ("t1", [1001, 1002], ("ph", ["6.5", "7.1"]), [["a6"], []], [None, None], [None, None]),
     ],
 )
 @pytest.mark.parametrize("export_format", _FORMATS)
@@ -434,7 +458,10 @@ def test_an_export_writes_each_row_in_order_with_its_annotations_and_custom_meta
     export_task: Callable[..., dict[str, Any]],
     table_name: str,
     ids: list[int],
+    payload: tuple[str, list[str | None]],
     annotations: list[list[str]],
+    custom_metadata: list[Any],
+    workbook_versions: list[str | None],
     export_format: str,
 ) -> None:
     task = export_task(table_name, export_format)
@@ -445,15 +472,16 @@ def test_an_export_writes_each_row_in_order_with_its_annotations_and_custom_meta
 
     assert manifest["rowCount"] == len(rows) == 2
     assert len(manifest["parts"]) == (2 if export_format in _SPARK_FORMATS else 1)
-    # A writer may leave out a null field, so the columns are those any row has.
-    assert set().union(*rows) == set(load_experiment_table("e1", table_name, _CATALOG).columns)
+    columns = set(load_experiment_table("e1", table_name, _CATALOG).columns)
+    # A JSON writer leaves a null field out, so NDJSON lacks a column no row fills.
+    unfilled = {name for name in columns if all(row.get(name) is None for row in rows)}
+    assert set().union(*rows) == (columns - unfilled if export_format == "ndjson" else columns)
     assert [int(row["id"]) for row in rows] == ids
+    field, values = payload
+    assert [None if row.get(field) is None else str(row[field]) for row in rows] == values
     assert [[annotation["id"] for annotation in _json(row["annotations"])] for row in rows] == annotations
-    assert [_json(row["custom_metadata"]) for row in rows] == [
-        {"soil": "clay", "color": "blue"},
-        {"soil": "sand"},
-    ]
-    assert [row.get("workbook_version_id") for row in rows] == ["v1", None]
+    assert [_json(row.get("custom_metadata")) for row in rows] == custom_metadata
+    assert [row.get("workbook_version_id") for row in rows] == workbook_versions
 
 
 def test_an_anonymized_export_shows_each_contributor_by_their_pseudonym(
