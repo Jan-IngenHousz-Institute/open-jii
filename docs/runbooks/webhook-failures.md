@@ -1,8 +1,9 @@
 # webhook-failures
 
 **HMAC-authenticated traffic between Databricks and the backend is failing.** The pipeline calls the
-backend to execute macro batches; the backend is called back for project transfers. A break here does not stop ingestion, it silently degrades enrichment, which is why it is
-worth an alarm rather than a dashboard.
+backend to execute macro batches; the backend is called back for project transfers. A break here
+does not stop ingestion, it silently degrades enrichment, which is why it is worth an alarm rather
+than a dashboard.
 
 The backend's HMAC guard logs each rejected call once with a `reason`. Metric filters on its log group
 count them twice: `PipelineCallsRejected`, which the alert reads, leaves out `missing-key-id`, since
