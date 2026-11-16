@@ -2,6 +2,7 @@
 
 import { MetadataUploadModal } from "@/components/experiment-data/metadata-upload-modal/metadata-upload-modal";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -44,6 +45,10 @@ interface ExperimentLayoutPanelProps {
   onDefiningChange: (isDefining: boolean) => void;
 }
 
+// Scaffold: no layout stores its plot question yet, so `?ask=plot-question` shows the question a
+// layout saved before the Next plot step asks once.
+const ASK_PARAM = "ask";
+
 type LayoutSide = { kind: "plot"; plotId: string } | { kind: "anchor" } | null;
 type GridMode = "inspect" | "markGaps";
 
@@ -78,7 +83,10 @@ export function ExperimentLayoutPanel({
   // No write route exists on the scaffold, so a created layout lives in this view until reload.
   const [created, setCreated] = useState<ExperimentLayout | null>(null);
   const layout = savedLayout ?? created;
-  const [isPlotQuestionOpen, setIsPlotQuestionOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const isPlotQuestionDue =
+    canEdit && savedLayout !== null && searchParams.get(ASK_PARAM) === "plot-question";
+  const [isPlotQuestionOpen, setIsPlotQuestionOpen] = useState(isPlotQuestionDue);
   const [isEditing, setIsEditing] = useState(false);
   const [side, setSide] = useState<LayoutSide>(null);
   const [mode, setMode] = useState<GridMode>("inspect");
