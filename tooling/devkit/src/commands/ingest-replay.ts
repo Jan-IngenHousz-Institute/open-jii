@@ -957,8 +957,9 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
 
   try {
     const pending: Message[] = [];
-    for (let start = 0; start < readable.length && !isStopped(); start += READ_CONCURRENCY) {
-      const slice = readable.slice(start, start + READ_CONCURRENCY);
+    let next = 0;
+    for (; next < readable.length && !isStopped(); next += READ_CONCURRENCY) {
+      const slice = readable.slice(next, next + READ_CONCURRENCY);
       const texts = await Promise.all(slice.map((object) => deps.archive.read(object.key)));
       slice.forEach((object, index) => {
         const read = readObject(args.source, object.key, texts[index], targets.archiveStream);
@@ -973,7 +974,9 @@ export async function runReplay(args: ReplayArgs, deps: ReplayDeps): Promise<Man
         await settle(pending.splice(0, LOOKUP_SIZE));
       }
     }
-    if (isStopped()) {
+    // A stop after the last message was settled left nothing out.
+    const isCutShort = isStopped() && (next < readable.length || pending.length > 0);
+    if (isCutShort) {
       stopped = "stopped by the operator; messages after the last batch are not in this manifest";
     } else {
       await settle(pending.splice(0));

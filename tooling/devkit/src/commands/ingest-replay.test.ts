@@ -636,32 +636,42 @@ describe("runReplay", () => {
     expect(isComplete(manifest)).toBe(false);
   });
 
-  it("is complete when the operator stops it during the last batch, which goes through", async () => {
-    const stop = new AbortController();
-    const writer: StreamWriter = {
-      put: vi.fn((records: StreamRecord[]) => {
-        stop.abort();
-        return Promise.resolve(
-          records.map((record) => ({ sequenceNumber: `seq-${record.partitionKey}`, error: null })),
-        );
-      }),
-      shardsInRetention: () => Promise.resolve([shard]),
-    };
+  it.each([200, 1000])(
+    "is complete when the operator stops a replay of %i during its last batch, which goes through",
+    async (count) => {
+      const stop = new AbortController();
+      let sent = 0;
+      const writer: StreamWriter = {
+        put: vi.fn((records: StreamRecord[]) => {
+          sent += records.length;
+          if (sent === count) {
+            stop.abort();
+          }
+          return Promise.resolve(
+            records.map((record) => ({
+              sequenceNumber: `seq-${record.partitionKey}`,
+              error: null,
+            })),
+          );
+        }),
+        shardsInRetention: () => Promise.resolve([shard]),
+      };
 
-    const manifest = await runReplay(
-      args({ apply: true }),
-      deps({
-        archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(200))]),
-        stream: writer,
-        stop: stop.signal,
-      }),
-    );
+      const manifest = await runReplay(
+        args({ apply: true }),
+        deps({
+          archive: archive([object("raw-iot/2026/10/07/a.gz", manyMissing(count))]),
+          stream: writer,
+          stop: stop.signal,
+        }),
+      );
 
-    expect(writer.put).toHaveBeenCalledTimes(1);
-    expect(manifest.counts).toEqual(expect.objectContaining({ sent: 200, "not sent": 0 }));
-    expect(manifest.stopped).toBeNull();
-    expect(isComplete(manifest)).toBe(true);
-  });
+      expect(writer.put).toHaveBeenCalledTimes(Math.ceil(count / 250));
+      expect(manifest.counts).toEqual(expect.objectContaining({ sent: count, "not sent": 0 }));
+      expect(manifest.stopped).toBeNull();
+      expect(isComplete(manifest)).toBe(true);
+    },
+  );
 
   it("sends no further batch when the operator stops it during the pause between batches", async () => {
     const stop = new AbortController();
