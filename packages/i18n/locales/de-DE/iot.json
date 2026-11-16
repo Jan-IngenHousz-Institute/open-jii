@@ -373,7 +373,7 @@
           "title": "Übersicht",
           "description": "Was dieses Gerät ist und wo seine Einrichtung steht."
         },
-        "equipmentLink": "In Equipment öffnen",
+        "equipmentLink": "In openJII Lab öffnen",
         "about": {
           "title": "Details"
         }

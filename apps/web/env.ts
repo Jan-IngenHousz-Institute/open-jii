@@ -7,7 +7,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_DOCS_URL: z.string().url().default("http://localhost:3010"),
   NEXT_PUBLIC_STATUS_URL: z.string().url().default("http://localhost:3030"),
   NEXT_PUBLIC_EQUIPMENT_URL: z.string().url().default("http://localhost:3100"),
-  // Devices this organization owns link to Equipment; unset hides the link.
+  // Devices this organization owns link to Lab; unset hides the link.
   NEXT_PUBLIC_JII_ORGANIZATION_ID: z.string().uuid().optional(),
   NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
   // Allows ?mockDevices=1 to offer fake IoT devices outside dev builds (e2e).
