@@ -1336,7 +1336,7 @@ resource "grafana_rule_group" "page_regeneration" {
   folder_uid       = grafana_folder.folder.uid
   interval_seconds = 300
 
-  # Catalog entry 145. A page whose regeneration failed three times lands in the DLQ and keeps
+  # Catalog entry 145. A page whose regeneration failed five times lands in the DLQ and keeps
   # serving its old copy, and the DLQ holds it for 14 days, so any message there is the signal.
   rule {
     name      = "Page Regeneration Failures"
@@ -1408,7 +1408,7 @@ resource "grafana_rule_group" "page_regeneration" {
     for            = "5m"
 
     annotations = {
-      description      = "Pages failed to regenerate three times and wait in the revalidation DLQ, so visitors see their old copies."
+      description      = "Pages failed to regenerate five times and wait in the revalidation DLQ, so visitors see their old copies."
       summary          = "Web pages are failing to regenerate"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-regeneration-failures.md"
       __dashboardUid__ = local.heartbeat_daily_uid

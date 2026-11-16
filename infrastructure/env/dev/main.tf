@@ -2526,7 +2526,7 @@ module "opennext" {
 
   # SQS configuration
   enable_dlq        = true
-  max_receive_count = 3
+  max_receive_count = 5
 
   tags = {
     Project     = "open-jii"

@@ -844,7 +844,7 @@ module "opennext" {
   enable_point_in_time_recovery = true
 
   enable_dlq        = true
-  max_receive_count = 3
+  max_receive_count = 5
 
   tags = {
     Project     = "open-jii"

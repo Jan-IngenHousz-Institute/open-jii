@@ -1,12 +1,13 @@
 # web-regeneration-failures
 
-**Pages the web app tried to regenerate failed three times, so visitors keep getting their old
+**Pages the web app tried to regenerate failed five times, so visitors keep getting their old
 copy.** The public pages (home, blog, releases, FAQ and the legal pages) are cached. A visit to one
 that is more than five minutes old serves the cached copy and queues the page on
 `open-jii-<env>-opennext-revalidation.fifo`. The revalidation function then requests the page with a
 HEAD request that carries Next's `x-prerender-revalidate` header and no User-Agent. A page that fails
-three times moves to `open-jii-<env>-opennext-revalidation-dlq.fifo`, which keeps it for 14 days, so
-the rule keeps firing until the queue is purged.
+five times moves to `open-jii-<env>-opennext-revalidation-dlq.fifo`, which keeps it for 14 days, so
+the rule keeps firing until the queue is purged. That is on purpose: someone has to look. The count
+is failed requests, not pages, since a page visited often fails again every five minutes.
 
 ## See which pages failed
 
@@ -21,14 +22,14 @@ aws logs tail /aws/lambda/open-jii-<env>-opennext-revalidation --since 1h \
 The log line lists the failed records. A visibility timeout of 0 reads the messages without taking
 them off the queue.
 
-## Likely causes, most common first
+## Likely causes
 
 - **The web ACL blocked the request.** `BlockNoUserAgentRule` lets a HEAD request with
   `x-prerender-revalidate` through and blocks every other request without a User-Agent. If OpenNext
   starts sending another method or header, the block shows in the WAF log:
 
   ```bash
-  aws logs tail aws-waf-logs-opennext-<env> --since 1h \
+  aws logs tail aws-waf-logs-opennext-<env> --region us-east-1 --since 1h \
     --filter-pattern '{ $.terminatingRuleId = "BlockNoUserAgentRule" }'
   ```
 
