@@ -1744,6 +1744,68 @@ module "experiment_annotations_table" {
   depends_on = [databricks_grants.centrum_schema]
 }
 
+module "contributor_profiles_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "contributor_profiles"
+  table_type   = "MANAGED"
+  comment      = "Contributors' names and avatars as every page shows them, which the pipelines join to name an experiment's contributors. The backend's outbox keeps it to Postgres."
+
+  columns = [
+    { name = "user_id", type = "STRING", nullable = false },
+    { name = "first_name", type = "STRING" },
+    { name = "last_name", type = "STRING" },
+    { name = "avatar_url", type = "STRING" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "device_registry_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "device_registry"
+  table_type   = "MANAGED"
+  comment      = "The device registry, one row per thing name, which the pipelines join to name an experiment's devices. The backend's outbox keeps it to Postgres."
+
+  columns = [
+    { name = "id", type = "STRING", nullable = false },
+    { name = "thing_name", type = "STRING", nullable = false },
+    { name = "serial_number", type = "STRING" },
+    { name = "created_by", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "device_type", type = "STRING" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
 module "experiment_export_metadata_table" {
   source = "../../modules/databricks/sql-table"
 
