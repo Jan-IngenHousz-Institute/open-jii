@@ -15,6 +15,13 @@ export interface StoreColumn {
   idOf?: "contributor" | "device";
   /** An as-of read's second device, already the JSON text of its client id and label. */
   isPairText?: boolean;
+  /** That device's client id and label, which its own table computes from its own names. */
+  matchedDevice?: DeviceParts;
+}
+
+export interface DeviceParts {
+  clientId: string;
+  label: string;
 }
 
 export interface StoreTable {

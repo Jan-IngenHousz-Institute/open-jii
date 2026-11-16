@@ -245,6 +245,35 @@ describe("StoreAggregation", () => {
     expect(query.value.columns[0]).toMatchObject({ name: "device", idOf: "device" });
   });
 
+  it("reads a second table's contributor as the id it holds, never as JSON text", () => {
+    const query = adapter.buildExperimentQuery(joinedRead({ columns: ["second__contributor"] }));
+
+    assertSuccess(query);
+    expect(query.value.sql).toContain("user_id AS `second__contributor`");
+    expect(query.value.sql).not.toContain("toJSONString(user_id)");
+  });
+
+  it("filters by a second table's device label from that table's label column", () => {
+    const query = adapter.buildExperimentQuery(
+      joinedRead({
+        columns: ["id"],
+        filters: [{ column: "second__device.serial_number", operator: "equals", value: "SN1" }],
+      }),
+    );
+
+    assertSuccess(query);
+    const where = query.value.sql.slice(query.value.sql.lastIndexOf("WHERE"));
+    expect(where).toContain("__asof_secondary.`__asof_label_second__device`");
+  });
+
+  it("sends the second table only the columns the read names", () => {
+    const query = adapter.buildExperimentQuery(joinedRead({ columns: ["id", "w"] }));
+
+    assertSuccess(query);
+    expect(query.value.sql).not.toContain("second__contributor");
+    expect(query.value.sql).not.toContain("second__device");
+  });
+
   it("refuses to expand an array into rows, which no chart asks of the store", () => {
     const query = adapter.buildExperimentQuery({
       ...storeRead("groupedStats"),
@@ -398,22 +427,222 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       ['["reg-1","SN1"]', "1", "1"],
     ]);
   });
+
+  it("orders whole devices by the registry's ids, as Spark sorts their structs", async () => {
+    const row = { ...emptyMacroRow("device-order"), timestamp: "2026-09-07 00:00:00" };
+    await admin.insert({
+      table: "macro_results",
+      values: [
+        { ...row, id: 1, raw_id: 1, client_id: "reg-1", device_id: "d1", device_name: "Old" },
+        { ...row, id: 2, raw_id: 2, client_id: "reg-2", device_id: "d9", device_name: "Probe" },
+        { ...row, id: 3, raw_id: 3, client_id: "phone-a", device_id: "d2", device_name: "Ambit" },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const query = adapter.buildExperimentQuery({
+      ...storeRead("groupedStats", "device-order"),
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "count" }],
+      },
+      ordering: { column: "device", direction: "ASC" },
+      deviceSerials: [
+        ["reg-1", "SN1"],
+        ["reg-2", "SN2"],
+      ],
+      // reg-2's registry id sorts before reg-1's, the other way round from their client ids.
+      orderByIds: ["reg-2", "reg-1"],
+    });
+    assertSuccess(query);
+    const data = await adapter.executeQuery(query.value);
+    assertSuccess(data);
+
+    expect(data.value.rows.map(([device]) => device)).toEqual([
+      '[null,"Ambit (d2)"]',
+      '["reg-2","SN2"]',
+      '["reg-1","SN1"]',
+    ]);
+  });
+
+  it("gives no correlation for a constant series, where Spark has none to give", async () => {
+    const row = {
+      ...emptyMacroRow("constant"),
+      timestamp: "2026-09-07 00:00:00",
+      device_name: "A",
+    };
+    await admin.insert({
+      table: "macro_results",
+      values: [1, 2, 3].map((id) => ({
+        ...row,
+        id,
+        raw_id: id,
+        latitude: id,
+        macro_output: { v: 5 },
+        macro_output_text: '{"v":5}',
+      })),
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf(storeRead("correlation", "constant"));
+
+    expect(data.rows).toEqual([["A", null]]);
+  });
+
+  describe("matching a second table by time", () => {
+    beforeAll(async () => {
+      const primary = { ...emptyMacroRow("joined"), macro_id: "m1" };
+      const second = { ...emptyMacroRow("joined"), macro_id: "m2" };
+      await admin.insert({
+        table: "macro_results",
+        values: [
+          { ...primary, id: 1, raw_id: 1, device_id: "d1", timestamp: "2026-09-07 10:00:00" },
+          { ...primary, id: 2, raw_id: 2, device_id: "d2", timestamp: "2026-09-07 10:00:00" },
+          { ...primary, id: 3, raw_id: 3, device_id: "d1", timestamp: "2026-09-07 08:00:00" },
+          {
+            ...second,
+            id: 11,
+            raw_id: 11,
+            device_id: "d1",
+            client_id: "reg-1",
+            device_name: "Old",
+            user_id: ADA,
+            timestamp: "2026-09-07 09:30:00",
+          },
+          {
+            ...second,
+            id: 12,
+            raw_id: 12,
+            device_id: "d2",
+            client_id: "phone-a",
+            device_name: "Ambit",
+            user_id: BEN,
+            timestamp: "2026-09-07 09:45:00",
+          },
+        ],
+        format: "JSONEachRow",
+      });
+    });
+
+    it("reads the second table's contributor as its id and its device as its own pair", async () => {
+      const data = await rowsOf(
+        joinedRead({ columns: ["id", "second__contributor", "second__device"] }),
+      );
+
+      expect(data.rows).toEqual([
+        ["1", ADA, '["reg-1","SN1"]'],
+        ["2", BEN, '["phone-a","Ambit (d2)"]'],
+        ["3", null, null],
+      ]);
+    });
+
+    it("filters by the second table's device label, from that table's own names", async () => {
+      const data = await rowsOf(
+        joinedRead({
+          columns: ["id"],
+          filters: [{ column: "second__device.serial_number", operator: "equals", value: "SN1" }],
+        }),
+      );
+
+      expect(data.rows).toEqual([["1"]]);
+    });
+
+    it("groups by the second table's device label", async () => {
+      const data = await rowsOf(
+        joinedRead({
+          aggregation: {
+            groupBy: [{ column: "second__device.serial_number", alias: "label" }],
+            functions: [{ column: "*", function: "count" }],
+          },
+          ordering: { column: "label", direction: "ASC" },
+        }),
+      );
+
+      expect(data.rows).toEqual([
+        [null, "1"],
+        ["Ambit (d2)", "1"],
+        ["SN1", "1"],
+      ]);
+    });
+  });
+
+  async function rowsOf(params: StoreQueryParams) {
+    const query = adapter.buildExperimentQuery(params);
+    assertSuccess(query);
+    const data = await adapter.executeQuery(query.value);
+    assertSuccess(data);
+    return data.value;
+  }
 });
+
+const ADA = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01";
+const BEN = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f02";
+
+/** A macro row of an experiment with nothing in it yet but the columns every row needs. */
+function emptyMacroRow(experimentId: string) {
+  return {
+    experiment_id: experimentId,
+    macro_id: "m1",
+    macro_output: {},
+    questions_data: {},
+    annotations: [],
+    _commit_version: 1,
+    _commit_timestamp: "2026-09-07 00:00:01",
+  };
+}
+
+/** A read of the joined experiment's first table matched to its second by device and time. */
+function joinedRead(read: Partial<StoreQueryParams>): StoreQueryParams {
+  return {
+    tableName: "m1",
+    tableType: "macro",
+    experimentId: "joined",
+    reservedColumns: STORE_COLUMNS,
+    deviceSerials: [["reg-1", "SN1"]],
+    plotsValues: true,
+    limit: CHART_LIMIT,
+    ordering: { column: "id", direction: "ASC" },
+    join: {
+      matchColumn: "device_id",
+      toleranceMinutes: 60,
+      secondary: {
+        tableName: "m2",
+        tableType: "macro",
+        variants: MATCH_VARIANTS,
+        reservedColumns: STORE_COLUMNS,
+      },
+      primaryColumns: STORE_COLUMNS,
+      secondaryColumns: [
+        { name: "contributor", alias: "second__contributor" },
+        { name: "device", alias: "second__device" },
+        { name: "w", alias: "w" },
+      ],
+      primaryTimeColumn: "timestamp",
+      primaryTimeType: "TIMESTAMP",
+      secondaryTimeColumn: "timestamp",
+      secondaryTimeType: "TIMESTAMP",
+    },
+    ...read,
+  };
+}
 
 /** A cell as the value Spark's result holds: numbers as numbers, anything else as its text. */
 function typedCell(cell: string | null | undefined, type: string): number | string | null {
   if (cell === null || cell === undefined) {
     return null;
   }
-  const isNumber = ["BIGINT", "INT", "DOUBLE"].includes(type);
+  const isNumber = ["BIGINT", "INT", "DOUBLE"].includes(type) || type.startsWith("DECIMAL(");
   return isNumber ? Number(cell) : cell;
 }
 
-/** Equal, or both NaN, or doubles apart only in their last bits, where sums run in another order. */
+/**
+ * Equal, or both NaN, or doubles apart by what their inputs' rounding allows: sums run in another
+ * order, and a correlation of values far from zero is only good to about 1e-10 in either engine.
+ */
 function expectSameValue(actual: number | string | null, expected: number | string | null): void {
   const expectedValue = expected === "NaN" ? Number.NaN : expected;
   if (typeof actual === "number" && typeof expectedValue === "number") {
-    const tolerance = 1e-12 * Math.max(1, Math.abs(expectedValue));
+    const tolerance = 1e-9 * Math.max(1, Math.abs(expectedValue));
     const isSame =
       (Number.isNaN(actual) && Number.isNaN(expectedValue)) ||
       Math.abs(actual - expectedValue) <= tolerance;

@@ -24,7 +24,7 @@ import type {
 } from "../../../databricks/services/query-builder/schema/flattened-fields";
 import { VariantSchema } from "../../../databricks/services/query-builder/schema/variant-schema";
 import type { VariantField } from "../../../databricks/services/query-builder/schema/variant-schema";
-import type { StoreColumn, StoreTable } from "./store-tables";
+import type { DeviceParts, StoreColumn, StoreTable } from "./store-tables";
 
 export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "isPairText"> & {
   text?: { column: string; key?: string };
@@ -56,30 +56,24 @@ const STORE_SCALARS: Record<string, string> = {
   BOOLEAN: "Bool",
 };
 
-/** The aggregates the store spells as Spark does, each over values that may be null, so an empty
- *  input gives null rather than the store's zero. */
-const PLAIN_AGGREGATES: Partial<Record<AggregateExpression["function"], string>> = {
-  sum: "sum",
-  avg: "avg",
-  min: "min",
-  max: "max",
+/** Spark keeps central moments; the store's plain spreads drift where values sit far from zero. */
+const SAMPLE_SPREADS: Record<"std" | "var", string> = {
+  std: "stddevSampStable",
+  var: "varSampStable",
 };
 
-/** Spark's sample spreads are null below two values, where the store's are NaN. */
-const SAMPLE_SPREADS: Partial<Record<AggregateExpression["function"], string>> = {
-  std: "stddevSamp",
-  var: "varSamp",
-};
+const INTEGER_TYPES = new Set(["BIGINT", "INT"]);
 
 /** Lag and row numbers count rows, so they see every row before this one, never its peers. */
 const ROWS_SO_FAR = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
 
-/** The names an as-of read gives its two tables and the second's own columns, as the warehouse's do. */
+/** The names an as-of read gives its two tables and the second's own columns. */
 const ASOF_PRIMARY = "__asof_primary";
 const ASOF_SECONDARY = "__asof_secondary";
 const ASOF_KEY = "__asof_key";
 const ASOF_TIME = "__asof_time";
 const ASOF_FOUND = "__asof_found";
+const ASOF_LABEL = "__asof_label_";
 
 /**
  * Reads one experiment table from the store's views in the warehouse's shape: the view's columns
@@ -118,7 +112,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
-  private readsValues = false;
+  private plotsValues = false;
   private rowNames = new Set<string>();
   private rowIds = new Map<string, "contributor" | "device">();
   /** Kept until a payload, a reserved name or a sheet changes them. */
@@ -193,7 +187,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** Payload fields read as the values a chart plots, not as the text a page shows. */
   plotValues(): this {
-    this.readsValues = true;
+    this.plotsValues = true;
     return this;
   }
 
@@ -209,7 +203,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /** Over another's rows a contributor is its id, and a device the pair of its key and label. */
   escapeIdentifier(identifier: string): string {
     const [name, path] = this.structPath(identifier);
-    const idOf = this.rowNames.has(identifier) ? undefined : this.rowIds.get(name);
+    const idOf = this.rowIdOf(identifier);
 
     const isContributorId = idOf === "contributor" && path === "id";
     if (isContributorId) {
@@ -284,7 +278,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
     const isSerialNumber = base.idOf === "device" && path === "serial_number";
     if (isSerialNumber) {
-      return this.deviceLabelOf(base.expression);
+      return this.devicePartsOf(base).label;
     }
     throw new QueryBuilderInputError(`The store cannot read '${column}'`);
   }
@@ -355,8 +349,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /** The store reads text as a number column's value only as plain digits, with a fraction where
    *  the type holds one. */
   private readsAsNumber(text: string, type: string): boolean {
-    const isInteger = type === "BIGINT" || type === "INT";
-    return isInteger ? /^-?\d+$/.test(text) : /^-?\d+(\.\d+)?$/.test(text);
+    return this.isIntegerType(type) ? /^-?\d+$/.test(text) : /^-?\d+(\.\d+)?$/.test(text);
+  }
+
+  /** Integers leave the store as text, since an id or a sum may pass 2^53. */
+  isIntegerType(type: string): boolean {
+    return INTEGER_TYPES.has(type);
   }
 
   /** A decimal reads as text at its scale, as its cell shows it: 5 at scale 2 is 5.00. */
@@ -396,52 +394,67 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   buildAggregateExpression(agg: AggregateExpression): { sql: string; alias: string } {
-    const { alias } = super.buildAggregateExpression(agg);
-    if (agg.column === "*") {
-      return { sql: "count()", alias };
-    }
+    const alias = this.aggregateAlias(agg);
+    const column = agg.column === "*" ? "*" : this.escapeIdentifier(agg.column);
+    // Over values that may be null an empty input gives null, as Spark's does, not the store's zero.
+    const value = `toNullable(${column})`;
 
-    const column = this.escapeIdentifier(agg.column);
-    const plain = PLAIN_AGGREGATES[agg.function];
-    if (plain !== undefined) {
-      return { sql: `${plain}(toNullable(${column}))`, alias };
+    switch (agg.function) {
+      case "sum":
+      case "avg":
+      case "min":
+      case "max":
+        return { sql: `${agg.function}(${value})`, alias };
+      case "count":
+        return { sql: agg.column === "*" ? "count()" : `count(${column})`, alias };
+      case "count_distinct":
+        return { sql: `count(DISTINCT ${column})`, alias };
+      case "std":
+      case "var":
+        // Spark's sample spreads are null below two values, where the store's are NaN.
+        return {
+          sql: `if(count(${value}) > 1, ${SAMPLE_SPREADS[agg.function]}(${value}), NULL)`,
+          alias,
+        };
+      case "corr": {
+        if (agg.secondColumn === undefined) {
+          throw new QueryBuilderInputError(
+            "buildAggregateExpression: 'corr' requires a secondColumn",
+          );
+        }
+        // Below two pairs or over a constant series there is no correlation, so no value.
+        const corr = `corrStable(${value}, toNullable(${this.escapeIdentifier(agg.secondColumn)}))`;
+        return { sql: `if(isFinite(${corr}), ${corr}, NULL)`, alias };
+      }
+      case "latest":
+      case "earliest": {
+        // The value rides in a tuple, which is never null, so a null value at the newest key is
+        // the answer as it is for Spark's MAX_BY, instead of a row the store skips.
+        const order = this.escapeIdentifier(this.orderColumnOf(agg));
+        const key = agg.tieBreaker
+          ? `tuple(${order}, ${this.escapeIdentifier(agg.tieBreaker)})`
+          : order;
+        const pick = agg.function === "latest" ? "argMaxIf" : "argMinIf";
+        return {
+          sql: `tupleElement(${pick}(tuple(${value}), ${key}, ${order} IS NOT NULL), 1)`,
+          alias,
+        };
+      }
+      case "cumsum":
+        throw new QueryBuilderInputError(
+          "buildAggregateExpression: cumsum is a window function, route through buildCumsumExpression",
+        );
+      case "previous":
+      case "change_from_previous":
+      case "row_number":
+        throw new QueryBuilderInputError("Row windows must use the window-only query path");
     }
-    const spread = SAMPLE_SPREADS[agg.function];
-    if (spread !== undefined) {
-      const value = `toNullable(${column})`;
-      return { sql: `if(count(${value}) > 1, ${spread}(${value}), NULL)`, alias };
-    }
-    if (agg.function === "count") {
-      return { sql: `count(${column})`, alias };
-    }
-    if (agg.function === "count_distinct") {
-      return { sql: `count(DISTINCT ${column})`, alias };
-    }
-    if (agg.function === "corr" && agg.secondColumn !== undefined) {
-      const second = this.escapeIdentifier(agg.secondColumn);
-      const pairs = `countIf(${column} IS NOT NULL AND ${second} IS NOT NULL)`;
-      const corr = `corr(toNullable(${column}), toNullable(${second}))`;
-      return { sql: `if(${pairs} > 1, ${corr}, NULL)`, alias };
-    }
-
-    // The value rides in a tuple, which is never null, so a null value at the newest key is the
-    // answer as it is for Spark's MAX_BY, instead of a row the store skips.
-    const order = this.escapeIdentifier(this.orderColumnOf(agg));
-    const key = agg.tieBreaker
-      ? `tuple(${order}, ${this.escapeIdentifier(agg.tieBreaker)})`
-      : order;
-    const pick = agg.function === "latest" ? "argMaxIf" : "argMinIf";
-    return {
-      sql: `tupleElement(${pick}(tuple(toNullable(${column})), ${key}, ${order} IS NOT NULL), 1)`,
-      alias,
-    };
   }
 
   buildCumsumExpression(
     agg: AggregateExpression,
     opts: { orderBy: string; grouped: boolean },
   ): { sql: string; alias: string } {
-    const { alias } = super.buildCumsumExpression(agg, opts);
     const value = (() => {
       if (agg.column === "*") {
         return opts.grouped ? "count()" : "1";
@@ -449,11 +462,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       const column = this.escapeIdentifier(agg.column);
       return opts.grouped ? `sum(toNullable(${column}))` : column;
     })();
-    return { sql: `sum(${value}) OVER (ORDER BY ${opts.orderBy} ASC NULLS FIRST)`, alias };
+    return {
+      sql: `sum(${value}) OVER (ORDER BY ${opts.orderBy} ASC NULLS FIRST)`,
+      alias: this.aggregateAlias(agg),
+    };
   }
 
   buildRowWindowExpression(item: AggregateExpression): { sql: string; alias: string } {
-    const { alias } = super.buildRowWindowExpression(item);
+    const alias = this.aggregateAlias(item);
     const order = this.escapeIdentifier(this.orderColumnOf(item));
     const window = `OVER (${buildWindowSpec(item, this)} ${ROWS_SO_FAR})`;
     const result = (sql: string) => ({
@@ -470,9 +486,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return result(previous);
     }
     const type = item.valueType?.trim().toUpperCase();
+    if (type === undefined || isNumericType(type)) {
+      return result(`(${column} - ${previous})`);
+    }
     const isTime = type === "TIMESTAMP" || type === "TIMESTAMP_NTZ" || type === "DATE";
     if (!isTime) {
-      return result(`(${column} - ${previous})`);
+      throw new QueryBuilderInputError(
+        "Change from previous requires a numeric, timestamp or date column",
+      );
     }
     const micros = (sql: string) => `toUnixTimestamp64Micro(${sql})`;
     const instant = this.instantOf(column);
@@ -480,8 +501,31 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return result(`(${micros(instant)} - ${micros(before)}) / 1e6`);
   }
 
-  sortDirection(direction: "ASC" | "DESC"): string {
-    return direction === "ASC" ? "ASC NULLS FIRST" : "DESC NULLS LAST";
+  /**
+   * Spark sorts a device's struct by its registry id, which only the ids in the order carry, and a
+   * contributor by name in the order of its ids; nulls go first going up and last going down.
+   */
+  aggregateOrdering(target: string, { column, direction = "ASC" }: QueryOrdering): string {
+    const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
+    const idOrder = this.ordering?.idOrder;
+    const [name, path] = this.structPath(column);
+    const idOf = this.rowIdOf(column);
+
+    const isWholeDevice = idOrder !== undefined && idOf === "device" && path === undefined;
+    if (isWholeDevice) {
+      const place = `indexOf(${ORDER_IDS}, tupleElement(${target}, 1)) ${direction} ${nulls}`;
+      return `${place}, tupleElement(${target}, 2) ${direction} ${nulls}`;
+    }
+    const isContributorName = idOrder !== undefined && idOf === "contributor" && path === "name";
+    if (isContributorName) {
+      return `indexOf(${ORDER_IDS}, ${this.quoteName(name)}) ${direction} ${nulls}`;
+    }
+    return `${target} ${direction} ${nulls}`;
+  }
+
+  /** A statement over another's rows, with the id list its sort reads. */
+  buildOver(statement: string): string {
+    return this.joinClauses([this.withClause(), statement]);
   }
 
   /**
@@ -515,14 +559,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const key = this.columnExpression(match.column);
     const at = this.instantOf(this.columnExpression(match.time));
     const values = match.columns.map(({ name, alias }) => {
-      const column = this.outputColumn(name);
-      return { column: { ...column, name: alias }, sql: this.secondaryValueOf(column) };
+      const { type, idOf } = this.outputColumn(name);
+      return { name, column: { name: alias, type, idOf } };
     });
     const projection = [
       `${key} AS ${ASOF_KEY}`,
       `${at} AS ${ASOF_TIME}`,
       `1 AS ${ASOF_FOUND}`,
-      ...values.map(({ column, sql }) => `${sql} AS ${this.quoteName(column.name)}`),
+      ...values.flatMap(({ name, column }) => this.secondaryValuesOf(name, column)),
     ];
     const where = [...this.whereConditions, `${key} IS NOT NULL`, `${at} IS NOT NULL`];
     const sql = this.joinClauses([
@@ -551,43 +595,86 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.fromClause = `${this.fromClause} AS ${ASOF_PRIMARY} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
     this.columns = [
       ...this.columns,
-      ...secondary.columns.map(({ name, type, idOf }) => ({
-        name,
-        type,
-        idOf,
-        isPairText: idOf === "device",
-        expression: `if(${isRecent}, ${ASOF_SECONDARY}.${this.quoteName(name)}, NULL)`,
-      })),
+      ...secondary.columns.map(({ name, type, idOf }) => {
+        const matched = (sql: string) => `if(${isRecent}, ${ASOF_SECONDARY}.${sql}, NULL)`;
+        if (idOf !== "device") {
+          return { name, type, idOf, expression: matched(this.quoteName(name)) };
+        }
+        const device = {
+          clientId: matched(this.quoteName(name)),
+          label: matched(this.quoteName(this.matchedLabelName(name))),
+        };
+        return {
+          name,
+          type,
+          idOf,
+          isPairText: true,
+          expression: `if(${isRecent}, toJSONString(tuple(${device.clientId}, ${device.label})), NULL)`,
+          matchedDevice: device,
+        };
+      }),
     ];
     return this;
   }
 
-  private secondaryValueOf(column: StoreOutputColumn): string {
-    const expression = this.projectedExpression(column.name);
+  /** A device travels as its client id and its label, from this table's own names. */
+  private secondaryValuesOf(name: string, column: StoreOutputColumn): string[] {
+    const expression = this.projectedExpression(name);
+    const quoted = this.quoteName(column.name);
     if (column.idOf === "device") {
-      return `toJSONString(tuple(${expression}, ${this.deviceLabelOf(expression)}))`;
+      const { label } = this.devicePartsOf(this.baseColumn(name));
+      return [
+        `${expression} AS ${quoted}`,
+        `${label} AS ${this.quoteName(this.matchedLabelName(column.name))}`,
+      ];
     }
-    const isField = this.fieldExpressions().has(column.name);
+    const isField = this.fieldExpressions().has(name);
     const isNested = column.type.startsWith("ARRAY<") || column.type.startsWith("STRUCT<");
-    return isNested && !isField ? `toJSONString(${expression})` : expression;
+    const isArray = isNested && !isField && column.idOf === undefined;
+    return [`${isArray ? `toJSONString(${expression})` : expression} AS ${quoted}`];
   }
 
-  private valueOf({ name, idOf, isPairText }: StoreOutputColumn): string {
+  private matchedLabelName(name: string): string {
+    return `${ASOF_LABEL}${name}`;
+  }
+
+  private valueOf({ name, idOf }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
-    const isClientId = idOf === "device" && !isPairText;
-    return isClientId ? this.deviceKeyOf(expression) : expression;
+    if (idOf !== "device") {
+      return expression;
+    }
+    const [base] = this.structPath(name);
+    return this.deviceKeyOf(this.devicePartsOf(this.baseColumn(base)));
   }
 
   /**
    * The warehouse groups a device by its struct: a registered one by the registry's row, which its
    * client id names, and any other by its label alone, however many clients share it.
    */
-  private deviceKeyOf(clientIdSql: string): string {
+  private deviceKeyOf({ clientId, label }: DeviceParts): string {
     const registered =
       this.deviceSerials.length > 0
-        ? `if(has(${DEVICE_CLIENT_IDS}, ${clientIdSql}), ${clientIdSql}, NULL)`
+        ? `if(has(${DEVICE_CLIENT_IDS}, ${clientId}), ${clientId}, NULL)`
         : "CAST(NULL AS Nullable(String))";
-    return `tuple(${registered}, ${this.deviceLabelOf(clientIdSql)})`;
+    return `tuple(${registered}, ${label})`;
+  }
+
+  /** A device's client id and label: a matched table's from its own names, any other's from its
+   *  row's. */
+  private devicePartsOf(column: StoreColumn): DeviceParts {
+    return (
+      column.matchedDevice ?? {
+        clientId: column.expression,
+        label: this.deviceLabelOf(column.expression),
+      }
+    );
+  }
+
+  /** The id kind of a column of the rows this statement reads over, unless a name holds a dot. */
+  private rowIdOf(column: string): "contributor" | "device" | undefined {
+    const [name, path] = this.structPath(column);
+    const isOwnName = path !== undefined && this.rowNames.has(column);
+    return isOwnName ? undefined : this.rowIds.get(name);
   }
 
   /** Spark reads a date as midnight in its session's zone, UTC. */
@@ -829,10 +916,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const expression = this.projectedExpression(name);
     const isClientId = idOf === "device" && !isPairText;
     if (isClientId) {
-      return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
+      const { clientId, label } = this.devicePartsOf(this.baseColumn(this.structPath(name)[0]));
+      return `tuple(${clientId}, ${label})`;
     }
-    const isInteger = type === "BIGINT" || type === "INT";
-    if (isInteger) {
+    if (this.isIntegerType(type)) {
       return `toString(${expression})`;
     }
     const decimal = VariantSchema.decimalOf(type);
@@ -855,12 +942,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
-      const { expression, idOf } = this.baseColumn(name);
-      const place = `indexOf(${ORDER_IDS}, ${expression}) ${direction} ${nulls}`;
+      const base = this.baseColumn(name);
+      if (base.idOf !== "device") {
+        return `indexOf(${ORDER_IDS}, ${base.expression}) ${direction} ${nulls}`;
+      }
       // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
       // in the order carry, then by its label.
-      const isDevice = idOf === "device";
-      return isDevice ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}` : place;
+      const { clientId, label } = this.devicePartsOf(base);
+      return `indexOf(${ORDER_IDS}, ${clientId}) ${direction} ${nulls}, ${label} ${direction} ${nulls}`;
     }
 
     const target = this.columnExpression(column);
@@ -1020,7 +1109,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   private textSource(column: string, key?: string): Pick<StoreOutputColumn, "text"> {
     const text = this.payloadTexts[column];
-    const readsText = text !== undefined && !this.isDistinct && !this.readsValues;
+    const readsText = text !== undefined && !this.isDistinct && !this.plotsValues;
     return readsText ? { text: { column: text, key } } : {};
   }
 

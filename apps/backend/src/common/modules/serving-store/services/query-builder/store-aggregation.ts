@@ -1,19 +1,23 @@
 import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
-import { wrapWithAggregation } from "../../../databricks/services/query-builder/expressions/aggregation";
+import { buildAggregation } from "../../../databricks/services/query-builder/expressions/aggregation";
+import type { AggregationOutput } from "../../../databricks/services/query-builder/expressions/aggregation";
 import type {
   AggregateExpression,
   AggregationSpec,
   GroupByExpression,
   QueryOrdering,
+  WidthBucket,
 } from "../../../databricks/services/query-builder/query-builder.types";
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
 import { StoreQueryBuilder } from "./store-query-builder";
 import type { StoreOutputColumn } from "./store-query-builder";
 
-/** Integers leave the store as text, since an id or a sum may pass 2^53. */
-const INTEGER_TYPES = new Set(["BIGINT", "INT"]);
+/** A decimal's precision and scale, as Spark types its arithmetic. */
+type Decimal = [number, number];
+
+const MAX_PRECISION = 38;
 
 /**
  * A chart's grouping and aggregates over a store read, written by the warehouse's own wrapper in
@@ -25,7 +29,7 @@ export class StoreAggregation {
     private readonly aggregation: AggregationSpec,
   ) {}
 
-  build(page: { ordering?: QueryOrdering; limit?: number; offset?: number }): {
+  build(page: { ordering?: QueryOrdering; limit?: number; offset?: number; idOrder?: string[] }): {
     sql: string;
     columns: StoreOutputColumn[];
   } {
@@ -33,74 +37,103 @@ export class StoreAggregation {
       throw new QueryBuilderInputError("The store does not expand arrays into rows");
     }
 
-    const inner = this.rows.outputColumns();
+    // Grouped, the store reads only the columns the aggregation names; it does not leave the
+    // others out of a statement it aggregates over by itself.
+    if (!this.keepsRows()) {
+      this.rows.select(this.namesRead(page.ordering));
+    }
+    const inner = this.rows.outputColumns().map(({ name, type, idOf }) => ({ name, type, idOf }));
     const names = inner.map(({ name }) => name);
     const dialect = new StoreQueryBuilder(names).over(inner);
-    const aggregated = wrapWithAggregation(
+    if (page.ordering !== undefined) {
+      dialect.orderBy(page.ordering, page.idOrder);
+    }
+
+    const { sql, outputs } = buildAggregation(
       this.rows.buildValues(),
       { columnNames: names, aggregation: this.aggregation, ...page },
       dialect,
     );
-
-    const columns = this.outputs(dialect, inner);
+    const columns = outputs.flatMap((output) => this.outputColumns(output, inner));
     const cells = columns.map(({ name, type }) => {
       const quoted = dialect.quoteName(name);
-      return INTEGER_TYPES.has(type) ? `toString(${quoted}) AS ${quoted}` : quoted;
+      return dialect.isIntegerType(type) ? `toString(${quoted}) AS ${quoted}` : quoted;
     });
-    // The statement keeps the aggregate's order; the store reads the names below an alias first.
-    return { sql: `SELECT ${cells.join(", ")} FROM (${aggregated})`, columns };
+    // The outer statement keeps the aggregate's order; under prefer_column_name_to_alias each text
+    // conversion reads the inner column, not its own alias.
+    return { sql: dialect.buildOver(`SELECT ${cells.join(", ")} FROM (${sql})`), columns };
   }
 
-  /** The wrapper's outputs in its order: groups, row aggregates, then windows, or every row's
-   *  columns then windows when nothing groups. */
-  private outputs(dialect: StoreQueryBuilder, inner: StoreOutputColumn[]): StoreOutputColumn[] {
-    const functions = this.aggregation.functions ?? [];
+  /** With nothing grouped and only windows, every row comes back with all its columns. */
+  private keepsRows(): boolean {
+    const hasGroups = (this.aggregation.groupBy ?? []).length > 0;
     const isWindow = ({ function: fn }: AggregateExpression) =>
       fn === "cumsum" || aggregateKind(fn) === "rowWindow";
-    const groups = (this.aggregation.groupBy ?? []).map((item) =>
-      this.groupOutput(dialect, inner, item),
-    );
-    const rowAggregates = functions
-      .filter((item) => !isWindow(item))
-      .map((item) => this.functionOutput(dialect, inner, item));
-    const windows = functions
-      .filter(isWindow)
-      .map((item) => this.functionOutput(dialect, inner, item));
+    return !hasGroups && (this.aggregation.functions ?? []).every(isWindow);
+  }
 
-    const isWindowOnly = groups.length === 0 && rowAggregates.length === 0;
-    return isWindowOnly ? [...inner, ...windows] : [...groups, ...rowAggregates, ...windows];
+  /** The read's own columns the aggregation and its sort name; a struct path reads its column. */
+  private namesRead(ordering?: QueryOrdering): string[] {
+    const all = new Set(this.rows.outputColumns().map(({ name }) => name));
+    const named = [
+      ...(this.aggregation.groupBy ?? []).map(({ column }) => column),
+      ...(this.aggregation.functions ?? []).flatMap((item) => [
+        item.column,
+        item.secondColumn,
+        item.partitionColumn,
+        item.orderColumn,
+        item.tieBreaker,
+      ]),
+      ordering?.column,
+    ];
+    const read = named.flatMap((name) => {
+      if (name === undefined) {
+        return [];
+      }
+      const column = all.has(name) ? name : name.split(".")[0];
+      return all.has(column) ? [column] : [];
+    });
+    // A count of rows names no column, yet the statement must read one.
+    return read.length > 0 ? [...new Set(read)] : ["id"];
+  }
+
+  private outputColumns(
+    output: AggregationOutput,
+    inner: StoreOutputColumn[],
+  ): StoreOutputColumn[] {
+    if (output.kind === "rows") {
+      return inner;
+    }
+    if (output.kind === "group") {
+      return [this.groupOutput(output.item, output.name, inner)];
+    }
+    return [this.functionOutput(output.item, output.name, inner)];
   }
 
   private groupOutput(
-    dialect: StoreQueryBuilder,
-    inner: StoreOutputColumn[],
     item: GroupByExpression,
+    name: string,
+    inner: StoreOutputColumn[],
   ): StoreOutputColumn {
     if (item.timeBucket !== undefined) {
-      const { alias } = dialect.buildTimeBucketExpression(item.column, item.timeBucket);
-      return { name: alias, type: "TIMESTAMP" };
+      return { name, type: "TIMESTAMP" };
     }
     if (item.widthBucket !== undefined) {
-      const { alias } = dialect.buildWidthBucketExpression(
-        item.column,
-        item.widthBucket,
-        item.alias,
-      );
-      return { name: alias, type: "BIGINT" };
+      const { type } = this.columnOf(inner, item.column);
+      return { name, type: this.widthBucketType(type, item.widthBucket) };
     }
-    return { ...this.columnOf(inner, item.column), name: item.alias ?? item.column };
+    return { ...this.columnOf(inner, item.column), name };
   }
 
   /** Spark's result type for each function: a count is a BIGINT, a mean or a spread a DOUBLE, a
    *  sum keeps whole numbers whole, and a picked value keeps its column's type. */
   private functionOutput(
-    dialect: StoreQueryBuilder,
-    inner: StoreOutputColumn[],
     item: AggregateExpression,
+    name: string,
+    inner: StoreOutputColumn[],
   ): StoreOutputColumn {
-    const name = this.aliasOf(dialect, item);
     const column = item.column === "*" ? undefined : this.columnOf(inner, item.column);
-    const isWhole = column !== undefined && INTEGER_TYPES.has(column.type);
+    const isWhole = column !== undefined && this.rows.isIntegerType(column.type);
 
     switch (item.function) {
       case "count":
@@ -129,14 +162,71 @@ export class StoreAggregation {
     }
   }
 
-  private aliasOf(dialect: StoreQueryBuilder, item: AggregateExpression): string {
-    if (item.function === "cumsum") {
-      return dialect.buildCumsumExpression(item, { orderBy: "", grouped: false }).alias;
+  /**
+   * Spark divides whole numbers as doubles, whose floor is a BIGINT, but reads a literal with a
+   * fraction as a DECIMAL, which keeps the division decimal and its floor a DECIMAL of scale 0.
+   */
+  private widthBucketType(columnType: string, bucket: WidthBucket): string {
+    // A time is its epoch milliseconds, a BIGINT.
+    const position = this.wholeColumn(bucket.scale === "time" ? "BIGINT" : columnType);
+    const origin = this.literalDecimal(bucket.origin);
+    const width = this.literalDecimal(bucket.width);
+    const isDouble = position === undefined || origin === undefined || width === undefined;
+    if (isDouble || (origin[1] === 0 && width[1] === 0)) {
+      return "BIGINT";
     }
-    if (aggregateKind(item.function) === "rowWindow") {
-      return dialect.buildRowWindowExpression(item).alias;
+
+    const difference = this.subtracted(position, origin);
+    const [precision, scale] = this.divided(difference, width);
+    return `DECIMAL(${Math.min(precision - scale + 1, MAX_PRECISION)},0)`;
+  }
+
+  private wholeColumn(type: string): Decimal | undefined {
+    if (type === "BIGINT") {
+      return [20, 0];
     }
-    return dialect.buildAggregateExpression(item).alias;
+    return type === "INT" ? [10, 0] : undefined;
+  }
+
+  private integerDecimal(value: number): Decimal {
+    return Math.abs(value) <= 2_147_483_647 ? [10, 0] : [20, 0];
+  }
+
+  /** None for a literal Spark reads as a double, which it writes with an exponent. */
+  private literalDecimal(value: number): Decimal | undefined {
+    const text = String(value);
+    if (/e/i.test(text)) {
+      return undefined;
+    }
+    const [whole, fraction = ""] = text.replace("-", "").split(".");
+    if (fraction === "") {
+      return this.integerDecimal(value);
+    }
+    const digits = whole.replace(/^0+/, "").length + fraction.length;
+    return [Math.max(digits, fraction.length), fraction.length];
+  }
+
+  private subtracted([p1, s1]: Decimal, [p2, s2]: Decimal): Decimal {
+    const isWhole = s1 === 0 && s2 === 0;
+    if (isWhole) {
+      return [Math.max(p1, p2), 0];
+    }
+    const scale = Math.max(s1, s2);
+    return this.bounded(Math.max(p1 - s1, p2 - s2) + scale + 1, scale);
+  }
+
+  private divided([p1, s1]: Decimal, [p2, s2]: Decimal): Decimal {
+    const scale = Math.max(6, s1 + p2 + 1);
+    return this.bounded(p1 - s1 + s2 + scale, scale);
+  }
+
+  /** Spark keeps the whole digits of a result past 38 and gives up scale, down to 6. */
+  private bounded(precision: number, scale: number): Decimal {
+    if (precision <= MAX_PRECISION) {
+      return [precision, scale];
+    }
+    const wholeDigits = precision - scale;
+    return [MAX_PRECISION, Math.max(MAX_PRECISION - wholeDigits, Math.min(scale, 6))];
   }
 
   /** A column the read holds, or a field of a contributor or device, which is text. */

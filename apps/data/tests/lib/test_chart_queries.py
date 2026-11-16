@@ -70,7 +70,11 @@ def _value(value: object) -> object:
 def _result(spark: SparkSession, name: str) -> dict[str, object]:
     frame = spark.sql(_QUERIES[name])
     columns = _PARITY["cases"][name].get("compare", frame.columns)
-    types = [_TYPES[frame.schema[column].dataType.simpleString()] for column in columns]
+    # A decimal is named as the warehouse names it, with its precision and scale.
+    types = [
+        _TYPES.get(kind, kind.upper())
+        for kind in (frame.schema[column].dataType.simpleString() for column in columns)
+    ]
     # Python reads a timestamp in the machine's zone, so Spark writes it in its session's, UTC.
     cells = [
         F.date_format(F.col(f"`{column}`"), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").alias(column)

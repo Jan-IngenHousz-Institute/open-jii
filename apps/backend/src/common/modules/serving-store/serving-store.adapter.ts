@@ -196,6 +196,7 @@ export class ServingStoreAdapter implements ServingStorePort {
             ordering: params.ordering,
             limit: params.limit,
             offset: params.offset,
+            idOrder: params.orderByIds,
           }),
         );
       }
@@ -258,7 +259,7 @@ export class ServingStoreAdapter implements ServingStorePort {
       builder.buildAsOfSecondary({
         column: join.matchColumn,
         time: join.secondaryTimeColumn,
-        columns: join.secondaryColumns,
+        columns: builder.secondaryColumnsRead(params, join),
       }),
     );
   }
@@ -320,15 +321,15 @@ export class ServingStoreAdapter implements ServingStorePort {
 
   private cells(columns: StoreQueryColumn[], row: unknown[]): (string | null)[] {
     const payloads = this.payloads(columns, row);
-    return columns.map(({ type, idOf, text }, index) => {
+    return columns.map(({ type, idOf, text, isPairText }, index) => {
       const value = row[index];
       if (text !== undefined) {
         return CellValues.payloadCell(payloads.get(text.column), text.key, type);
       }
-      // An as-of read's second device comes as its pair's JSON text, or null without a match.
-      const isPairText = typeof value === "string" || value === null;
       if (idOf === "device") {
-        return isPairText ? value : JSON.stringify(value);
+        return isPairText === true && (typeof value === "string" || value === null)
+          ? value
+          : JSON.stringify(value);
       }
       if (idOf === "contributor") {
         return typeof value === "string" ? value : null;

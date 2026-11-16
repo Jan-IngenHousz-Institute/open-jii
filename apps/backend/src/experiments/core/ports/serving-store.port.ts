@@ -21,6 +21,8 @@ export interface StoreQueryColumn {
    * `key`, or the whole payload without one. The first column read from a text carries it.
    */
   text?: { column: string; key?: string };
+  /** An as-of read's second device, which comes as its pair's JSON text, or null without a match. */
+  isPairText?: boolean;
 }
 
 export interface StoreQuery {
