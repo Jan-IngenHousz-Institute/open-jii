@@ -936,7 +936,7 @@ describe("ordered aggregate query inputs", () => {
       );
 
     expect(sumAlong("id")).toContain(
-      "FROM (SELECT * FROM (SELECT * FROM readings) WHERE `id` <= (SELECT max(`id`) FROM (SELECT `id` FROM (SELECT * FROM readings) ORDER BY `id` ASC LIMIT 2)))",
+      "FROM (SELECT * EXCEPT (`__cap_rank`) FROM (SELECT *, rank() OVER (ORDER BY `id` ASC) AS `__cap_rank` FROM (SELECT * FROM readings)) WHERE `__cap_rank` <= 2)",
     );
     expect(sumAlong("timestamp")).toMatch(
       /OVER \(ORDER BY `timestamp`\) AS `value_cumsum` FROM \(SELECT \* FROM readings\) ORDER BY/,

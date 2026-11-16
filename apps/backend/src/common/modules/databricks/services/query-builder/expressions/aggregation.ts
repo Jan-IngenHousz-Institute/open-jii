@@ -17,6 +17,7 @@ import { QueryBuilderInputError } from "../query-builder.types";
 import { buildWindowOrder } from "./window";
 
 const ROW_ID = "id";
+const CAP_RANK = "__cap_rank";
 
 /**
  * Whether a running sum's rows may be cut to the limit before it runs: along the row id going up,
@@ -49,9 +50,10 @@ function cappedRows(
   if (!windows.hasRunningSum) {
     return `(SELECT * FROM ${from} ORDER BY ${order} LIMIT ${count})`;
   }
-  const id = builder.escapeIdentifier(ROW_ID);
-  const lastId = `SELECT max(${id}) FROM (SELECT ${id} FROM ${from} ORDER BY ${order} LIMIT ${count})`;
-  return `(SELECT * FROM ${from} WHERE ${id} <= (${lastId}))`;
+  // A row's rank counts the rows before it, so every row that shares the last kept id ranks in.
+  const rank = builder.quoteName(CAP_RANK);
+  const ranked = `SELECT *, rank() OVER (ORDER BY ${order}) AS ${rank} FROM ${from}`;
+  return `(SELECT * EXCEPT (${rank}) FROM (${ranked}) WHERE ${rank} <= ${count})`;
 }
 
 /** What an aggregated read groups, computes, sorts and pages by. */
