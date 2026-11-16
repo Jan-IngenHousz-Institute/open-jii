@@ -18,7 +18,6 @@ export class PageBytes {
     return firstOver === -1 ? rows : rows.slice(0, firstOver);
   }
 
-  /** The leading rows that fit the limit together. */
   static fitting(rows: (string | null)[][]): (string | null)[][] {
     const size = new PageBytes();
     const count = rows.findIndex((row) => {

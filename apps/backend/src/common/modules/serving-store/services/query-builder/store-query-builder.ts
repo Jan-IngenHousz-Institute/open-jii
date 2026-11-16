@@ -292,7 +292,6 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this.followIds(idOrder);
   }
 
-  /** The ids an order by a contributor's name or a device's registry id follows. */
   followIds(idOrder: string[] | undefined): this {
     this.idOrder = idOrder;
     return this;
@@ -575,7 +574,6 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return `${target} ${direction} ${nulls}`;
   }
 
-  /** A statement over another's rows, with the id list its sort reads. */
   buildOver(statement: string): string {
     return this.joinClauses([this.withClause(), statement]);
   }
@@ -700,7 +698,6 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  /** A device travels as its client id and its label, from this table's own names. */
   private secondaryValuesOf(name: string, column: StoreOutputColumn): string[] {
     const expression = this.projectedExpression(name);
     const quoted = this.quoteName(column.name);
@@ -753,7 +750,6 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     );
   }
 
-  /** The id kind of a column of the rows this statement reads over, unless a name holds a dot. */
   private rowIdOf(column: string): "contributor" | "device" | undefined {
     const [name, path] = this.structPath(column);
     const isOwnName = path !== undefined && this.rowNames.has(column);

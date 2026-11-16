@@ -164,7 +164,6 @@ export class StoreAggregation {
     }
   }
 
-  /** A column the read holds, or a field of a contributor or device, which is text. */
   private columnOf(inner: StoreOutputColumn[], name: string): StoreOutputColumn {
     const column = inner.find((candidate) => candidate.name === name);
     if (column !== undefined) {

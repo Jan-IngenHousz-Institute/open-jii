@@ -1218,7 +1218,6 @@ export class ExperimentDataRepository {
     return success(this.reads(shape).deviceLabelsQuery(projected.value, limit + 1, offset));
   }
 
-  /** How many rows a read without its page returns. */
   private async countQuery(
     experimentId: string,
     shape: TableShape,
