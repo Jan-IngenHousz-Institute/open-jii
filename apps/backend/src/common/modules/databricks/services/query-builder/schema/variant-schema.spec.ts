@@ -18,6 +18,16 @@ const zMergeCases = z.array(
   }),
 );
 
+// Worked out by gold's table metadata notebook in the data tests.
+const SHEET_CASES = resolve(
+  __dirname,
+  "../../../../../../../../data/tests/fixtures/custom_metadata_schemas.json",
+);
+
+const zSheetCases = z.array(
+  z.object({ name: z.string(), rows: z.array(z.string()), schema: z.string().nullable() }),
+);
+
 describe("VariantSchema.topLevelFieldNames", () => {
   it("extracts simple comma-separated fields", () => {
     expect(VariantSchema.topLevelFieldNames("OBJECT<a: INT, b: STRING>")).toEqual(["a", "b"]);
@@ -101,6 +111,26 @@ describe("VariantSchema.merge", () => {
 
   it("has nothing to merge without a schema", () => {
     expect(VariantSchema.merge([])).toBeNull();
+  });
+});
+
+describe("VariantSchema.ofJson", () => {
+  const cases = zSheetCases.parse(JSON.parse(readFileSync(SHEET_CASES, "utf-8")));
+
+  it.each(cases)("types $name as gold does", ({ rows, schema }) => {
+    expect(VariantSchema.ofJson(rows)).toBe(schema);
+  });
+
+  it("has no schema without rows, or when every row is null", () => {
+    expect(VariantSchema.ofJson([])).toBeNull();
+    expect(VariantSchema.ofJson(["null"])).toBeNull();
+  });
+
+  it("reads a sheet's numbers as JSON.stringify writes them", () => {
+    const rows = [{ area: 1.5 }, { area: 12.25 }, { area: 1e21 }].map((row) => JSON.stringify(row));
+
+    expect(VariantSchema.ofJson(rows.slice(0, 2))).toBe("OBJECT<area: DECIMAL(4,2)>");
+    expect(VariantSchema.ofJson(rows)).toBe("OBJECT<area: DOUBLE>");
   });
 });
 
