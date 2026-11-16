@@ -8,9 +8,9 @@ vi.mock("better-auth/adapters/drizzle", async () => {
 });
 
 describe.each([
-  ["prod", "https://openjii.org", "https://equipment.openjii.org/login/openjii"],
+  ["prod", "https://openjii.org", "https://lab.openjii.org/login/openjii"],
   ["dev", "https://dev.openjii.org", "http://localhost:3100/login/openjii"],
-])("%s browser origins and sibling return destinations", (environment, baseUrl, equipmentUrl) => {
+])("%s browser origins and sibling return destinations", (environment, baseUrl, siblingAppUrl) => {
   let trustedOrigins: string[] = [];
 
   beforeAll(async () => {
@@ -29,7 +29,8 @@ describe.each([
   it("keeps browser-origin trust separate from approved returns", () => {
     expect(trustedOrigins).toEqual(expect.arrayContaining([baseUrl, "openjii://", "photosynq://"]));
     expect(trustedOrigins).not.toContain("https://equipment.openjii.org");
+    expect(trustedOrigins).not.toContain("https://lab.openjii.org");
     expect(trustedOrigins).not.toContain("http://localhost:3100");
-    expect(resolveAuthCallback(equipmentUrl, { baseUrl, environment })).toBe(equipmentUrl);
+    expect(resolveAuthCallback(siblingAppUrl, { baseUrl, environment })).toBe(siblingAppUrl);
   });
 });
