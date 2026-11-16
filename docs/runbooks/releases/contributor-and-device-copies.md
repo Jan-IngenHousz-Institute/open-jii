@@ -124,15 +124,23 @@ FROM centrum.experiment_devices;
 Run both before the release as well and compare: each reads the same before and after the
 restart. A user without a profile reads blank in both, as the backend's lookup left them.
 
+Centrum may also restart before step 5 on its own, after a recoverable failure, once the bundle
+has deployed. It then joins copies that are still filling, and names read blank until step 3
+drains. Finish steps 2 and 3: the names come back as the copies land, and this is no reason to
+roll back.
+
 ## Rolling back
 
-Before the restart, nothing has switched: roll back as any release. After it, the previous
-release's gold tables call the backend again, and its backend serves them, but only once Centrum
-restarts on the previous bundle. Its tasks never claim a `contributor` or `device` row, so any left
-owed would wait and fire `experiment-data-outbox-waiting`. Once the rollback is out, delete them:
+The previous release's tasks never claim a `contributor` or `device` row, so step 2's rows, and
+every copy the new tasks owed, would wait and fire `experiment-data-outbox-waiting`. Whenever the
+rollback comes, before step 5 or after it, delete them once it is out:
 
 ```sql
 DELETE FROM experiment_data_outbox WHERE record_type IN ('contributor', 'device');
 ```
+
+Before step 5, Centrum still runs the previous notebooks, unless it restarted on its own. After
+step 5, or after such a restart, restart Centrum once the previous bundle is out: its gold tables
+then call the backend again, and the previous backend serves them.
 
 When the release comes back, run steps 2 to 4 again: the copies missed every change made meanwhile.
