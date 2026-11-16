@@ -35,12 +35,12 @@ describe("STATUS_COMPONENTS", () => {
     expect(STATUS_COMPONENTS.map((component) => component.id)).toEqual([...STATUS_COMPONENT_IDS]);
   });
 
-  it("marks sign-in and exports as not live and the rest as live", () => {
+  it("marks every component live", () => {
     const notLive = STATUS_COMPONENTS.filter((component) => !component.live).map(
       (component) => component.id,
     );
 
-    expect(notLive).toEqual(["sign-in", "exports"]);
+    expect(notLive).toEqual([]);
   });
 
   it("gives every signal to at least one component and none that does not exist", () => {
@@ -150,14 +150,6 @@ describe("statusQueries", () => {
       lookbackMinutes: STALL_PUBLISHES_START_MINUTES,
       endMinutesAgo: STALL_PUBLISHES_END_MINUTES,
     });
-  });
-
-  it("leaves out the signals of components that are not live", () => {
-    const ids = regions.flatMap((entry) => entry.readings.map((reading) => reading.id));
-
-    expect(ids).not.toContain("emailUp");
-    expect(ids).not.toContain("exportsFailed");
-    expect(JSON.stringify(regions)).not.toContain("ExportsFailed");
   });
 
   it("reads every signal of every live component, and a shared one once", () => {

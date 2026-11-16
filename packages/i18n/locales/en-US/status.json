@@ -123,7 +123,7 @@
     "sign-in": {
       "name": "Sign-in",
       "description": "Signing in to your openJII account.",
-      "details": "Signing in with an email code needs our email service. Every five minutes the platform tests its connection to that service. Sign-in is degraded when every test in the last 10 minutes fails."
+      "details": "Signing in with an email code needs our email service. Every five minutes the platform tests its connection to that service. Sign-in is degraded when every test in the last 10 minutes fails, or when an email with a sign-in code failed to send in the last 15 minutes."
     },
     "platform": {
       "name": "Platform",

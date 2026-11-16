@@ -123,7 +123,7 @@
     "sign-in": {
       "name": "Anmeldung",
       "description": "Die Anmeldung bei Ihrem openJII-Konto.",
-      "details": "Die Anmeldung mit einem E-Mail-Code braucht unseren E-Mail-Dienst. Alle fünf Minuten testet die Plattform ihre Verbindung zu diesem Dienst. Die Anmeldung gilt als beeinträchtigt, wenn in den letzten 10 Minuten jeder Test fehlschlägt."
+      "details": "Die Anmeldung mit einem E-Mail-Code braucht unseren E-Mail-Dienst. Alle fünf Minuten testet die Plattform ihre Verbindung zu diesem Dienst. Die Anmeldung gilt als beeinträchtigt, wenn in den letzten 10 Minuten jeder Test fehlschlägt oder in den letzten 15 Minuten eine E-Mail mit einem Anmeldecode nicht versendet werden konnte."
     },
     "platform": {
       "name": "Plattform",

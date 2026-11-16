@@ -11,6 +11,13 @@ export type GeocodeResult = ExperimentPlaceSearchResult;
  */
 export const AWS_PORT = Symbol("AWS_PORT");
 
+export interface ExportMetric {
+  name: string;
+  value: number;
+  unit: "Count";
+  dimensions: Record<string, string>;
+}
+
 /**
  * Search request for places
  */
@@ -53,4 +60,6 @@ export interface AwsPort {
 
   /** The text of a small export object such as a manifest; null when it was never written. */
   readExportObject(key: string): Promise<Result<string | null>>;
+
+  publishMetrics(namespace: string, metrics: ExportMetric[]): Promise<Result<void>>;
 }

@@ -190,6 +190,13 @@ function judgeDataIntake({ readings }: ComponentEvidence): ComponentVerdict {
   };
 }
 
+function judgeSignIn({ readings }: ComponentEvidence): ComponentVerdict {
+  const isEmailDown = isDependencyDown(readings.emailUp);
+  const hasFailedEmail = (readings.signInEmailsFailed ?? 0) > 0;
+
+  return { state: stateOf(false, isEmailDown || hasFailedEmail) };
+}
+
 function judgeDataDelivery({ readings }: ComponentEvidence): ComponentVerdict {
   const latencySeconds = readings.deliveryLatencyP95 ?? 0;
   const iteratorAgeMs = readings.ingestIteratorAge ?? 0;
@@ -237,7 +244,7 @@ export function judgeComponent(
     case "website":
       return judgeWebsite(evidence);
     case "sign-in":
-      return { state: stateOf(false, isDependencyDown(evidence.readings.emailUp)) };
+      return judgeSignIn(evidence);
     case "platform":
       return judgePlatform(evidence);
     case "data-intake":

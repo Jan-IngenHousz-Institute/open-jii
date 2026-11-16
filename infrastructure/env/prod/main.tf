@@ -3088,6 +3088,22 @@ module "backend_ecs" {
   }
 }
 
+# The auth server logs each code email the email server did not take. Catalog entry 147; the status
+# page's Sign-in row reads the same count.
+resource "aws_cloudwatch_log_metric_filter" "sign_in_emails_failed" {
+  name           = "sign-in-emails-failed-${var.environment}"
+  log_group_name = module.backend_ecs.cloudwatch_log_group_name
+  pattern        = "\"Sign-in code email failed\""
+
+  metric_transformation {
+    name          = "SignInEmailsFailed"
+    namespace     = "OpenJII/Backend"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
 # The backend's HMAC guard logs each rejected pipeline call once, with its reason. The alert counts
 # the calls that carried a key id, since anyone can send one without, and reads 0 between
 # rejections while the backend logs anything else. A count with a dimension cannot default to 0,

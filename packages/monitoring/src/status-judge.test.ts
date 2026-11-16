@@ -54,10 +54,12 @@ import { collapseReadings } from "./status-readings.js";
 
 const LIVE_IDS: StatusComponentId[] = [
   "website",
+  "sign-in",
   "platform",
   "data-intake",
   "data-delivery",
   "macro-processing",
+  "exports",
 ];
 
 const HEALTHY_PROBES: StatusProbes = {
@@ -87,6 +89,7 @@ const HEALTHY_READINGS: StatusReadings = {
   macroPlatformFailures: 0,
   macroLatencyP95: 10,
   macroBacklog: 0,
+  signInEmailsFailed: 0,
   exportsFailed: 0,
 };
 
@@ -570,6 +573,18 @@ const thresholdCases: Case[] = [
     id: "sign-in",
     name: "no email check",
     change: { readings: { emailUp: undefined } },
+    state: "operational",
+  },
+  {
+    id: "sign-in",
+    name: "one sign-in email that failed to send",
+    change: { readings: { signInEmailsFailed: 1 } },
+    state: "degraded",
+  },
+  {
+    id: "sign-in",
+    name: "no failed-email datapoint",
+    change: { readings: { signInEmailsFailed: undefined } },
     state: "operational",
   },
   {
