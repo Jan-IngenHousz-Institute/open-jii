@@ -50,7 +50,6 @@ flowchart TD
   %% Warming flow
   EB -- "5min Schedule" --> WL
   WL -- "Keep Warm" --> SL
-  WL -- "Keep Warm" --> IL
 
   %% Logging connections (dashed lines)
   SL -.->|Logs| CW

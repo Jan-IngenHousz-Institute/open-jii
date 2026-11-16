@@ -163,12 +163,12 @@ function handler(event) {
 EOT
 }
 locals {
-  # Pages that differ per visitor never come from the edge cache, whatever their
-  # headers say.
   # The proxy skips these extensions, so on the server a missing file reads as an unknown locale and
   # fails with a 500 instead of a 404.
-  public_file_patterns = ["*.svg", "*.ico", "*.png", "*.jpg", "*.jpeg"]
+  public_file_patterns = ["*.svg", "*.ico", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.avif", "*.gif"]
 
+  # Pages that differ per visitor never come from the edge cache, whatever their
+  # headers say.
   uncached_page_patterns = [
     "/*/platform*",
     "/*/login*",
