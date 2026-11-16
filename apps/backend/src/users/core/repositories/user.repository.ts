@@ -434,13 +434,13 @@ export class UserRepository {
 
     // 2. Re-check the deletion blockers inside the transaction. The pre-flight
     //    checks in DeleteUserUseCase drive the hand-off UX but are raceable on
-    //    their own: two last admins — or two co-owners of one organization —
+    //    their own: two last admins (or two co-owners of one organization)
     //    deleting at once would both see the other and both commit.
     await this.assertDeletionUnblocked(tx, id);
 
     // Clear the dormant roster rows and every grant. `can()` reads
     // resource_grants, so leaving grants behind keeps a deleted account's access
-    // alive — and nothing cascades on the grantee side.
+    // alive, and nothing cascades on the grantee side.
 
     await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
     await deleteGranteeGrants(tx, id, "user");
@@ -451,7 +451,7 @@ export class UserRepository {
 
     // 3. Scrub PII and mark deleted. An upsert, not an update: `deleted_at` is
     //    the only closed-account marker, and an UPDATE does nothing for someone
-    //    who never onboarded — leaving them a living owner forever.
+    //    who never onboarded, leaving them a living owner forever.
     await tx
       .insert(profiles)
       .values({
