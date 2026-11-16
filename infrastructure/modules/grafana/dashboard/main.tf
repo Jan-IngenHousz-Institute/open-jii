@@ -2118,10 +2118,10 @@ resource "grafana_rule_group" "serving_store_health" {
 
 # Serving store feed alerts, only where the pipelines feed the store
 locals {
-  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows"])
+  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows", "device_events"])
 
-  # The heartbeat metric counting the gold rows each table is fed from. Uploads have none, so a stall
-  # there shows only as a slow feed once rows arrive.
+  # The heartbeat metric counting the gold rows each table is fed from. Uploads, the sheets' rows and
+  # silver's device events have none, so a stall there shows only as a slow feed once rows arrive.
   serving_store_feed_gold_rows = {
     measurements  = "ExperimentRows"
     macro_results = "MacroResultRows"
