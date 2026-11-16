@@ -201,6 +201,23 @@ resource "aws_cloudwatch_log_group" "server" {
   tags              = local.common_tags
 }
 
+# A cached Contentful read that fails to refresh keeps serving its old value, and Next only logs
+# the failure. Catalog entry 149 counts the line, since the pages otherwise stay up but stale.
+resource "aws_cloudwatch_log_metric_filter" "cms_refresh_failures" {
+  count          = var.enable_cloudwatch_logs ? 1 : 0
+  name           = "${local.name_prefix}-cms-refresh-failures"
+  log_group_name = aws_cloudwatch_log_group.server[0].name
+  pattern        = "\"revalidating cache with key\""
+
+  metric_transformation {
+    name          = "CmsRefreshFailures"
+    namespace     = "OpenJII/Web"
+    value         = "1"
+    default_value = "0"
+    unit          = "Count"
+  }
+}
+
 resource "aws_cloudwatch_log_group" "image" {
   count             = var.enable_cloudwatch_logs ? 1 : 0
   name              = "/aws/lambda/${local.image_function_name}"

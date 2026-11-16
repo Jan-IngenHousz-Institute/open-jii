@@ -1420,6 +1420,89 @@ resource "grafana_rule_group" "page_regeneration" {
       service   = "frontend"
     }
   }
+
+  # Catalog entry 149. Next keeps serving a cached Contentful read whose refresh failed and only
+  # logs it, so a filter counts the line; failures for 15 minutes mean the pages have gone stale.
+  rule {
+    name      = "Public Page Content Not Refreshing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Web"
+        metricName = "CmsRefreshFailures"
+        statistic  = "Sum"
+        dimensions = {}
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "Cached Contentful reads behind the public pages keep failing to refresh, so the pages show old content."
+      summary          = "Public pages have stopped following Contentful"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-cms-refresh-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-cms-refresh-failures"]
+    }
+    labels = {
+      metric_id = "web-cms-refresh-failures"
+      severity  = "warning"
+      service   = "frontend"
+    }
+  }
 }
 
 # Database Alerts
