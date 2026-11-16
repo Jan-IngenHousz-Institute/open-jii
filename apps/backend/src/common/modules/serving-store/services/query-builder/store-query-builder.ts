@@ -30,8 +30,8 @@ export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "is
   text?: { column: string; key?: string };
 };
 
-/** Another table's rows, one per key and time, for this table's rows to match. */
-export interface StoreMatchable {
+/** The second table of an as-of read, one row per key and time. */
+export interface StoreAsOfSecondary {
   sql: string;
   columns: StoreOutputColumn[];
 }
@@ -74,12 +74,12 @@ const SAMPLE_SPREADS: Partial<Record<AggregateExpression["function"], string>> =
 /** Lag and row numbers count rows, so they see every row before this one, never its peers. */
 const ROWS_SO_FAR = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
 
-/** The names a time-matched read gives its two tables and the matched table's own columns. */
-const ROWS = "__rows";
-const MATCHED = "__matched";
-const MATCH_KEY = "__match_key";
-const MATCH_TIME = "__match_time";
-const MATCH_FOUND = "__match_found";
+/** The names an as-of read gives its two tables and the second's own columns, as the warehouse's do. */
+const ASOF_PRIMARY = "__asof_primary";
+const ASOF_SECONDARY = "__asof_secondary";
+const ASOF_KEY = "__asof_key";
+const ASOF_TIME = "__asof_time";
+const ASOF_FOUND = "__asof_found";
 
 /**
  * Reads one experiment table from the store's views in the warehouse's shape: the view's columns
@@ -210,10 +210,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   escapeIdentifier(identifier: string): string {
     const [name, path] = this.structPath(identifier);
     const idOf = this.rowNames.has(identifier) ? undefined : this.rowIds.get(name);
-    if (idOf === "contributor" && path === "id") {
+
+    const isContributorId = idOf === "contributor" && path === "id";
+    if (isContributorId) {
       return this.quoteName(name);
     }
-    if (idOf === "device" && path === "serial_number") {
+    const isSerialNumber = idOf === "device" && path === "serial_number";
+    if (isSerialNumber) {
       return `tupleElement(${this.quoteName(name)}, 2)`;
     }
     return super.escapeIdentifier(identifier);
@@ -501,25 +504,24 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * These rows for another table's to match by time: per key and time the one with the lowest
-   * id, as the warehouse breaks a tie, each named column under its alias. A device comes as the
-   * JSON text of its pair and an array as its JSON, since a missing match makes either null.
+   * These rows as an as-of read's second table: per key and time the one with the lowest id, as
+   * the warehouse breaks a tie. A device and an array come as JSON text, since no match nulls them.
    */
-  buildMatchable(match: {
+  buildAsOfSecondary(match: {
     column: string;
     time: string;
     columns: { name: string; alias: string }[];
-  }): StoreMatchable {
+  }): StoreAsOfSecondary {
     const key = this.columnExpression(match.column);
     const at = this.instantOf(this.columnExpression(match.time));
     const values = match.columns.map(({ name, alias }) => {
       const column = this.outputColumn(name);
-      return { column: { ...column, name: alias }, sql: this.matchableValueOf(column) };
+      return { column: { ...column, name: alias }, sql: this.secondaryValueOf(column) };
     });
     const projection = [
-      `${key} AS ${MATCH_KEY}`,
-      `${at} AS ${MATCH_TIME}`,
-      `1 AS ${MATCH_FOUND}`,
+      `${key} AS ${ASOF_KEY}`,
+      `${at} AS ${ASOF_TIME}`,
+      `1 AS ${ASOF_FOUND}`,
       ...values.map(({ column, sql }) => `${sql} AS ${this.quoteName(column.name)}`),
     ];
     const where = [...this.whereConditions, `${key} IS NOT NULL`, `${at} IS NOT NULL`];
@@ -528,8 +530,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       `SELECT ${projection.join(", ")}`,
       `FROM ${this.fromClause}`,
       `WHERE ${where.join(" AND ")}`,
-      `ORDER BY ${MATCH_KEY}, ${MATCH_TIME}, ${this.columnExpression("id")} ASC`,
-      `LIMIT 1 BY ${MATCH_KEY}, ${MATCH_TIME}`,
+      `ORDER BY ${ASOF_KEY}, ${ASOF_TIME}, ${this.columnExpression("id")} ASC`,
+      `LIMIT 1 BY ${ASOF_KEY}, ${ASOF_TIME}`,
     ]);
     return { sql, columns: values.map(({ column }) => column) };
   }
@@ -539,28 +541,28 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * row's time, and null where there is none or it is older than the tolerance.
    */
   joinAsOf(
-    matchable: StoreMatchable,
+    secondary: StoreAsOfSecondary,
     match: { column: string; time: string; toleranceMinutes: number },
   ): this {
     const key = this.columnExpression(match.column);
     const at = this.instantOf(this.columnExpression(match.time));
-    const isRecent = `${MATCHED}.${MATCH_FOUND} = 1 AND ${MATCHED}.${MATCH_TIME} >= ${at} - INTERVAL ${match.toleranceMinutes} MINUTE`;
-    const on = `${key} = ${MATCHED}.${MATCH_KEY} AND ${at} >= ${MATCHED}.${MATCH_TIME}`;
-    this.fromClause = `${this.fromClause} AS ${ROWS} ASOF LEFT JOIN (${matchable.sql}) AS ${MATCHED} ON ${on}`;
+    const isRecent = `${ASOF_SECONDARY}.${ASOF_FOUND} = 1 AND ${ASOF_SECONDARY}.${ASOF_TIME} >= ${at} - INTERVAL ${match.toleranceMinutes} MINUTE`;
+    const on = `${key} = ${ASOF_SECONDARY}.${ASOF_KEY} AND ${at} >= ${ASOF_SECONDARY}.${ASOF_TIME}`;
+    this.fromClause = `${this.fromClause} AS ${ASOF_PRIMARY} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
     this.columns = [
       ...this.columns,
-      ...matchable.columns.map(({ name, type, idOf }) => ({
+      ...secondary.columns.map(({ name, type, idOf }) => ({
         name,
         type,
         idOf,
         isPairText: idOf === "device",
-        expression: `if(${isRecent}, ${MATCHED}.${this.quoteName(name)}, NULL)`,
+        expression: `if(${isRecent}, ${ASOF_SECONDARY}.${this.quoteName(name)}, NULL)`,
       })),
     ];
     return this;
   }
 
-  private matchableValueOf(column: StoreOutputColumn): string {
+  private secondaryValueOf(column: StoreOutputColumn): string {
     const expression = this.projectedExpression(column.name);
     if (column.idOf === "device") {
       return `toJSONString(tuple(${expression}, ${this.deviceLabelOf(expression)}))`;
@@ -572,7 +574,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   private valueOf({ name, idOf, isPairText }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
-    return idOf === "device" && !isPairText ? this.deviceKeyOf(expression) : expression;
+    const isClientId = idOf === "device" && !isPairText;
+    return isClientId ? this.deviceKeyOf(expression) : expression;
   }
 
   /**
@@ -824,7 +827,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   private projectedValue({ name, type, idOf, isPairText }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
-    if (idOf === "device" && !isPairText) {
+    const isClientId = idOf === "device" && !isPairText;
+    if (isClientId) {
       return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
     }
     const isInteger = type === "BIGINT" || type === "INT";

@@ -24,7 +24,7 @@ import { CellValues } from "./services/client/cell-values";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { StoreAggregation } from "./services/query-builder/store-aggregation";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
-import type { StoreMatchable } from "./services/query-builder/store-query-builder";
+import type { StoreAsOfSecondary } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
 
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
@@ -177,11 +177,11 @@ export class ServingStoreAdapter implements ServingStorePort {
 
     try {
       if (params.join !== undefined) {
-        const matchable = this.matchable(params, params.join);
-        if (matchable.isFailure()) {
-          return matchable;
+        const secondary = this.asOfSecondary(params, params.join);
+        if (secondary.isFailure()) {
+          return secondary;
         }
-        builder.joinAsOf(matchable.value, {
+        builder.joinAsOf(secondary.value, {
           column: params.join.matchColumn,
           time: params.join.primaryTimeColumn,
           toleranceMinutes: params.join.toleranceMinutes,
@@ -231,8 +231,11 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
   }
 
-  /** The second table of a time-matched read, from the same experiment and its devices. */
-  private matchable(params: StoreQueryParams, join: ExperimentAsOfJoin): Result<StoreMatchable> {
+  /** The second table of an as-of read, from the same experiment and its devices. */
+  private asOfSecondary(
+    params: StoreQueryParams,
+    join: ExperimentAsOfJoin,
+  ): Result<StoreAsOfSecondary> {
     const { secondary } = join;
     const table = StoreTables.of(secondary.tableType, secondary.tableName);
     if (table === null) {
@@ -252,7 +255,7 @@ export class ServingStoreAdapter implements ServingStorePort {
       builder.except(secondary.exceptColumns);
     }
     return success(
-      builder.buildMatchable({
+      builder.buildAsOfSecondary({
         column: join.matchColumn,
         time: join.secondaryTimeColumn,
         columns: join.secondaryColumns,
@@ -322,9 +325,10 @@ export class ServingStoreAdapter implements ServingStorePort {
       if (text !== undefined) {
         return CellValues.payloadCell(payloads.get(text.column), text.key, type);
       }
+      // An as-of read's second device comes as its pair's JSON text, or null without a match.
+      const isPairText = typeof value === "string" || value === null;
       if (idOf === "device") {
-        // A matched table's device comes as its pair's JSON text already, or null without a match.
-        return typeof value === "string" || value === null ? value : JSON.stringify(value);
+        return isPairText ? value : JSON.stringify(value);
       }
       if (idOf === "contributor") {
         return typeof value === "string" ? value : null;

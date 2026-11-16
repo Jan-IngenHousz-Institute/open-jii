@@ -16,9 +16,8 @@ import type { StoreOutputColumn } from "./store-query-builder";
 const INTEGER_TYPES = new Set(["BIGINT", "INT"]);
 
 /**
- * A chart's grouping and aggregates over a store read, in the warehouse's statement shape: the
- * warehouse's own wrapper writes it, through the store's dialect, over the read's values. Each
- * output is typed as Spark types it, so its cells read as the warehouse's do.
+ * A chart's grouping and aggregates over a store read, written by the warehouse's own wrapper in
+ * the store's dialect, with each output typed as Spark types it so its cells read alike.
  */
 export class StoreAggregation {
   constructor(
@@ -82,7 +81,11 @@ export class StoreAggregation {
       return { name: alias, type: "TIMESTAMP" };
     }
     if (item.widthBucket !== undefined) {
-      const { alias } = dialect.buildWidthBucketExpression(item.column, item.widthBucket, item.alias);
+      const { alias } = dialect.buildWidthBucketExpression(
+        item.column,
+        item.widthBucket,
+        item.alias,
+      );
       return { name: alias, type: "BIGINT" };
     }
     return { ...this.columnOf(inner, item.column), name: item.alias ?? item.column };

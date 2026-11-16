@@ -21,7 +21,10 @@ import { ServingStoreConfigService } from "../config/config.service";
 import { MACRO_RESULTS_TABLE } from "./store-tables";
 
 const FIXTURES = resolve(__dirname, "../../../../../../../data/tests/fixtures");
-const MIGRATIONS = resolve(__dirname, "../../../../../../../../packages/database/clickhouse/migrations");
+const MIGRATIONS = resolve(
+  __dirname,
+  "../../../../../../../../packages/database/clickhouse/migrations",
+);
 
 const zRow = z.object({
   id: z.number(),
@@ -46,29 +49,29 @@ const zCase = z.object({
   aggregation: z
     .object({
       groupBy: z
-      .array(
-        z.object({
-          column: z.string(),
-          alias: z.string().optional(),
-          timeBucket: zExperimentTimeBucketUnit.optional(),
-          widthBucket: zExperimentWidthBucket.optional(),
-        }),
-      )
-      .optional(),
-    functions: z
-      .array(
-        z.object({
-          column: z.string(),
-          function: zExperimentAggregationFunction,
-          alias: z.string().optional(),
-          secondColumn: z.string().optional(),
-          partitionColumn: z.string().optional(),
-          orderColumn: z.string().optional(),
-          tieBreaker: z.string().optional(),
-          valueType: z.string().optional(),
-        }),
-      )
-      .optional(),
+        .array(
+          z.object({
+            column: z.string(),
+            alias: z.string().optional(),
+            timeBucket: zExperimentTimeBucketUnit.optional(),
+            widthBucket: zExperimentWidthBucket.optional(),
+          }),
+        )
+        .optional(),
+      functions: z
+        .array(
+          z.object({
+            column: z.string(),
+            function: zExperimentAggregationFunction,
+            alias: z.string().optional(),
+            secondColumn: z.string().optional(),
+            partitionColumn: z.string().optional(),
+            orderColumn: z.string().optional(),
+            tieBreaker: z.string().optional(),
+            valueType: z.string().optional(),
+          }),
+        )
+        .optional(),
     })
     .optional(),
   ordering: z.object({ column: z.string(), direction: z.enum(["ASC", "DESC"]) }).optional(),
@@ -92,7 +95,9 @@ const zResults = z.record(
   }),
 );
 
-const FIXTURE = zFixture.parse(JSON.parse(readFileSync(resolve(FIXTURES, "chart-parity.json"), "utf-8")));
+const FIXTURE = zFixture.parse(
+  JSON.parse(readFileSync(resolve(FIXTURES, "chart-parity.json"), "utf-8")),
+);
 
 /** The columns the Spark test's view holds, as the warehouse's macro view holds them. */
 const SPARK_COLUMNS = ["experiment_id", "id", "timestamp", "date", "device_name", "latitude"];
@@ -156,39 +161,41 @@ it("keeps the Spark chart fixture in sync with the warehouse's generated queries
   const service = new QueryBuilderService();
   const scoped = { whereConditions: [["experiment_id", "charts"]] satisfies [string, string][] };
   const queries = Object.fromEntries(
-    Object.entries(FIXTURE.cases).map(([name, { columns, join, filters, aggregation, ordering }]) => {
-      const built = service.buildQuery({
-        table: "chart_rows",
-        ...scoped,
-        columns,
-        join:
-          join === undefined
-            ? undefined
-            : {
-                ...join,
-                secondary: {
-                  table: "chart_matches",
-                  ...scoped,
-                  variants: MATCH_VARIANTS,
-                  reservedColumns: SPARK_COLUMNS,
+    Object.entries(FIXTURE.cases).map(
+      ([name, { columns, join, filters, aggregation, ordering }]) => {
+        const built = service.buildQuery({
+          table: "chart_rows",
+          ...scoped,
+          columns,
+          join:
+            join === undefined
+              ? undefined
+              : {
+                  ...join,
+                  secondary: {
+                    table: "chart_matches",
+                    ...scoped,
+                    variants: MATCH_VARIANTS,
+                    reservedColumns: SPARK_COLUMNS,
+                  },
+                  primaryColumns: [...SPARK_COLUMNS, "n", "v"],
+                  secondaryColumns: MATCHED_COLUMNS,
+                  primaryTimeColumn: "timestamp",
+                  primaryTimeType: "TIMESTAMP",
+                  secondaryTimeColumn: "timestamp",
+                  secondaryTimeType: "TIMESTAMP",
                 },
-                primaryColumns: [...SPARK_COLUMNS, "n", "v"],
-                secondaryColumns: MATCHED_COLUMNS,
-                primaryTimeColumn: "timestamp",
-                primaryTimeType: "TIMESTAMP",
-                secondaryTimeColumn: "timestamp",
-                secondaryTimeType: "TIMESTAMP",
-              },
-        variants: VARIANTS,
-        reservedColumns: SPARK_COLUMNS,
-        filters,
-        aggregation,
-        ordering,
-        limit: CHART_LIMIT,
-      });
-      assertSuccess(built);
-      return [name, built.value];
-    }),
+          variants: VARIANTS,
+          reservedColumns: SPARK_COLUMNS,
+          filters,
+          aggregation,
+          ordering,
+          limit: CHART_LIMIT,
+        });
+        assertSuccess(built);
+        return [name, built.value];
+      },
+    ),
   );
 
   await expect(JSON.stringify(queries, null, 2) + "\n").toMatchFileSnapshot(
@@ -205,7 +212,9 @@ describe("StoreAggregation", () => {
     const query = adapter.buildExperimentQuery(storeRead("groupedStats"));
 
     assertSuccess(query);
-    expect(query.value.sql).toMatch(/^SELECT `device_name`, `v_sum`, toString\(`n_sum`\) AS `n_sum`/);
+    expect(query.value.sql).toMatch(
+      /^SELECT `device_name`, `v_sum`, toString\(`n_sum`\) AS `n_sum`/,
+    );
     expect(query.value.columns.find(({ name }) => name === "n_sum")).toMatchObject({
       type: "BIGINT",
     });
@@ -221,13 +230,18 @@ describe("StoreAggregation", () => {
   it("groups a device as the warehouse groups its struct: a registered one by its client id", () => {
     const query = adapter.buildExperimentQuery({
       ...storeRead("groupedStats"),
-      aggregation: { groupBy: [{ column: "device" }], functions: [{ column: "*", function: "count" }] },
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "count" }],
+      },
       ordering: undefined,
       deviceSerials: [["reg-1", "SN1"]],
     });
 
     assertSuccess(query);
-    expect(query.value.sql).toContain("tuple(if(has(__device_client_ids, client_id), client_id, NULL)");
+    expect(query.value.sql).toContain(
+      "tuple(if(has(__device_client_ids, client_id), client_id, NULL)",
+    );
     expect(query.value.columns[0]).toMatchObject({ name: "device", idOf: "device" });
   });
 
@@ -289,7 +303,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       device_name: row.device_name,
       latitude: row.latitude,
       macro_id: macroId,
-      macro_output: JSON.parse(row.output),
+      macro_output: z.record(z.string(), z.unknown()).parse(JSON.parse(row.output)),
       macro_output_text: row.output,
       questions_data: {},
       annotations: [],
