@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from openjii.helpers import load_experiment_table
 from pyspark.dbutils import DBUtils
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, expr, lit, struct, to_json, when
+from pyspark.sql.functions import col, concat, lit, sha2, struct, substring, to_json, upper, when
 from pyspark.sql.types import ArrayType, MapType, StringType, StructType, VariantType
 
 
@@ -147,17 +147,15 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
         return df
     for field in contributor_fields:
         col_name = field.name
-        # `concat('Contributor-', upper(substring(sha2(<experimentId>:<userId>, 256), 1, 6)))`
-        pseudonym_expr = (
-            f"concat('Contributor-', upper(substring(sha2(concat('{experiment_id}', ':', `{col_name}`.id), 256), 1, 6)))"
-        )
+        digest = sha2(concat(lit(experiment_id), lit(":"), col(col_name).getField("id")), 256)
+        pseudonym = concat(lit("Contributor-"), upper(substring(digest, 1, 6)))
         df = df.withColumn(
             col_name,
             when(
                 col(col_name).isNotNull(),
                 struct(
-                    expr(pseudonym_expr).alias("id"),
-                    expr(pseudonym_expr).alias("name"),
+                    pseudonym.alias("id"),
+                    pseudonym.alias("name"),
                     lit(None).cast(StringType()).alias("avatar"),
                 ),
             ).otherwise(col(col_name)),
