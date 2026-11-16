@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
@@ -8,8 +8,6 @@ import { FlowRepository } from "../../../core/repositories/flow.repository";
 
 @Injectable()
 export class UpdateFlowUseCase {
-  private readonly logger = new Logger(UpdateFlowUseCase.name);
-
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly flowRepository: FlowRepository,
@@ -38,17 +36,6 @@ export class UpdateFlowUseCase {
           return failure(AppError.notFound("Flow not found"));
         }
         const written = await this.flowRepository.update(experimentId, graph);
-        if (written.isFailure()) return written;
-        // The flow is already saved; a missed bump only affects list ordering.
-        const touched = await this.experimentRepository.touch(experimentId);
-        if (touched.isFailure()) {
-          this.logger.warn({
-            msg: "Failed to mark experiment as updated",
-            operation: "updateFlow",
-            experimentId,
-            error: touched.error.message,
-          });
-        }
         return written;
       });
     });

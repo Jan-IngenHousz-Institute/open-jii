@@ -7,6 +7,7 @@ export interface EnvVariables {
   CONTENTFUL_SPACE_ID: string;
   CONTENTFUL_ACCESS_TOKEN: string;
   CONTENTFUL_SPACE_ENVIRONMENT: string;
+  STATUS_URI: string;
 }
 
 export type EnvVariablesMap = Record<string, EnvVariables>;

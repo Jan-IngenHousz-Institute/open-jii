@@ -1,6 +1,10 @@
 import type { Page, Route } from "@playwright/test";
 import postgres from "postgres";
 
+import type { ExperimentExportRecord } from "@repo/api/domains/experiment/exports/experiment-exports.schema";
+import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
+import type { ExperimentUploadRecord } from "@repo/api/domains/experiment/uploads/experiment-uploads.schema";
+
 import { assertSafeFixtureDatabase, databaseUrl, seedEmail } from "./helpers.js";
 
 const defaultExperimentName = "[E2E] Dialog fit experiment";
@@ -100,7 +104,7 @@ export interface LakehouseData {
 
 const createdAt = "2026-09-25T09:09:24.000Z";
 
-function uploadRecords(experimentId: string, count: number) {
+function uploadRecords(experimentId: string, count: number): ExperimentUploadRecord[] {
   return Array.from({ length: count }, (_, i) => {
     const failed = i % 3 === 2;
     return {
@@ -115,12 +119,13 @@ function uploadRecords(experimentId: string, count: number) {
       createdBy: crypto.randomUUID(),
       createdAt,
       completedAt: createdAt,
-      errorMessage: failed ? "The file has no header row." : null,
+      rejectedFiles: [],
+      errorCode: failed ? "no_rows" : null,
     };
   });
 }
 
-function metadataRecords(experimentId: string, count: number) {
+function metadataRecords(experimentId: string, count: number): ExperimentMetadata[] {
   return Array.from({ length: count }, (_, i) => ({
     metadataId: crypto.randomUUID(),
     experimentId,
@@ -140,7 +145,7 @@ function metadataRecords(experimentId: string, count: number) {
   }));
 }
 
-function exportRecords(experimentId: string, count: number) {
+function exportRecords(experimentId: string, count: number): ExperimentExportRecord[] {
   return Array.from({ length: count }, () => ({
     exportId: crypto.randomUUID(),
     experimentId,

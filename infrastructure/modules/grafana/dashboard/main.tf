@@ -671,9 +671,9 @@ EOT
 }
 
 # Notification email. The backend publishes the outbox's gauges every five minutes from each
-# task, and SES publishes the account's reputation once it has sent enough mail to judge, so
-# no data on any of the three is quiet, not broken; dependency-health watches the backend going
-# silent.
+# task, 0 when nothing waits, so no data there means the reporting has stopped and its rule fires.
+# SES publishes the account's reputation only once it has sent enough mail to judge, so no data
+# on those two is quiet, not broken.
 resource "grafana_rule_group" "email_health" {
   provider         = grafana.amg
   name             = "Notification Email Health"
@@ -681,7 +681,9 @@ resource "grafana_rule_group" "email_health" {
   interval_seconds = 60
 
   # Catalog entry 141. Every task publishes the same age, so the highest reads right however many
-  # run. A relay outage holds every row; one email failing on every attempt crosses it too.
+  # run. A relay outage holds every row; one email failing on every attempt crosses it too. No
+  # point at all for the query's 15 minutes and the 5 to hold means the job reporting the outbox
+  # has stopped, while email may be stuck, so no data fires as well.
   rule {
     name      = "Notification Emails Waiting"
     condition = "C"
@@ -748,12 +750,12 @@ resource "grafana_rule_group" "email_health" {
       }
     }
 
-    no_data_state  = "OK"
+    no_data_state  = "Alerting"
     exec_err_state = "OK"
     for            = "5m"
 
     annotations = {
-      description      = "An email has waited in the outbox for over 15 minutes. Either the mail relay is unreachable and the whole outbox is waiting, or one email is failing on every attempt."
+      description      = "An email has waited in the outbox for over 15 minutes. Either the mail relay is unreachable and the whole outbox is waiting, or one email is failing on every attempt. It also fires when the backend has stopped reporting the outbox."
       summary          = "Notification emails are not leaving"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/email-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -1324,6 +1326,183 @@ EOT
       metric_id = "web-server-throttles"
       severity  = "warning"
       service   = "lambda"
+    }
+  }
+}
+
+resource "grafana_rule_group" "page_regeneration" {
+  count = var.revalidation_dlq_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Page Regeneration"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 145. A page whose regeneration failed five times lands in the DLQ and keeps
+  # serving its old copy, and the DLQ holds it for 14 days, so any message there is the signal.
+  rule {
+    name      = "Page Regeneration Failures"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/SQS"
+        metricName = "ApproximateNumberOfMessagesVisible"
+        statistic  = "Maximum"
+        dimensions = {
+          QueueName = var.revalidation_dlq_name
+        }
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "Pages failed to regenerate five times and wait in the revalidation DLQ, so visitors see their old copies."
+      summary          = "Web pages are failing to regenerate"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-regeneration-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-regeneration-failures"]
+    }
+    labels = {
+      metric_id = "web-regeneration-failures"
+      severity  = "warning"
+      service   = "frontend"
+    }
+  }
+
+  # Catalog entry 149. Next keeps serving a cached Contentful read whose refresh failed and only
+  # logs it, so a filter counts the line; failures for 15 minutes mean the pages have gone stale.
+  rule {
+    name      = "Public Page Content Not Refreshing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Web"
+        metricName = "CmsRefreshFailures"
+        statistic  = "Sum"
+        dimensions = {}
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "Cached Contentful reads behind the public pages keep failing to refresh, so the pages show old content."
+      summary          = "Public pages have stopped following Contentful"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-cms-refresh-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-cms-refresh-failures"]
+    }
+    labels = {
+      metric_id = "web-cms-refresh-failures"
+      severity  = "warning"
+      service   = "frontend"
     }
   }
 }

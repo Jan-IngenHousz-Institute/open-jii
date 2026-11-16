@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { PageBlogPostOrder } from "@repo/cms/lib/__generated/sdk";
@@ -9,6 +11,22 @@ import { BlogPostTile } from "./blog-post-tile";
 import { DashboardSection } from "./dashboard-section";
 import { SeeAllLink } from "./see-all-link";
 
+async function fetchLatestPosts(locale: string, preview: boolean) {
+  const { previewClient, client } = await getContentfulClients();
+  return (preview ? previewClient : client).pageBlogPostCollection({
+    limit: 3,
+    locale,
+    order: PageBlogPostOrder.PublishedDateDesc,
+    preview,
+  });
+}
+
+const getPublishedLatestPosts = unstable_cache(
+  (locale: string) => fetchLatestPosts(locale, false),
+  ["pageBlogPostCollection"],
+  { revalidate: PUBLISHED_CONTENT_SECONDS },
+);
+
 interface BlogPostsSectionProps {
   locale: string;
 }
@@ -16,18 +34,12 @@ interface BlogPostsSectionProps {
 /** The three newest posts as one row of image tiles. Absent when the CMS has none to give. */
 export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
   const { isEnabled: preview } = await draftMode();
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
 
   const { t } = await initTranslations({ locale });
 
-  const posts: (PageBlogPostFieldsFragment | null)[] = await gqlClient
-    .pageBlogPostCollection({
-      limit: 3,
-      locale,
-      order: PageBlogPostOrder.PublishedDateDesc,
-      preview,
-    })
+  const posts: (PageBlogPostFieldsFragment | null)[] = await (
+    preview ? fetchLatestPosts(locale, true) : getPublishedLatestPosts(locale)
+  )
     .then((data) => data.pageBlogPostCollection?.items ?? [])
     // A CMS outage leaves the home without its posts rather than showing the reader an error.
     .catch((error: unknown) => {

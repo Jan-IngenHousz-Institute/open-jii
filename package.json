@@ -49,6 +49,7 @@
     "posthog:query": "pnpm --filter @repo/devkit posthog:query --",
     "grafana:auth": "pnpm --filter @repo/devkit grafana:auth --",
     "grafana:get": "pnpm --filter @repo/devkit grafana:get --",
+    "ingest:replay": "pnpm --filter @repo/devkit ingest:replay --",
     "round:read": "pnpm --filter @repo/devkit round:read --",
     "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --"
   },

@@ -977,3 +977,48 @@ describe("ordered aggregate query inputs", () => {
     },
   );
 });
+
+describe("number question answers", () => {
+  const service = new QueryBuilderService();
+  const variants = [
+    { columnName: "questions_data", schema: "OBJECT<height: DOUBLE, plot: STRING>" },
+  ];
+  const height = `try_variant_get(\`questions_data\`, '$["height"]', 'DOUBLE')`;
+  const plot = `try_variant_get(\`questions_data\`, '$["plot"]', 'STRING')`;
+
+  it.each(["ASC", "DESC"] as const)(
+    "sorts %s with empty answers last and the row id breaking ties",
+    (direction) => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "measurements",
+          variants,
+          reservedColumns: ["id"],
+          ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+        }),
+      );
+
+      expect(sql.endsWith(`ORDER BY \`height\` ${direction} NULLS LAST, \`id\` ASC`)).toBe(true);
+    },
+  );
+
+  it("compares text with the number it holds, so text that is not one matches no row", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "measurements",
+        variants,
+        filters: [
+          { column: "height", operator: "equals", value: "n/a" },
+          { column: "height", operator: "in", value: ["10", ""] },
+          { column: "height", operator: "greater_than", value: 10 },
+          { column: "plot", operator: "equals", value: "007" },
+        ],
+      }),
+    );
+
+    expect(sql).toContain(`${height} = try_cast('n/a' AS DOUBLE)`);
+    expect(sql).toContain(`${height} IN (try_cast('10' AS DOUBLE), try_cast('' AS DOUBLE))`);
+    expect(sql).toContain(`${height} > 10`);
+    expect(sql).toContain(`${plot} = '007'`);
+  });
+});

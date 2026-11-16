@@ -16,8 +16,8 @@ reverse proxy. Behaviors are matched in the order below; the first path pattern 
 | 4     | `/ingest/*`                                                                      | PostHog ingest | Managed CachingDisabled                        | `posthog_rewrite` (viewer request)      |
 | 5     | `api/*`                                                                          | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
 | 6     | `_next/data/*`                                                                   | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`                   |
-| 7, 8  | `*.svg`, `*.ico`                                                                 | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
-| 9+    | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*`                | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| 7-11  | `*.svg`, `*.ico`, `*.png`, `*.jpg`, `*.jpeg`, `*.webp`, `*.avif`, `*.gif`        | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 12+   | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*`                | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
 | next  | `/en-US*`, `/robots.txt`, `/sitemap.xml`, `/opengraph-image*`, `/twitter-image*` | Server Lambda  | `server_pages`                                 | `forward_host_header`, `edge_hash_body` |
 | last  | default (`*`)                                                                    | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
 

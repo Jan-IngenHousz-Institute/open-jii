@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
 import { cache } from "react";
 import { CookiePolicyContent } from "~/components/cms/cookie-policy";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
@@ -11,10 +13,23 @@ interface CookiePolicyPageProps {
   params: Promise<{ locale: string }>;
 }
 
-const getCookiePolicyData = cache(async (locale: string, preview: boolean) => {
+async function fetchCookiePolicy(locale: string, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const cookiePolicyQuery = await gqlClient.pageCookiePolicy({ locale, preview });
+  return (preview ? previewClient : client).pageCookiePolicy({ locale, preview });
+}
+
+const getPublishedCookiePolicy = unstable_cache(
+  (locale: string) => fetchCookiePolicy(locale, false),
+  ["pageCookiePolicy"],
+  {
+    revalidate: PUBLISHED_CONTENT_SECONDS,
+  },
+);
+
+const getCookiePolicyData = cache(async (locale: string, preview: boolean) => {
+  const cookiePolicyQuery = await (preview
+    ? fetchCookiePolicy(locale, true)
+    : getPublishedCookiePolicy(locale));
   return cookiePolicyQuery.pageCookiePolicyCollection?.items[0] as PageCookiePolicyFieldsFragment;
 });
 

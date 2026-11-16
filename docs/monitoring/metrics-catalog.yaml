@@ -138,6 +138,15 @@ passes:
     note: >-
       notification email health: what the outbox sent, failed and has waiting, how long the oldest
       has waited, and the account's bounce and complaint rates
+  - date: 2026-11-13
+    range: [144, 144]
+    note: how many notification emails are waiting, for the Platform dashboard's Email chart
+  - date: 2026-11-16
+    range: [145, 145]
+    note: web pages that failed to regenerate, since a failed regeneration leaves the old copy up and nothing else says so
+  - date: 2026-11-16
+    range: [149, 149]
+    note: cached Contentful reads behind the public pages that fail to refresh, since Next keeps serving the old value and only logs it
 
 metrics:
   # Ingest path
@@ -914,6 +923,51 @@ metrics:
       dimensions: { FunctionName: "${SERVER_FUNCTION_NAME}" }
     baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/web-server-throttles.md
+
+  - num: 145
+    id: web-regeneration-failures
+    name: Page regeneration failures
+    family: observability
+    area: web
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/SQS
+      metric: ApproximateNumberOfMessagesVisible
+      stat: Maximum
+      dimensions: { QueueName: "${REVALIDATION_DLQ_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/web-regeneration-failures.md
+    notes: >-
+      Regeneration requests the web app failed, read from the revalidation queue's DLQ. A request goes
+      there after five failed tries and its page keeps serving its old copy. The count is requests,
+      not pages, since a page visited often fails again every five minutes. The DLQ keeps a message
+      for 14 days, so the rule stays firing until someone fixes the cause and purges the queue.
+
+  - num: 149
+    id: web-cms-refresh-failures
+    name: Public pages' Contentful reads failing to refresh
+    family: observability
+    area: web
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Web
+      metric: CmsRefreshFailures
+      stat: Sum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/web-cms-refresh-failures.md
+    notes: >-
+      Cached Contentful reads behind the public pages that failed when their hour was up, counted by
+      a metric filter on the web server's log group from Next's "revalidating cache with key" line.
+      Next keeps serving the old value, so the pages stay up but stop following Contentful. The rule
+      fires when failures carry on for 15 minutes, so one slow answer does not.
 
   - num: 26
     id: web-vitals
@@ -2611,11 +2665,12 @@ metrics:
     runbook: docs/runbooks/email-outbox-waiting.md
     notes: >-
       How long the oldest notification email still pending or sending has waited since it was
-      queued, 0 when none is. Every backend task publishes it every five minutes beside
-      NotificationEmailsWaiting, the number of them. A relay outage holds every row with its attempts
-      unchanged. One email rejected on every attempt also passes 900 seconds, in the wait after its
-      third failure, since the retries wait 1, 5, 15 and 60 minutes, and stays past it until it is
-      sent or given up on.
+      queued, 0 when none is. Every backend task publishes it every five minutes, with the number of
+      them (144). A relay outage holds every row with its attempts unchanged. One email rejected on
+      every attempt also passes 900 seconds, in the wait after its third failure, since the retries
+      wait 1, 5, 15 and 60 minutes, and stays past it until it is sent or given up on. Since a quiet
+      outbox still reads 0, the rule treats no data as firing too: about twenty minutes after the
+      last point, it says the job that reports the outbox has stopped, whatever email is doing.
 
   - num: 142
     id: email-bounce-rate
@@ -2667,3 +2722,21 @@ metrics:
       account has sent enough to be judged, so no data is not an outage. SES publishes points only
       around sends, roughly daily on dev, so the board reads a day at a time and a quiet account
       shows No data, not red. Covers every email the account sends, sign-in codes included.
+
+  - num: 144
+    id: emails-waiting
+    name: Emails waiting
+    family: observability
+    source: api
+    phase: P2
+    active: true
+    slots: [dashboard]
+    signal:
+      namespace: OpenJII/Backend
+      metric: NotificationEmailsWaiting
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: >-
+      How many notification emails are pending or sending, 0 when none is. Every backend task
+      publishes it every five minutes with the age of the oldest of them (141). A count for the
+      Platform dashboard's Email chart, with no limit of its own: the age is what the rule watches.

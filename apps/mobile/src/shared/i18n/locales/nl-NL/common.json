@@ -14,6 +14,7 @@
   "loading": "Laden…",
   "serverUnreachable": "Kan openJII niet bereiken. Controleer je internetverbinding en probeer het opnieuw.",
   "checkingConnection": "Verbinding wordt gecontroleerd…",
+  "checkStatusPage": "Controleer op de statuspagina of openJII werkt",
   "errorGeneric": "Er ging iets mis",
   "errorTitle": "Fout",
   "timeSyncUnavailable": "Tijdsynchronisatie niet beschikbaar. Controleer je verbinding en probeer het opnieuw.",

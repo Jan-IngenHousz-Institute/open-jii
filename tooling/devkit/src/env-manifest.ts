@@ -132,6 +132,7 @@ export const envManifest: readonly EnvVar[] = [
   env("CORS_ORIGINS", set, "http://localhost:3000", backend),
 
   env("NEXT_PUBLIC_DOCS_URL", set, "http://localhost:3010", web),
+  env("NEXT_PUBLIC_STATUS_URL", set, "http://localhost:3030", web),
   env("NEXT_PUBLIC_ENABLE_DEVTOOLS", set, "true", web),
   env("NEXT_PUBLIC_ENABLE_MOCK_DEVICES", set, "false", web),
   env("CONTENTFUL_SPACE_ID", set, undefined, web),

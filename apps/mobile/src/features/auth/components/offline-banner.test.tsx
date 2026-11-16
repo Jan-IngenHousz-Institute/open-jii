@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
+import { Linking } from "react-native";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { OfflineBanner } from "~/features/auth/components/offline-banner";
 import common from "~/shared/i18n/locales/en-US/common.json";
@@ -13,6 +14,9 @@ vi.mock("~/shared/i18n", () => ({
   }),
 }));
 vi.mock("@expo/vector-icons/MaterialIcons", () => ({ default: () => null }));
+vi.mock("~/shared/stores/environment-store", () => ({
+  useEnvVar: () => "https://status.openjii.test",
+}));
 
 afterEach(cleanup);
 
@@ -29,6 +33,14 @@ describe("OfflineBanner", () => {
     expect(screen.queryByText(common.checkingConnection)).toBeNull();
     fireEvent.press(screen.getByText(common.retry));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("links to the status page", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+    render(<OfflineBanner online={false} checking={false} onRetry={vi.fn()} />);
+
+    fireEvent.press(screen.getByText(common.checkStatusPage));
+    expect(openURL).toHaveBeenCalledWith("https://status.openjii.test");
   });
 
   it("shows progress while a retry runs", () => {
