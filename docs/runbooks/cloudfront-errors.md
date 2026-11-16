@@ -61,13 +61,6 @@ and completion in the ticket. Keep other prefixes, including ALB logs. This is a
 manual operator step; the pull request does not delete stored logs or run a
 cleanup command.
 
-The repository's Access Log Policy check runs without credentials and rejects
-cookie logging, missing CloudFront retention or missing firewall redactions.
-It runs inside the required Build, Lint, & Test check, including on infrastructure-only
-PRs. Adding standard logging v2 or real-time logging requires extending the
-policy to check their cookie fields before those resources can be introduced.
-Run it locally with `node --test infrastructure/tests/access-log-policy.test.mjs`.
-
 ## Distribution changes are the usual edge cause
 
 Behaviours, origin request policies and cache policies are all in
