@@ -1,8 +1,10 @@
+import type { ConfigType } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
 
 import { AppModule } from "./app.module";
+import corsConfig from "./common/config/cors.config";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -14,20 +16,9 @@ async function bootstrap() {
   // Use nestjs-pino logger
   app.useLogger(app.get(Logger));
 
-  const corsEnabled = process.env.CORS_ENABLED !== "false";
-  if (corsEnabled) {
-    const corsOrigins = process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(",").map((origin) => origin.trim())
-      : ["http://localhost:3000"]; // Default origin
-
-    app.enableCors({
-      origin: corsOrigins,
-      credentials: true,
-      exposedHeaders: ["Content-Disposition", "X-Data-Source"],
-      // Lets the browser skip the preflight on repeat writes to the same URL, such as autosave.
-      // Two hours is Chrome's ceiling.
-      maxAge: 7200,
-    });
+  const cors = app.get<ConfigType<typeof corsConfig>>(corsConfig.KEY);
+  if (cors.enabled) {
+    app.enableCors(cors.options);
   }
 
   // Only the running service: the signal listeners these register would accumulate
