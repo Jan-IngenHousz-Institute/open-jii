@@ -8,9 +8,9 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 - the feed missed rows: while it was off for longer than its start versions reach, after a
   checkpoint reset, after a gold refresh that changed a key column (`store-feed-stalled`), or for
   refused rows once the feed's code can send them (`store-feed-rejects`);
-- a store migration adds a column the feed fills, such as 0009's payload texts or 0011's sensor
-  readings: rows written before it carry none, and the feed never sends them again (see "After a
-  migration the feed fills").
+- a store migration adds a column the feed fills, such as 0009's payload texts or 0011's local
+  hours and sensor readings: rows written before it carry none, and the feed never sends them again
+  (see "After a migration the feed fills").
 
 ## What it does
 
