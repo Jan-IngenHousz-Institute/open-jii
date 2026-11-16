@@ -15,12 +15,14 @@ The platform heartbeat's tested logic: the metrics forwarder's parsing, the cost
 | `status-events.ts`            | Work out what changed since subscribers were last told, for a channel such as Slack          |
 | `status-feed.ts`              | The state the publisher keeps beside its history: what was announced and the last content    |
 | `status-probes.ts`            | What a healthy answer from the website and the API looks like                                |
+| `status-slack.ts`             | Turn one status event into the Slack message that the status channel receives                |
+| `status-slack-delivery.ts`    | Check the stored webhook address and remember the event ids an instance posted               |
 | `catalog.ts`                  | Parse `docs/monitoring/metrics-catalog.yaml`                                                 |
 | `catalog-consistency.test.ts` | Fail when the catalogue, the exporter's metric names, the rules or the dashboards diverge    |
 
 ## How it reaches the Lambda
 
-The metrics forwarder lives in `infrastructure/modules/monitoring/metrics-forwarder/lambda`, the cost publisher in `infrastructure/modules/grafana/cost-publisher/lambda`, and the status publisher in `infrastructure/modules/monitoring/status-publisher/lambda`, each as a self-contained npm project, deliberately outside the pnpm workspace: a Lambda zip needs real `node_modules`, and pnpm's symlinked tree does not survive zipping. Each build step copies this package's compiled `dist/` in as `lib/`, so after changing any module here run `pnpm turbo run build --filter=@repo/monitoring` and rebuild all three bundles with `npm run build` in their lambda directories.
+The metrics forwarder lives in `infrastructure/modules/monitoring/metrics-forwarder/lambda`, the cost publisher in `infrastructure/modules/grafana/cost-publisher/lambda`, the status publisher in `infrastructure/modules/monitoring/status-publisher/lambda`, and the status Slack function in `infrastructure/modules/monitoring/status-slack/lambda`, each as a self-contained npm project, deliberately outside the pnpm workspace: a Lambda zip needs real `node_modules`, and pnpm's symlinked tree does not survive zipping. Each build step copies this package's compiled `dist/` in as `lib/`, so after changing any module here run `pnpm turbo run build --filter=@repo/monitoring` and rebuild every bundle listed in `BUNDLE_DIRS` in `.github/workflows/pr.yml` with `npm run build` in its lambda directory.
 
 Import the specific module you need (`lib/forwarder.js`, `lib/cost.js`, `lib/status-judge.js`), never a barrel. There is no barrel on purpose: pulling `catalog.ts` into the forwarder would drag `js-yaml` into a bundle that does not ship it, which is a runtime crash rather than a build error.
 
