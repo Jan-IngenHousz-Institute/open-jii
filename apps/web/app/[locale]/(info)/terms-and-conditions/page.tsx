@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { cache } from "react";
+import { getTermsAndConditions } from "~/components/cms/fetch-terms-and-conditions";
 import { TermsAndConditionsPage } from "~/components/cms/terms-and-conditions";
-import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -12,9 +12,7 @@ interface TermsAndConditionsPageProps {
 }
 
 const getTermsAndConditionsData = cache(async (locale: string, preview: boolean) => {
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const termsQuery = await gqlClient.pageTermsAndConditions({ locale, preview });
+  const termsQuery = await getTermsAndConditions(locale, preview);
   return termsQuery.pageTermsAndConditionsCollection
     ?.items[0] as PageTermsAndConditionsFieldsFragment;
 });

@@ -138,6 +138,12 @@ passes:
     note: >-
       notification email health: what the outbox sent, failed and has waiting, how long the oldest
       has waited, and the account's bounce and complaint rates
+  - date: 2026-11-16
+    range: [145, 145]
+    note: web pages that failed to regenerate, since a failed regeneration leaves the old copy up and nothing else says so
+  - date: 2026-11-16
+    range: [149, 149]
+    note: cached Contentful reads behind the public pages that fail to refresh, since Next keeps serving the old value and only logs it
 
 metrics:
   # Ingest path
@@ -914,6 +920,51 @@ metrics:
       dimensions: { FunctionName: "${SERVER_FUNCTION_NAME}" }
     baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/web-server-throttles.md
+
+  - num: 145
+    id: web-regeneration-failures
+    name: Page regeneration failures
+    family: observability
+    area: web
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: AWS/SQS
+      metric: ApproximateNumberOfMessagesVisible
+      stat: Maximum
+      dimensions: { QueueName: "${REVALIDATION_DLQ_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/web-regeneration-failures.md
+    notes: >-
+      Regeneration requests the web app failed, read from the revalidation queue's DLQ. A request goes
+      there after five failed tries and its page keeps serving its old copy. The count is requests,
+      not pages, since a page visited often fails again every five minutes. The DLQ keeps a message
+      for 14 days, so the rule stays firing until someone fixes the cause and purges the queue.
+
+  - num: 149
+    id: web-cms-refresh-failures
+    name: Public pages' Contentful reads failing to refresh
+    family: observability
+    area: web
+    source: aws
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Web
+      metric: CmsRefreshFailures
+      stat: Sum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/web-cms-refresh-failures.md
+    notes: >-
+      Cached Contentful reads behind the public pages that failed when their hour was up, counted by
+      a metric filter on the web server's log group from Next's "revalidating cache with key" line.
+      Next keeps serving the old value, so the pages stay up but stop following Contentful. The rule
+      fires when failures carry on for 15 minutes, so one slow answer does not.
 
   - num: 26
     id: web-vitals

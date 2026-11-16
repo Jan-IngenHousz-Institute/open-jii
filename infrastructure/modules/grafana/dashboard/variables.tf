@@ -169,6 +169,13 @@ variable "ingest_healthcheck_alerting" {
   default     = false
 }
 
+variable "revalidation_dlq_name" {
+  description = "Dead letter queue for pages the web app failed to regenerate. Empty leaves its rule out."
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
 variable "status_publisher_function_name" {
   description = "Status publisher Lambda to watch. Empty leaves its error rule out."
   type        = string

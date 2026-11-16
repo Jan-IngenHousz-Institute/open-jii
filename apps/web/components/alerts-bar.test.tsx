@@ -7,11 +7,6 @@ import type { ComponentAlertFieldsFragment } from "@repo/cms";
 
 import { AlertsBar } from "./alerts-bar";
 
-// unstable_cache requires Next.js incremental cache context unavailable in vitest — strip it to a passthrough
-vi.mock("next/cache", () => ({
-  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
-}));
-
 const mockActiveAlerts = vi.fn();
 
 vi.mock("~/components/cms/alert/alerts-container", () => ({

@@ -66,6 +66,12 @@ variable "large_body_bypass_routes" {
   }
 }
 
+variable "allow_page_regeneration" {
+  description = "Let OpenNext's page regeneration requests through NoUserAgent_HEADER: HEAD requests with Next's x-prerender-revalidate header. Every other request without a User-Agent is still blocked."
+  type        = bool
+  default     = false
+}
+
 variable "enable_bot_control" {
   description = "Enable AWS Managed Bot Control rule set. Adds ~$10/month + $1/million requests."
   type        = bool
