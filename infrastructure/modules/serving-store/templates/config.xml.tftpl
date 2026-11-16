@@ -6,6 +6,10 @@
          rest is left to the system, the CloudWatch agent and the feed timer. -->
     <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
 
+    <!-- The custom settings a read may send: the reader's row policy on each table reads the
+         experiment a chart's read names as custom_experiment. -->
+    <custom_settings_prefixes>custom_</custom_settings_prefixes>
+
     <!-- The packaged defaults log at trace level into ten 1 GB files on the root volume. -->
     <logger>
         <level>information</level>
