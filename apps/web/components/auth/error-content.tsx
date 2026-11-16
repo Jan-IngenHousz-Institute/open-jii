@@ -2,6 +2,7 @@
 
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { env } from "~/env";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -54,6 +55,14 @@ export function ErrorContent({ locale, error, errorDescription }: ErrorContentPr
 
         {/* Support Message */}
         <p className="text-accent-foreground mt-6 text-center text-xs">{t("auth.errorSupport")}</p>
+        <a
+          href={env.NEXT_PUBLIC_STATUS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary mt-2 text-center text-xs underline"
+        >
+          {t("auth.errorStatus")}
+        </a>
       </div>
 
       {/* Spacer to center content vertically */}

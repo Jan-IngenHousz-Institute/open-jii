@@ -123,6 +123,11 @@ output "sqs_dlq_url" {
   value       = module.sqs.dlq_url
 }
 
+output "sqs_dlq_name" {
+  description = "Name of the SQS dead letter queue (if enabled)"
+  value       = module.sqs.dlq_name
+}
+
 # Domain and URL Outputs
 output "application_url" {
   description = "URL to access the application"

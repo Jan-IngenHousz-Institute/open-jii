@@ -5,7 +5,6 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { PublicNavbar } from "./public-navbar";
 
-vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
 vi.mock("@/components/language-switcher", () => ({ LanguageSwitcher: () => null }));
 
 const published = vi.fn();

@@ -110,7 +110,8 @@
     "support": null,
     "documentation": "Dokumentation",
     "breadcrumbs": "Brotkrümelnavigation",
-    "faq": null
+    "faq": null,
+    "status": "Systemstatus"
   },
   "experiments": {
     "clearSearch": "Suche löschen",
@@ -1027,6 +1028,7 @@
     "errorTryAgain": "Erneut versuchen",
     "errorGoHome": "Zur Startseite",
     "errorSupport": "Wenn dieses Problem weiterhin besteht, kontaktieren Sie bitte unser Support-Team.",
+    "errorStatus": "Auf der Statusseite prüfen, ob openJII funktioniert",
     "checkEmail": null,
     "loginWith-passkey": "Mit Passkey anmelden",
     "lastUsed": "Zuletzt verwendet",

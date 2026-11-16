@@ -525,7 +525,9 @@ module "node_cluster_policy" {
 # The macro tasks mostly wait on the sandbox over HTTP, so cores are bought as task
 # slots at the lowest price. Each slot keeps three requests in flight, and the slots
 # stay within the sandbox's reserved concurrency, which is why the worker is fixed. The
-# driver takes four cores for the same startup timeout as Centrum's.
+# driver takes four cores for the same startup timeout as Centrum's. The one worker is
+# on-demand all the same (first_on_demand counts the driver), since a spot reclaim stops
+# every macro until a replacement starts, 8 to 14 minutes each time.
 module "macro_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -555,7 +557,7 @@ module "macro_cluster_policy" {
     }
     "aws_attributes.first_on_demand" = {
       type  = "fixed"
-      value = 1
+      value = 2
     }
     "aws_attributes.zone_id" = {
       type  = "fixed"
@@ -2483,6 +2485,7 @@ module "opennext_waf" {
   enable_bot_control = true
 
   managed_rules_excluded_paths = ["/ingest"]
+  allow_page_regeneration      = true
 
   tags = {
     Environment = var.environment
@@ -2543,7 +2546,7 @@ module "opennext" {
 
   # SQS configuration
   enable_dlq        = true
-  max_receive_count = 3
+  max_receive_count = 5
 
   tags = {
     Project     = "open-jii"
@@ -3514,6 +3517,7 @@ module "grafana_dashboard" {
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
   status_publisher_function_name   = module.status_publisher.function_name
+  revalidation_dlq_name            = module.opennext.sqs_dlq_name
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring

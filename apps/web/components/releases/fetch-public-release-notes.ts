@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 
 import type {
@@ -13,16 +15,38 @@ import type {
  * Contentful request per render (mirrors the blog's getBlogData / getBlogDetailData).
  */
 
+async function fetchAllReleaseNotes(locale: string, preview: boolean) {
+  const { previewClient, client } = await getContentfulClients();
+  return (preview ? previewClient : client).allReleaseNotes({
+    preview,
+    now: new Date().toISOString(),
+    locale,
+  });
+}
+
+const getPublishedReleaseNotes = unstable_cache(
+  (locale: string) => fetchAllReleaseNotes(locale, false),
+  ["allReleaseNotes"],
+  { revalidate: PUBLISHED_CONTENT_SECONDS },
+);
+
+async function fetchReleaseNoteBySlug(locale: string, slug: string, preview: boolean) {
+  const { previewClient, client } = await getContentfulClients();
+  return (preview ? previewClient : client).releaseNoteBySlug({ slug, locale, preview });
+}
+
+const getPublishedReleaseNoteBySlug = unstable_cache(
+  (locale: string, slug: string) => fetchReleaseNoteBySlug(locale, slug, false),
+  ["releaseNoteBySlug"],
+  { revalidate: PUBLISHED_CONTENT_SECONDS },
+);
+
 /** All active release notes (no surface filter), newest first. */
 export const getAllReleaseNotes = cache(
   async (locale: string, preview: boolean): Promise<ComponentReleaseNoteFieldsFragment[]> => {
-    const { previewClient, client } = await getContentfulClients();
-    const gqlClient = preview ? previewClient : client;
-    const data = await gqlClient.allReleaseNotes({
-      preview,
-      now: new Date().toISOString(),
-      locale,
-    });
+    const data = await (preview
+      ? fetchAllReleaseNotes(locale, true)
+      : getPublishedReleaseNotes(locale));
     return (data.componentReleaseNoteCollection?.items ?? []).filter(
       (item): item is ComponentReleaseNoteFieldsFragment => item !== null,
     );
@@ -36,9 +60,9 @@ export const getReleaseNoteBySlug = cache(
     slug: string,
     preview: boolean,
   ): Promise<ComponentReleaseNoteDetailFieldsFragment | null> => {
-    const { previewClient, client } = await getContentfulClients();
-    const gqlClient = preview ? previewClient : client;
-    const data = await gqlClient.releaseNoteBySlug({ slug, locale, preview });
+    const data = await (preview
+      ? fetchReleaseNoteBySlug(locale, slug, true)
+      : getPublishedReleaseNoteBySlug(locale, slug));
     const entry = data.componentReleaseNoteCollection?.items[0] ?? null;
 
     // Honor the scheduled `publishedAt` reveal (the list query filters `publishedAt_lte: now`), so a
