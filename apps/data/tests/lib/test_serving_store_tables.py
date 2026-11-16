@@ -160,6 +160,26 @@ def test_a_measurement_carries_every_sensor_reading_of_both_payload_shapes(spark
     }
 
 
+@pytest.mark.parametrize(
+    ("zone", "hour"),
+    [("'Europe/Amsterdam'", 12), ("'+02:00'", 12), ("'PST'", 3), ("'UTC+2'", 12), ("'Z'", 10)],
+)
+def test_a_measurement_carries_its_local_hour_in_every_zone_spark_knows(
+    spark: SparkSession, zone: str, hour: int
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'Europe/Amsterdam' AS timezone", f"{zone} AS timezone")
+
+    row = _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+    assert row["hour_local"] == hour
+
+
+def test_a_measurement_without_a_zone_has_no_local_hour(spark: SparkSession) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'Europe/Amsterdam' AS timezone", "CAST(NULL AS STRING) AS timezone")
+
+    assert "hour_local" not in _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+
 def test_a_payload_that_is_not_a_list_of_samples_has_no_readings(spark: SparkSession) -> None:
     changes = _RAW_DATA_CHANGES.replace(
         """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
@@ -605,3 +625,22 @@ def test_sensor_readings_land_as_the_very_doubles_gold_holds(
         "WHERE experiment_id = 'readings'"
     )
     assert rows == [{"par_readings": [51.986383, 5.6631109, 1e-7], "temperature_readings": []}] * 3
+
+
+@pytest.mark.clickhouse
+def test_a_measurement_keeps_its_payloads_size_out_of_its_columns(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'sizes' AS experiment_id")
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    [row] = store.rows(
+        f"SELECT DISTINCT data_bytes, length(data) AS length FROM {_DATABASE}.measurements FINAL "
+        "WHERE experiment_id = 'sizes'"
+    )
+    [stored] = store.rows(
+        f"SELECT * FROM {_DATABASE}.measurements FINAL WHERE experiment_id = 'sizes' LIMIT 1"
+    )
+    assert row["data_bytes"] == row["length"] > 0
+    assert "data_bytes" not in stored

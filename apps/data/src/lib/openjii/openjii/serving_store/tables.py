@@ -159,7 +159,6 @@ class StoreTable:
         raise NotImplementedError
 
     def readings(self) -> list[Column]:
-        """The table's sensor readings, one column per entry of ``SENSOR_READINGS``."""
         return []
 
     def key(self) -> list[Column]:
@@ -198,6 +197,7 @@ class Measurements(StoreTable):
             "client_app_version",
             clamped("timestamp"),
             "timezone",
+            F.hour(F.from_utc_timestamp("timestamp", F.col("timezone"))).alias("hour_local"),
             "macros",
             "questions_data",
             "annotations",
