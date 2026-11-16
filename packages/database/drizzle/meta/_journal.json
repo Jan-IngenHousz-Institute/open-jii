@@ -414,6 +414,13 @@
       "when": 1792419143798,
       "tag": "0058_study_descriptors",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794197864760,
+      "tag": "0059_data_license_cc_by_sa",
+      "breakpoints": true
     }
   ]
 }

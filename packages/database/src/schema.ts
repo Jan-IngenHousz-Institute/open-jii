@@ -349,8 +349,8 @@ export const experimentStatusEnum = pgEnum("experiment_status", [
 // Experiment Visibility Enum
 export const experimentVisibilityEnum = pgEnum("experiment_visibility", ["private", "public"]);
 
-// SPDX identifiers; the only two licenses the platform offers for datasets.
-export const dataLicenseEnum = pgEnum("data_license", ["CC0-1.0", "CC-BY-4.0"]);
+// SPDX identifiers of the licenses the platform offers for datasets.
+export const dataLicenseEnum = pgEnum("data_license", ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"]);
 
 export const experiments = pgTable(
   "experiments",

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."data_license" ADD VALUE 'CC-BY-SA-4.0';
