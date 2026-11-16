@@ -77,22 +77,11 @@ export const zWebhookAuthHeader = z.object({
   "x-databricks-timestamp": z.string(),
 });
 
-export const zUserMetadataWebhookPayload = z.object({
-  // Accept any string so one malformed id can't 400 the whole batch; the
-  // backend filters to valid uuids and omits the rest.
-  userIds: z.array(z.string()).min(1).max(500),
-});
-
 export const zUserMetadata = z.object({
   userId: z.string().guid(),
   firstName: z.string(),
   lastName: z.string(),
   avatarUrl: z.string().nullable(),
-});
-
-export const zUserMetadataWebhookResponse = z.object({
-  users: z.array(zUserMetadata),
-  success: z.boolean(),
 });
 
 export const zWebhookSuccessResponse = z.object({
@@ -116,9 +105,7 @@ export type UserProfile = z.infer<typeof zUserProfile>;
 export type CreateUserProfileBody = z.infer<typeof zCreateUserProfileBody>;
 export type CreateUserProfileResponse = z.infer<typeof zCreateUserProfileResponse>;
 export type WebhookAuthHeader = z.infer<typeof zWebhookAuthHeader>;
-export type UserMetadataWebhookPayload = z.infer<typeof zUserMetadataWebhookPayload>;
 export type UserMetadata = z.infer<typeof zUserMetadata>;
-export type UserMetadataWebhookResponse = z.infer<typeof zUserMetadataWebhookResponse>;
 export type WebhookSuccessResponse = z.infer<typeof zWebhookSuccessResponse>;
 export type WebhookErrorResponse = z.infer<typeof zWebhookErrorResponse>;
 

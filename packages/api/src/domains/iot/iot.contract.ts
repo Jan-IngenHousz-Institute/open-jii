@@ -6,8 +6,6 @@ import {
   zDeviceFirmwareHistory,
   zDeviceMonitoring,
   zDeviceOnboardingConfig,
-  zDeviceRegistryWebhookPayload,
-  zDeviceRegistryWebhookResponse,
   zIotCredentials,
   zIotDevice,
   zIotDeviceActivity,
@@ -39,12 +37,6 @@ export const iotContract = {
     .route({ method: "POST", path: "/api/v1/iot/upload-url", successStatus: 200 })
     .input(zIotUploadUrlRequest)
     .output(zIotUploadUrl),
-
-  // Device registry webhook (Databricks lineage). Authenticated by HmacGuard.
-  getDeviceRegistry: oc
-    .route({ method: "POST", path: "/api/v1/iot/devices/registry", successStatus: 200 })
-    .input(zDeviceRegistryWebhookPayload)
-    .output(zDeviceRegistryWebhookResponse),
 
   // IotDevice registry (owner-scoped)
   // Idempotent per-phone self-registration; 200 whether the row was created

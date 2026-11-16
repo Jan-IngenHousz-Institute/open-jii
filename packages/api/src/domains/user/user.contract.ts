@@ -14,8 +14,6 @@ import {
   zSearchUsersQuery,
   zUser,
   zUserIdPathParam,
-  zUserMetadataWebhookPayload,
-  zUserMetadataWebhookResponse,
   zUserProfile,
   zUserSearchResultList,
   zWhatsNewSeenResponse,
@@ -46,10 +44,6 @@ export const userContract = {
     .route({ method: "GET", path: "/api/v1/users/{id}/deletion-blockers", successStatus: 200 })
     .input(zUserIdPathParam)
     .output(zDeletionBlockersResponse),
-  getUserMetadata: oc
-    .route({ method: "POST", path: "/api/v1/users/metadata", successStatus: 200 })
-    .input(zUserMetadataWebhookPayload)
-    .output(zUserMetadataWebhookResponse),
   createInvitation: oc
     .route({ method: "POST", path: "/api/v1/invitations", successStatus: 201 })
     .input(zCreateInvitationBody)
