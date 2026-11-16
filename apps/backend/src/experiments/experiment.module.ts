@@ -29,6 +29,7 @@ import { AnnotationsLakehouseCopier } from "./application/services/annotations-l
 import { AnnotationsStoreCopier } from "./application/services/annotations-store-copier";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { ExperimentDataOutboxMetricsService } from "./application/services/experiment-data-outbox-metrics.service";
 import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
 import { ExperimentDataSourceService } from "./application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
@@ -105,6 +106,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { EXPERIMENT_METRICS_PORT } from "./core/ports/metrics.port";
 import { SERVING_STORE_COPIES_PORT } from "./core/ports/serving-store-copies.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 // Repositories
@@ -198,6 +200,10 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
       useExisting: AwsAdapter,
     },
     {
+      provide: EXPERIMENT_METRICS_PORT,
+      useExisting: AwsAdapter,
+    },
+    {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
     },
@@ -257,6 +263,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     MetadataSheetsLakehouseCopier,
     AnnotationsStoreCopier,
     MetadataSheetsStoreCopier,
+    ExperimentDataOutboxMetricsService,
     AnnotationMergerService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,

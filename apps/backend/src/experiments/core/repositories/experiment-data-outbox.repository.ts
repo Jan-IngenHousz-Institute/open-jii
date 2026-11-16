@@ -24,6 +24,7 @@ import type {
   ExperimentDataDestination,
   OutboxClaim,
   OwedRecord,
+  WaitingCopies,
 } from "../models/experiment-data-outbox.model";
 import { SERVING_STORE_COPIES_PORT } from "../ports/serving-store-copies.port";
 import type { ServingStoreCopiesPort } from "../ports/serving-store-copies.port";
@@ -170,6 +171,23 @@ export class ExperimentDataOutboxRepository {
         destination: zExperimentDataDestination.parse(row.destination),
         claimedAt: new Date(row.claimedAt),
       }));
+    });
+  }
+
+  /**
+   * The copies still owed, and how long the oldest has been, from when it was first owed. Aged on
+   * the database clock, the one `created_at` was stamped by.
+   */
+  async countWaiting(): Promise<Result<WaitingCopies>> {
+    return tryCatch(async () => {
+      const [row] = await this.database
+        .select({
+          waiting: sql<number>`count(*)::int`,
+          oldestWaitingSeconds: sql<number>`coalesce(extract(epoch from (now() AT TIME ZONE 'UTC') - min(${experimentDataOutbox.createdAt})), 0)::float8`,
+        })
+        .from(experimentDataOutbox);
+
+      return row;
     });
   }
 

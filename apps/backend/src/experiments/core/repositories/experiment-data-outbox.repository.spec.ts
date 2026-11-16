@@ -79,6 +79,26 @@ describe("ExperimentDataOutboxRepository", () => {
     expect(await claim()).toHaveLength(1);
   });
 
+  it("counts the copies still owed and ages the oldest from when it was first owed", async () => {
+    const empty = await repository.countWaiting();
+    assertSuccess(empty);
+    expect(empty.value).toEqual({ waiting: 0, oldestWaitingSeconds: 0 });
+
+    const [older, newer] = [annotation(), annotation()];
+    await owe(older, newer);
+    await testApp.database.execute(sql`
+      UPDATE experiment_data_outbox
+      SET created_at = created_at - make_interval(secs => 1800)
+      WHERE record_id = ${older.recordId}
+    `);
+    await owe(older);
+
+    const waiting = await repository.countWaiting();
+    assertSuccess(waiting);
+    expect(waiting.value.waiting).toBe(2);
+    expect(waiting.value.oldestWaitingSeconds).toBeGreaterThanOrEqual(1800);
+  });
+
   it("keeps one waiting row however often a record changes", async () => {
     const record = annotation();
 

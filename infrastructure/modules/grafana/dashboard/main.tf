@@ -937,6 +937,102 @@ resource "grafana_rule_group" "email_health" {
   }
 }
 
+# Copies of annotations and metadata sheets. The backend publishes the outbox's gauges every five
+# minutes from each task, so no data is a quiet backend, which dependency-health watches.
+resource "grafana_rule_group" "experiment_data_copies" {
+  provider         = grafana.amg
+  name             = "Experiment Data Copies"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  # Catalog entry 148. Every task publishes the same age, so the highest reads right however many
+  # run. A copy unreachable for everyone holds every row; one record failing on every attempt
+  # crosses it too.
+  rule {
+    name      = "Experiment Data Copies Waiting"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "ExperimentDataCopyOldestWaitingSeconds"
+        statistic  = "Maximum"
+        period     = "300"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 1800"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse or the serving store refuses every copy, or one record fails on every attempt. Exports, charts and store filters miss the latest edits until it lands."
+      summary          = "Annotation and sheet copies are not landing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["experiment-data-copies-waiting"]
+    }
+    labels = {
+      metric_id = "experiment-data-copies-waiting"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
+}
+
 # CloudFront Alerts
 resource "grafana_rule_group" "cloudfront_errors" {
   provider         = grafana.amg
