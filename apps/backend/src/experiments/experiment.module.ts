@@ -26,7 +26,9 @@ import { AnnotationMergerService } from "./application/services/annotation-merge
 // Services
 import { AnnotationsOutboxService } from "./application/services/annotations-outbox.service";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
+import { ContributorsOutboxService } from "./application/services/contributors-outbox.service";
 import { CustomMetadataService } from "./application/services/custom-metadata.service";
+import { DevicesOutboxService } from "./application/services/devices-outbox.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExperimentDataOutboxMetricsService } from "./application/services/experiment-data-outbox-metrics.service";
 import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
@@ -107,6 +109,8 @@ import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EXPERIMENT_METRICS_PORT } from "./core/ports/metrics.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 // Repositories
+import { ContributorProfilesWarehouseRepository } from "./core/repositories/contributor-profiles-warehouse.repository";
+import { DeviceRegistryWarehouseRepository } from "./core/repositories/device-registry-warehouse.repository";
 import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "./core/repositories/experiment-annotations.repository";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
@@ -236,6 +240,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDashboardRepository,
     ExperimentDataRepository,
     ExperimentDeviceRegistryRepository,
+    ContributorProfilesWarehouseRepository,
+    DeviceRegistryWarehouseRepository,
     ExperimentDataExportsRepository,
     ExperimentDataUploadsRepository,
     FlowRepository,
@@ -254,6 +260,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataOutboxWorker,
     AnnotationsOutboxService,
     MetadataSheetsOutboxService,
+    ContributorsOutboxService,
+    DevicesOutboxService,
     ExperimentDataOutboxMetricsService,
     AnnotationMergerService,
     ExportRunReconcilerService,
@@ -353,6 +361,11 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
   ],
-  exports: [ExperimentRepository, ExperimentDashboardRepository, ExperimentVisualizationRepository],
+  exports: [
+    ExperimentRepository,
+    ExperimentDashboardRepository,
+    ExperimentVisualizationRepository,
+    ExperimentDataOutboxRepository,
+  ],
 })
 export class ExperimentModule {}

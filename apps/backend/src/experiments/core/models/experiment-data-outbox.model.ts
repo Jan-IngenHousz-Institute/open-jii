@@ -12,13 +12,15 @@ export type ExperimentDataDestination = z.infer<typeof zExperimentDataDestinatio
 export const OWED_COPIES: Record<ExperimentDataRecordType, ExperimentDataDestination[]> = {
   annotation: ["lakehouse"],
   metadata_sheet: ["lakehouse"],
+  contributor: ["lakehouse"],
+  device: ["lakehouse"],
 };
 
 /** A record whose current state its copies are owed. */
 export interface OwedRecord {
   recordType: ExperimentDataRecordType;
   recordId: string;
-  experimentId: string;
+  experimentId: string | null;
 }
 
 /** An outbox row a worker holds while it applies it. */

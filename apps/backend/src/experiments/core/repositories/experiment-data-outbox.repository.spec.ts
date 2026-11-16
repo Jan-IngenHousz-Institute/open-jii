@@ -14,7 +14,7 @@ describe("ExperimentDataOutboxRepository", () => {
   const LEASE_MS = 5 * 60_000;
   const WAITS = [10, 60, 300];
 
-  function annotation(): OwedRecord {
+  function annotation(): OwedRecord & { experimentId: string } {
     return {
       recordType: "annotation",
       recordId: faker.string.uuid(),
@@ -97,6 +97,35 @@ describe("ExperimentDataOutboxRepository", () => {
     assertSuccess(waiting);
     expect(waiting.value.waiting).toBe(2);
     expect(waiting.value.oldestWaitingSeconds).toBeGreaterThanOrEqual(1800);
+  });
+
+  it("owes a contributor or a device to the lakehouse under no experiment", async () => {
+    const contributor = faker.string.uuid();
+    const device = faker.string.uuid();
+
+    await owe(
+      { recordType: "contributor", recordId: contributor, experimentId: null },
+      { recordType: "device", recordId: device, experimentId: null },
+    );
+
+    const claimed = await claim();
+    expect(claimed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          recordType: "contributor",
+          recordId: contributor,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+        expect.objectContaining({
+          recordType: "device",
+          recordId: device,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]),
+    );
+    expect(claimed).toHaveLength(2);
   });
 
   it("keeps one waiting row however often a record changes", async () => {

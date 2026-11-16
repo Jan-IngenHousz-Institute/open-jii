@@ -9,6 +9,8 @@ import type {
 } from "../../core/models/experiment-data-outbox.model";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { AnnotationsOutboxService } from "./annotations-outbox.service";
+import { ContributorsOutboxService } from "./contributors-outbox.service";
+import { DevicesOutboxService } from "./devices-outbox.service";
 import type { CopyOutcome, ExperimentDataOutboxService } from "./experiment-data-outbox.service";
 import { MetadataSheetsOutboxService } from "./metadata-sheets-outbox.service";
 
@@ -68,8 +70,15 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     private readonly outbox: ExperimentDataOutboxRepository,
     annotations: AnnotationsOutboxService,
     sheets: MetadataSheetsOutboxService,
+    contributors: ContributorsOutboxService,
+    devices: DevicesOutboxService,
   ) {
-    this.outboxServices = { annotation: annotations, metadata_sheet: sheets };
+    this.outboxServices = {
+      annotation: annotations,
+      metadata_sheet: sheets,
+      contributor: contributors,
+      device: devices,
+    };
   }
 
   @Interval(EXPERIMENT_DATA_OUTBOX_INTERVAL, INTERVAL_MS)

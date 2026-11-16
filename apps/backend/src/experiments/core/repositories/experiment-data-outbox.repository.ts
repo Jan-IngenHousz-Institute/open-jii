@@ -47,8 +47,9 @@ const INSERT_CHUNK_SIZE = 1000;
 const CLAIM_STAMP = sql`date_trunc('milliseconds', now() AT TIME ZONE 'UTC')`;
 
 /**
- * The copies of annotations and metadata sheets still owed. A write to a record owes its current
- * state to each copy in the same transaction; the worker applies it and deletes the row.
+ * The copies of annotations, metadata sheets, contributors and devices still owed. A write to a
+ * record owes its current state to each copy in the same transaction; the worker applies it and
+ * deletes the row.
  */
 /** What putting a row back changes besides its claim. */
 interface RetryChanges {
