@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { devkitEnvPath } from "./config.js";
 import {
@@ -69,6 +69,24 @@ describe("the Contentful write log", () => {
     await expect(client.createEntry("statusUpdate", {})).rejects.toThrow("returned 422");
 
     expect(await logOf(root)).toMatch(/ failed POST entries environment=master session=shell /);
+  });
+});
+
+describe("a write log that cannot be written", () => {
+  it("lets the write succeed and warns that it was not logged", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const client = new ContentfulManagement(config, answering(200), () =>
+      Promise.reject(new Error("disk full")),
+    );
+
+    await expect(
+      client.createEntry("statusUpdate", entryBody("upd-1").fields),
+    ).resolves.toMatchObject({ sys: { id: "upd-1" } });
+    expect(warn).toHaveBeenCalledWith(
+      "Contentful POST entries went through but was not logged: disk full",
+    );
+
+    warn.mockRestore();
   });
 });
 

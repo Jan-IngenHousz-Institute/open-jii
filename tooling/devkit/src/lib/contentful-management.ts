@@ -278,7 +278,14 @@ export class ContentfulManagement {
     }
 
     const at = new Date().toISOString();
-    await this.audit({ at, ok, method, resource, environment: this.config.environment });
+    // The write already reached Contentful, so a log that cannot be written must not read as a
+    // failed write, or an operator would retry one that happened.
+    await this.audit({ at, ok, method, resource, environment: this.config.environment }).catch(
+      (error: unknown) => {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.warn(`Contentful ${method} ${resource} went through but was not logged: ${reason}`);
+      },
+    );
   }
 
   private async send(method: Method, path: string, options: SendOptions = {}): Promise<unknown> {
