@@ -236,7 +236,9 @@ export class CmsModels {
     live: LiveContentType | null,
   ): Promise<string[]> {
     const dateFields = model.dateFieldIds();
-    if (live === null || dateFields.length === 0) {
+    // Contentful creates a type's editor interface when the type is first activated.
+    const hasEditorInterface = live !== null && live.publishedVersion !== null;
+    if (!hasEditorInterface || dateFields.length === 0) {
       return dateFields;
     }
 

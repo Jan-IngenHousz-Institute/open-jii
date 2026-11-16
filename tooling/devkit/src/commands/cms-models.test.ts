@@ -80,11 +80,14 @@ class FakeContentful {
       publishedVersion: "publishedVersion" in options ? options.publishedVersion : 1,
       body,
     });
-    this.interfaces.set(id, {
-      version: 3,
-      controls: options.controls ?? body.fields.map((item) => ({ fieldId: item.id })),
-      sidebar: [{ widgetId: "publication-widget", widgetNamespace: "sidebar-builtin" }],
-    });
+    // Contentful creates the editor interface when a type is first activated.
+    if (this.types.get(id)?.publishedVersion !== undefined) {
+      this.interfaces.set(id, {
+        version: 3,
+        controls: options.controls ?? body.fields.map((item) => ({ fieldId: item.id })),
+        sidebar: [{ widgetId: "publication-widget", widgetNamespace: "sidebar-builtin" }],
+      });
+    }
   }
 
   summary(): string[] {
@@ -267,6 +270,17 @@ describe("diff", () => {
         "~ field startAt widget: apply sets the date and time picker with a time zone",
       );
       expect(formatDiff(report)).toContain("apply with --expected-version");
+    });
+
+    it("names the Date fields of a type saved but never activated, which has no editor interface", async () => {
+      await writeModel("event", event);
+      const { fake, models } = setup();
+      fake.seed("event", event, { publishedVersion: undefined });
+
+      const report = await models.diff(["event"]);
+
+      expect(report.models[0]).toMatchObject({ dateControls: ["startAt"] });
+      expect(fake.summary()).not.toContain("GET content_types/event/editor_interface");
     });
 
     it("lists a Date field of a type missing live once, as added", async () => {

@@ -391,8 +391,10 @@ repeats only that step.
 
 `apply` writes, so it needs `--environment <name>`, which must equal `CONTENTFUL_SPACE_ENVIRONMENT`.
 It refuses otherwise, so a write never lands in an environment nobody named. `--dry-run` reads the
-live type, prints every request body as it would be sent and writes nothing, so it needs credentials
-but no `--environment`.
+live type and writes nothing, so it needs credentials but no `--environment`. It prints the content
+type's request bodies as they would be sent, and of the editor interface only the Date controls
+`apply` would set. `apply` reads the live editor interface when it runs and merges them into it,
+keeping its other controls, sidebar and help text.
 
 ## A local session without a browser
 

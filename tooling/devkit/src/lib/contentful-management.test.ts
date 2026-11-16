@@ -125,6 +125,14 @@ describe("loadContentfulConfig", () => {
     });
   });
 
+  it("takes a token from the shell under either name over one stored in the file", async () => {
+    const root = await rootWith("CONTENTFUL_MANAGEMENT_TOKEN=stored-token\n");
+
+    expect((await loadContentfulConfig(root, { CMA: " rotated-token " })).token).toBe(
+      "rotated-token",
+    );
+  });
+
   it("falls back to the CMA name when the management token is empty", async () => {
     const root = await rootWith("CMA=alias-token\n");
 

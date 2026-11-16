@@ -109,8 +109,10 @@ export async function loadContentfulConfig(
   return {
     space: values.CONTENTFUL_SPACE_ID?.trim() ?? "",
     environment: values.CONTENTFUL_SPACE_ENVIRONMENT?.trim() ?? "",
+    // The first source holding a token wins, under either name, so the shell replaces a stored one.
     token:
-      [values.CONTENTFUL_MANAGEMENT_TOKEN, values.CMA]
+      [env, file, shared]
+        .flatMap((source) => [source.CONTENTFUL_MANAGEMENT_TOKEN, source.CMA])
         .map((value) => value?.trim())
         .find(Boolean) ?? "",
   };
