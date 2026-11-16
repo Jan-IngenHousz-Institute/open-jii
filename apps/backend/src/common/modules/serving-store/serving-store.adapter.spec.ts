@@ -963,6 +963,21 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(sorted.rows.slice(1, 3).sort()).toEqual([["1"], ["11"]]);
     });
 
+    it("sorts whole devices by registry order, the unregistered first by their labels", async () => {
+      const sorted = await rowsOf({
+        ...read,
+        columns: ["id"],
+        ordering: { column: "device" },
+        orderByIds: ["c1", "blank-phone"],
+        deviceSerials: serials,
+      });
+      const ids = sorted.rows.map(([id]) => id);
+
+      expect(ids.slice(0, 8)).toEqual(["7", "2", "3", "8", "6", "5", "4", "10"]);
+      expect(ids.slice(8, 10).sort()).toEqual(["1", "11"]);
+      expect(ids[10]).toBe("9");
+    });
+
     it("lists the labels as the device picker pages them", async () => {
       const labels = async (limit: number, offset: number) => {
         const projected = adapter.buildExperimentQuery({
