@@ -40,8 +40,9 @@ server. If its log says `Exceeded maximum allowed payload size`, the response we
 6 MB limit. In October 2026 the Lambda was returning Contentful originals unresized, so any CMS
 photo over about 6 MB failed every time it was requested.
 
-Access logs record request metadata without cookie values. The cookie field is `-`;
-the status and path fields above stay in their usual positions. CloudFront log
+After deployment, new access logs record request metadata without cookie values.
+Their cookie field is `-`; the status and path fields above stay in their usual
+positions. Historical logs may contain cookie values until they are deleted. CloudFront log
 objects under `cloudfront-logs/` expire 30 days after creation. Previous versions
 expire 30 days after becoming noncurrent. Dev, production and DR use the same
 cookie-free distribution modules and retention rule. Firewall logs continue to redact `cookie` and `authorization`.
