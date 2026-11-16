@@ -909,6 +909,58 @@
       ]
     ]
   },
+  "rowCumsumCapped": {
+    "columns": [
+      "id",
+      "v",
+      "v_cumsum",
+      "n_cumsum"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        1,
+        1.5,
+        1.5,
+        1
+      ],
+      [
+        2,
+        2.5,
+        4.0,
+        3
+      ],
+      [
+        3,
+        null,
+        4.0,
+        5
+      ],
+      [
+        4,
+        4.0,
+        8.0,
+        5
+      ],
+      [
+        5,
+        8.0,
+        16.0,
+        10
+      ],
+      [
+        6,
+        -0.5,
+        15.5,
+        13
+      ]
+    ]
+  },
   "rowWindows": {
     "columns": [
       "id",
@@ -1094,6 +1146,110 @@
         25,
         52.10003,
         5
+      ]
+    ]
+  },
+  "rowWindowsByNullableOrderCapped": {
+    "columns": [
+      "id",
+      "v_previous",
+      "row"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "INT"
+    ],
+    "rows": [
+      [
+        1,
+        null,
+        1
+      ],
+      [
+        2,
+        1.5,
+        2
+      ],
+      [
+        3,
+        2.5,
+        3
+      ],
+      [
+        5,
+        null,
+        1
+      ],
+      [
+        6,
+        null,
+        1
+      ],
+      [
+        8,
+        null,
+        1
+      ]
+    ]
+  },
+  "rowWindowsCapped": {
+    "columns": [
+      "id",
+      "v_previous",
+      "v_change_from_previous",
+      "seconds_since_previous",
+      "row"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE",
+      "DOUBLE",
+      "DOUBLE",
+      "INT"
+    ],
+    "rows": [
+      [
+        1,
+        null,
+        null,
+        null,
+        1
+      ],
+      [
+        2,
+        1.5,
+        1.0,
+        3600.0,
+        2
+      ],
+      [
+        3,
+        2.5,
+        null,
+        0.0,
+        3
+      ],
+      [
+        4,
+        6.0,
+        -2.0,
+        30.25,
+        2
+      ],
+      [
+        5,
+        null,
+        null,
+        null,
+        1
+      ],
+      [
+        8,
+        null,
+        null,
+        null,
+        1
       ]
     ]
   },

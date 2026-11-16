@@ -821,6 +821,115 @@
         "column": "device_name",
         "direction": "ASC"
       }
+    },
+    "rowCumsumCapped": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "cumsum"
+          },
+          {
+            "column": "n",
+            "function": "cumsum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": [
+        "id",
+        "v",
+        "v_cumsum",
+        "n_cumsum"
+      ],
+      "limit": 6,
+      "exact": true
+    },
+    "rowWindowsCapped": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "v",
+            "function": "change_from_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "DOUBLE"
+          },
+          {
+            "column": "timestamp",
+            "function": "change_from_previous",
+            "alias": "seconds_since_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "TIMESTAMP"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": [
+        "id",
+        "v_previous",
+        "v_change_from_previous",
+        "seconds_since_previous",
+        "row"
+      ],
+      "limit": 6,
+      "exact": true
+    },
+    "rowWindowsByNullableOrderCapped": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": [
+        "id",
+        "v_previous",
+        "row"
+      ],
+      "limit": 6,
+      "exact": true
     }
   }
 }

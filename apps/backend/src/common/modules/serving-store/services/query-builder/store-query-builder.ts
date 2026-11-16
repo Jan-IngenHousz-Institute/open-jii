@@ -30,6 +30,12 @@ export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "is
   text?: { column: string; key?: string };
 };
 
+/** A column the rows first kept sort by going up, and where its nulls go. */
+export interface FirstRowsTerm {
+  column: string;
+  nulls: "FIRST" | "LAST";
+}
+
 /** The second table of an as-of read, one row per key and time. */
 export interface StoreAsOfSecondary {
   sql: string;
@@ -90,6 +96,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   /** The table a chart reads with FINAL, which an alias must come before. */
   private finalTable?: string;
+  private firstRows?: { order: FirstRowsTerm[]; count: number };
   private columns: StoreColumn[] = [];
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
@@ -198,6 +205,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       };
     });
     this.forgetFields();
+    return this;
+  }
+
+  /**
+   * Reads only the rows first in `order`, found by their keys over the key and order columns alone,
+   * as a sorted page finds its rows; the rest of each row is read for those rows only.
+   */
+  keepFirst(order: FirstRowsTerm[], count: number): this {
+    this.firstRows = { order, count };
     return this;
   }
 
@@ -560,11 +576,33 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       .join(", ");
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
+    const first = this.firstRows;
+    if (first === undefined) {
+      return this.joinClauses([
+        this.withClause(),
+        `SELECT ${projection}`,
+        `FROM ${this.fromClause}`,
+        where,
+      ]);
+    }
+
+    const key = this.key.join(", ");
+    const order = first.order
+      .map(({ column, nulls }) => `${this.projectedExpression(column)} ASC NULLS ${nulls}`)
+      .join(", ");
+    const firstKeys = this.joinClauses([
+      `SELECT ${key}`,
+      `FROM ${this.fromClause}`,
+      where,
+      `ORDER BY ${order}, ${key}`,
+      `LIMIT ${first.count}`,
+    ]);
+    const conditions = [...this.whereConditions, `(${key}) IN (${firstKeys})`];
     return this.joinClauses([
       this.withClause(),
       `SELECT ${projection}`,
       `FROM ${this.fromClause}`,
-      where,
+      `WHERE ${conditions.join(" AND ")}`,
     ]);
   }
 

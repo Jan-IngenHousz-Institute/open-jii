@@ -15,6 +15,7 @@ from collections.abc import Iterator
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import TypedDict
 
 import pytest
 from pyspark.sql import SparkSession
@@ -67,8 +68,14 @@ def _value(value: object) -> object:
     return value
 
 
-def _result(spark: SparkSession, name: str) -> dict[str, object]:
-    frame = spark.sql(_QUERIES[name])
+class _ChartResult(TypedDict):
+    columns: list[str]
+    types: list[str]
+    rows: list[list[object]]
+
+
+def _result(spark: SparkSession, name: str, query: str | None = None) -> _ChartResult:
+    frame = spark.sql(_QUERIES[query or name])
     columns = _PARITY["cases"][name].get("compare", frame.columns)
     # A decimal is named as the warehouse names it, with its precision and scale.
     types = [
@@ -86,8 +93,26 @@ def _result(spark: SparkSession, name: str) -> dict[str, object]:
     return {"columns": columns, "types": types, "rows": rows}
 
 
+def _exact_cases() -> list[str]:
+    return sorted(name for name, case in _PARITY["cases"].items() if case.get("exact"))
+
+
 def test_every_case_has_its_generated_query() -> None:
-    assert set(_QUERIES) == set(_PARITY["cases"])
+    every_row = {f"{name} over every row" for name in _exact_cases()}
+    assert set(_QUERIES) == set(_PARITY["cases"]) | every_row
+
+
+@pytest.mark.parametrize("name", _exact_cases())
+def test_a_capped_window_shows_each_row_as_over_every_row(
+    spark: SparkSession, chart_rows: None, name: str
+) -> None:
+    capped = _result(spark, name)
+    every_row = _result(spark, name, f"{name} over every row")
+    rows_by_id = {row[0]: row for row in every_row["rows"]}
+
+    # The cap leaves the table's last rows out, and the read asks one row past it to say so.
+    assert len(capped["rows"]) == _PARITY["cases"][name]["limit"] < len(every_row["rows"])
+    assert [rows_by_id[row[0]] for row in capped["rows"]] == capped["rows"]
 
 
 def test_spark_returns_the_recorded_series_for_every_chart_case(

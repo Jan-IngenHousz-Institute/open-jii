@@ -14,15 +14,20 @@ function orderExpression(item: AggregateExpression, builder: BaseQueryBuilder): 
 }
 
 export function buildWindowSpec(item: AggregateExpression, builder: BaseQueryBuilder): string {
-  const order = orderExpression(item, builder);
   const partition = item.partitionColumn
     ? `PARTITION BY ${builder.escapeIdentifier(item.partitionColumn)} `
     : "";
+  return `${partition}ORDER BY ${buildWindowOrder(item, builder)}`;
+}
+
+/** The order a row window looks back in, across its partitions. */
+export function buildWindowOrder(item: AggregateExpression, builder: BaseQueryBuilder): string {
+  const order = orderExpression(item, builder);
   const tie =
     item.tieBreaker && item.tieBreaker !== item.orderColumn
       ? `, ${builder.escapeIdentifier(item.tieBreaker)} ASC`
       : "";
-  return `${partition}ORDER BY ${order} ASC NULLS LAST${tie}`;
+  return `${order} ASC NULLS LAST${tie}`;
 }
 
 export function buildRowWindowExpression(

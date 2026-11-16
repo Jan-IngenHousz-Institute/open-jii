@@ -77,6 +77,10 @@ const zCase = z.object({
     .optional(),
   ordering: z.object({ column: z.string(), direction: z.enum(["ASC", "DESC"]) }).optional(),
   compare: z.array(z.string()).optional(),
+  /** A test cap in place of the read's ceiling, for a table larger than it. */
+  limit: z.number().optional(),
+  /** Spark checks each shown row against the same windows computed over every row. */
+  exact: z.boolean().optional(),
 });
 
 const zFixture = z.object({
@@ -122,7 +126,7 @@ const MATCHED_COLUMNS = [
 const CHART_LIMIT = 100_001;
 
 function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
-  const { columns, join, filters, aggregation, ordering } = FIXTURE.cases[name];
+  const { columns, join, filters, aggregation, ordering, limit } = FIXTURE.cases[name];
   return {
     tableName: "m1",
     tableType: "macro",
@@ -151,7 +155,7 @@ function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
     filters,
     aggregation,
     ordering,
-    limit: CHART_LIMIT,
+    limit: limit ?? CHART_LIMIT,
     plotsValues: true,
   };
 }
@@ -161,42 +165,48 @@ function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
 it("keeps the Spark chart fixture in sync with the warehouse's generated queries", async () => {
   const service = new QueryBuilderService();
   const scoped = { whereConditions: [["experiment_id", "charts"]] satisfies [string, string][] };
+  const warehouseRead = (
+    { columns, join, filters, aggregation, ordering }: z.infer<typeof zCase>,
+    limit: number | undefined,
+  ) => {
+    const built = service.buildQuery({
+      table: "chart_rows",
+      ...scoped,
+      columns,
+      join:
+        join === undefined
+          ? undefined
+          : {
+              ...join,
+              secondary: {
+                table: "chart_matches",
+                ...scoped,
+                variants: MATCH_VARIANTS,
+                reservedColumns: SPARK_COLUMNS,
+              },
+              primaryColumns: [...SPARK_COLUMNS, "n", "v"],
+              secondaryColumns: MATCHED_COLUMNS,
+              primaryTimeColumn: "timestamp",
+              primaryTimeType: "TIMESTAMP",
+              secondaryTimeColumn: "timestamp",
+              secondaryTimeType: "TIMESTAMP",
+            },
+      variants: VARIANTS,
+      reservedColumns: SPARK_COLUMNS,
+      filters,
+      aggregation,
+      ordering,
+      limit,
+    });
+    assertSuccess(built);
+    return built.value;
+  };
   const queries = Object.fromEntries(
-    Object.entries(FIXTURE.cases).map(
-      ([name, { columns, join, filters, aggregation, ordering }]) => {
-        const built = service.buildQuery({
-          table: "chart_rows",
-          ...scoped,
-          columns,
-          join:
-            join === undefined
-              ? undefined
-              : {
-                  ...join,
-                  secondary: {
-                    table: "chart_matches",
-                    ...scoped,
-                    variants: MATCH_VARIANTS,
-                    reservedColumns: SPARK_COLUMNS,
-                  },
-                  primaryColumns: [...SPARK_COLUMNS, "n", "v"],
-                  secondaryColumns: MATCHED_COLUMNS,
-                  primaryTimeColumn: "timestamp",
-                  primaryTimeType: "TIMESTAMP",
-                  secondaryTimeColumn: "timestamp",
-                  secondaryTimeType: "TIMESTAMP",
-                },
-          variants: VARIANTS,
-          reservedColumns: SPARK_COLUMNS,
-          filters,
-          aggregation,
-          ordering,
-          limit: CHART_LIMIT,
-        });
-        assertSuccess(built);
-        return [name, built.value];
-      },
-    ),
+    Object.entries(FIXTURE.cases).flatMap(([name, read]) => {
+      const capped: [string, string] = [name, warehouseRead(read, read.limit ?? CHART_LIMIT)];
+      const uncapped: [string, string] = [`${name} over every row`, warehouseRead(read, undefined)];
+      return read.exact === true ? [capped, uncapped] : [capped];
+    }),
   );
 
   await expect(JSON.stringify(queries, null, 2) + "\n").toMatchFileSnapshot(
@@ -253,6 +263,29 @@ describe("StoreAggregation", () => {
 
     assertSuccess(query);
     expect(query.value.sql).toContain("ORDER BY `device_name` ASC NULLS FIRST");
+  });
+
+  it("finds a capped window's rows by key in the window's order before reading their payloads", () => {
+    const windows = adapter.buildExperimentQuery(storeRead("rowWindowsCapped"));
+    const sum = adapter.buildExperimentQuery(storeRead("rowCumsumCapped"));
+
+    assertSuccess(windows);
+    assertSuccess(sum);
+    expect(windows.value.sql).toMatch(
+      /\) IN \(SELECT [^\n]+\nFROM macro_results FINAL\nWHERE [^\n]+\nORDER BY timestamp ASC NULLS LAST, id ASC NULLS LAST, [^\n]+\nLIMIT 6\)/,
+    );
+    expect(sum.value.sql).toMatch(/\nORDER BY id ASC NULLS FIRST, [^\n]+\nLIMIT 6\)/);
+  });
+
+  it("reads every row for a running sum along a column rows may share", () => {
+    const query = adapter.buildExperimentQuery({
+      ...storeRead("rowCumsumCapped"),
+      ordering: { column: "timestamp", direction: "ASC" },
+    });
+
+    assertSuccess(query);
+    expect(query.value.sql).not.toContain(") IN (SELECT ");
+    expect(query.value.sql.match(/LIMIT 6/g)).toHaveLength(1);
   });
 
   it("groups a device as the warehouse groups its struct: a registered one by its client id", () => {

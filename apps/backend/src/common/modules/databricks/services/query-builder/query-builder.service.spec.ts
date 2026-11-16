@@ -908,7 +908,7 @@ describe("as-of joins", () => {
 describe("ordered aggregate query inputs", () => {
   const service = new QueryBuilderService();
 
-  it("filters all rows before LAG and only then applies the result limit", () => {
+  it("filters all rows, keeps the limit's first in the order LAG reads, and only then runs it", () => {
     const sql = unwrap(
       service.buildQuery({
         table: "readings",
@@ -920,8 +920,44 @@ describe("ordered aggregate query inputs", () => {
       }),
     );
     expect(sql).toBe(
-      "SELECT *, CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST) END AS `value_previous` FROM (SELECT * FROM readings WHERE `value` > 5) LIMIT 2",
+      "SELECT *, CASE WHEN `timestamp` IS NULL THEN NULL ELSE LAG(`value`) OVER (ORDER BY `timestamp` ASC NULLS LAST) END AS `value_previous` FROM (SELECT * FROM (SELECT * FROM readings WHERE `value` > 5) ORDER BY `timestamp` ASC NULLS LAST LIMIT 2) LIMIT 2",
     );
+  });
+
+  it("cuts a running sum's rows first only along the row id, since a cut through tied rows drops part of their total", () => {
+    const sumAlong = (column: string) =>
+      unwrap(
+        service.buildQuery({
+          table: "readings",
+          aggregation: { functions: [{ column: "value", function: "cumsum" }] },
+          ordering: { column },
+          limit: 2,
+        }),
+      );
+
+    expect(sumAlong("id")).toContain(
+      "FROM (SELECT * FROM (SELECT * FROM readings) ORDER BY `id` ASC LIMIT 2)",
+    );
+    expect(sumAlong("timestamp")).toMatch(
+      /OVER \(ORDER BY `timestamp`\) AS `value_cumsum` FROM \(SELECT \* FROM readings\) ORDER BY/,
+    );
+  });
+
+  it("runs windows that look back in different orders over every row", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "readings",
+        aggregation: {
+          functions: [
+            { column: "value", function: "previous", orderColumn: "timestamp" },
+            { column: "value", function: "previous", orderColumn: "id", alias: "by_id" },
+          ],
+        },
+        limit: 2,
+      }),
+    );
+
+    expect(sql).toMatch(/ FROM \(SELECT \* FROM readings\) LIMIT 2$/);
   });
 
   it("returns a bad request for a raw window mixed with grouped rows", () => {
