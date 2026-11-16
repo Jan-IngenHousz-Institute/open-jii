@@ -14,6 +14,8 @@ from openjii.centrum.constants import (
     EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_UPLOADED_DATA_TABLE,
 )
+from openjii.metrics.constants import SENSOR_PARAMETER_ALLOWLIST
+from openjii.metrics.sensor_readings import sensor_readings
 from openjii.variant_schema import custom_metadata_schemas, merged_variant_schema
 
 # The store parses microseconds without an offset. Spark's default writes milliseconds with the
@@ -39,6 +41,11 @@ METADATA_SHEETS = "metadata_sheets"
 # The store's Float64 columns, which each line writes first so the writer can rewrite their digits
 # without reading the rest of the line (writer.exact_doubles).
 FLOAT64_COLUMNS = ("latitude", "longitude", "device_battery")
+
+# Every reading of each sensor the platform metrics count, out of a measurement's payload, as an
+# Array(Float64) column named after the sensor. They follow the Float64 columns in a line, for the
+# same rewrite.
+SENSOR_READINGS = {f"{name}_readings": name for name in SENSOR_PARAMETER_ALLOWLIST}
 
 
 def clamped(column: str) -> Column:
@@ -97,7 +104,7 @@ class StoreTable:
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
         the time the store partitions it by in ``partition_time``. The table's Float64 columns come
-        first in the line.
+        first in the line, then its sensor readings.
 
         A reloaded line says it arrived when gold committed it, so the store's delivery metrics,
         which read ``inserted_at``, count only the rows the feed sends.
@@ -107,7 +114,7 @@ class StoreTable:
         names = [column for column in columns if isinstance(column, str)]
         floats = [column for column in FLOAT64_COLUMNS if column in names]
         others = [column for column in columns if isinstance(column, Column) or column not in floats]
-        fields = [*floats, *others, "_commit_version", "_commit_timestamp"]
+        fields = [*floats, *self.readings(), *others, "_commit_version", "_commit_timestamp"]
         if reloaded:
             fields.append(F.col("_commit_timestamp").alias("inserted_at"))
         row = F.struct(*fields)
@@ -150,6 +157,10 @@ class StoreTable:
 
     def columns(self) -> list[str | Column]:
         raise NotImplementedError
+
+    def readings(self) -> list[Column]:
+        """The table's sensor readings, one column per entry of ``SENSOR_READINGS``."""
+        return []
 
     def key(self) -> list[Column]:
         """The store table's sorting key, on which it folds rows into one, from gold's columns."""
@@ -202,6 +213,11 @@ class Measurements(StoreTable):
             "processed_timestamp",
             "arrival_timestamp",
             "skip_macro_processing",
+        ]
+
+    def readings(self) -> list[Column]:
+        return [
+            sensor_readings("to_json(data)", name).alias(column) for column, name in SENSOR_READINGS.items()
         ]
 
 

@@ -16,7 +16,7 @@ import requests
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from openjii.serving_store.tables import FLOAT64_COLUMNS
+from openjii.serving_store.tables import FLOAT64_COLUMNS, SENSOR_READINGS
 
 # One chunk is one insert block, so it lands whole or not at all.
 CHUNK_ROWS = 5_000
@@ -60,25 +60,35 @@ SCHEMAS_NOT_SENT = 0
 _REJECT_ROW_CHARS = 16_000_000
 
 
-# The store's Float64 columns, which each line holds first. Written as Spark writes them (51.986383,
-# 1.0E-7), the store reads about one value in a hundred onto the neighbouring double; written as 17
-# significant digits without an exponent, it reads every one exactly. Measured on 25.8 from 1e-13 up,
-# where precise_float_parsing changes nothing for an insert. Its JSON columns read numbers exactly,
-# so only the line's leading fields are rewritten, never a payload's own.
-_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":(-?\d[\d.eE+-]*),')
+# The store's Float64 columns, which each line holds first, then its arrays of them. Written as Spark
+# writes them (51.986383, 1.0E-7), the store reads about one value in a hundred onto the neighbouring
+# double, in an array too; written as 17 significant digits without an exponent, it reads every one
+# exactly. Measured on 25.8 from 1e-13 up, where precise_float_parsing changes nothing for an insert.
+# Its JSON columns read numbers exactly, so only the line's leading fields are rewritten, never a
+# payload's own. Spark writes NaN and Infinity in an array as strings, which stay as they are.
+_NUMBER = re.compile(r"-?\d[\d.eE+-]*")
+_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":({_NUMBER.pattern}),')
+_LEADING_FLOAT64_ARRAY = re.compile(rf'"({"|".join(SENSOR_READINGS)})":\[([^\]]*)\],')
 
 
 def exact_doubles(line: str) -> str:
-    """The line with the Float64 fields it starts with written so the store reads them exactly."""
+    """The line with the Float64 fields it starts with, and the arrays of them that follow, written
+    so the store reads them exactly."""
     position = 1
     fields = []
     while match := _LEADING_FLOAT64.match(line, position):
         fields.append(f'"{match[1]}":{_exact_digits(match[2])},')
         position = match.end()
+    while match := _LEADING_FLOAT64_ARRAY.match(line, position):
+        values = ",".join(_exact_digits(value) for value in match[2].split(",")) if match[2] else ""
+        fields.append(f'"{match[1]}":[{values}],')
+        position = match.end()
     return "{" + "".join(fields) + line[position:] if fields else line
 
 
 def _exact_digits(text: str) -> str:
+    if not _NUMBER.fullmatch(text):
+        return text
     value = float(text)
     if not 1e-13 <= abs(value) < 1e15:
         return text

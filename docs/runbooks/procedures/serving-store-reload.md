@@ -8,9 +8,9 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 - the feed missed rows: while it was off for longer than its start versions reach, after a
   checkpoint reset, after a gold refresh that changed a key column (`store-feed-stalled`), or for
   refused rows once the feed's code can send them (`store-feed-rejects`);
-- a store migration adds a column the feed fills, such as 0009's payload texts: rows written
-  before it carry none, and the feed never sends them again (see "After a migration the feed
-  fills").
+- a store migration adds a column the feed fills, such as 0009's payload texts or 0011's sensor
+  readings: rows written before it carry none, and the feed never sends them again (see "After a
+  migration the feed fills").
 
 ## What it does
 
@@ -109,7 +109,8 @@ in this order, and compare the read paths or widen a store flag only at the end:
    `Macro-Execution-DLT-Pipeline-<ENV>`, which runs the `macro_results` sink, so every store sink
    runs the new code.
 3. Check that the feed has caught up, as "Running it" describes.
-4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`.
+4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`;
+   for 0011, `measurements`.
 5. Merge them once, as "After a full or large reload" describes.
 
 An environment whose feed is off, as prod's is before its first rollout, needs only its first

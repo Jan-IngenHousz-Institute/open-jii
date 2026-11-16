@@ -18,7 +18,14 @@ from collections.abc import Iterator
 
 import pytest
 import requests
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
+from openjii.serving_store.tables import (
+    MACRO_RESULTS,
+    MEASUREMENTS,
+    METADATA_ROWS,
+    SENSOR_READINGS,
+    UPLOADS,
+    StoreTable,
+)
 from openjii.serving_store.writer import StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -108,7 +115,9 @@ def test_a_line_starts_with_its_float64_columns_for_the_writer_to_rewrite(spark:
 
     assert measurement is not None and upload is not None
     assert measurement.line.startswith(
-        '{"latitude":52.1,"longitude":5.1,"device_battery":87.5,"experiment_id":'
+        '{"latitude":52.1,"longitude":5.1,"device_battery":87.5,'
+        '"par_readings":[120.0],"temperature_readings":[19.5,20.0],"humidity_readings":[],'
+        '"pressure_readings":[],"light_intensity_readings":[],"thickness_readings":[],"experiment_id":'
     )
     assert upload.line.startswith('{"experiment_id":')
 
@@ -130,6 +139,36 @@ def test_a_measurement_carries_its_columns(spark: SparkSession) -> None:
     assert row["_commit_version"] == 7
     assert row["_commit_timestamp"] == "2026-10-19 10:00:04.000000"
     assert "date" not in row
+
+
+def test_a_measurement_carries_every_sensor_reading_of_both_payload_shapes(spark: SparkSession) -> None:
+    changes = _RAW_DATA_CHANGES.replace(
+        """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
+        """parse_json('[{"data": {"par": 120, "thickness": "0.42"}, "set": [{"par": 80}, {"par": "dim"}]}, '
+        '{"data": {"humidity": null}, "set": [{"pressure": 1013.25}]}]')""",
+    )
+
+    row = _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+    assert {column: row[column] for column in SENSOR_READINGS} == {
+        "par_readings": [120.0, 80.0],
+        "temperature_readings": [],
+        "humidity_readings": [],
+        "pressure_readings": [1013.25],
+        "light_intensity_readings": [],
+        "thickness_readings": [0.42],
+    }
+
+
+def test_a_payload_that_is_not_a_list_of_samples_has_no_readings(spark: SparkSession) -> None:
+    changes = _RAW_DATA_CHANGES.replace(
+        """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
+        """parse_json('{"data": {"par": 120}}')""",
+    )
+
+    row = _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+    assert not any(column in row for column in SENSOR_READINGS)
 
 
 def test_only_rows_gold_holds_now_are_sent(spark: SparkSession) -> None:
@@ -548,3 +587,21 @@ def test_coordinates_land_as_the_very_doubles_gold_holds(
         "WHERE experiment_id = 'exact'"
     )
     assert rows == [{"latitude": 51.986383, "longitude": 5.6631109, "device_battery": 87.5}] * 3
+
+
+@pytest.mark.clickhouse
+def test_sensor_readings_land_as_the_very_doubles_gold_holds(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'readings' AS experiment_id").replace(
+        """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
+        """parse_json('[{"set": [{"par": 51.986383}, {"par": 5.6631109}, {"par": 1e-7}]}]')""",
+    )
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    rows = store.rows(
+        f"SELECT par_readings, temperature_readings FROM {_DATABASE}.measurements FINAL "
+        "WHERE experiment_id = 'readings'"
+    )
+    assert rows == [{"par_readings": [51.986383, 5.6631109, 1e-7], "temperature_readings": []}] * 3
