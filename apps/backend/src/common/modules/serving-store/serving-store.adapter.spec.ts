@@ -18,7 +18,7 @@ import {
   MEASUREMENTS_TABLE,
   UPLOADS_TABLE,
 } from "./services/query-builder/store-tables";
-import { ServingStoreAdapter } from "./serving-store.adapter";
+import { EXPERIMENT_SETTING, ServingStoreAdapter } from "./serving-store.adapter";
 
 describe("ServingStoreAdapter", () => {
   let client: ServingStoreClientService;
@@ -276,6 +276,29 @@ describe("ServingStoreAdapter", () => {
     const refused = flaggedRead(20_000);
     assertFailure(refused);
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+  });
+
+  it("sends the experiment setting with a chart read and never with a page read", async () => {
+    const stream = vi.spyOn(client, "stream").mockResolvedValue(success({ complete: true }));
+    const read: StoreQueryParams = {
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "e1",
+    };
+    const page = adapter.buildExperimentQuery({ ...read, limit: 10 });
+    const chart = adapter.buildExperimentQuery({ ...read, plotsValues: true });
+    assertSuccess(page);
+    assertSuccess(chart);
+
+    await adapter.executeQuery(page.value);
+    await adapter.executeQuery(adapter.countQuery(page.value));
+    await adapter.executeQuery(chart.value);
+
+    const [pageCall, countCall, chartCall] = stream.mock.calls;
+    expect(pageCall[0]).not.toContain(EXPERIMENT_SETTING);
+    expect(pageCall[1]).toEqual({});
+    expect(countCall[1]).toEqual({});
+    expect(chartCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
   });
 
   it("counts a read as text", () => {

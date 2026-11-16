@@ -28,7 +28,7 @@ export interface StoreQueryColumn {
 export interface StoreQuery {
   sql: string;
   columns: StoreQueryColumn[];
-  /** The experiment the read names, which a read of the tables sends to their row policy. */
+  /** The experiment a chart's read of the tables sends to their row policy; a page sends none. */
   experiment?: string;
 }
 
