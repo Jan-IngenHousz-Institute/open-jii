@@ -22,6 +22,9 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   // Every evaluation is an HTTP round trip and polling surfaces hit flagged
   // routes several times a minute; a minute of staleness is fine.
   private static readonly FLAG_CACHE_TTL_MS = 60_000;
+  // While PostHog times out, each evaluation waits out the client's timeout and its retry; a
+  // fallback held this long bounds that wait without keeping a flag dark after PostHog recovers.
+  private static readonly FLAG_FALLBACK_TTL_MS = 10_000;
   // Keyed per (flag, user, person properties); insertion order makes the oldest the
   // eviction candidate.
   private static readonly FLAG_CACHE_MAX_ENTRIES = 5_000;
@@ -142,20 +145,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
 
-      // Cache only real evaluations; pinning a fallback default would keep a
-      // flag dark after PostHog starts resolving.
-      if (typeof isEnabled === "boolean") {
-        if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
-          const oldest = this.flagCache.keys().next();
-          if (!oldest.done) {
-            this.flagCache.delete(oldest.value);
-          }
-        }
-        this.flagCache.set(cacheKey, {
-          value: isEnabled,
-          expiresAt: Date.now() + FlagsService.FLAG_CACHE_TTL_MS,
-        });
-      }
+      const isRealEvaluation = typeof isEnabled === "boolean";
+      this.remember(
+        cacheKey,
+        result,
+        isRealEvaluation ? FlagsService.FLAG_CACHE_TTL_MS : FlagsService.FLAG_FALLBACK_TTL_MS,
+      );
 
       return result;
     } catch (error) {
@@ -166,8 +161,22 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         flagKey,
         error,
       });
-      return FEATURE_FLAG_DEFAULTS[flagKey];
+
+      const fallback = FEATURE_FLAG_DEFAULTS[flagKey];
+      this.remember(cacheKey, fallback, FlagsService.FLAG_FALLBACK_TTL_MS);
+      return fallback;
     }
+  }
+
+  private remember(cacheKey: string, value: boolean, ttlMs: number) {
+    if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
+      const oldest = this.flagCache.keys().next();
+      if (!oldest.done) {
+        this.flagCache.delete(oldest.value);
+      }
+    }
+
+    this.flagCache.set(cacheKey, { value, expiresAt: Date.now() + ttlMs });
   }
 
   /**

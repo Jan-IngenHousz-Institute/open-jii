@@ -269,6 +269,68 @@ describe("FlagsService", () => {
 
       expect(result).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]);
     });
+
+    describe("while PostHog fails", () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it("asks PostHog once for a failing key within the fallback's seconds", async () => {
+        const mockClient = {
+          isFeatureEnabled: vi.fn().mockRejectedValue(new Error("timeout")),
+          shutdown: vi.fn().mockResolvedValue(undefined),
+        };
+        mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+        await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "outage-user");
+        await vi.advanceTimersByTimeAsync(9_000);
+        const second = await service.isFeatureFlagEnabled(
+          FEATURE_FLAGS.MACRO_DELETION,
+          "outage-user",
+        );
+
+        expect(second).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.MACRO_DELETION]);
+        expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(1);
+      });
+
+      it("asks PostHog again once the fallback's seconds pass, and takes its answer", async () => {
+        const mockClient = {
+          isFeatureEnabled: vi
+            .fn()
+            .mockRejectedValueOnce(new Error("timeout"))
+            .mockResolvedValueOnce(true),
+          shutdown: vi.fn().mockResolvedValue(undefined),
+        };
+        mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+        await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "recovery-user");
+        await vi.advanceTimersByTimeAsync(10_001);
+
+        await expect(
+          service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "recovery-user"),
+        ).resolves.toBe(true);
+        expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(2);
+      });
+
+      it("holds an empty answer for seconds, not a minute", async () => {
+        const mockClient = {
+          isFeatureEnabled: vi.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(true),
+          shutdown: vi.fn().mockResolvedValue(undefined),
+        };
+        mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+        await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "empty-user");
+        await vi.advanceTimersByTimeAsync(10_001);
+
+        await expect(
+          service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "empty-user"),
+        ).resolves.toBe(true);
+      });
+    });
   });
 
   describe("isInitialized", () => {
