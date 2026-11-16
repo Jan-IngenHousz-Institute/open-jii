@@ -411,13 +411,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * A matched sheet row's fields as their JSON text by key. The store's JSON reads no integer past
-   * UInt64, which a sheet's 20-digit number can be; written with a fraction it reads as a double,
-   * whose decimal cast from its text stays exact.
+   * A matched sheet row's fields as their JSON text by key. The copier writes an integer outside
+   * Int64 and UInt64 with a fraction, which the extraction drops again; the JSON type refuses it
+   * without one, and as a double it reads, its decimal cast from its text exact.
    */
   private sheetFields(alias: string): string {
     const pairs = `JSONExtractKeysAndValuesRaw(if(${alias}.matched = 1, ${alias}.fields, '{}'))`;
-    const readable = `arrayMap(kv -> (kv.1, if(match(kv.2, '^-?[0-9]{20,}$'), concat(kv.2, '.0'), kv.2)), ${pairs})`;
+    const isOutsideIntegers =
+      "match(kv.2, '^-?[0-9]+$') AND toInt64OrNull(kv.2) IS NULL AND toUInt64OrNull(kv.2) IS NULL";
+    const readable = `arrayMap(kv -> (kv.1, if(${isOutsideIntegers}, concat(kv.2, '.0'), kv.2)), ${pairs})`;
     return `CAST(${readable}, 'Map(String, String)')`;
   }
 
