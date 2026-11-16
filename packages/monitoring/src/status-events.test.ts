@@ -1477,11 +1477,11 @@ function changed(id: string): StatusEvent {
 }
 
 describe("batchEvents", () => {
-  const ids = (batches: ReturnType<typeof batchEvents>) =>
+  const ids = ({ batches }: ReturnType<typeof batchEvents>) =>
     batches.map((batch) => batch.map(({ event }) => event.id));
 
   it("sends nothing for no events", () => {
-    expect(batchEvents([])).toEqual([]);
+    expect(batchEvents([])).toEqual({ batches: [], tooLarge: [] });
   });
 
   it("fills batches of ten in order", () => {
@@ -1495,7 +1495,7 @@ describe("batchEvents", () => {
 
   it("starts a new batch before the bytes would pass the limit", () => {
     const big = (name: string) => changed(name.padEnd(SNS_BATCH_BYTES / 2, "x"));
-    const batches = batchEvents([big("a"), big("b"), changed("c")]);
+    const { batches } = batchEvents([big("a"), big("b"), changed("c")]);
 
     expect(batches.map((batch) => batch.length)).toEqual([1, 2]);
     expect(batches.flat().map(({ message, event }) => message === JSON.stringify(event))).toEqual([
@@ -1505,10 +1505,12 @@ describe("batchEvents", () => {
     ]);
   });
 
-  it("sends a message over the limit on its own", () => {
+  it("sets aside a message SNS could never take and batches the rest", () => {
     const huge = changed("h".repeat(SNS_BATCH_BYTES));
+    const batched = batchEvents([changed("a"), huge, changed("b")]);
 
-    expect(ids(batchEvents([changed("a"), huge, changed("b")]))).toEqual([["a"], [huge.id], ["b"]]);
+    expect(ids(batched)).toEqual([["a", "b"]]);
+    expect(batched.tooLarge).toEqual([huge]);
   });
 });
 

@@ -44,13 +44,15 @@ Contentful stayed unreadable, which logs that line first because it had written 
   the schema does not allow throws instead of publishing a broken file.
 - **Publishing to SNS failed.** The run throws when a `PublishBatch` call fails or reports a failed
   entry, and the message names the event ids and what SNS said. The page and the history were
-  already written, so only the events are held back. The feed state is written after a successful
-  send, so the next run works out the same events again and tries again, and a recovered topic
-  catches up without a gap. A subscriber may see an event twice, which its `id` tells apart.
+  already written, so only the events are held back. They stay pending in `status-feed.json`, and
+  the next run sends them before anything newer, so a recovered topic catches up without a gap. A
+  subscriber may see an event twice, which its `id` tells apart.
   `AccessDenied` or `AuthorizationError` means the role lost `sns:Publish` on the topic, `NotFound`
   means `STATUS_EVENTS_TOPIC_ARN` points at a topic that is gone, and `KMSAccessDeniedException`
   means the AWS managed key refused the publish. The publisher splits events into batches that
-  stay under SNS's limits of ten messages and 256 KB, so a long update text does not fail a run.
+  stay under SNS's limits of ten messages and 256 KB, so a long update text does not fail a run. An
+  event over 256 KB on its own is left out and logged as `"warning": "status-event-too-large"`
+  with its id; shorten the incident's updates or the notice in Contentful.
 - **The saved state is corrupt.** The publisher carries its history between runs in
   `publisher-state.json`, and a state that no longer parses stops every run on purpose, so history
   does not silently restart. The log shows a schema error from reading it. Restore the previous

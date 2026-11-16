@@ -529,15 +529,27 @@ export interface EventMessage {
   message: string;
 }
 
-/** Splits events into SNS batches in order; a message over the byte limit on its own goes alone. */
-export function batchEvents(events: StatusEvent[]): EventMessage[][] {
+export interface EventBatches {
+  batches: EventMessage[][];
+  /** Events whose message alone passes SNS's limit, which SNS would refuse on every try. */
+  tooLarge: StatusEvent[];
+}
+
+/** Splits events into SNS batches in order, setting aside any SNS cannot take at all. */
+export function batchEvents(events: StatusEvent[]): EventBatches {
   const batches: EventMessage[][] = [];
+  const tooLarge: StatusEvent[] = [];
   let batch: EventMessage[] = [];
   let bytes = 0;
 
   for (const event of events) {
     const message = JSON.stringify(event);
     const size = Buffer.byteLength(message);
+    if (size > SNS_BATCH_BYTES) {
+      tooLarge.push(event);
+      continue;
+    }
+
     const isFull = batch.length === SNS_BATCH_SIZE || bytes + size > SNS_BATCH_BYTES;
 
     if (isFull && batch.length > 0) {
@@ -554,7 +566,7 @@ export function batchEvents(events: StatusEvent[]): EventMessage[][] {
     batches.push(batch);
   }
 
-  return batches;
+  return { batches, tooLarge };
 }
 
 /** One entry SNS refused, as `PublishBatch` reports it against the batch's own ids. */

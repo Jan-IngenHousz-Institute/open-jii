@@ -18,14 +18,9 @@ const {
   toStatusContent,
 } = require("./lib/status-content.js");
 const { STATUS_DOCUMENT_CACHE_CONTROL, statusDocumentSchema } = require("./lib/status-document.js");
+const { statusEventSchema, statusEvents } = require("./lib/status-events.js");
 const {
-  batchEvents,
-  failedEntriesText,
-  statusEventSchema,
-  statusEvents,
-} = require("./lib/status-events.js");
-const {
-  STATUS_FEED_STATE_VERSION,
+  announceEvents,
   contentFailure,
   isContentDue,
   statusFeedStateSchema,
@@ -259,28 +254,21 @@ async function readContent(stateBucket, secretArn, now) {
   return { feed, contentRead };
 }
 
-async function publishEvents(topicArn, events) {
-  for (const batch of batchEvents(events)) {
-    const result = await sns.send(
-      new PublishBatchCommand({
-        TopicArn: topicArn,
-        PublishBatchRequestEntries: batch.map(({ event, message }, index) => ({
-          Id: String(index),
-          Message: message,
-          MessageAttributes: { type: { DataType: "String", StringValue: event.type } },
-        })),
-      }),
-    );
+async function sendBatch(topicArn, batch) {
+  const result = await sns.send(
+    new PublishBatchCommand({
+      TopicArn: topicArn,
+      PublishBatchRequestEntries: batch.map(({ event, message }, index) => ({
+        Id: String(index),
+        Message: message,
+        MessageAttributes: { type: { DataType: "String", StringValue: event.type } },
+      })),
+    }),
+  );
 
-    const failed = result.Failed ?? [];
-    if (failed.length > 0) {
-      const sent = batch.map(({ event }) => event);
-      throw new Error(`SNS rejected status events: ${failedEntriesText(sent, failed)}`);
-    }
-  }
+  return result.Failed ?? [];
 }
 
-// Written last: a failed send leaves the old snapshot, so the same events come up again.
 async function announceChanges({
   stateBucket,
   topicArn,
@@ -299,19 +287,24 @@ async function announceChanges({
     now,
   });
 
-  await publishEvents(
-    topicArn,
-    events.map((statusEvent) => statusEventSchema.parse(statusEvent)),
-  );
-
-  const nextFeed = statusFeedStateSchema.parse({
-    version: STATUS_FEED_STATE_VERSION,
+  const outcome = await announceEvents({
+    feed,
+    events: events.map((statusEvent) => statusEventSchema.parse(statusEvent)),
     announced,
     content,
+    send: (batch) => sendBatch(topicArn, batch),
+    save: (state) =>
+      writeJson(stateBucket, FEED_STATE_KEY, statusFeedStateSchema.parse(state), "no-store"),
   });
-  await writeJson(stateBucket, FEED_STATE_KEY, nextFeed, "no-store");
 
-  return events.length;
+  for (const statusEvent of outcome.tooLarge) {
+    console.warn(JSON.stringify({ warning: "status-event-too-large", id: statusEvent.id }));
+  }
+  if (outcome.failure !== undefined) {
+    throw new Error(outcome.failure);
+  }
+
+  return outcome.sent;
 }
 
 exports.handler = async (event) => {
