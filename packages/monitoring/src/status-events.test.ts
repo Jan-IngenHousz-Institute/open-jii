@@ -1096,7 +1096,7 @@ describe("components", () => {
       ]);
     });
 
-    it("holds back a worse state in the run the incident that declared less is resolved", () => {
+    it("announces a worse state in the run the incident that declared less is resolved", () => {
       const declared = incident({ impact: "degraded", components: ["platform"] });
       const previous = baselineOf({
         ...statusDocument({ components: [component("platform", "degraded")] }),
@@ -1112,7 +1112,10 @@ describe("components", () => {
         LATER,
       );
 
-      expect(typesOf(events)).toEqual(["incident.resolved"]);
+      expect(events).toMatchObject([
+        { type: "incident.resolved" },
+        { type: "component.changed", component: "platform", from: "degraded", to: "outage" },
+      ]);
     });
 
     it.each([
@@ -1175,6 +1178,28 @@ describe("components", () => {
       );
 
       expect(typesOf(events)).toEqual(["maintenance.completed"]);
+    });
+
+    it("announces an outage that remains in the run a window completes", () => {
+      const window = maintenance({
+        startsAt: "2026-11-03T11:00:00.000Z",
+        endsAt: "2026-11-03T12:30:00.000Z",
+      });
+      const inMaintenance = statusDocument({
+        components: [component("website"), component("platform", "maintenance")],
+      });
+      const previous = baselineOf({ ...inMaintenance, incidents: [window] });
+
+      const { events } = run(
+        previous,
+        { ...down, incidents: [window] },
+        "2026-11-03T12:31:00.000Z",
+      );
+
+      expect(events).toMatchObject([
+        { type: "maintenance.completed" },
+        { type: "component.changed", component: "platform", from: "maintenance", to: "outage" },
+      ]);
     });
 
     it("announces the next change, because a resolved incident no longer speaks for it", () => {

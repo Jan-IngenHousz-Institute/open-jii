@@ -430,8 +430,9 @@ function isLive(entry: AnnouncedIncident): boolean {
 
 /**
  * A change is held back while a window that names the component is open, or an open incident that
- * names it is at least as severe as the new state, since their events already say it. It is also
- * held back in the run an incident or window ends, since its closing event says the return.
+ * names it is at least as severe as the new state, since their events already say it. A return to
+ * operational is also held back in the run an incident or window ends, since its closing event says
+ * it; a component still down then is announced.
  */
 function isHeldBack(
   component: StatusComponent,
@@ -443,7 +444,7 @@ function isHeldBack(
     .filter((incident) => incident.components.includes(component.id))
     .some((incident) => {
       const isNow = isOpen(incident, atMs);
-      const isEnding = !isNow && wasLive.has(incident.id);
+      const isEnding = !isNow && wasLive.has(incident.id) && component.state === "operational";
       const isWindow = isNow && incident.kind === "maintenance";
       const isAsSevere =
         isNow &&
