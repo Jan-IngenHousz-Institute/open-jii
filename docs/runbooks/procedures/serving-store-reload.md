@@ -124,9 +124,16 @@ An environment whose feed is off, as prod's is before its first rollout, needs o
 reload of `all`.
 
 0010 fills `measurements_by_device` from the rows measurements already holds, as it applies, and
-needs no reload for it. Its `device_events` starts empty: once silver's lifecycle events have their
-change feed (step 2) and their sink is on, with `device_events` set in
-`serving_store_feed_start_versions` (`store-feed-stalled`), reload `device_events` for `all`.
+needs no reload for it. Its `device_events` starts empty, so go in this order before the
+`store-device-reads` flag targets anyone:
+
+1. Once silver's lifecycle events have their change feed (step 2), set `device_events` in
+   `serving_store_feed_start_versions` (`store-feed-stalled`), which switches their sink on.
+2. Reload `device_events` for `all`.
+3. Target the flag.
+
+A device page read from the store before step 2 shows no connects, sessions or uptime and no error,
+while its counts beside them look right.
 
 ## After a full or large reload
 
