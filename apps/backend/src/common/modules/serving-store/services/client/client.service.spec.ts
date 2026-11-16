@@ -110,7 +110,7 @@ describe("ServingStoreClientService", () => {
     answer = { status: 200, body: "", lines: { line, count: 40 } };
     let taken = 0;
 
-    const result = await client.stream(STATEMENT, () => {
+    const result = await client.stream(STATEMENT, {}, () => {
       taken += 1;
       return taken < 5;
     });
@@ -126,7 +126,7 @@ describe("ServingStoreClientService", () => {
     answer = { status: 200, body: '["1","A1"]\n["2","B2"]\n["3",null]\n' };
     const rows: unknown[][] = [];
 
-    const result = await client.stream(STATEMENT, (row) => {
+    const result = await client.stream(STATEMENT, {}, (row) => {
       rows.push(row);
       return true;
     });

@@ -132,8 +132,7 @@ describe("StoreQueryBuilder", () => {
 
   it("reads a chart's payload fields as values from the JSON column, never the payload's text", () => {
     const builder = new StoreQueryBuilder()
-      .read(MACRO_RESULTS_TABLE, "e1", "m1")
-      .plotValues()
+      .readForChart(MACRO_RESULTS_TABLE, "e1", "m1")
       .parseVariant("macro_output", "OBJECT<PAR: DOUBLE>", "output")
       .select(["id", "PAR"]);
     const sql = builder.build();

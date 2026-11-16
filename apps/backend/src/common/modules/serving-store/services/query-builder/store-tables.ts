@@ -26,6 +26,8 @@ export interface DeviceParts {
 
 export interface StoreTable {
   view: string;
+  /** The table under the view, which a chart reads under the reader's row policy. */
+  table: string;
   identifierColumn?: string;
   /** The table's ORDER BY columns after experiment_id, exactly as its migration writes them. */
   key: string[];
@@ -89,6 +91,7 @@ const CUSTOM_METADATA: StoreColumn = {
 
 export const MEASUREMENTS_TABLE: StoreTable = {
   view: "experiment_measurements",
+  table: "measurements",
   key: ["timestamp", "id", "ifNull(device_id, '')"],
   phoneAnnotations: "annotations",
   takesCustomMetadata: true,
@@ -116,6 +119,7 @@ export const MEASUREMENTS_TABLE: StoreTable = {
 
 export const MACRO_RESULTS_TABLE: StoreTable = {
   view: "experiment_macro_results",
+  table: "macro_results",
   identifierColumn: "macro_id",
   phoneAnnotations: "annotations",
   takesCustomMetadata: true,
@@ -154,6 +158,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
 
 export const UPLOADS_TABLE: StoreTable = {
   view: "experiment_uploads",
+  table: "uploads",
   identifierColumn: "upload_table_id",
   key: ["ifNull(upload_table_id, '')", "uploaded_at", "id"],
   columns: [

@@ -33,7 +33,7 @@ describe("ServingStoreAdapter", () => {
    *  counts the rows it handed over. */
   function storeSends(rows: unknown[][]) {
     const sent = { handed: 0 };
-    vi.spyOn(client, "stream").mockImplementation((_sql, take) => {
+    vi.spyOn(client, "stream").mockImplementation((_sql, _settings, take) => {
       const isComplete = rows.every((row) => {
         sent.handed += 1;
         return take(row);

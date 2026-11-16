@@ -88,6 +88,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   private experiment = "";
   private fromClause = "";
+  /** The table a chart reads with FINAL, which an alias must come before. */
+  private finalTable?: string;
   private columns: StoreColumn[] = [];
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
@@ -117,6 +119,25 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private expressions?: Map<string, string>;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
+    this.columnsOf(table, experimentId, identifier);
+    return this.from(`${table.view}(experiment = ${this.experiment})`);
+  }
+
+  /**
+   * A chart's read of the table itself, which reads only the payload paths it names where the
+   * view would read whole payloads. The reader's row policy keeps it to the experiment the read
+   * sends as its setting, and FINAL merges each row's copies, as the view does. Payload fields
+   * read as the values a chart plots, not as the text a page shows.
+   */
+  readForChart(table: StoreTable, experimentId: string, identifier?: string): this {
+    this.columnsOf(table, experimentId, identifier);
+    this.where(`experiment_id = ${this.experiment}`);
+    this.plotsValues = true;
+    this.finalTable = table.table;
+    return this.from(`${table.table} FINAL`);
+  }
+
+  private columnsOf(table: StoreTable, experimentId: string, identifier?: string): void {
     this.experiment = this.escapeValue(experimentId);
     this.columns = table.columns;
     this.key = table.key;
@@ -125,11 +146,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.takesCustomMetadata = table.takesCustomMetadata ?? false;
     this.reservedColumns.push(...StoreQueryBuilder.reservedNames);
     this.forgetFields();
-    this.from(`${table.view}(experiment = ${this.experiment})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
     }
-    return this;
   }
 
   select(columns?: string[]): this {
@@ -179,12 +198,6 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       };
     });
     this.forgetFields();
-    return this;
-  }
-
-  /** Payload fields read as the values a chart plots, not as the text a page shows. */
-  plotValues(): this {
-    this.plotsValues = true;
     return this;
   }
 
@@ -600,7 +613,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const at = this.instantOf(this.columnExpression(match.time));
     const isRecent = `${ASOF_SECONDARY}.${ASOF_FOUND} = 1 AND ${ASOF_SECONDARY}.${ASOF_TIME} >= ${at} - INTERVAL ${match.toleranceMinutes} MINUTE`;
     const on = `${key} = ${ASOF_SECONDARY}.${ASOF_KEY} AND ${at} >= ${ASOF_SECONDARY}.${ASOF_TIME}`;
-    this.fromClause = `${this.fromClause} AS ${ASOF_PRIMARY} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
+    const primary =
+      this.finalTable === undefined
+        ? `${this.fromClause} AS ${ASOF_PRIMARY}`
+        : `${this.finalTable} AS ${ASOF_PRIMARY} FINAL`;
+    this.fromClause = `${primary} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
     this.columns = [
       ...this.columns,
       ...secondary.columns.map(({ name, type, idOf }) => {

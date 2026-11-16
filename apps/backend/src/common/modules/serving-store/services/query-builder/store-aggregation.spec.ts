@@ -15,12 +15,13 @@ import {
 import type { StoreQueryParams } from "../../../../../experiments/core/ports/serving-store.port";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { QueryBuilderService } from "../../../databricks/services/query-builder/query-builder.service";
-import { ServingStoreAdapter } from "../../serving-store.adapter";
+import { EXPERIMENT_SETTING, ServingStoreAdapter } from "../../serving-store.adapter";
 import { ServingStoreClientService } from "../client/client.service";
 import { ServingStoreConfigService } from "../config/config.service";
 import { MACRO_RESULTS_TABLE } from "./store-tables";
 
 const FIXTURES = resolve(__dirname, "../../../../../../../data/tests/fixtures");
+const MODULE = resolve(__dirname, "../../../../../../../../infrastructure/modules/serving-store");
 const MIGRATIONS = resolve(
   __dirname,
   "../../../../../../../../packages/database/clickhouse/migrations",
@@ -208,6 +209,33 @@ describe("StoreAggregation", () => {
     new ServingStoreClientService(new ServingStoreConfigService(new ConfigService({}))),
   );
 
+  it("reads the tables with FINAL in every chart statement, never the views", () => {
+    // A table read without FINAL, its alias, if any, coming first.
+    const unmerged = /\b(?:measurements|macro_results|uploads)\b(?!(?: AS \w+)? FINAL\b)/;
+    for (const name of Object.keys(FIXTURE.cases)) {
+      const query = adapter.buildExperimentQuery(storeRead(name));
+      assertSuccess(query);
+
+      const readsView = /\bexperiment_\w+\(/.test(query.value.sql);
+      expect({ name, readsView }).toEqual({ name, readsView: false });
+      expect({ name, unmerged: unmerged.exec(query.value.sql)?.[0] }).toEqual({
+        name,
+        unmerged: undefined,
+      });
+      expect(query.value.experiment).toBe("charts");
+    }
+  });
+
+  it("sends the experiment as the setting the module's row policies read and its server allows", () => {
+    const config = readFileSync(resolve(MODULE, "templates/config.xml.tftpl"), "utf-8");
+    const prefix = /<custom_settings_prefixes>([^<]+)<\/custom_settings_prefixes>/.exec(
+      config,
+    )?.[1];
+
+    expect(prefix !== undefined && EXPERIMENT_SETTING.startsWith(prefix)).toBe(true);
+    expect(moduleReader().rowFilter).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
+  });
+
   it("writes integer outputs as text, since a sum or an id may pass 2^53", () => {
     const query = adapter.buildExperimentQuery(storeRead("groupedStats"));
 
@@ -289,10 +317,15 @@ describe("StoreAggregation", () => {
 });
 
 /**
- * Each chart case against a real store of the version the store runs, through the migrations'
- * views, compared with Spark's results for the warehouse's own SQL on the same rows. It rebuilds
- * the `store` database, so it runs only against a throwaway store, and skips without one (see
- * serving-store.adapter.spec.ts for the container).
+ * Each chart case against a real store of the version the store runs, read by a user made as the
+ * module makes its reader, through the tables and their row policies, compared with Spark's
+ * results for the warehouse's own SQL on the same rows. It rebuilds the `store` database, so it
+ * runs only against a throwaway store, and skips without one. The store must allow the module's
+ * custom settings prefix: start the container of serving-store.adapter.spec.ts with
+ *
+ *   -v "$PWD/custom-settings.xml:/etc/clickhouse-server/config.d/custom-settings.xml:ro"
+ *
+ * where the file holds <clickhouse><custom_settings_prefixes>custom_</custom_settings_prefixes></clickhouse>.
  */
 const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
 const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
@@ -345,8 +378,11 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       format: "JSONEachRow",
     });
 
+    for (const statement of readerStatements()) {
+      await admin.command({ query: statement });
+    }
     const config = new ConfigService({
-      servingStore: { url, username: STORE_USER, password: STORE_PASSWORD },
+      servingStore: { url, username: READER, password: READER_PASSWORD },
     });
     client = new ServingStoreClientService(new ServingStoreConfigService(config));
     adapter = new ServingStoreAdapter(client);
@@ -355,6 +391,54 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
   afterAll(async () => {
     await client.onModuleDestroy();
     await admin.close();
+  });
+
+  describe("the reader's row policies", () => {
+    it("fail a chart read that sends no experiment", async () => {
+      const query = adapter.buildExperimentQuery(storeRead("groupedStats"));
+      assertSuccess(query);
+
+      const read = await client.stream(query.value.sql, {}, () => true);
+
+      assertFailure(read);
+    });
+
+    it("keep a read to the experiment it sends, whatever its statement names", async () => {
+      const rows: unknown[][] = [];
+      const read = await client.stream(
+        "SELECT DISTINCT experiment_id FROM macro_results FINAL",
+        { [EXPERIMENT_SETTING]: "charts" },
+        (row) => rows.push(row) > 0,
+      );
+      assertSuccess(read);
+      expect(rows).toEqual([["charts"]]);
+
+      const query = adapter.buildExperimentQuery(storeRead("groupedStats", "joined"));
+      assertSuccess(query);
+      const crossed = await adapter.executeQuery({ ...query.value, experiment: "charts" });
+      assertSuccess(crossed);
+      expect(crossed.value.rows).toEqual([]);
+    });
+
+    it("leave the reader no table or view the module does not grant it", async () => {
+      const granted = new Set([...moduleReader().views, ...moduleReader().tables]);
+      const listed = await admin.query({
+        query: "SELECT name FROM system.tables WHERE database = 'store' ORDER BY name",
+        format: "JSONEachRow",
+      });
+      const names = z.array(z.object({ name: z.string() })).parse(await listed.json());
+      const others = names.map(({ name }) => name).filter((name) => !granted.has(name));
+      expect(others.length).toBeGreaterThan(0);
+
+      for (const name of others) {
+        const read = await client.stream(
+          `SELECT 1 FROM ${name} LIMIT 1`,
+          { [EXPERIMENT_SETTING]: "charts" },
+          () => true,
+        );
+        expect({ name, refused: read.isFailure() }).toEqual({ name, refused: true });
+      }
+    });
   });
 
   it.each(Object.keys(FIXTURE.cases))("returns Spark's series for %s", async (name) => {
@@ -686,6 +770,75 @@ function expectSameValue(actual: number | string | null, expected: number | stri
     return;
   }
   expect(actual).toEqual(expectedValue);
+}
+
+const READER = "charts_test_reader";
+const READER_PASSWORD = "charts-test";
+const READER_PROFILE = "charts_test_reader_profile";
+
+/** The reader's views, tables and row filter, as infrastructure/modules/serving-store/main.tf
+ *  grants them. */
+function moduleReader(): { views: string[]; tables: string[]; rowFilter: string } {
+  const main = readFileSync(resolve(MODULE, "main.tf"), "utf-8");
+  const listOf = (name: string) => {
+    const list = new RegExp(`${name}\\s*=\\s*\\[([^\\]]*)\\]`).exec(main)?.[1];
+    if (list === undefined) {
+      throw new Error(`main.tf no longer lists ${name}`);
+    }
+    return [...list.matchAll(/"([^"]+)"/g)].map(([, value]) => value);
+  };
+  const rowFilter = /reader_row_filter\s*=\s*"([^"]+)"/.exec(main)?.[1];
+  if (rowFilter === undefined) {
+    throw new Error("main.tf no longer sets reader_row_filter");
+  }
+  return { views: listOf("reader_views"), tables: listOf("reader_tables"), rowFilter };
+}
+
+/**
+ * The statements that make a user as the module makes its reader: the reader profile of
+ * templates/users.xml.tftpl over its default one, with its fixed settings fixed, and the grants
+ * and row policies of main.tf.
+ */
+function readerStatements(): string[] {
+  const users = readFileSync(resolve(MODULE, "templates/users.xml.tftpl"), "utf-8").replace(
+    /<!--[\s\S]*?-->/g,
+    "",
+  );
+  const block = (name: string) => {
+    const found = new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(users)?.[1];
+    if (found === undefined) {
+      throw new Error(`users.xml.tftpl no longer holds <${name}>`);
+    }
+    return found;
+  };
+  const reader = block("reader");
+  const constraints = block("constraints");
+  const fixed = new Set(
+    [...constraints.matchAll(/<(\w+)><const\/><\/\1>/g)].map(([, name]) => name),
+  );
+  const values = new Map(
+    [...`${block("default")}${reader.replace(constraints, "")}`.matchAll(/<(\w+)>([^<]*)<\/\1>/g)]
+      .filter(([, name]) => name !== "profile" && name !== "constraints")
+      .map(([, name, value]) => [name, value]),
+  );
+  const settings = [
+    ...[...values].map(([name, value]) => `${name} = ${value}${fixed.has(name) ? " CONST" : ""}`),
+    ...[...fixed].filter((name) => !values.has(name)).map((name) => `${name} CONST`),
+  ];
+  const { views, tables, rowFilter } = moduleReader();
+
+  return [
+    `DROP USER IF EXISTS ${READER}`,
+    `DROP SETTINGS PROFILE IF EXISTS ${READER_PROFILE}`,
+    ...tables.map((table) => `DROP ROW POLICY IF EXISTS ${READER}_${table} ON store.${table}`),
+    `CREATE SETTINGS PROFILE ${READER_PROFILE} SETTINGS ${settings.join(", ")}`,
+    `CREATE USER ${READER} IDENTIFIED BY '${READER_PASSWORD}' SETTINGS PROFILE '${READER_PROFILE}'`,
+    ...[...views, ...tables].map((name) => `GRANT SELECT ON store.${name} TO ${READER}`),
+    ...tables.map(
+      (table) =>
+        `CREATE ROW POLICY ${READER}_${table} ON store.${table} USING ${rowFilter} TO ${READER}`,
+    ),
+  ];
 }
 
 function migrationStatements(): string[] {

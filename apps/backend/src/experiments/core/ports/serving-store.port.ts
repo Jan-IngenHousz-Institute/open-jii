@@ -28,6 +28,8 @@ export interface StoreQueryColumn {
 export interface StoreQuery {
   sql: string;
   columns: StoreQueryColumn[];
+  /** The experiment the read names, which a read of the tables sends to their row policy. */
+  experiment?: string;
 }
 
 /** A metadata sheet as the store holds it, from the lakehouse's copy of the sheets. */

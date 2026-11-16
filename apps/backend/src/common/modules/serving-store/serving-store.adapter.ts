@@ -27,6 +27,9 @@ import { StoreQueryBuilder } from "./services/query-builder/store-query-builder"
 import type { StoreAsOfSecondary } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
 
+/** The setting the reader's row policy on each table reads (infrastructure/modules/serving-store). */
+export const EXPERIMENT_SETTING = "custom_experiment";
+
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
   static: "static",
   macro: "macro",
@@ -151,8 +154,13 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     const identifier = params.tableType === "static" ? undefined : params.tableName;
-    const builder = new StoreQueryBuilder()
-      .read(table, params.experimentId, identifier)
+    const builder = new StoreQueryBuilder();
+    if (params.plotsValues) {
+      builder.readForChart(table, params.experimentId, identifier);
+    } else {
+      builder.read(table, params.experimentId, identifier);
+    }
+    builder
       .select(params.columns)
       .reserve(params.reservedColumns ?? [])
       .serialNumbers(params.deviceSerials ?? [])
@@ -160,9 +168,6 @@ export class ServingStoreAdapter implements ServingStorePort {
 
     if (params.distinct) {
       builder.distinct();
-    }
-    if (params.plotsValues) {
-      builder.plotValues();
     }
     for (const { columnName, schema, suffix } of params.variants ?? []) {
       builder.parseVariant(columnName, schema, suffix);
@@ -191,14 +196,13 @@ export class ServingStoreAdapter implements ServingStorePort {
         builder.filter(filter);
       }
       if (params.aggregation !== undefined && hasAggregationContent(params.aggregation)) {
-        return success(
-          new StoreAggregation(builder, params.aggregation).build({
-            ordering: params.ordering,
-            limit: params.limit,
-            offset: params.offset,
-            idOrder: params.orderByIds,
-          }),
-        );
+        const aggregated = new StoreAggregation(builder, params.aggregation).build({
+          ordering: params.ordering,
+          limit: params.limit,
+          offset: params.offset,
+          idOrder: params.orderByIds,
+        });
+        return success({ ...aggregated, experiment: params.experimentId });
       }
       if (params.ordering) {
         builder.orderBy(params.ordering, params.orderByIds);
@@ -209,7 +213,11 @@ export class ServingStoreAdapter implements ServingStorePort {
       if (params.offset !== undefined) {
         builder.offset(params.offset);
       }
-      const query = { sql: builder.build(), columns: builder.outputColumns() };
+      const query = {
+        sql: builder.build(),
+        columns: builder.outputColumns(),
+        experiment: params.experimentId,
+      };
 
       // The flagged ids are written into the statement, and a flagged page also sends its count,
       // which wraps it.
@@ -245,10 +253,9 @@ export class ServingStoreAdapter implements ServingStorePort {
 
     const identifier = secondary.tableType === "static" ? undefined : secondary.tableName;
     const builder = new StoreQueryBuilder()
-      .read(table, params.experimentId, identifier)
+      .readForChart(table, params.experimentId, identifier)
       .reserve(secondary.reservedColumns ?? [])
-      .serialNumbers(params.deviceSerials ?? [])
-      .plotValues();
+      .serialNumbers(params.deviceSerials ?? []);
     for (const { columnName, schema, suffix } of secondary.variants ?? []) {
       builder.parseVariant(columnName, schema, suffix);
     }
@@ -268,6 +275,7 @@ export class ServingStoreAdapter implements ServingStorePort {
     return {
       sql: `SELECT toString(count()) AS total FROM (${query.sql}) AS sub`,
       columns: [{ name: "total", type: "BIGINT" }],
+      experiment: query.experiment,
     };
   }
 
@@ -284,6 +292,7 @@ export class ServingStoreAdapter implements ServingStorePort {
         `OFFSET ${offset}`,
       ].join("\n"),
       columns: [{ name: "serial_number", type: "STRING" }],
+      experiment: query.experiment,
     };
   }
 
@@ -297,7 +306,7 @@ export class ServingStoreAdapter implements ServingStorePort {
   async executeQuery(query: StoreQuery): Promise<Result<SchemaData>> {
     const rows: (string | null)[][] = [];
     const size = new PageBytes();
-    const read = await this.client.stream(query.sql, (row) => {
+    const read = await this.client.stream(query.sql, this.settingsOf(query), (row) => {
       const cells = this.cells(query.columns, row);
       size.add(cells.map((cell, index) => (query.columns[index].idOf === "device" ? null : cell)));
       if (size.exceedsLimit) {
@@ -317,6 +326,12 @@ export class ServingStoreAdapter implements ServingStorePort {
       position,
     }));
     return success({ columns, rows, totalRows: rows.length, truncated: !read.value.complete });
+  }
+
+  /** A read of the tables names its experiment to the reader's row policy, which reads no rows
+   *  without it; a read of the views is sent it too, and ignores it. */
+  private settingsOf({ experiment }: StoreQuery): Record<string, string> {
+    return experiment === undefined ? {} : { [EXPERIMENT_SETTING]: experiment };
   }
 
   private cells(columns: StoreQueryColumn[], row: unknown[]): (string | null)[] {

@@ -18,6 +18,8 @@ export interface TableQuery {
   distinct: boolean;
   /** A distinct store read's limit, applied once filled devices that read alike are one row. */
   limitAfterDetails?: number;
+  /** The experiment a store read names to the tables' row policy. */
+  experiment?: string;
 }
 
 /** Where experiment data is read from: the warehouse's views, or the serving store. */
