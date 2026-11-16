@@ -9,6 +9,7 @@ import { AppError, assertFailure, assertSuccess, failure, success } from "../../
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
+import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
 import {
   MACRO_RESULTS_TABLE,
   MEASUREMENTS_TABLE,
@@ -685,6 +686,19 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       },
     });
     expect(byPseudonym.rows).toEqual(expected.map((id) => [id]));
+  });
+
+  it("gives the anonymizer's pinned pair the pseudonym the anonymizer gives it", async () => {
+    const builder = new StoreQueryBuilder();
+    const pseudonym = builder.contributorPseudonym(
+      builder.escapeValue(ADA),
+      "5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61",
+    );
+
+    const result = await client.query(`SELECT ${pseudonym}`);
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["Contributor-AC2F1B"]]);
   });
 
   it("sorts text answers by the number they hold, then text, then empty ones, as the warehouse does", async () => {

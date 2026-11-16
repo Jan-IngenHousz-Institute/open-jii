@@ -31,6 +31,16 @@ describe("ContributorAnonymizerService", () => {
         service.pseudonymFor("exp-2", "user-1"),
       );
     });
+
+    // The warehouse, store and export specs pin the same pair, and published exports carry it.
+    it("gives the pinned pair the pseudonym every other implementation gives it", () => {
+      expect(
+        service.pseudonymFor(
+          "5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61",
+          "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01",
+        ),
+      ).toBe("Contributor-AC2F1B");
+    });
   });
 
   describe("anonymizeRows", () => {

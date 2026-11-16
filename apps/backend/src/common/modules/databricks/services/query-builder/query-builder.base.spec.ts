@@ -1,4 +1,8 @@
+import { resolve } from "node:path";
+
+import { assertSuccess } from "../../../../utils/fp-utils";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
+import { QueryBuilderService } from "./query-builder.service";
 
 describe("QueryBuilder Base", () => {
   describe("SqlQueryBuilder", () => {
@@ -79,6 +83,40 @@ describe("QueryBuilder Base", () => {
         .build();
       expect(query).toBe(
         "SELECT * FROM t ORDER BY concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) DESC",
+      );
+    });
+
+    // Spark runs this fixture against the pair the anonymizer's spec pins.
+    it("keeps the Spark contributor-pseudonym fixture in sync with the generated SQL", async () => {
+      const experimentId = "5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61";
+      const filtered = new QueryBuilderService().buildQuery({
+        table: "pseudonym_contributors",
+        columns: ["row"],
+        filters: [
+          {
+            column: "contributor.id",
+            operator: "equals",
+            value: "Contributor-AC2F1B",
+            contributorPseudonymSalt: experimentId,
+          },
+        ],
+      });
+      assertSuccess(filtered);
+      const pseudonym = builder.contributorPseudonym("`contributor`.`id`", experimentId);
+      const queries = {
+        pseudonyms: builder
+          .selectRaw(`\`row\`, ${pseudonym} AS \`pseudonym\``)
+          .from("pseudonym_contributors")
+          .orderByRaw("`row` ASC")
+          .build(),
+        filtered: filtered.value,
+      };
+
+      await expect(JSON.stringify(queries, null, 2) + "\n").toMatchFileSnapshot(
+        resolve(
+          __dirname,
+          "../../../../../../../data/tests/fixtures/contributor-pseudonym-queries.json",
+        ),
       );
     });
 
