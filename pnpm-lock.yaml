@@ -1825,6 +1825,9 @@ importers:
       postgres:
         specifier: ^3.4.8
         version: 3.4.9
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
