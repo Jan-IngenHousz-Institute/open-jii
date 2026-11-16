@@ -266,9 +266,12 @@ def take_snapshot(table):
     (docs.databricks.com/aws/en/compute/serverless/dataframe-cache). The payloads stay VARIANT in
     the files, because a parsed payload can hold an empty struct or ARRAY<VOID>, which parquet
     cannot. The files are read with the rows' own schema, so a VARIANT reads back as one whatever
-    their footers say.
+    their footers say. An anonymised export's files hold only pseudonyms.
     """
     rows = table.rows()
+    if ANONYMIZE_CONTRIBUTORS:
+        rows = anonymize_contributors(rows, EXPERIMENT_ID)
+
     rows.write.mode("overwrite").parquet(SNAPSHOT_PATH)
     return spark.read.schema(rows.schema).parquet(SNAPSHOT_PATH)
 
@@ -287,8 +290,6 @@ def main():
             log(f"Writing {row_count} rows as {parts_planned} part(s)")
             df = table.shape(snapshot, parts_planned if WRITES_IN_PARTS else None)
             check_driver_format_limits(FORMAT, row_count, len(df.columns))
-            if ANONYMIZE_CONTRIBUTORS:
-                df = anonymize_contributors(df, EXPERIMENT_ID)
             write_parts(df)
             parts = list_parts(OUTPUT_PATH)
 

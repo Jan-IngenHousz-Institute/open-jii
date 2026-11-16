@@ -469,6 +469,26 @@ def test_an_anonymized_export_shows_each_contributor_by_their_pseudonym(
     assert without_contributor is None
 
 
+def test_an_anonymized_exports_snapshot_holds_only_pseudonyms(
+    export_task: Callable[..., dict[str, Any]],
+) -> None:
+    task = export_task("raw_data", "csv", anonymize=True)
+    take_snapshot = task["take_snapshot"]
+    held: dict[int, Any] = {}
+
+    def snapshot_recording_its_contributors(table: Any) -> DataFrame:
+        snapshot = take_snapshot(table)
+        held.update({row.id: row.contributor for row in snapshot.select("id", "contributor").collect()})
+        return snapshot
+
+    task["take_snapshot"] = snapshot_recording_its_contributors
+    _run(task)
+
+    pseudonym = f"Contributor-{hashlib.sha256(b'e1:u1').hexdigest()[:6].upper()}"
+    assert held[1].asDict() == {"id": pseudonym, "name": pseudonym, "avatar": None}
+    assert held[2] is None
+
+
 def test_an_export_writes_its_parts_from_its_snapshot_not_from_the_views(
     export_task: Callable[..., dict[str, Any]],
 ) -> None:
