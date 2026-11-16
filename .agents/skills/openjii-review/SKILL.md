@@ -343,6 +343,10 @@ of change rather than its size.
 - **Scanner suppressions.** A new entry in a `.trivyignore` file names the finding, is scoped to its
   package, and says why it is safe.
 - **The mobile app's storage, network and device access.** OWASP MASVS is the reference.
+- **Agent guardrails.** A change to `.claude/hooks/`, `.claude/settings.json`, `.codex/` or
+  `infrastructure/policies/` is read for anything it lets through that it used to refuse. The
+  guard's tests cover the new case, and the devkit's permission tests still pass, so Claude Code,
+  Codex and the analyst permission set refuse the same things.
 
 At depth 4 a second security agent runs this pass over the whole change, independently of the
 branch agents. Its findings merge with theirs before the second look. At depth 5 one red-team agent
