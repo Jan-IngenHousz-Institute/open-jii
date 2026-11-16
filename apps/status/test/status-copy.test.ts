@@ -68,7 +68,10 @@ const CASES: [string, string, string[]][] = [
   [
     "sign-in",
     en.component["sign-in"].details,
-    [`every test in ${recent(DEPENDENCY_WINDOW_MINUTES)} fails`],
+    [
+      `every test in ${recent(DEPENDENCY_WINDOW_MINUTES)} fails`,
+      `failed to send in ${recent(RULE_WINDOW_MINUTES)}`,
+    ],
   ],
   [
     "platform",

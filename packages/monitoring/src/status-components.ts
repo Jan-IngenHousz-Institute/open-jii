@@ -35,6 +35,7 @@ export const STATUS_SIGNAL_IDS = [
   "albTarget5xx",
   "albRequests",
   "emailUp",
+  "signInEmailsFailed",
   "ingestForwardingFailures",
   "ingestRefusedPublishes",
   "ingestThrottled",
@@ -133,7 +134,7 @@ interface StatusComponentDefinition {
 
 export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
   { id: "website", live: true, signals: ["websiteRequests", "websiteFailedRequests"] },
-  { id: "sign-in", live: false, signals: ["emailUp"] },
+  { id: "sign-in", live: true, signals: ["emailUp", "signInEmailsFailed"] },
   {
     id: "platform",
     live: true,
@@ -162,7 +163,7 @@ export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
     live: true,
     signals: ["macroPlatformFailures", "macroLatencyP95", "macroBacklog"],
   },
-  { id: "exports", live: false, signals: ["exportsFailed"] },
+  { id: "exports", live: true, signals: ["exportsFailed"] },
 ];
 
 type QueryBuilder = (id: string, periodSeconds: number) => MetricDataQuery;
@@ -287,6 +288,12 @@ export function statusSignals(config: StatusConfig): StatusSignal[] {
     define({ ...awsCount, id: "albRequests", read: loadBalancer("RequestCount") }),
 
     define({ ...dependencyCheck, id: "emailUp", read: dependencyUp("email") }),
+    // A log metric filter counts these, and a filtered count carries no dimension to default to 0.
+    define({
+      ...awsCount,
+      id: "signInEmailsFailed",
+      read: metricRead("OpenJII/Backend", "SignInEmailsFailed", "Sum", []),
+    }),
 
     define({
       ...awsCount,
