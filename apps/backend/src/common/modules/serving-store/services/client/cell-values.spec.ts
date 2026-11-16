@@ -65,6 +65,12 @@ describe("CellValues.text", () => {
     expect(CellValues.text("2026-09-14 16:56:31", "TIMESTAMP")).toBe("2026-09-14T16:56:31.000Z");
   });
 
+  it("writes a double JSON has no number for as Java does, from the store's quoted text", () => {
+    expect(CellValues.text("nan", "DOUBLE")).toBe("NaN");
+    expect(CellValues.text("inf", "DOUBLE")).toBe("Infinity");
+    expect(CellValues.text("-inf", "DOUBLE")).toBe("-Infinity");
+  });
+
   it("writes scalars as text", () => {
     expect(CellValues.text("9007199254740993", "BIGINT")).toBe("9007199254740993");
     expect(CellValues.text(true, "BOOLEAN")).toBe("true");

@@ -7,6 +7,15 @@ class JsonNumber {
 
 const TIMESTAMP = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?/;
 
+/** How the store writes a double JSON has no number for, once asked to quote it. */
+const NON_FINITE: Partial<Record<string, number>> = {
+  nan: Number.NaN,
+  "-nan": Number.NaN,
+  inf: Number.POSITIVE_INFINITY,
+  "+inf": Number.POSITIVE_INFINITY,
+  "-inf": Number.NEGATIVE_INFINITY,
+};
+
 /**
  * Writes the store's values as the warehouse writes its cells, which pages show as they come:
  * times in UTC to the millisecond, doubles as Java prints them, and arrays and structs as JSON
@@ -126,6 +135,10 @@ export class CellValues {
     const number = CellValues.numberText(value);
 
     if (type === "DOUBLE" || type === "FLOAT") {
+      const nonFinite = typeof value === "string" ? NON_FINITE[value] : undefined;
+      if (nonFinite !== undefined) {
+        return CellValues.javaDouble(nonFinite);
+      }
       return number === null ? CellValues.loose(value) : CellValues.javaDouble(Number(number));
     }
     if (type === "BIGINT" || type === "INT") {

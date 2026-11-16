@@ -904,6 +904,37 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ]);
       expect(await ids([{ column: "plot", operator: "equals", value: "007" }])).toHaveLength(8);
     });
+
+    it("reads an answer of no finite number as Spark does, not as no value", async () => {
+      const unbounded: [string, string][] = [
+        ["NaN", "NaN"],
+        ["Infinity", "Infinity"],
+        ["-inf", "-Infinity"],
+        ["1e400", "Infinity"],
+      ];
+      await admin.insert({
+        table: "measurements",
+        values: unbounded.map(([height], index) => ({
+          experiment_id: "unbounded-answers",
+          id: 220 + index,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: { height },
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+
+      const data = await rowsOf({
+        ...read,
+        experimentId: "unbounded-answers",
+        columns: ["height"],
+        ordering: { column: "id" },
+      });
+
+      expect(data.rows).toEqual(unbounded.map(([, cell]) => [cell]));
+    });
   });
 
   it("filters and sorts devices by the serial numbers it is given", async () => {

@@ -51,6 +51,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // writes bare; reads write their integer columns as text themselves.
               output_format_json_quote_64bit_integers: 0,
               output_format_json_escape_forward_slashes: 0,
+              // A NaN or infinite double, such as a Number answer of "Infinity", would come back
+              // as null; quoted, it reaches the page as Spark writes it.
+              output_format_json_quote_denormals: 1,
               // A payload field is projected under its own name, which may be a column's, such as
               // user_id; the column must still read as the column everywhere else in the query.
               prefer_column_name_to_alias: 1,
