@@ -206,9 +206,10 @@ export abstract class BaseQueryBuilder {
     return buildAggregateExpression(agg, this);
   }
 
+  /** `orderColumn` is the column `orderBy` reads, for a dialect that orders some columns apart. */
   buildCumsumExpression(
     agg: AggregateExpression,
-    opts: { orderBy: string; grouped: boolean },
+    opts: { orderBy: string; orderColumn?: string; grouped: boolean },
   ): { sql: string; alias: string } {
     return buildCumsumExpression(agg, opts, this);
   }

@@ -114,7 +114,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     }
     const devices = devicesResult.value;
 
-    const sortsByRegistry = devices !== undefined && this.sortsWholeDevice(params, idColumns);
+    const sortsByRegistry =
+      devices !== undefined &&
+      (this.sortsWholeDevice(params, idColumns) || this.sumsByDevice(params, idColumns));
     const orderResult = sortsByRegistry
       ? success(this.registryOrder(devices))
       : await this.contributorOrder(params, idColumns);
@@ -351,6 +353,13 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   /** The label's own rule, which Spark trims by spaces only: a serial of spaces shows the label. */
   private showsSerial(serial: string | null): serial is string {
     return serial !== null && /[^ ]/.test(serial);
+  }
+
+  /** A running sum grouped first by a whole device accumulates in the registry's order. */
+  private sumsByDevice({ aggregation }: ExperimentQueryParams, idColumns: IdColumns): boolean {
+    const first = aggregation?.groupBy?.at(0);
+    const hasRunningSum = (aggregation?.functions ?? []).some((item) => item.function === "cumsum");
+    return hasRunningSum && first !== undefined && idColumns.get(first.column) === "device";
   }
 
   private sortsWholeDevice({ ordering }: ExperimentQueryParams, idColumns: IdColumns): boolean {

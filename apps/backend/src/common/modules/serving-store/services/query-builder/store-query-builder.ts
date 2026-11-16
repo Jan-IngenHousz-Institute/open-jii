@@ -36,10 +36,6 @@ export interface StoreAsOfSecondary {
   columns: StoreOutputColumn[];
 }
 
-interface StoreOrdering extends QueryOrdering {
-  idOrder?: string[];
-}
-
 /** The names of the id lists a statement's WITH clause holds, which no payload field may take. */
 const ORDER_IDS = "__order_ids";
 const DEVICE_CLIENT_IDS = "__device_client_ids";
@@ -109,7 +105,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     fields: ReadonlySet<string>;
     nestsObjects: boolean;
   })[] = [];
-  private ordering?: StoreOrdering;
+  private ordering?: QueryOrdering;
+  private idOrder?: string[];
   private limitValue?: number;
   private offsetValue?: number;
   private plotsValues = false;
@@ -246,7 +243,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * id, by the place of each row's id in it; names never enter a query, whose text the store logs.
    */
   orderBy(ordering: QueryOrdering, idOrder?: string[]): this {
-    this.ordering = { ...ordering, idOrder };
+    this.ordering = ordering;
+    return this.followIds(idOrder);
+  }
+
+  /** The ids an order by a contributor's name or a device's registry id follows. */
+  followIds(idOrder: string[] | undefined): this {
+    this.idOrder = idOrder;
     return this;
   }
 
@@ -451,9 +454,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
   }
 
+  /** A running sum grouped first by device accumulates in the order Spark sorts its struct. */
   buildCumsumExpression(
     agg: AggregateExpression,
-    opts: { orderBy: string; grouped: boolean },
+    opts: { orderBy: string; orderColumn?: string; grouped: boolean },
   ): { sql: string; alias: string } {
     const value = (() => {
       if (agg.column === "*") {
@@ -462,8 +466,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       const column = this.escapeIdentifier(agg.column);
       return opts.grouped ? `sum(toNullable(${column}))` : column;
     })();
+    const order =
+      opts.orderColumn === undefined
+        ? `${opts.orderBy} ASC NULLS FIRST`
+        : this.aggregateOrdering(opts.orderBy, { column: opts.orderColumn, direction: "ASC" });
     return {
-      sql: `sum(${value}) OVER (ORDER BY ${opts.orderBy} ASC NULLS FIRST)`,
+      sql: `sum(${value}) OVER (ORDER BY ${order})`,
       alias: this.aggregateAlias(agg),
     };
   }
@@ -507,7 +515,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   aggregateOrdering(target: string, { column, direction = "ASC" }: QueryOrdering): string {
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
-    const idOrder = this.ordering?.idOrder;
+    const idOrder = this.idOrder;
     const [name, path] = this.structPath(column);
     const idOf = this.rowIdOf(column);
 
@@ -938,7 +946,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
-  private sortClause({ column, direction = "ASC", mode, idOrder }: StoreOrdering): string {
+  private sortClause({ column, direction = "ASC", mode }: QueryOrdering): string {
+    const idOrder = this.idOrder;
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
@@ -1012,7 +1021,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   private withClause(): string {
     const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
-    const idOrder = this.ordering?.idOrder;
+    const idOrder = this.idOrder;
     const lists = [
       ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS ${ORDER_IDS}`]),
       ...(this.deviceSerials.length === 0

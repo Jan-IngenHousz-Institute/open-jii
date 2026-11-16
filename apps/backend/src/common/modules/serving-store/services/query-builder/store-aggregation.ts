@@ -39,9 +39,7 @@ export class StoreAggregation {
     const inner = this.rows.outputColumns().map(({ name, type, idOf }) => ({ name, type, idOf }));
     const names = inner.map(({ name }) => name);
     const dialect = new StoreQueryBuilder(names).over(inner);
-    if (page.ordering !== undefined) {
-      dialect.orderBy(page.ordering, page.idOrder);
-    }
+    dialect.followIds(page.idOrder);
 
     const { sql, outputs } = buildAggregation(
       this.rows.buildValues(),

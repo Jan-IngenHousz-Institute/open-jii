@@ -465,6 +465,42 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
     ]);
   });
 
+  it("runs a sum grouped first by device in the registry's order, as Spark orders the structs", async () => {
+    const row = { ...emptyMacroRow("device-sums"), timestamp: "2026-09-07 00:00:00" };
+    await admin.insert({
+      table: "macro_results",
+      values: [
+        { ...row, id: 1, raw_id: 1, client_id: "reg-1", device_id: "d1", device_name: "Old" },
+        { ...row, id: 2, raw_id: 2, client_id: "reg-2", device_id: "d9", device_name: "Probe" },
+        { ...row, id: 3, raw_id: 3, client_id: "phone-a", device_id: "d2", device_name: "Ambit" },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      ...storeRead("groupedStats", "device-sums"),
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "cumsum" }],
+      },
+      ordering: undefined,
+      deviceSerials: [
+        ["reg-1", "SN1"],
+        ["reg-2", "SN2"],
+      ],
+      // reg-2's registry id sorts before reg-1's, the other way round from their client ids.
+      orderByIds: ["reg-2", "reg-1"],
+    });
+
+    expect(new Map(data.rows.map(([device, total]) => [device, total]))).toEqual(
+      new Map([
+        ['[null,"Ambit (d2)"]', "1"],
+        ['["reg-2","SN2"]', "2"],
+        ['["reg-1","SN1"]', "3"],
+      ]),
+    );
+  });
+
   it("gives no correlation for a constant series, where Spark has none to give", async () => {
     const row = {
       ...emptyMacroRow("constant"),

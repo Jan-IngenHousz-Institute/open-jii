@@ -181,6 +181,7 @@ export function buildAggregation(
   const orderSql = sortTarget(builder, opts.ordering);
 
   let firstGroupBySql: string | undefined;
+  let firstGroupColumn: string | undefined;
 
   if (opts.aggregation) {
     const functions = opts.aggregation.functions ?? [];
@@ -205,9 +206,11 @@ export function buildAggregation(
       groupByClauses.push(expr.sql);
 
       firstGroupBySql ??= expr.sql;
+      firstGroupColumn ??= item.column;
     }
 
     const cumsumOrderBy = firstGroupBySql ?? orderSql;
+    const cumsumOrderColumn = firstGroupColumn ?? opts.ordering?.column;
 
     for (const item of opts.aggregation.functions ?? []) {
       if (item.function === "cumsum") {
@@ -219,6 +222,7 @@ export function buildAggregation(
 
         const expr = builder.buildCumsumExpression(item, {
           orderBy: cumsumOrderBy,
+          orderColumn: cumsumOrderColumn,
           grouped: groupByClauses.length > 0,
         });
 

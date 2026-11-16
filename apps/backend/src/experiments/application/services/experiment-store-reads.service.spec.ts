@@ -411,6 +411,28 @@ describe("ExperimentStoreReadsService", () => {
     ]);
   });
 
+  it("hands a running sum grouped first by device the registry's order", async () => {
+    const owner = await testApp.createTestUser({});
+    const first = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-c" });
+    const second = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-b" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["thing-c", "thing-b"]));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    await reads.buildQuery({
+      ...page,
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "cumsum" }],
+      },
+    });
+
+    const byId = [
+      { thing: "thing-c", id: first.id },
+      { thing: "thing-b", id: second.id },
+    ].sort((a, b) => (a.id < b.id ? -1 : 1));
+    expect(build.mock.calls[0][0].orderByIds).toEqual(byId.map(({ thing }) => thing));
+  });
+
   it("looks the devices up only for an aggregation that names one or keeps every row", async () => {
     const ids = vi.spyOn(store, "getExperimentIds").mockResolvedValue(success([]));
     const read = (aggregation: ExperimentQueryParams["aggregation"]) =>
