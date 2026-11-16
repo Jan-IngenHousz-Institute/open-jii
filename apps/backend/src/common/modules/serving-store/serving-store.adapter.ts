@@ -533,10 +533,7 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
     );
   }
 
-  /**
-   * Newest first. The payload is gold's parsed copy as Spark writes it out, keys in order and NaN
-   * as null, where the warehouse shows the device's own text.
-   */
+  /** Newest first, each payload as gold's text: keys sorted, NaN as null. */
   async getDeviceRecentMeasurements(
     thingName: string,
     from: string,
@@ -592,7 +589,6 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
     return `experiment = ${new StoreQueryBuilder().escapeValue(experimentId)}`;
   }
 
-  /** The device views read only the devices a read names, which the backend has authorized. */
   private deviceArgument(clientId: string): string {
     return `devices = [${new StoreQueryBuilder().escapeValue(clientId)}]`;
   }
@@ -614,7 +610,7 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
     return typeof value === "string" ? value : null;
   }
 
-  /** A double JSON has no number for, such as NaN, comes back quoted and reads as no value. */
+  /** NaN and infinities arrive quoted (output_format_json_quote_denormals) and read as no value. */
   private numberOrNull(value: unknown): number | null {
     return typeof value === "number" ? value : null;
   }

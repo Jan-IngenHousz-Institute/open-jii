@@ -37,7 +37,7 @@ export class GetIotDeviceActivityUseCase {
     }
 
     // Enrichment, never a gate: a failure is reported as unavailable so
-    // "never sent data" and "warehouse down" stay distinguishable.
+    // "never sent data" and "the source down" stay distinguishable.
     const activityResult = await this.dataSource
       .reads(source)
       .getDeviceLastActivity(deviceResult.value.thingName);

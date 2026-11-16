@@ -61,7 +61,7 @@ export interface DeviceMeasurementRow {
   sample: string | null;
 }
 
-/** What one device's page reads, which the warehouse and the serving store both answer. */
+/** A device's reads, which the warehouse and the serving store both answer. */
 export interface DeviceReads {
   getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>>;
   getExperimentDeviceSeries(
