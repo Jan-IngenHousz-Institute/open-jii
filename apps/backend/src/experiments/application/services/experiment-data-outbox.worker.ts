@@ -3,16 +3,17 @@ import type { OnApplicationShutdown } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
-import { Result, success } from "../../../common/utils/fp-utils";
 import type {
   ClaimedOutboxRow,
   ExperimentDataRecordType,
 } from "../../core/models/experiment-data-outbox.model";
-import { ExperimentAnnotationsWarehouseRepository } from "../../core/repositories/experiment-annotations-warehouse.repository";
-import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
-import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
-import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
+import { AnnotationsLakehouseCopier } from "./annotations-lakehouse-copier";
+import type {
+  CopyOutcome,
+  ExperimentDataLakehouseCopier,
+} from "./experiment-data-lakehouse-copier";
+import { MetadataSheetsLakehouseCopier } from "./metadata-sheets-lakehouse-copier";
 
 /** A claim older than this was abandoned by a task that died, and is taken back. */
 export const LEASE_MS = 5 * 60_000;
@@ -45,14 +46,10 @@ export interface OutboxDrainCounts {
   released: number;
 }
 
-/** What one group of a claim came to. */
-type GroupOutcome = "copied" | "stopped" | { failed: string };
-
 /**
- * Copies annotations and metadata sheets from Postgres to the lakehouse. Each row names a record,
- * and the copy takes the record's state at the time of the copy, so several edits arrive as one,
- * applying a row twice does no harm, and the order of the rows does not matter. Every task runs
- * this loop; Postgres hands each one different rows.
+ * Claims the outbox's rows and hands each kind of record to its copier. The order of the rows does
+ * not matter, since a copy takes each record's state at the time of the copy. Every task runs this
+ * loop; Postgres hands each one different rows.
  */
 @Injectable()
 export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
@@ -64,14 +61,18 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   private inFlight: Promise<unknown> | null = null;
   /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
+  private readonly copiers: Record<
+    ExperimentDataRecordType,
+    ExperimentDataLakehouseCopier<{ id: string }>
+  >;
 
   constructor(
     private readonly outbox: ExperimentDataOutboxRepository,
-    private readonly annotations: ExperimentAnnotationsRepository,
-    private readonly annotationsWarehouse: ExperimentAnnotationsWarehouseRepository,
-    private readonly sheets: ExperimentMetadataRepository,
-    private readonly sheetsWarehouse: ExperimentMetadataWarehouseRepository,
-  ) {}
+    annotations: AnnotationsLakehouseCopier,
+    sheets: MetadataSheetsLakehouseCopier,
+  ) {
+    this.copiers = { annotation: annotations, metadata_sheet: sheets };
+  }
 
   @Interval(EXPERIMENT_DATA_OUTBOX_INTERVAL, INTERVAL_MS)
   async drainOnSchedule(): Promise<void> {
@@ -184,10 +185,8 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     deadlineAt: number,
   ): Promise<OutboxDrainCounts> {
     const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-    const groups = await this.groupsOf(
-      recordType,
-      rows.map((row) => row.recordId),
-    );
+    const copier = this.copiers[recordType];
+    const groups = await copier.groupsOf(rows.map((row) => row.recordId));
     if (groups.isFailure()) {
       await this.retry(recordType, rows, groups.error.message);
       counts.retried = rows.length;
@@ -197,8 +196,8 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     const canContinue = () => Date.now() < deadlineAt && !this.stopping;
     let left = rows;
     for (const ids of groups.value) {
-      const outcome = await this.copyGroup(recordType, ids, canContinue).catch(
-        (error: unknown): GroupOutcome => ({
+      const outcome = await copier.copy(ids, canContinue).catch(
+        (error: unknown): CopyOutcome => ({
           failed: error instanceof Error ? error.message : String(error),
         }),
       );
@@ -222,83 +221,6 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
       left = left.filter((row) => !done.has(row.recordId));
     }
     return counts;
-  }
-
-  /**
-   * The records each statement-sized group copies. Annotations are one group. Sheets are grouped
-   * by their size, so only one statement's documents are read at once, and the ids of sheets that
-   * are gone make a group of their own.
-   */
-  private async groupsOf(
-    recordType: ExperimentDataRecordType,
-    ids: string[],
-  ): Promise<Result<string[][]>> {
-    if (recordType === "annotation") {
-      return success([ids]);
-    }
-
-    const sizes = await this.sheets.findSizes(ids);
-    if (sizes.isFailure()) {
-      return sizes;
-    }
-
-    const groups = this.sheetsWarehouse.statementGroups(sizes.value);
-    const gone = this.gone(ids, sizes.value);
-    return success(gone.length > 0 ? [...groups, gone] : groups);
-  }
-
-  /** Writes a group's records that still exist and deletes the copies of those that are gone. */
-  private async copyGroup(
-    recordType: ExperimentDataRecordType,
-    ids: string[],
-    canContinue: () => boolean,
-  ): Promise<GroupOutcome> {
-    if (!canContinue()) {
-      return "stopped";
-    }
-
-    if (recordType === "annotation") {
-      return this.copyWith(ids, await this.annotations.findCopies(ids), canContinue, {
-        merge: (found) => this.annotationsWarehouse.merge(found),
-        remove: (gone) => this.annotationsWarehouse.delete(gone),
-      });
-    }
-    return this.copyWith(ids, await this.sheets.findByIds(ids), canContinue, {
-      merge: (found) => this.sheetsWarehouse.merge(found),
-      remove: (gone) => this.sheetsWarehouse.delete(gone),
-    });
-  }
-
-  private async copyWith<T extends { id: string }>(
-    ids: string[],
-    found: Result<T[]>,
-    canContinue: () => boolean,
-    lakehouse: {
-      merge: (records: T[]) => Promise<Result<void>>;
-      remove: (gone: string[]) => Promise<Result<void>>;
-    },
-  ): Promise<GroupOutcome> {
-    if (found.isFailure()) {
-      return { failed: found.error.message };
-    }
-
-    if (found.value.length > 0) {
-      const merged = await lakehouse.merge(found.value);
-      if (merged.isFailure()) {
-        return { failed: merged.error.message };
-      }
-    }
-
-    const gone = this.gone(ids, found.value);
-    if (gone.length === 0) {
-      return "copied";
-    }
-    if (!canContinue()) {
-      return "stopped";
-    }
-
-    const deleted = await lakehouse.remove(gone);
-    return deleted.isFailure() ? { failed: deleted.error.message } : "copied";
   }
 
   /** Deletes the rows whose copies landed, as long as this task still holds them. */
@@ -375,11 +297,6 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
         error: released.error.message,
       });
     }
-  }
-
-  private gone(ids: string[], found: { id: string }[]): string[] {
-    const kept = new Set(found.map(({ id }) => id));
-    return ids.filter((id) => !kept.has(id));
   }
 
   private byRecordType(
