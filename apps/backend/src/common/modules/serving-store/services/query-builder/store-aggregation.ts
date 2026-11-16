@@ -46,12 +46,13 @@ export class StoreAggregation {
     const dialect = new StoreQueryBuilder(names).over(inner);
     dialect.followIds(page.idOrder);
 
-    const { sql, outputs } = buildAggregation(
-      this.rows.buildValues(),
-      { columnNames: names, aggregation: this.aggregation, ...page },
-      dialect,
-    );
+    const values = this.rows.buildValues();
+    const read = { columnNames: names, aggregation: this.aggregation, ...page };
+    const { outputs } = buildAggregation(values, read, dialect);
     const columns = outputs.flatMap((output) => this.outputColumns(output, inner));
+    // Only the outputs' types say which sorts hold doubles, so the statement is written again.
+    dialect.sortsAsDoubles(columns.filter(({ type }) => type === "DOUBLE").map(({ name }) => name));
+    const { sql } = buildAggregation(values, read, dialect);
     const cells = columns.map(({ name, type }) => {
       const quoted = dialect.quoteName(name);
       return dialect.isIntegerType(type) ? `toString(${quoted}) AS ${quoted}` : quoted;

@@ -1,4 +1,60 @@
 {
+  "averageNaNDown": {
+    "columns": [
+      "device_name",
+      "v_avg"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        "A",
+        "NaN"
+      ],
+      [
+        "C",
+        2.0
+      ],
+      [
+        "B",
+        1.0
+      ],
+      [
+        "D",
+        null
+      ]
+    ]
+  },
+  "averageNaNUp": {
+    "columns": [
+      "device_name",
+      "v_avg"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        "D",
+        null
+      ],
+      [
+        "B",
+        1.0
+      ],
+      [
+        "C",
+        2.0
+      ],
+      [
+        "A",
+        "NaN"
+      ]
+    ]
+  },
   "correlation": {
     "columns": [
       "device_name",
@@ -31,7 +87,7 @@
       ],
       [
         "E",
-        0.35355339084507736
+        0.3535533908773623
       ]
     ]
   },

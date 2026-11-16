@@ -130,6 +130,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private plotsValues = false;
   private rowNames = new Set<string>();
   private rowTypes = new Map<string, string>();
+  private doubleOutputs = new Set<string>();
   private rowIds = new Map<string, "contributor" | "device">();
   /** Kept until a payload, a reserved name or a sheet changes them. */
   private fields?: Map<string, FlattenedField>;
@@ -571,7 +572,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (isContributorName) {
       return `indexOf(${ORDER_IDS}, ${this.quoteName(name)}) ${direction} ${nulls}`;
     }
+    // Spark sorts NaN above every number; the store would put it beside the nulls.
+    const isDouble = this.doubleOutputs.has(column) || this.rowTypes.get(column) === "DOUBLE";
+    if (isDouble) {
+      return `isNaN(${target}) ${direction} ${nulls}, ${target} ${direction} ${nulls}`;
+    }
     return `${target} ${direction} ${nulls}`;
+  }
+
+  /** The outputs of a statement over these rows that hold doubles, whose sort puts NaN apart. */
+  sortsAsDoubles(names: string[]): this {
+    this.doubleOutputs = new Set(names);
+    return this;
   }
 
   buildOver(statement: string): string {

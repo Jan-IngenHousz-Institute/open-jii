@@ -187,6 +187,46 @@
       "device_name": "Z",
       "latitude": 1.0,
       "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "nans",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"Infinity\"}"
+    },
+    {
+      "experiment": "nans",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"-Infinity\"}"
+    },
+    {
+      "experiment": "nans",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":1.0}"
+    },
+    {
+      "experiment": "nans",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":2.0}"
+    },
+    {
+      "experiment": "nans",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "D",
+      "latitude": 1.0,
+      "output": "{\"v\":null}"
     }
   ],
   "matchSchema": "OBJECT<w: DOUBLE>",
@@ -1035,6 +1075,46 @@
       "ordering": {
         "column": "zoom_bucket",
         "direction": "ASC"
+      }
+    },
+    "averageNaNUp": {
+      "experiment": "nans",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "avg"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "v_avg",
+        "direction": "ASC"
+      }
+    },
+    "averageNaNDown": {
+      "experiment": "nans",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "avg"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "v_avg",
+        "direction": "DESC"
       }
     }
   }
