@@ -2466,6 +2466,7 @@ module "opennext_waf" {
   enable_bot_control = true
 
   managed_rules_excluded_paths = ["/ingest"]
+  allow_page_regeneration      = true
 
   tags = {
     Environment = var.environment
@@ -2525,7 +2526,7 @@ module "opennext" {
 
   # SQS configuration
   enable_dlq        = true
-  max_receive_count = 3
+  max_receive_count = 5
 
   tags = {
     Project     = "open-jii"
@@ -3498,6 +3499,7 @@ module "grafana_dashboard" {
   ingest_healthcheck_function_name = local.ingest_healthcheck_publishing ? module.ingest_healthcheck.function_name : ""
   ingest_healthcheck_alerting      = local.ingest_healthcheck_alerting
   status_publisher_function_name   = module.status_publisher.function_name
+  revalidation_dlq_name            = module.opennext.sqs_dlq_name
   db_cluster_identifier            = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median

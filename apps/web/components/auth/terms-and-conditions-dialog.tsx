@@ -1,9 +1,9 @@
 import { draftMode } from "next/headers";
+import { getTermsAndConditions } from "~/components/cms/fetch-terms-and-conditions";
 import {
   TermsAndConditionsContent,
   TermsAndConditionsTitle,
 } from "~/components/cms/terms-and-conditions";
-import { getContentfulClients } from "~/lib/contentful";
 
 import type { PageTermsAndConditionsFieldsFragment } from "@repo/cms/lib/__generated/sdk";
 import initTranslations from "@repo/i18n/server";
@@ -14,8 +14,6 @@ interface TermsAndConditionsDialogProps {
 
 export async function TermsAndConditionsDialog({ locale }: TermsAndConditionsDialogProps) {
   const { isEnabled: preview } = await draftMode();
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
 
   // Initialize translations for fallback content
   const { t } = await initTranslations({
@@ -24,7 +22,7 @@ export async function TermsAndConditionsDialog({ locale }: TermsAndConditionsDia
   });
 
   try {
-    const termsQuery = await gqlClient.pageTermsAndConditions({ locale, preview });
+    const termsQuery = await getTermsAndConditions(locale, preview);
     const termsAndConditions = termsQuery.pageTermsAndConditionsCollection
       ?.items[0] as PageTermsAndConditionsFieldsFragment;
 

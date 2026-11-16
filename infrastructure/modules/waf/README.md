@@ -40,17 +40,18 @@ module "backend_waf" {
 
 ## Inputs
 
-| Name                           | Description                               | Type           | Default  | Required |
-| ------------------------------ | ----------------------------------------- | -------------- | -------- | -------- |
-| `service_name`                 | Base name for the service                 | `string`       | —        | yes      |
-| `environment`                  | Environment name                          | `string`       | —        | yes      |
-| `rate_limit`                   | Requests per 5-min window per IP          | `number`       | `500`    | no       |
-| `blocked_countries`            | ISO 3166-1 alpha-2 country codes to block | `list(string)` | `[]`     | no       |
-| `log_retention_days`           | Days to retain WAF logs                   | `number`       | `365`    | no       |
-| `enable_bot_control`           | Enable AWS Bot Control rule set           | `bool`         | `false`  | no       |
-| `bot_control_inspection_level` | `COMMON` or `TARGETED`                    | `string`       | `COMMON` | no       |
-| `large_body_bypass_routes`     | Routes that bypass body size restrictions | `list(object)` | `[]`     | no       |
-| `tags`                         | Tags to apply to resources                | `map(string)`  | `{}`     | no       |
+| Name                           | Description                                                                                                                | Type           | Default  | Required |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------- | -------------- | -------- | -------- |
+| `service_name`                 | Base name for the service                                                                                                  | `string`       | none     | yes      |
+| `environment`                  | Environment name                                                                                                           | `string`       | none     | yes      |
+| `rate_limit`                   | Requests per 5-min window per IP                                                                                           | `number`       | `500`    | no       |
+| `blocked_countries`            | ISO 3166-1 alpha-2 country codes to block                                                                                  | `list(string)` | `[]`     | no       |
+| `log_retention_days`           | Days to retain WAF logs                                                                                                    | `number`       | `365`    | no       |
+| `enable_bot_control`           | Enable AWS Bot Control rule set                                                                                            | `bool`         | `false`  | no       |
+| `bot_control_inspection_level` | `COMMON` or `TARGETED`                                                                                                     | `string`       | `COMMON` | no       |
+| `large_body_bypass_routes`     | Routes that bypass body size restrictions                                                                                  | `list(object)` | `[]`     | no       |
+| `allow_page_regeneration`      | Let OpenNext's regeneration HEAD requests through `NoUserAgent_HEADER`, and block every other request without a User-Agent | `bool`         | `false`  | no       |
+| `tags`                         | Tags to apply to resources                                                                                                 | `map(string)`  | `{}`     | no       |
 
 ## Outputs
 

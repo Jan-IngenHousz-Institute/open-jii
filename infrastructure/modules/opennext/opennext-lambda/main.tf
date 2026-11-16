@@ -73,6 +73,7 @@ resource "aws_iam_role_policy" "dynamodb_permissions" {
       {
         Effect = "Allow"
         Action = [
+          "dynamodb:BatchWriteItem",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
