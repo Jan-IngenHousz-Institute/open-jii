@@ -666,6 +666,24 @@ export const zExperimentTablesListing = z.object({
   body: zExperimentTablesMetadataList,
 });
 
+export const zExperimentTableVersion = zExperimentTableMetadata.pick({
+  identifier: true,
+  totalRows: true,
+  latestRowAt: true,
+  schemaRevision: true,
+});
+
+export const zExperimentTablesEvent = z.discriminatedUnion("type", [
+  z
+    .object({ type: z.literal("changed"), tables: z.array(zExperimentTableVersion) })
+    .describe(
+      "Each table's row count, newest row and schema as the store holds them, sent when the stream opens and whenever they change",
+    ),
+  z
+    .object({ type: z.literal("heartbeat") })
+    .describe("Sent while nothing changes, so a client can tell a quiet stream from a dropped one"),
+]);
+
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDistinctValuesQuery = z.infer<typeof zExperimentDistinctValuesQuery>;
 export type ExperimentDistinctValuesResponse = z.infer<typeof zExperimentDistinctValuesResponse>;
@@ -678,3 +696,5 @@ export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
 export type ExperimentDataSource = z.infer<typeof zExperimentDataSource>;
 export type ExperimentTablesListing = z.infer<typeof zExperimentTablesListing>;
+export type ExperimentTableVersion = z.infer<typeof zExperimentTableVersion>;
+export type ExperimentTablesEvent = z.infer<typeof zExperimentTablesEvent>;

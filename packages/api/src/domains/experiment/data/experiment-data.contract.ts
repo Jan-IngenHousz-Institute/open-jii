@@ -1,4 +1,4 @@
-import { oc } from "@orpc/contract";
+import { eventIterator, oc } from "@orpc/contract";
 
 import { zExperimentIdPathParam } from "../experiment.schema";
 import {
@@ -8,6 +8,7 @@ import {
   zExperimentDistinctValuesResponse,
   zExperimentTableColumnsQuery,
   zExperimentTableColumnsResponse,
+  zExperimentTablesEvent,
   zExperimentTablesListing,
 } from "./experiment-data.schema";
 
@@ -21,6 +22,10 @@ export const experimentDataContract = {
     })
     .input(zExperimentIdPathParam)
     .output(zExperimentTablesListing),
+  watchExperimentTables: oc
+    .route({ method: "GET", path: "/api/v1/experiments/{id}/tables/changes", successStatus: 200 })
+    .input(zExperimentIdPathParam)
+    .output(eventIterator(zExperimentTablesEvent)),
   getExperimentData: oc
     .route({ method: "GET", path: "/api/v1/experiments/{id}/data", successStatus: 200 })
     .input(zExperimentIdPathParam.and(zExperimentDataQuery))

@@ -19,6 +19,16 @@ describe("OpenAPI tables listing", () => {
   });
 });
 
+describe("OpenAPI tables change stream", () => {
+  it("documents the experiment's table changes as server-sent events", async () => {
+    const document = await generateOpenApiDocument();
+    const ok = document.paths?.["/api/v1/experiments/{id}/tables/changes"]?.get?.responses["200"];
+
+    expect(JSON.stringify(ok)).toContain("text/event-stream");
+    expect(JSON.stringify(ok)).toContain("heartbeat");
+  });
+});
+
 describe("OpenAPI rolling-window schema", () => {
   it("retains required preset constraints inside dashboard table filters", async () => {
     const document = await generateOpenApiDocument();
