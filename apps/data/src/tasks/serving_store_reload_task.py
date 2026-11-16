@@ -1,6 +1,6 @@
 # Databricks notebook source
 # DBTITLE 1,Serving Store Reload
-# Replaces what the serving store holds for one experiment, or for every experiment, with what gold
+# Replaces what the serving store holds for one experiment, or for every experiment, with what its source
 # holds now. Run by hand; docs/runbooks/procedures/serving-store-reload.md says when and how.
 
 # COMMAND ----------
@@ -39,13 +39,12 @@ if TABLE != "all" and TABLE not in TABLES:
 tables = list(TABLES.values()) if TABLE == "all" else [TABLES[TABLE]]
 experiment_id = None if EXPERIMENT_ID == "all" else EXPERIMENT_ID
 
-# A table whose rows belong to no experiment, as device events, reloads only for all.
 if experiment_id is not None:
-    if TABLE != "all" and TABLES[TABLE].counted_by != "experiment_id":
+    if TABLE != "all" and not TABLES[TABLE].per_experiment:
         raise ValueError(f"TABLE {TABLE} holds no experiment's rows; reload it with EXPERIMENT_ID all")
-    tables = [table for table in tables if table.counted_by == "experiment_id"]
+    tables = [table for table in tables if table.per_experiment]
 
-# Lets the delete remove more than the reload's limit of rows gold no longer holds, as for a
+# Lets the delete remove more than the reload's limit of rows the source no longer holds, as for a
 # deleted experiment. Anything but true or false is refused, so a typo cannot pass for either.
 ALLOW_REMOVAL = dbutils.widgets.get("ALLOW_REMOVAL").strip().lower()
 if ALLOW_REMOVAL not in ("true", "false"):
@@ -80,18 +79,18 @@ for table in tables:
         mismatches.append(f"{table.name} failed: {type(error).__name__}: {error}")
         continue
 
-    counted = "experiments" if table.counted_by == "experiment_id" else "devices"
+    counted = "experiments" if table.per_experiment else "devices"
     print(
-        f"[serving store] Reloaded {table.name} at gold version {reloaded.version}: "
+        f"[serving store] Reloaded {table.name} at {table.layer} version {reloaded.version}: "
         f"{reloaded.written.inserted} rows sent, {reloaded.written.rejected} refused (in feed_rejects); "
-        f"{sum(reloaded.gold.values())} rows in gold and {sum(reloaded.store.values())} in the store "
-        f"over {len(reloaded.gold)} {counted}, {sum(reloaded.newer.values())} of them written by the feed since",
+        f"{sum(reloaded.source.values())} rows in {table.layer} and {sum(reloaded.store.values())} in the store "
+        f"over {len(reloaded.source)} {counted}, {sum(reloaded.newer.values())} of them written by the feed since",
         flush=True,
     )
-    found_nothing = experiment_id is not None and not (reloaded.gold or reloaded.store or reloaded.older)
+    found_nothing = experiment_id is not None and not (reloaded.source or reloaded.store or reloaded.older)
     if found_nothing:
         print(
-            f"[serving store] Neither gold nor store.{table.name} holds experiment {experiment_id} now; "
+            f"[serving store] Neither {table.layer} nor store.{table.name} holds experiment {experiment_id} now; "
             "unless it was deleted, check the id"
         )
 
@@ -107,7 +106,7 @@ for table in tables:
             "the older ones stay; fix them as store-feed-rejects describes, then run the reload again"
         )
     if reloaded.missing:
-        mismatches.append(f"{table.name} lacks {reloaded.missing} of gold's rows, in {named(reloaded.short)}")
+        mismatches.append(f"{table.name} lacks {reloaded.missing} of {table.layer}'s rows, in {named(reloaded.short)}")
     if reloaded.older:
         mismatches.append(
             f"{table.name} holds rows from before version {reloaded.version} that the feed sent after the "
@@ -115,4 +114,4 @@ for table in tables:
         )
 
 if mismatches:
-    raise RuntimeError(f"The store does not match gold: {'; '.join(mismatches)}")
+    raise RuntimeError(f"The store does not match its sources: {'; '.join(mismatches)}")

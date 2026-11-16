@@ -1,5 +1,6 @@
-"""Replaces what the serving store holds for one experiment, or for every one, with what gold holds
-now: the first load, and the repair for what the feed cannot send, such as rows gold removed."""
+"""Replaces what the serving store holds for one experiment, or for every one, with what its source
+table holds now: the first load, and the repair for what the feed cannot send, such as rows the
+source removed."""
 
 from __future__ import annotations
 
@@ -28,17 +29,19 @@ ID_SOURCES = {
     "client_ids": ("client_id", {"measurements": "client_id", "macro_results": "client_id"}),
 }
 
-# More rows than this that gold no longer holds stop a reload before its delete, unless asked for.
-# A repair removes a few; a gold table part way through a refresh looks as if it lost most of them.
+# More rows than this that the source no longer holds stop a reload before its delete, unless
+# asked for. A repair removes a few; a table part way through a refresh looks as if it lost most.
 REMOVAL_LIMIT = 1000
 
 
-class StoreAheadOfGold(Exception):
-    """The store holds a commit newer than gold's latest, as after gold's table was recreated."""
+class StoreAheadOfSource(Exception):
+    """The store holds a commit newer than its source table's latest, as after that table was
+    recreated."""
 
 
 class RemovalOverLimit(Exception):
-    """The delete would take more rows that gold no longer holds than a reload removes unasked."""
+    """The delete would take more rows that the source no longer holds than a reload removes
+    unasked."""
 
 
 @dataclass(frozen=True)
@@ -47,63 +50,62 @@ class Reloaded:
     version: int
     written: Written
     schemas: Written
-    # Rows per experiment, or per device for a table counted by device, one per store key: gold's at
-    # the version, and the store's afterwards by where the newest commit of each falls against the
-    # version.
-    gold: dict[str, int]
+    # Rows per experiment, or per device, one per store key: the source's at the version, and the
+    # store's afterwards by where the newest commit of each falls against the version.
+    source: dict[str, int]
     store: dict[str, int]
     newer: dict[str, int]
     older: dict[str, int]
 
     @property
     def short(self) -> dict[str, int]:
-        """The experiments whose rows at the version or newer are fewer than gold's, and by how many.
-        Exact for an experiment the feed wrote nothing newer to; otherwise the feed's new rows can
-        make up for as many missing ones."""
+        """The experiments, or devices, whose rows at the version or newer are fewer than the
+        source's, and by how many. Exact for one the feed wrote nothing newer to; otherwise the
+        feed's new rows can make up for as many missing ones."""
         return {
-            experiment: rows - self.store.get(experiment, 0)
-            for experiment, rows in self.gold.items()
-            if rows > self.store.get(experiment, 0)
+            scope: rows - self.store.get(scope, 0)
+            for scope, rows in self.source.items()
+            if rows > self.store.get(scope, 0)
         }
 
     @property
     def missing(self) -> int:
-        """Rows gold holds that the store lacks."""
+        """Rows the source holds that the store lacks."""
         return sum(self.short.values())
 
 
 class StoreReload:
-    """Loads a store table from gold as gold holds it at its latest version, then deletes the
-    store's rows from older versions.
+    """Loads a store table from its source table as that holds it at its latest version, then
+    deletes the store's rows from older versions.
 
     Inserting first keeps an experiment readable throughout. The store keeps a row's newest commit,
-    so the delete takes the copies the load replaced and the rows gold no longer holds, and leaves
+    so the delete takes the copies the load replaced and the rows the source no longer holds, and leaves
     what the live feed writes meanwhile.
     """
 
-    def __init__(self, spark: SparkSession, writer: StoreWriter, gold_schema: str):
+    def __init__(self, spark: SparkSession, writer: StoreWriter, source_schema: str):
         self.spark = spark
         self.writer = writer
-        self.gold_schema = gold_schema
+        self.source_schema = source_schema
 
     def reload(
         self, table: StoreTable, experiment_id: str | None = None, allow_removal: bool = False
     ) -> Reloaded:
         """Reloads one experiment, or every experiment when ``experiment_id`` is None. An
-        experiment gold no longer holds leaves the store with it, once ``allow_removal`` says more
+        experiment the source no longer holds leaves the store with it, once ``allow_removal`` says more
         than ``REMOVAL_LIMIT`` rows may go. When the store refuses any row, nothing is deleted,
         since a refused row's older copy is the only one the store has, and a refused schema keeps
         the older schemas for the same reason."""
-        # Read first, so a commit the feed sends meanwhile cannot look newer than gold's latest.
+        # Read first, so a commit the feed sends meanwhile cannot look newer than the source's latest.
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
         if newest > version:
-            raise StoreAheadOfGold(
-                f"store.{table.name}, its copies or its payload schemas hold version {newest} and gold's "
-                f"{table.source_table} only {version}: empty them first (docs/runbooks/procedures/serving-store-reload.md)"
+            raise StoreAheadOfSource(
+                f"store.{table.name}, its copies or its payload schemas hold version {newest} and "
+                f"{table.layer}'s {table.source_table} only {version}: empty them first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
-        rows = self.gold_rows(table, version)
+        rows = self.source_rows(table, version)
         if experiment_id is not None:
             rows = rows.filter(F.col("experiment_id") == experiment_id)
         rows = self._newest_copies(table, rows)
@@ -124,50 +126,50 @@ class StoreReload:
             for store_table in (table.name, *table.copies):
                 self._delete_older(store_table, version, experiment_id)
             if table.payloads and not schemas.rejected:
-                # A table type's schemas carry its gold table's versions, so the older ones are
+                # A table type's schemas carry its source table's versions, so the older ones are
                 # those only rows from before the load had.
                 self._delete_older(PAYLOAD_SCHEMAS, version, experiment_id, table_type=table.table_type)
             if fills_id_tables:
                 self._prune_ids(experiment_id)
 
         counted_by = table.counted_by
-        gold = rows.select(*table.key()).dropDuplicates().groupBy(counted_by).count().collect()
+        in_source = rows.select(*table.key()).dropDuplicates().groupBy(counted_by).count().collect()
         stored = self._stored_rows(table, version, experiment_id)
         return Reloaded(
             table.name,
             version,
             written,
             schemas,
-            gold={row[counted_by]: row["count"] for row in gold},
+            source={row[counted_by]: row["count"] for row in in_source},
             store={row[counted_by]: int(row["current"]) for row in stored if int(row["current"])},
             newer={row[counted_by]: int(row["newer"]) for row in stored if int(row["newer"])},
             older={row[counted_by]: int(row["older"]) for row in stored if int(row["older"])},
         )
 
     def latest_version(self, table: StoreTable) -> tuple[int, datetime]:
-        """Gold's latest commit, as its version and time."""
-        [commit] = self.spark.sql(f"DESCRIBE HISTORY {self._gold_name(table)} LIMIT 1").collect()
+        """The source table's latest commit, as its version and time."""
+        [commit] = self.spark.sql(f"DESCRIBE HISTORY {self._source_name(table)} LIMIT 1").collect()
         return commit["version"], commit["timestamp"]
 
-    def gold_rows(self, table: StoreTable, version: int) -> DataFrame:
-        """Gold's rows at ``version``."""
-        return self.spark.sql(f"SELECT * FROM {self._gold_name(table)} VERSION AS OF {version}")
+    def source_rows(self, table: StoreTable, version: int) -> DataFrame:
+        """The source table's rows at ``version``."""
+        return self.spark.sql(f"SELECT * FROM {self._source_name(table)} VERSION AS OF {version}")
 
     def _newest_copies(self, table: StoreTable, rows: DataFrame) -> DataFrame:
-        """Gold's newest copy of each store key, the one the store keeps from the feed. Gold's tables
-        only append, so a recomputed row stands beside the one it replaces, and a load sends every
+        """The source's newest copy of each store key, the one the store keeps from the feed. The
+        source tables only append, so a recomputed row stands beside the one it replaces, and a load sends every
         row at one version, which would leave the store to keep either.
 
-        The newest copy is the one gold processed last. The commit that added a row would say it
-        more exactly, but the job's dedicated compute reads gold's streaming tables through a view,
+        The newest copy is the one the source processed last. The commit that added a row would say it
+        more exactly, but the job's dedicated compute reads the streaming tables through a view,
         which hides ``_metadata.row_commit_version``. Copies with one processing time, and copies of
         an upload row, keep any one of them."""
         processed_last = F.col(table.processed_at).desc_nulls_last() if table.processed_at else F.lit(0)
         newest = Window.partitionBy(*table.key()).orderBy(processed_last)
         return rows.withColumn("_copy", F.row_number().over(newest)).filter(F.col("_copy") == 1).drop("_copy")
 
-    def _gold_name(self, table: StoreTable) -> str:
-        return f"{self.gold_schema}.{table.source_table}"
+    def _source_name(self, table: StoreTable) -> str:
+        return f"{self.source_schema}.{table.source_table}"
 
     def _write(self, table: StoreTable, changes: DataFrame) -> Written:
         """Writes the load, again until every row has gone."""
@@ -175,7 +177,7 @@ class StoreReload:
         return self._until_sent(f"rows of {table.name}", lambda: self.writer.write(lines, table.name))
 
     def _write_schemas(self, table: StoreTable, changes: DataFrame) -> Written:
-        """Sends the load's payload schemas, rebuilt from gold's rows as the rows are."""
+        """Sends the load's payload schemas, rebuilt from the source's rows as the rows are."""
         if not table.payloads:
             return Written()
         lines = [row.line for row in table.schema_lines(changes).collect()]
@@ -224,8 +226,8 @@ class StoreReload:
         return int(row["newest"])
 
     def _check_removal(self, table: StoreTable, version: int, experiment_id: str | None) -> None:
-        """Stops before the delete when it would take more than ``REMOVAL_LIMIT`` rows gold no
-        longer holds. After the load, a key gold holds has its newest copy at the version, so the
+        """Stops before the delete when it would take more than ``REMOVAL_LIMIT`` rows the source
+        no longer holds. After the load, a key it holds has its newest copy at the version, so the
         keys still older are the ones the delete removes for good."""
         removed = {
             row[table.counted_by]: int(row["older"])
@@ -238,10 +240,10 @@ class StoreReload:
 
         largest = sorted(removed.items(), key=lambda item: item[1], reverse=True)[:20]
         raise RemovalOverLimit(
-            f"the delete would remove {total} rows of store.{table.name} that gold's {table.source_table} "
+            f"the delete would remove {total} rows of store.{table.name} that {table.layer}'s {table.source_table} "
             f"no longer holds, over the limit of {REMOVAL_LIMIT}: "
             + ", ".join(f"{experiment} ({count})" for experiment, count in largest)
-            + ". Nothing was deleted. If gold is being refreshed, wait for it; if the rows should go, "
+            + f". Nothing was deleted. If {table.layer} is being refreshed, wait for it; if the rows should go, "
             "run again with ALLOW_REMOVAL set to true (docs/runbooks/procedures/serving-store-reload.md)"
         )
 

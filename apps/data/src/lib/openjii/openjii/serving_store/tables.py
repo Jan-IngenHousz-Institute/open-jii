@@ -79,23 +79,27 @@ class StoreTable:
 
     name: str
     source_table: str
+    layer = "gold"
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
-    # The time gold processed a row at, later on a recomputed copy than on the row it replaces.
+    # The time the source processed a row at, later on a recomputed copy than on the row it replaces.
     # Gold's uploads carry none.
     processed_at: str | None = "processed_timestamp"
     # How gold's table listing (experiment_table_metadata) types the experiment tables this table
-    # holds, and the payload columns whose schemas it lists; a table without payloads lists none.
+    # holds, and the payload columns whose schemas it lists.
     table_type: str
     payloads: tuple[str, ...] = ()
     # The store table its schema lines go to, after its rows.
     schema_table = PAYLOAD_SCHEMAS
-    # The column a reload counts rows by, and limits itself to one experiment by when it is the
-    # experiment's. Rows that belong to no experiment count by device and reload whole.
-    counted_by = "experiment_id"
+    # A table whose rows belong to no experiment reloads whole and counts its rows by device.
+    per_experiment = True
     # The store tables the migrations keep from this one by a materialized view, which a reload's
     # delete reaches too, since a view only adds rows.
     copies: tuple[str, ...] = ()
+
+    @property
+    def counted_by(self) -> str:
+        return "experiment_id" if self.per_experiment else "client_id"
 
     def source(self, catalog: str) -> str:
         """The table whose change feed the store table is fed from."""
@@ -415,9 +419,10 @@ class DeviceEvents(StoreTable):
 
     name = "device_events"
     source_table = CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE
+    layer = "silver"
     partitioned_by = "event_timestamp"
     processed_at = "ingestion_timestamp"
-    counted_by = "client_id"
+    per_experiment = False
 
     def key(self) -> list[Column]:
         return [

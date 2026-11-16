@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 import pytest
 import requests
 from openjii.serving_store import reload as reload_module
-from openjii.serving_store.reload import Reloaded, RemovalOverLimit, StoreAheadOfGold, StoreReload
+from openjii.serving_store.reload import Reloaded, RemovalOverLimit, StoreAheadOfSource, StoreReload
 from openjii.serving_store.tables import DEVICE_EVENTS, MEASUREMENTS, UPLOADS, StoreTable
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
@@ -78,15 +78,15 @@ class _GoldAt(StoreReload):
 
     def __init__(self, spark: SparkSession, writer: StoreWriter, gold: str, version: int = 7):
         super().__init__(spark, writer, "gold")
-        self.gold = gold
+        self.source = gold
         self.version = version
 
     def latest_version(self, table: StoreTable) -> tuple[int, datetime]:
         return self.version, _COMMITTED_AT
 
-    def gold_rows(self, table: StoreTable, version: int) -> DataFrame:
+    def source_rows(self, table: StoreTable, version: int) -> DataFrame:
         assert version == self.version
-        return self.spark.sql(self.gold)
+        return self.spark.sql(self.source)
 
 
 class _Writer(StoreWriter):
@@ -253,7 +253,7 @@ def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSessi
 def test_a_store_ahead_of_gold_is_refused_before_anything_is_written(spark: SparkSession) -> None:
     writer = _Writer(newest=9)
 
-    with pytest.raises(StoreAheadOfGold, match="hold version 9"):
+    with pytest.raises(StoreAheadOfSource, match="hold version 9"):
         _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert writer.lines == []
@@ -335,7 +335,7 @@ def test_missing_counts_the_experiments_short_of_gold() -> None:
         7,
         Written(inserted=9),
         Written(inserted=1),
-        gold={"e1": 5, "e2": 4},
+        source={"e1": 5, "e2": 4},
         store={"e1": 3, "e2": 6},
         newer={"e2": 2},
         older={},
@@ -429,7 +429,7 @@ def test_reloading_an_experiment_leaves_its_rows_as_gold_holds_them(
         ("e2", 31, 6.8, 3),
     ]
     # Gold's copy of 22 is one row in the store, so gold's rows are counted once per key.
-    assert (reloaded.gold, reloaded.store, reloaded.missing) == ({"e1": 3}, {"e1": 3}, 0)
+    assert (reloaded.source, reloaded.store, reloaded.missing) == ({"e1": 3}, {"e1": 3}, 0)
     assert (reloaded.newer, reloaded.older) == ({}, {})
     assert store.rows(f"SELECT count() AS older FROM {_DATABASE}.uploads WHERE _commit_version < 7")[0] == {
         "older": 1
@@ -482,7 +482,7 @@ def test_feed_rows_written_since_the_version_are_counted_apart(
 
     reloaded = _FeedCatchingUp(spark, reloader, _GOLD, late=arrived).reload(UPLOADS, "e1")
 
-    assert (reloaded.gold, reloaded.store, reloaded.newer) == ({"e1": 3}, {"e1": 4}, {"e1": 1})
+    assert (reloaded.source, reloaded.store, reloaded.newer) == ({"e1": 3}, {"e1": 4}, {"e1": 1})
     assert (reloaded.missing, reloaded.older) == (0, {})
 
 
@@ -497,7 +497,7 @@ def test_reloading_an_experiment_gold_no_longer_holds_removes_it(
 
     assert [row for row in _uploads(store) if row[0] == "e2"] == []
     assert [row[1] for row in _uploads(store)] == [21, 22, 23]
-    assert (reloaded.gold, reloaded.store) == ({}, {})
+    assert (reloaded.source, reloaded.store) == ({}, {})
 
 
 @pytest.mark.clickhouse
@@ -538,7 +538,7 @@ def test_rows_gold_sends_again_do_not_count_against_the_removal_limit(
 
     reloaded = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e2")
 
-    assert reloaded.store == reloaded.gold
+    assert reloaded.store == reloaded.source
 
 
 @pytest.mark.clickhouse
@@ -564,7 +564,7 @@ def test_a_new_store_takes_every_experiment_and_a_second_run_changes_nothing(
     first = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS)
     second = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS)
 
-    assert first.gold == first.store == second.store == {"e1": 3, "e2": 1}
+    assert first.source == first.store == second.store == {"e1": 3, "e2": 1}
     assert store.rows(f"SELECT count() AS rows FROM {_DATABASE}.uploads") == [{"rows": 4}]
     assert [row[1] for row in _uploads(store)] == [21, 22, 24, 31]
 
@@ -606,7 +606,7 @@ def test_schemas_from_a_recreated_gold_table_stop_the_reload(
         "VALUES ('e1', 'upload', 't1', 'uploaded_data', 'OBJECT<ph: DOUBLE>', 99)"
     )
 
-    with pytest.raises(StoreAheadOfGold, match="hold version 99"):
+    with pytest.raises(StoreAheadOfSource, match="hold version 99"):
         _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
 
 
@@ -641,7 +641,7 @@ def test_device_events_reload_whole_without_schemas_or_ids_and_count_by_device(s
     assert [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE")] == [
         ("DELETE FROM store.device_events WHERE _commit_version < {version:Int64}", {"version": 7})
     ]
-    assert reloaded.gold == {"c1": 2, "c2": 1}
+    assert reloaded.source == {"c1": 2, "c2": 1}
 
 
 def test_a_measurements_reload_deletes_the_older_rows_of_its_copy_by_device_too(spark: SparkSession) -> None:
@@ -687,7 +687,7 @@ def test_reloading_device_events_leaves_them_as_silver_holds_them(
         {"client_id": "c1", "event_type": "disconnected", "_commit_version": 7},
         {"client_id": "c2", "event_type": "connected", "_commit_version": 7},
     ]
-    assert (reloaded.gold, reloaded.store, reloaded.missing) == ({"c1": 2, "c2": 1}, {"c1": 2, "c2": 1}, 0)
+    assert (reloaded.source, reloaded.store, reloaded.missing) == ({"c1": 2, "c2": 1}, {"c1": 2, "c2": 1}, 0)
 
 
 @pytest.mark.clickhouse
