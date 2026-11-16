@@ -34,6 +34,7 @@ export class GetDeviceObservedExperimentsUseCase {
       msg: "Getting observed experiments",
       operation: "listDeviceObservedExperiments",
       deviceId,
+      source,
     });
 
     const deviceResult = await this.deviceRepository.findById(deviceId);

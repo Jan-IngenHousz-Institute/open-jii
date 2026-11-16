@@ -44,6 +44,7 @@ export class GetDeviceMonitoringUseCase {
       deviceId,
       userId,
       bucket,
+      source,
     });
 
     const deviceResult = await this.deviceRepository.findById(deviceId);

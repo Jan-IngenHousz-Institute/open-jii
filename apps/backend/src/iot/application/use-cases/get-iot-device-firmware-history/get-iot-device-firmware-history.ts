@@ -33,6 +33,7 @@ export class GetIotDeviceFirmwareHistoryUseCase {
       operation: "getDeviceFirmwareHistory",
       deviceId,
       bucket,
+      source,
     });
 
     const deviceResult = await this.deviceRepository.findById(deviceId);

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
 
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import {
@@ -237,5 +238,15 @@ describe("GetDeviceMonitoringUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
     expect(store).not.toHaveBeenCalled();
+  });
+
+  it("logs the source a device page reads from", async () => {
+    const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+    await useCase.execute(faker.string.uuid(), FROM, TO, "hour", userId, "store");
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "getDeviceMonitoring", source: "store" }),
+    );
   });
 });

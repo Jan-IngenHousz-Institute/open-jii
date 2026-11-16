@@ -26,6 +26,7 @@ export class GetIotDeviceActivityUseCase {
       operation: "getIotDeviceActivity",
       deviceId,
       userId,
+      source,
     });
 
     const deviceResult = await this.deviceRepository.findById(deviceId);
