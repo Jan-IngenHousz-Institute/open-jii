@@ -12,6 +12,7 @@ import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experim
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
+import { WatchExperimentTablesUseCase } from "../application/use-cases/experiment-data/watch-experiment-tables";
 
 @Controller()
 export class ExperimentDataController {
@@ -22,6 +23,7 @@ export class ExperimentDataController {
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
     private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
     private readonly getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase,
+    private readonly watchExperimentTablesUseCase: WatchExperimentTablesUseCase,
     private readonly dataSource: ExperimentDataSourceService,
   ) {}
 
@@ -40,6 +42,21 @@ export class ExperimentDataController {
       }
       return throwOrpcFailure(result, this.logger);
     });
+  }
+
+  @CanAccess({ resource: "experiment", action: "read" })
+  @Implement(experimentDataContract.watchExperimentTables)
+  watchExperimentTables(@Session() session: UserSession) {
+    return implement(experimentDataContract.watchExperimentTables).handler(
+      async ({ input, signal }) => {
+        const source = await this.dataSource.sourceFor(session.user);
+        const result = await this.watchExperimentTablesUseCase.execute(input.id, source, signal);
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 
   @CanAccess({ resource: "experiment", action: "read" })

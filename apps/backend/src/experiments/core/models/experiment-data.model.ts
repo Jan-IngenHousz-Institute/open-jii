@@ -23,6 +23,17 @@ export type ExperimentTableType = "static" | "macro" | "upload";
 /** Where a read of experiment data goes: the warehouse's views, or the serving store. */
 export type ExperimentDataSource = "warehouse" | "store";
 
+export interface ExperimentTableVersion {
+  identifier: string;
+  totalRows: number;
+  latestRowAt: string | null;
+  schemaRevision: string | null;
+}
+
+export type ExperimentTablesChange =
+  | { type: "changed"; tables: ExperimentTableVersion[] }
+  | { type: "heartbeat" };
+
 export const PAGE_TOO_LARGE_MESSAGE =
   "This page holds more data than one read can return. Choose a smaller page size.";
 

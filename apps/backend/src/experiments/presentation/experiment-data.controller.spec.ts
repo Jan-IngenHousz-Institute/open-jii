@@ -8,6 +8,7 @@ import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experim
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
+import { WatchExperimentTablesUseCase } from "../application/use-cases/experiment-data/watch-experiment-tables";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
@@ -19,6 +20,7 @@ describe("ExperimentDataController", () => {
   let getExperimentTablesUseCase: GetExperimentTablesUseCase;
   let getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase;
   let getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase;
+  let watchExperimentTablesUseCase: WatchExperimentTablesUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -36,6 +38,7 @@ describe("ExperimentDataController", () => {
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
     getDistinctColumnValuesUseCase = testApp.module.get(GetDistinctColumnValuesUseCase);
     getExperimentTableColumnsUseCase = testApp.module.get(GetExperimentTableColumnsUseCase);
+    watchExperimentTablesUseCase = testApp.module.get(WatchExperimentTablesUseCase);
   });
 
   afterEach(() => {
@@ -99,6 +102,40 @@ describe("ExperimentDataController", () => {
 
       await testApp
         .get(`/api/v1/experiments/${experimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(404);
+    });
+  });
+
+  describe("watchExperimentTables", () => {
+    it("streams the table changes to a store reader", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      const tables = [
+        { identifier: "raw_data", totalRows: 3, latestRowAt: null, schemaRevision: null },
+      ];
+      async function* changes() {
+        await Promise.resolve();
+        yield { type: "changed" as const, tables };
+      }
+      const execute = vi
+        .spyOn(watchExperimentTablesUseCase, "execute")
+        .mockResolvedValue(success(changes()));
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
+        .withAuth(testUserId)
+        .expect(200);
+
+      expect(response.headers["content-type"]).toContain("text/event-stream");
+      expect(response.text).toContain(JSON.stringify({ type: "changed", tables }));
+      expect(execute.mock.lastCall?.slice(0, 2)).toEqual([readableExperimentId, "store"]);
+    });
+
+    it("gives a warehouse reader no stream", async () => {
+      await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
         .withAuth(testUserId)
         .expect(404);
     });
@@ -293,6 +330,11 @@ describe("ExperimentDataController", () => {
         name: "get experiment tables",
         request: (experimentId: string, userId: string) =>
           testApp.get(`/api/v1/experiments/${experimentId}/tables`).withAuth(userId),
+      },
+      {
+        name: "watch experiment tables",
+        request: (experimentId: string, userId: string) =>
+          testApp.get(`/api/v1/experiments/${experimentId}/tables/changes`).withAuth(userId),
       },
       {
         name: "get experiment data",
