@@ -924,7 +924,7 @@ describe("ordered aggregate query inputs", () => {
     );
   });
 
-  it("cuts a running sum's rows first only along the row id, since a cut through tied rows drops part of their total", () => {
+  it("cuts a running sum's rows first only along the row id, keeping every row that shares the last kept id", () => {
     const sumAlong = (column: string) =>
       unwrap(
         service.buildQuery({
@@ -936,7 +936,7 @@ describe("ordered aggregate query inputs", () => {
       );
 
     expect(sumAlong("id")).toContain(
-      "FROM (SELECT * FROM (SELECT * FROM readings) ORDER BY `id` ASC LIMIT 2)",
+      "FROM (SELECT * FROM (SELECT * FROM readings) WHERE `id` <= (SELECT max(`id`) FROM (SELECT `id` FROM (SELECT * FROM readings) ORDER BY `id` ASC LIMIT 2)))",
     );
     expect(sumAlong("timestamp")).toMatch(
       /OVER \(ORDER BY `timestamp`\) AS `value_cumsum` FROM \(SELECT \* FROM readings\) ORDER BY/,

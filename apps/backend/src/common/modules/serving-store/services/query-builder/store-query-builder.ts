@@ -36,6 +36,12 @@ export interface FirstRowsTerm {
   nulls: "FIRST" | "LAST";
 }
 
+/** The order the rows first kept are chosen in, and whether rows tied with the last are kept too. */
+export interface FirstRows {
+  order: FirstRowsTerm[];
+  withTies: boolean;
+}
+
 /** The second table of an as-of read, one row per key and time. */
 export interface StoreAsOfSecondary {
   sql: string;
@@ -96,7 +102,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   /** The table a chart reads with FINAL, which an alias must come before. */
   private finalTable?: string;
-  private firstRows?: { order: FirstRowsTerm[]; count: number };
+  private firstRows?: FirstRows & { count: number };
   private columns: StoreColumn[] = [];
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
@@ -212,8 +218,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * Reads only the rows first in `order`, found by their keys over the key and order columns alone,
    * as a sorted page finds its rows; the rest of each row is read for those rows only.
    */
-  keepFirst(order: FirstRowsTerm[], count: number): this {
-    this.firstRows = { order, count };
+  keepFirst(rows: FirstRows, count: number): this {
+    this.firstRows = { ...rows, count };
     return this;
   }
 
@@ -594,8 +600,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       `SELECT ${key}`,
       `FROM ${this.fromClause}`,
       where,
-      `ORDER BY ${order}, ${key}`,
-      `LIMIT ${first.count}`,
+      first.withTies ? `ORDER BY ${order}` : `ORDER BY ${order}, ${key}`,
+      first.withTies ? `LIMIT ${first.count} WITH TIES` : `LIMIT ${first.count}`,
     ]);
     const conditions = [...this.whereConditions, `(${key}) IN (${firstKeys})`];
     return this.joinClauses([

@@ -28,6 +28,8 @@ const MIGRATIONS = resolve(
 );
 
 const zRow = z.object({
+  /** The experiment the row belongs to, when not the one most cases read. */
+  experiment: z.string().optional(),
   id: z.number(),
   timestamp: z.string(),
   device_name: z.string().nullable(),
@@ -36,6 +38,7 @@ const zRow = z.object({
 });
 
 const zCase = z.object({
+  experiment: z.string().optional(),
   columns: z.array(z.string()).optional(),
   join: z.object({ matchColumn: z.string(), toleranceMinutes: z.number() }).optional(),
   filters: z
@@ -125,7 +128,10 @@ const MATCHED_COLUMNS = [
 /** A chart read's ceiling and one more, as the repository asks for. */
 const CHART_LIMIT = 100_001;
 
-function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
+function storeRead(
+  name: string,
+  experimentId = FIXTURE.cases[name].experiment ?? "charts",
+): StoreQueryParams {
   const { columns, join, filters, aggregation, ordering, limit } = FIXTURE.cases[name];
   return {
     tableName: "m1",
@@ -164,11 +170,13 @@ function storeRead(name: string, experimentId = "charts"): StoreQueryParams {
 // against chart-results.json; the store's spec below expects the same results.
 it("keeps the Spark chart fixture in sync with the warehouse's generated queries", async () => {
   const service = new QueryBuilderService();
-  const scoped = { whereConditions: [["experiment_id", "charts"]] satisfies [string, string][] };
   const warehouseRead = (
-    { columns, join, filters, aggregation, ordering }: z.infer<typeof zCase>,
+    { experiment, columns, join, filters, aggregation, ordering }: z.infer<typeof zCase>,
     limit: number | undefined,
   ) => {
+    const scoped = {
+      whereConditions: [["experiment_id", experiment ?? "charts"]] satisfies [string, string][],
+    };
     const built = service.buildQuery({
       table: "chart_rows",
       ...scoped,
@@ -232,7 +240,7 @@ describe("StoreAggregation", () => {
         name,
         unmerged: undefined,
       });
-      expect(query.value.experiment).toBe("charts");
+      expect(query.value.experiment).toBe(FIXTURE.cases[name].experiment ?? "charts");
     }
   });
 
@@ -274,7 +282,7 @@ describe("StoreAggregation", () => {
     expect(windows.value.sql).toMatch(
       /\) IN \(SELECT [^\n]+\nFROM macro_results FINAL\nWHERE [^\n]+\nORDER BY timestamp ASC NULLS LAST, id ASC NULLS LAST, [^\n]+\nLIMIT 6\)/,
     );
-    expect(sum.value.sql).toMatch(/\nORDER BY id ASC NULLS FIRST, [^\n]+\nLIMIT 6\)/);
+    expect(sum.value.sql).toContain("\nORDER BY id ASC NULLS FIRST\nLIMIT 6 WITH TIES)");
   });
 
   it("reads every row for a running sum along a column rows may share", () => {
@@ -391,7 +399,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       await admin.command({ query: statement });
     }
     const macroRow = (macroId: string) => (row: z.infer<typeof zRow>) => ({
-      experiment_id: "charts",
+      experiment_id: row.experiment ?? "charts",
       id: row.id,
       raw_id: row.id,
       timestamp: row.timestamp,

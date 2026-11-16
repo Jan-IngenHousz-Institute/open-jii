@@ -35,14 +35,23 @@ def chart_rows(spark: SparkSession) -> Iterator[None]:
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     for view, key in (("chart_rows", "rows"), ("chart_matches", "matches")):
         rows = [
-            (row["id"], row["timestamp"], row["device_name"], row["latitude"], row["output"])
+            (
+                row.get("experiment", "charts"),
+                row["id"],
+                row["timestamp"],
+                row["device_name"],
+                row["latitude"],
+                row["output"],
+            )
             for row in _PARITY[key]
         ]
         frame = spark.createDataFrame(
-            rows, "id BIGINT, timestamp_text STRING, device_name STRING, latitude DOUBLE, output STRING"
+            rows,
+            "experiment_id STRING, id BIGINT, timestamp_text STRING, device_name STRING, latitude DOUBLE, "
+            "output STRING",
         )
         frame.select(
-            F.lit("charts").alias("experiment_id"),
+            "experiment_id",
             "id",
             F.to_timestamp("timestamp_text").alias("timestamp"),
             F.to_date(F.to_timestamp("timestamp_text")).alias("date"),

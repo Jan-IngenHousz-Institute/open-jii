@@ -91,6 +91,78 @@
       "device_name": "E",
       "latitude": 52.10005,
       "output": "{\"n\":10,\"v\":52.10004}"
+    },
+    {
+      "experiment": "ties",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":2,\"v\":2.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":3,\"v\":3.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":4,\"v\":4.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":5,\"v\":5.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":6,\"v\":6.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 6,
+      "timestamp": "2026-09-09 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":60,\"v\":60.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 7,
+      "timestamp": "2026-09-07 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":7,\"v\":7.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 8,
+      "timestamp": "2026-09-08 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":8,\"v\":8.0}"
     }
   ],
   "matchSchema": "OBJECT<w: DOUBLE>",
@@ -890,6 +962,28 @@
         "direction": "ASC"
       },
       "compare": ["id", "v_previous", "row"],
+      "limit": 6,
+      "exact": true
+    },
+    "rowCumsumTiedAtCap": {
+      "experiment": "ties",
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "cumsum"
+          },
+          {
+            "column": "n",
+            "function": "cumsum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v_cumsum", "n_cumsum"],
       "limit": 6,
       "exact": true
     }

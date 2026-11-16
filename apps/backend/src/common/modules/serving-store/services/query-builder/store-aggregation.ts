@@ -15,7 +15,7 @@ import type {
 } from "../../../databricks/services/query-builder/query-builder.types";
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
 import { StoreQueryBuilder } from "./store-query-builder";
-import type { FirstRowsTerm, StoreOutputColumn } from "./store-query-builder";
+import type { FirstRows, FirstRowsTerm, StoreOutputColumn } from "./store-query-builder";
 
 /** A decimal's precision and scale, as Spark types its arithmetic. */
 type Decimal = [number, number];
@@ -43,9 +43,9 @@ export class StoreAggregation {
     const inner = this.rows.outputColumns().map(({ name, type, idOf }) => ({ name, type, idOf }));
     // The shared cap keeps the first rows in the windows' order; the store finds them by key
     // first, so it never extracts every row's payload to choose them.
-    const firstOrder = this.windowOrder(inner, page.ordering);
-    if (firstOrder !== undefined && page.limit !== undefined) {
-      this.rows.keepFirst(firstOrder, page.limit + (page.offset ?? 0));
+    const firstRows = this.firstRows(inner, page.ordering);
+    if (firstRows !== undefined && page.limit !== undefined) {
+      this.rows.keepFirst(firstRows, page.limit + (page.offset ?? 0));
     }
     const names = inner.map(({ name }) => name);
     const dialect = new StoreQueryBuilder(names).over(inner);
@@ -67,15 +67,10 @@ export class StoreAggregation {
   }
 
   /**
-   * The one order every window of a read that keeps its rows looks back in, as the shared cap
-   * orders them: going up, nulls first for a running sum and last for a row window, as the store
-   * sorts a tie breaker. None when a group is read, the windows differ, a sum is not one the cap
-   * keeps exact, or an order column is not a plain value of the rows.
+   * The rows the shared cap keeps, when every window looks back in one order. A tie breaker sorts
+   * nulls last, as the store's plain ASC in the window does.
    */
-  private windowOrder(
-    inner: StoreOutputColumn[],
-    ordering?: QueryOrdering,
-  ): FirstRowsTerm[] | undefined {
+  private firstRows(inner: StoreOutputColumn[], ordering?: QueryOrdering): FirstRows | undefined {
     const hasGroups = (this.aggregation.groupBy ?? []).length > 0;
     if (hasGroups) {
       return undefined;
@@ -103,7 +98,10 @@ export class StoreAggregation {
     const [order] = orders;
     const isOneOrder =
       keys.size === 1 && (order?.every(({ column }) => isPlainValue(column)) ?? false);
-    return isOneOrder ? order : undefined;
+    const hasRunningSum = (this.aggregation.functions ?? []).some(
+      (item) => item.function === "cumsum",
+    );
+    return isOneOrder && order !== undefined ? { order, withTies: hasRunningSum } : undefined;
   }
 
   private outputColumns(
