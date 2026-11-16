@@ -45,16 +45,16 @@ delivery time near zero.
 After its delete it removes the contributor and client ids that no row names any longer, such as an
 erased contributor's, from the id tables the page sorts use.
 
-`measurements_by_device`, the copy of measurements that device pages read, fills from measurements as
-rows land, so a reload of measurements fills it too, and its delete takes the copy's older rows with
-measurements'. `device_events` comes from silver's `clean_device_lifecycle_events`, not from gold. Its
-rows belong to no experiment, so it reloads only for `all` and counts its rows per device.
+`measurements_by_device`, the copy of measurements that device pages read, fills from measurements
+as rows land, so a reload of measurements fills it too, and its delete takes the copy's older rows
+with measurements'. `device_events` comes from silver's `clean_device_lifecycle_events`, not from
+gold. Its rows belong to no experiment, so it reloads only for `all` and counts its rows per device.
 
 It connects as `openjii_reloader`, which may read and insert in `store` and delete from the tables it
-reloads (the four row tables, the device copy, `payload_schemas` and the two id tables), but cannot update their
-values, delete from `feed_rejects`, or write to the migration ledger. Its right to delete also lets
-it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has
-no narrower grant for a delete.
+reloads (the four row tables, the device copy, `payload_schemas` and the two id tables), but cannot
+update their values, delete from `feed_rejects`, or write to the migration ledger. Its right to
+delete also lets it drop or detach those tables' partitions, which empties a table as `TRUNCATE`
+would; ClickHouse has no narrower grant for a delete.
 
 ## Running it
 
@@ -63,8 +63,8 @@ a stopped feed sends nothing to measure. Check it instead: the store's newest ve
 least gold's newest commit that added rows. As the admin, `SELECT max(_commit_version) FROM
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
 (`experiment_raw_data`, `experiment_macro_data`, `experiment_uploaded_data` or, for device events,
-silver's `clean_device_lifecycle_events`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
-it carries in parallel, so the store's newest version can reach gold's while that batch still
+silver's `clean_device_lifecycle_events`) and the newest version whose `operationMetrics` show
+`numOutputRows` above 0. A feed batch writes the commits it carries in parallel, so the store's newest version can reach gold's while that batch still
 writes older ones. So also check that batch has finished. `SELECT max(inserted_at) FROM
 store.<table> WHERE _commit_version = <gold's newest version>` gives when the feed landed that
 commit's rows, and the pipeline's driver log must show a `[serving store] <table> batch <n>: ...
@@ -87,9 +87,9 @@ its count may each take up to an hour; a run that times out is safe to run again
 
 Give the experiment's id, or `all`, and one table (`measurements`, `macro_results`, `uploads`,
 `device_events`), or `all`. A run without an experiment fails rather than reloading everything.
-`device_events` needs `all`: a run for one experiment leaves it out of `all` tables, and refuses it
-by name. In the Databricks UI,
-open the job and choose "Run now with different parameters". From a terminal:
+Device events belong to no experiment: with `TABLE` set to `all`, a run for one experiment skips
+`device_events`, and with `TABLE` set to `device_events`, it fails unless `EXPERIMENT_ID` is `all`.
+In the Databricks UI, open the job and choose "Run now with different parameters". From a terminal:
 
 ```bash
 databricks jobs list --name Serving-Store-Reload-<ENV>
@@ -102,7 +102,7 @@ only when those rows should go, as for an experiment gold has dropped, and only 
 
 The cluster takes a few minutes to start. Each table's result is one line of the task's output:
 
-`[serving store] Reloaded <table> at gold version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in gold and <n> in the store over <n> experiments, <n> of them written by the feed since`
+`[serving store] Reloaded <table> at <gold or silver> version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in <gold or silver> and <n> in the store over <n> <experiments or devices>, <n> of them written by the feed since`
 
 ## After a migration the feed fills
 
@@ -125,8 +125,8 @@ reload of `all`.
 
 0010 fills `measurements_by_device` from the rows measurements already holds, as it applies, and
 needs no reload for it. Its `device_events` starts empty: once silver's lifecycle events have their
-change feed (step 2) and their sink is on, with `device_events` in the feed's start versions
-(`store-feed-stalled`), reload `device_events` for `all`.
+change feed (step 2) and their sink is on, with `device_events` set in
+`serving_store_feed_start_versions` (`store-feed-stalled`), reload `device_events` for `all`.
 
 ## After a full or large reload
 
@@ -136,8 +136,8 @@ rollout. Every read through the views then merges those parts as it reads, and C
 background merges can leave them that way for a day or more. On dev, a 37M-row experiment's count
 took 1.5 to 2.9 s in that state and 0.4 s once merged; its pages took up to twice as long.
 
-When the run has finished, merge the tables it wrote once, as the admin, starting `clickhouse-client`
-with `--receive_timeout=3600`. A merge writes each month's new part beside the old ones before it
+When the run has finished, merge the tables it wrote once, as the admin, starting
+`clickhouse-client` with `--receive_timeout=3600`. A merge writes each month's new part beside the old ones before it
 drops them, so first check the store's disk has about the table's size free (`store-disk`, or
 `SELECT formatReadableSize(sum(bytes_on_disk)) FROM system.parts WHERE database = 'store' AND table = 'measurements' AND active`
 against `SELECT formatReadableSize(free_space) FROM system.disks`):

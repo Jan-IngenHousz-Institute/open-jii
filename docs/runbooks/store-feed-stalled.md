@@ -10,7 +10,8 @@ sheets and their rows, from the backend's copy of the sheets rather than from go
 sinks exist only while the feed is switched on, and the device events sink only once its start
 version is set too. A timer on the store's instance counts the rows each table took every minute and
 reports zero when none arrived, so its silence is the timer or ClickHouse stopping, not a quiet
-night.
+night. Device events have no stall alert, since no heartbeat counts silver's events: a stall there
+shows only as `store-feed-latency` once events arrive again.
 
 The pipelines' logs are in `/Volumes/<catalog>/centrum/pipeline-logs/<centrum|macro>/<cluster id>/`,
 the driver's under `driver/` and the executors' under `executor/`. Every line the feed writes starts
@@ -81,10 +82,10 @@ Repeat for `experiment_uploaded_data` and `experiment_macro_data`, and set `meas
 `uploads` and `macro_results` in the map to those versions. `metadata_rows` starts at `latest`:
 the sheets' rows are filled by owing every sheet to the lakehouse once
 ([reload](procedures/serving-store-reload.md#metadata-sheets)). Device events read silver's
-`clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so
-their start version, `SERVING_STORE_FEED_START_DEVICE_EVENTS` in the Centrum pipeline's settings, is
-that table's latest version, never one before it. After switching on, watch the first
-batches in each pipeline's driver log (`[serving store] measurements batch 0: ... inserted`). A
+`clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so set
+`device_events` in the map to that table's latest version, never one before it. Left empty, it keeps
+the device events sink off. After switching on, watch the first batches in each pipeline's driver
+log (`[serving store] measurements batch 0: ... inserted`). A
 first batch numbered 0 means the sink started at its start version, and rows gold gained while the
 feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number
 means it resumed from its checkpoint. For `metadata_rows`, a batch 0 after the feed was off means
