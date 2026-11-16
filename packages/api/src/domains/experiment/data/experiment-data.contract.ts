@@ -8,14 +8,19 @@ import {
   zExperimentDistinctValuesResponse,
   zExperimentTableColumnsQuery,
   zExperimentTableColumnsResponse,
-  zExperimentTablesMetadataList,
+  zExperimentTablesListing,
 } from "./experiment-data.schema";
 
 export const experimentDataContract = {
   getExperimentTables: oc
-    .route({ method: "GET", path: "/api/v1/experiments/{id}/tables", successStatus: 200 })
+    .route({
+      method: "GET",
+      path: "/api/v1/experiments/{id}/tables",
+      successStatus: 200,
+      outputStructure: "detailed",
+    })
     .input(zExperimentIdPathParam)
-    .output(zExperimentTablesMetadataList),
+    .output(zExperimentTablesListing),
   getExperimentData: oc
     .route({ method: "GET", path: "/api/v1/experiments/{id}/data", successStatus: 200 })
     .input(zExperimentIdPathParam.and(zExperimentDataQuery))

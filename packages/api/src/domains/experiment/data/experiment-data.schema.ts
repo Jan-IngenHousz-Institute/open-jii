@@ -655,6 +655,17 @@ export const zExperimentTableMetadata = z.object({
 
 export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 
+export const zExperimentDataSource = z
+  .enum(["warehouse", "store"])
+  .describe(
+    "Which source answered: the serving store, read afresh on every call, or the SQL warehouse, served from a short-lived cache",
+  );
+
+export const zExperimentTablesListing = z.object({
+  headers: z.object({ "x-data-source": zExperimentDataSource }),
+  body: zExperimentTablesMetadataList,
+});
+
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDistinctValuesQuery = z.infer<typeof zExperimentDistinctValuesQuery>;
 export type ExperimentDistinctValuesResponse = z.infer<typeof zExperimentDistinctValuesResponse>;
@@ -665,3 +676,5 @@ export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type ExperimentColumnInfo = z.infer<typeof zExperimentColumnInfo>;
 export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
+export type ExperimentDataSource = z.infer<typeof zExperimentDataSource>;
+export type ExperimentTablesListing = z.infer<typeof zExperimentTablesListing>;

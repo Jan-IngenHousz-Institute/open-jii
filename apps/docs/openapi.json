@@ -3067,6 +3067,19 @@
         "responses": {
           "200": {
             "description": "OK",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "enum": [
+                    "warehouse",
+                    "store"
+                  ],
+                  "type": "string",
+                  "description": "Which source answered: the serving store, read afresh on every call, or the SQL warehouse, served from a short-lived cache"
+                },
+                "required": true
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
