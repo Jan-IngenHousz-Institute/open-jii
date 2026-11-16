@@ -68,7 +68,7 @@ SETTINGS non_replicated_deduplication_window = 10000;
 CREATE VIEW IF NOT EXISTS device_measurements DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
 SELECT * FROM measurements_by_device FINAL WHERE client_id IN {devices:Array(String)};
 
--- Only what a device page shows, since a device's rows span experiments its viewer may not be in.
+-- A device's rows span experiments, so this names the device's readings rather than every field.
 CREATE VIEW IF NOT EXISTS device_newest_measurements DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
 SELECT
     timestamp, experiment_id, id, protocol_id, workbook_version_id, device_version, device_battery,
@@ -85,8 +85,7 @@ WHERE (experiment_id, timestamp, id, ifNull(device_id, '')) IN (
 CREATE VIEW IF NOT EXISTS device_lifecycle_events DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
 SELECT * FROM device_events FINAL WHERE client_id IN {devices:Array(String)};
 
--- Each device's newest measurement and newest event. Every copy of a row has its key's time, so the
--- latest times need no FINAL.
+-- Every copy of a row has its key's time, so the latest times need no FINAL.
 CREATE VIEW IF NOT EXISTS device_last_activity DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
 SELECT
     client_id,

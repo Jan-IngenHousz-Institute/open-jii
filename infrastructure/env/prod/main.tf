@@ -2212,8 +2212,8 @@ module "serving_store" {
 locals {
   # The version each feed sink starts at when its checkpoint is new, as in dev. Empty keeps the feed
   # and its alerts off; switching on means filling in every table dev lists, each gold table's
-  # version read from gold on the day they ship (docs/runbooks/store-feed-stalled.md), and
-  # device_events, silver's, once its change feed is on.
+  # version read from gold on the day they ship (docs/runbooks/store-feed-stalled.md).
+  # device_events, silver's, waits for its change feed.
   serving_store_feed_start_versions = {}
   serving_store_feed                = length(local.serving_store_feed_start_versions) > 0
 
