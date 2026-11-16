@@ -334,6 +334,18 @@ describe("openJiiEmailOTP", () => {
     ).toHaveLength(1);
   });
 
+  it("logs the error's name when the email server gives no code", async () => {
+    const { auth, sendEmail, log } = createAuth(unconfigured);
+    sendEmail.mockRejectedValueOnce(new TypeError("fetch failed"));
+
+    await auth.api.sendVerificationOTP({ body: { email: OTHER_EMAIL, type: "sign-in" } });
+
+    expect(log).toHaveBeenCalledWith("error", SIGN_IN_EMAIL_FAILED_LOG_LINE, {
+      type: "sign-in",
+      code: "TypeError",
+    });
+  });
+
   it("matches the failed code email in each environment's metric filter", () => {
     for (const path of backendEnvPaths) {
       const env = readFileSync(join(repoRoot, path), "utf8");

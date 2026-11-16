@@ -483,6 +483,17 @@ describe("ExportRunReconcilerService", () => {
       expect(publish).toHaveBeenCalledOnce();
     });
 
+    it("still fails the export when the count cannot be published", async () => {
+      const exportId = await exportStuckForTwoDays();
+      vi.spyOn(awsPort, "publishMetrics").mockResolvedValue(
+        failure(AppError.internal("CloudWatch unavailable")),
+      );
+
+      await reconcilerWith(deployed).reconcile();
+
+      expect(await stored(exportId)).toMatchObject({ status: "failed", errorCode: "unknown" });
+    });
+
     it("counts nothing outside a deployed service", async () => {
       await exportStuckForTwoDays();
       const publish = vi.spyOn(awsPort, "publishMetrics");
