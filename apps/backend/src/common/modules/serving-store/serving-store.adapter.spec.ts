@@ -28,6 +28,14 @@ describe("ServingStoreAdapter", () => {
     adapter = new ServingStoreAdapter(client);
   });
 
+  /** The store sends these rows, one at a time, for as long as the reader takes them. */
+  function storeSends(rows: unknown[][]) {
+    vi.spyOn(client, "stream").mockImplementation((_sql, take) => {
+      const isComplete = rows.every((row) => take(row));
+      return Promise.resolve(success({ complete: isComplete }));
+    });
+  }
+
   it("is not configured without a store", () => {
     expect(adapter.isConfigured()).toBe(false);
   });
@@ -119,7 +127,7 @@ describe("ServingStoreAdapter", () => {
     const columns = adapter.getExperimentTableColumns("macro", "m1");
     assertSuccess(columns);
     const id = columns.value.filter(({ name }) => name === "id");
-    vi.spyOn(client, "query").mockResolvedValue(success({ rows: [["12"]] }));
+    storeSends([["12"]]);
 
     const result = await adapter.executeQuery({ sql: "SELECT id", columns: id });
 
@@ -156,14 +164,10 @@ describe("ServingStoreAdapter", () => {
   });
 
   it("writes rows as the warehouse writes its cells and leaves ids for the backend to fill", async () => {
-    vi.spyOn(client, "query").mockResolvedValue(
-      success({
-        rows: [
-          ["1", "2026-09-14 16:56:31.972123", 3, "u1", '{"x":1}'],
-          ["2", null, null, null, null],
-        ],
-      }),
-    );
+    storeSends([
+      ["1", "2026-09-14 16:56:31.972123", 3, "u1", '{"x":1}'],
+      ["2", null, null, null, null],
+    ]);
 
     const result = await adapter.executeQuery({
       sql: "SELECT …",
@@ -1141,7 +1145,28 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.rows).toHaveLength(800_000);
+    expect(data.truncated).toBe(false);
     expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
+  });
+
+  it("stops reading a page at the row that takes its cells past the read limit", async () => {
+    // Rows of a million bytes each, 40 MB in all and well under the store's own guard.
+    await admin.command({
+      query: `INSERT INTO measurements (experiment_id, id, timestamp, device_name, questions_data, annotations, _commit_version, _commit_timestamp)
+        SELECT 'wide-page', number, toDateTime64('2026-09-13 01:00:00', 6, 'UTC'), repeat('x', 1000000), map(), [], 1, toDateTime64('2026-09-13 01:11:00', 6, 'UTC')
+        FROM numbers(40)`,
+    });
+
+    const data = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "wide-page",
+      columns: ["device_name"],
+    });
+
+    // 27 rows of 1,000,004 bytes and their separators pass 25 MiB.
+    expect(data.truncated).toBe(true);
+    expect(data.rows).toHaveLength(27);
   });
 
   it("counts a read and lists the experiment's ids", async () => {

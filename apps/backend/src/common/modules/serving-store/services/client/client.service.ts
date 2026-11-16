@@ -8,7 +8,7 @@ import {
   PAGE_TOO_LARGE_MESSAGE,
 } from "../../../../../experiments/core/models/experiment-data.model";
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { AppError, failure, tryCatch } from "../../../../utils/fp-utils";
+import { AppError, failure, success, tryCatch } from "../../../../utils/fp-utils";
 import type { Result } from "../../../../utils/fp-utils";
 import { ServingStoreConfigService } from "../config/config.service";
 
@@ -16,7 +16,7 @@ export interface StoreResult {
   rows: unknown[][];
 }
 
-const zRows = z.array(z.array(z.unknown()));
+const zRow = z.array(z.unknown());
 
 @Injectable()
 export class ServingStoreClientService implements OnModuleDestroy {
@@ -26,9 +26,10 @@ export class ServingStoreClientService implements OnModuleDestroy {
   private static readonly REQUEST_TIMEOUT_MS = 35_000;
 
   /**
-   * The backend refuses a page by its cells as the warehouse writes them; this limit only guards
-   * memory. An empty text cell, 9 bytes in the store's memory against 3 as JSON text, is the widest
-   * ratio a page can have, so the guard sits 4 times above the page limit and never refuses first.
+   * The backend refuses a page by its cells as the warehouse writes them, as the rows arrive; this
+   * limit guards the store's memory. An empty text cell, 9 bytes there against 3 as JSON text, is
+   * the widest ratio a page can have, so the guard sits 4 times above the page limit and never
+   * refuses first.
    */
   private static readonly RESULT_BYTES_GUARD = 4 * PAGE_BYTE_LIMIT;
 
@@ -53,9 +54,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // A payload field is projected under its own name, which may be a column's, such as
               // user_id; the column must still read as the column everywhere else in the query.
               prefer_column_name_to_alias: 1,
-              // The client holds the whole result, so one past the guard is refused rather than
-              // read. The store refuses it before sending only when it waits for the end of the
-              // query; otherwise the refusal arrives mid-stream, which the client reads from 25.11.
+              // The store refuses a result past the guard before sending only when it waits for the
+              // end of the query; otherwise the refusal arrives mid-stream, which the client reads
+              // from 25.11.
               max_result_bytes: String(ServingStoreClientService.RESULT_BYTES_GUARD),
               result_overflow_mode: "throw",
               wait_end_of_query: 1,
@@ -78,6 +79,22 @@ export class ServingStoreClientService implements OnModuleDestroy {
   }
 
   async query(sql: string): Promise<Result<StoreResult>> {
+    const rows: unknown[][] = [];
+    const read = await this.stream(sql, (row) => {
+      rows.push(row);
+      return true;
+    });
+    return read.isFailure() ? read : success({ rows });
+  }
+
+  /**
+   * Hands the result's rows to `take` as they arrive. Once `take` returns false the client stops
+   * reading and closes the connection, so the rows the store had not sent are never held.
+   */
+  async stream(
+    sql: string,
+    take: (row: unknown[]) => boolean,
+  ): Promise<Result<{ complete: boolean }>> {
     const client = this.client;
     if (client === null) {
       return failure(AppError.internal("No serving store is configured", "STORE_NOT_CONFIGURED"));
@@ -86,7 +103,15 @@ export class ServingStoreClientService implements OnModuleDestroy {
     return tryCatch(
       async () => {
         const resultSet = await client.query({ query: sql, format: "JSONCompactEachRow" });
-        return { rows: zRows.parse(await resultSet.json()) };
+        for await (const rows of resultSet.stream()) {
+          for (const row of rows) {
+            if (!take(zRow.parse(row.json()))) {
+              resultSet.close();
+              return { complete: false };
+            }
+          }
+        }
+        return { complete: true };
       },
       (error) => this.storeError(error),
     );

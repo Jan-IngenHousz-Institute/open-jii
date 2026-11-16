@@ -1,6 +1,6 @@
 import { ConfigService } from "@nestjs/config";
 import { createServer } from "http";
-import type { Server } from "http";
+import type { Server, ServerResponse } from "http";
 
 import { PAGE_TOO_LARGE_MESSAGE } from "../../../../../experiments/core/models/experiment-data.model";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
@@ -13,9 +13,30 @@ const STATEMENT = "SELECT id FROM experiment_measurements(experiment = 'a-value-
 describe("ServingStoreClientService", () => {
   let server: Server;
   let url: string;
-  let answer: { status: number; body: string };
+  let answer: { status: number; body: string; lines?: { line: string; count: number } };
   let requested: URLSearchParams;
   let client: ServingStoreClientService;
+  // How much of a streamed answer the client took before the connection closed.
+  let sent = 0;
+  let answered: Promise<void> = Promise.resolve();
+
+  /** Writes the lines as fast as the client reads them, until it has them all or hangs up. */
+  async function streamLines(
+    response: ServerResponse,
+    { line, count }: { line: string; count: number },
+  ) {
+    sent = 0;
+    for (let index = 0; index < count && !response.destroyed; index++) {
+      sent += line.length;
+      if (!response.write(line)) {
+        await new Promise((resolve) => {
+          response.once("drain", resolve);
+          response.once("close", resolve);
+        });
+      }
+    }
+    response.end();
+  }
 
   beforeAll(async () => {
     server = createServer((request, response) => {
@@ -23,7 +44,13 @@ describe("ServingStoreClientService", () => {
       request.resume();
       request.on("end", () => {
         response.writeHead(answer.status, { "Content-Type": "text/plain" });
-        response.end(answer.body);
+        const lines = answer.lines;
+        if (lines === undefined) {
+          response.end(answer.body);
+          return;
+        }
+        answered = new Promise((resolve) => response.once("close", resolve));
+        void streamLines(response, lines);
       });
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -76,6 +103,33 @@ describe("ServingStoreClientService", () => {
         ["2", null],
       ],
     });
+  });
+
+  it("stops reading a result where the reader stops taking rows, leaving the rest unread", async () => {
+    // 40 rows of 1 MiB each; the reader takes 5.
+    const line = `${JSON.stringify(["x".repeat(1_048_576)])}\n`;
+    answer = { status: 200, body: "", lines: { line, count: 40 } };
+    let taken = 0;
+
+    const result = await client.stream(STATEMENT, () => {
+      taken += 1;
+      return taken < 5;
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ complete: false });
+    expect(taken).toBe(5);
+    await answered;
+    expect(sent).toBeLessThan(40 * line.length);
+  });
+
+  it("reads every row of a result the reader takes whole", async () => {
+    answer = { status: 200, body: "", lines: { line: '["1","A1"]\n', count: 3 } };
+
+    const result = await client.stream(STATEMENT, () => true);
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ complete: true });
   });
 
   it("asks the store to refuse a result past 100 MiB, 4 times the page limit, before it sends any of it", async () => {

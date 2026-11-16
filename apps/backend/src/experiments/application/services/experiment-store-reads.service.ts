@@ -5,12 +5,12 @@ import type { SchemaData } from "../../../common/modules/databricks/services/sql
 import { success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 import { UserRepository } from "../../../users/core/repositories/user.repository";
-import { PAGE_BYTE_LIMIT } from "../../core/models/experiment-data.model";
 import type {
   ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../core/models/experiment-data.model";
+import { PageBytes } from "../../core/models/page-bytes.model";
 import type {
   ExperimentTableReads,
   TableQuery,
@@ -152,8 +152,8 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     const data = query.distinct
       ? this.withoutRepeats(filled.value, query.limitAfterDetails)
       : filled.value;
-    const exceedsLimit = Buffer.byteLength(JSON.stringify(data.rows)) > PAGE_BYTE_LIMIT;
-    return success({ ...data, truncated: exceedsLimit });
+    const isTruncated = data.truncated || PageBytes.of(data.rows).exceedsLimit;
+    return success({ ...data, truncated: isTruncated });
   }
 
   /**
