@@ -175,12 +175,17 @@ Run this in the same session as [annotations-move](annotations-move.md). The sec
 only when both are clean.
 
 Run steps 1 to 5 again right before the second release goes out, with a fresh export and in a new
-psql session, since step 3 creates its tables; a clean check is what lets it go. Once it is out,
-run steps 2 and 3 and step 5's checks once more without step 4, since Postgres is then where sheets
-are written: a difference is a write the first release's tasks took while the second rolled out,
-whose copy failed. Postgres is what the metadata list reads by then, so repair it as step 5 says:
-step 4 with `AND l.id IN ('<id>', '<id>')` added for a missing or older sheet, a `DELETE` from
-Postgres for one the lakehouse no longer holds. Note the ids in OJD-2153.
+psql session, since step 3 creates its tables; a clean check is what lets it go.
+
+Once the second release is out, Postgres is the source, and the lakehouse only receives copies of
+what it holds. Never repair Postgres from the lakehouse then: never run step 4 again and never
+delete from Postgres. A sheet saved since then can be in Postgres before its copy reaches the
+lakehouse, and a sheet deleted since then can still be in the lakehouse, so a copy back from the
+lakehouse can delete a valid sheet or bring back a deleted one. The second release adds the steps
+that bring the lakehouse level instead.
+
+When one release carries both, follow [annotations-and-sheets-cutover](annotations-and-sheets-cutover.md)
+instead of this page.
 
 Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
 researchers' data.
