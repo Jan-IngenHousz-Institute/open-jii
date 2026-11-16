@@ -285,7 +285,7 @@ export class ExperimentDataRepository {
         aggregation,
         ordering,
         limit: ceiling + 1,
-        plotsValues: true,
+        isChartRead: true,
       });
       if (queryResult.isFailure()) {
         return queryResult;
@@ -299,7 +299,7 @@ export class ExperimentDataRepository {
           this.countQuery(experimentId, shape, {
             filters: effectiveFilters,
             aggregation,
-            plotsValues: true,
+            isChartRead: true,
           }),
         ceiling,
         read,
@@ -368,7 +368,7 @@ export class ExperimentDataRepository {
         filters: effectiveFilters,
         ordering,
         limit: ceiling + 1,
-        plotsValues: true,
+        isChartRead: true,
       });
       if (queryResult.isFailure()) {
         return queryResult;
@@ -382,7 +382,7 @@ export class ExperimentDataRepository {
           this.countQuery(experimentId, shape, {
             columns,
             filters: effectiveFilters,
-            plotsValues: true,
+            isChartRead: true,
           }),
         ceiling,
         read,
@@ -1021,10 +1021,10 @@ export class ExperimentDataRepository {
       | "ordering"
       | "limit"
       | "offset"
-      | "plotsValues"
+      | "isChartRead"
     > = {},
   ): Promise<Result<TableQuery>> {
-    const { filters, aggregation, distinct, ordering, limit, offset, plotsValues } = options;
+    const { filters, aggregation, distinct, ordering, limit, offset, isChartRead } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
     // Only a read of rows is merged, so only it needs the phone's annotations beside the column.
     const readsRows = !distinct && aggregation === undefined;
@@ -1093,7 +1093,7 @@ export class ExperimentDataRepository {
       limit,
       offset,
       flagged: shape.flagged,
-      plotsValues,
+      isChartRead,
     });
   }
 
@@ -1221,7 +1221,7 @@ export class ExperimentDataRepository {
   private async countQuery(
     experimentId: string,
     shape: TableShape,
-    options: Pick<ExperimentQueryParams, "columns" | "filters" | "aggregation" | "plotsValues">,
+    options: Pick<ExperimentQueryParams, "columns" | "filters" | "aggregation" | "isChartRead">,
   ): Promise<Result<TableQuery>> {
     const subquery = await this.buildQuery(experimentId, shape, options);
     return subquery.isFailure() ? subquery : success(this.reads(shape).countQuery(subquery.value));

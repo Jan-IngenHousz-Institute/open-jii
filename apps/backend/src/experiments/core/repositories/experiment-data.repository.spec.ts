@@ -1032,7 +1032,7 @@ describe("ExperimentDataRepository", () => {
         ordering: undefined,
         limit: DATA_QUERY_MAX_LIMIT + 1,
         offset: undefined,
-        plotsValues: true,
+        isChartRead: true,
       });
     });
 
@@ -3184,7 +3184,7 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(series);
       expect(warehouse).not.toHaveBeenCalled();
       expect(store.mock.calls[0][0].sql).toContain("GROUP BY `plot`");
-      expect(build.mock.calls.every(([params]) => params.plotsValues === true)).toBe(true);
+      expect(build.mock.calls.every(([params]) => params.isChartRead === true)).toBe(true);
     });
 
     it("groups a raw x by device in the warehouse once the table passes the cap", async () => {

@@ -377,7 +377,7 @@ describe("ExperimentStoreReadsService", () => {
 
   it("keeps a chart's rows that fit once filled in and marks the rest cut, as the warehouse cuts it", async () => {
     const name = { name: "device_name", type_name: "STRING", type_text: "STRING", position: 0 };
-    const query = await reads.buildQuery({ ...page, columns: ["device_name"], plotsValues: true });
+    const query = await reads.buildQuery({ ...page, columns: ["device_name"], isChartRead: true });
     assertSuccess(query);
     storeRows([name], [["a"], ["x".repeat(PAGE_BYTE_LIMIT)], ["c"]]);
 

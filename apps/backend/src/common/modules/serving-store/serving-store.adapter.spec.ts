@@ -285,7 +285,7 @@ describe("ServingStoreAdapter", () => {
       experimentId: "e1",
     };
     const page = adapter.buildExperimentQuery({ ...read, limit: 10 });
-    const chart = adapter.buildExperimentQuery({ ...read, plotsValues: true });
+    const chart = adapter.buildExperimentQuery({ ...read, isChartRead: true });
     const joinedPage = adapter.buildExperimentQuery({
       ...read,
       limit: 10,

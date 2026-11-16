@@ -155,7 +155,7 @@ export class ServingStoreAdapter implements ServingStorePort {
 
     const identifier = params.tableType === "static" ? undefined : params.tableName;
     const builder = new StoreQueryBuilder();
-    if (params.plotsValues) {
+    if (params.isChartRead) {
       builder.readForChart(table, params.experimentId, identifier);
     } else {
       builder.read(table, params.experimentId, identifier);

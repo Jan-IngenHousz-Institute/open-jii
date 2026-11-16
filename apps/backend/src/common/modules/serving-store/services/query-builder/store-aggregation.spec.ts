@@ -162,7 +162,7 @@ function storeRead(
     aggregation,
     ordering,
     limit: limit ?? CHART_LIMIT,
-    plotsValues: true,
+    isChartRead: true,
   };
 }
 
@@ -248,14 +248,14 @@ describe("StoreAggregation", () => {
     const table = /\b(?:measurements|macro_results|uploads)\b/;
     const pagesOfTables: string[] = [];
     for (const name of Object.keys(FIXTURE.cases)) {
-      for (const plotsValues of [true, false]) {
-        const query = adapter.buildExperimentQuery({ ...storeRead(name), plotsValues });
+      for (const isChartRead of [true, false]) {
+        const query = adapter.buildExperimentQuery({ ...storeRead(name), isChartRead });
         assertSuccess(query);
 
         const readsTable = table.test(query.value.sql);
         const sends = query.value.experiment !== undefined;
-        expect({ name, plotsValues, sends }).toEqual({ name, plotsValues, sends: readsTable });
-        if (!plotsValues && readsTable) {
+        expect({ name, isChartRead, sends }).toEqual({ name, isChartRead, sends: readsTable });
+        if (!isChartRead && readsTable) {
           pagesOfTables.push(name);
         }
       }
@@ -771,7 +771,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
 
     it("reads a joined page through the reader, its second table under the row policy", async () => {
       const data = await rowsOf(
-        joinedRead({ plotsValues: false, columns: ["id", "w"], limit: 10, offset: 0 }),
+        joinedRead({ isChartRead: false, columns: ["id", "w"], limit: 10, offset: 0 }),
       );
 
       expect(data.rows.map(([id]) => id)).toEqual(["1", "2", "3"]);
@@ -840,7 +840,7 @@ function joinedRead(read: Partial<StoreQueryParams>): StoreQueryParams {
     experimentId: "joined",
     reservedColumns: STORE_COLUMNS,
     deviceSerials: [["reg-1", "SN1"]],
-    plotsValues: true,
+    isChartRead: true,
     limit: CHART_LIMIT,
     ordering: { column: "id", direction: "ASC" },
     join: {
