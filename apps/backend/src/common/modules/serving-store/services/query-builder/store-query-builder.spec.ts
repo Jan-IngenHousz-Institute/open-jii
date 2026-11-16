@@ -263,6 +263,19 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("ORDER BY indexOf(__order_ids, user_id) ASC NULLS FIRST");
   });
 
+  it("renames a payload field that takes the name of a list the statement holds", () => {
+    const builder = new StoreQueryBuilder()
+      .read(UPLOADS_TABLE, "e1", "t1")
+      .parseVariant("uploaded_data", "OBJECT<__order_ids: STRING>", "upload")
+      .select(["id", "__order_ids_upload"])
+      .orderBy({ column: "contributor.name", direction: "ASC" }, ["u1"]);
+    const sql = builder.build();
+
+    expect(builder.outputColumns().map(({ name }) => name)).toEqual(["id", "__order_ids_upload"]);
+    expect(sql).toMatch(/^WITH \['u1'\] AS __order_ids\n/);
+    expect(sql).toContain("uploaded_data_text AS `__order_ids_upload`");
+  });
+
   it("sorts and filters a field by its extraction, never by its output name", () => {
     const sql = new StoreQueryBuilder()
       .read(UPLOADS_TABLE, "e1", "t1")

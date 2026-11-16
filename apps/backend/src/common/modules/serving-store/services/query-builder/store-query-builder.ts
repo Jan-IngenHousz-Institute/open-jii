@@ -26,6 +26,11 @@ interface StoreOrdering extends QueryOrdering {
   idOrder?: string[];
 }
 
+/** The names of the id lists a statement's WITH clause holds, which no payload field may take. */
+const ORDER_IDS = "__order_ids";
+const DEVICE_CLIENT_IDS = "__device_client_ids";
+const DEVICE_SERIALS = "__device_serials";
+
 const STORE_SCALARS: Record<string, string> = {
   STRING: "String",
   BIGINT: "Int64",
@@ -60,6 +65,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.columns = table.columns;
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
+    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS);
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -350,7 +356,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
       const { expression, idOf } = this.baseColumn(name);
-      const place = `indexOf(__order_ids, ${expression}) ${direction} ${nulls}`;
+      const place = `indexOf(${ORDER_IDS}, ${expression}) ${direction} ${nulls}`;
       // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
       // in the order carry, then by its label.
       const isDevice = idOf === "device";
@@ -401,7 +407,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** A client id missing from the list reads 0 from indexOf, and the Nullable array's NULL there. */
   private serialNumberOf(clientIdSql: string): string {
-    return `arrayElement(__device_serials, indexOf(__device_client_ids, ${clientIdSql}))`;
+    return `arrayElement(${DEVICE_SERIALS}, indexOf(${DEVICE_CLIENT_IDS}, ${clientIdSql}))`;
   }
 
   /**
@@ -412,12 +418,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
     const idOrder = this.ordering?.idOrder;
     const lists = [
-      ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS __order_ids`]),
+      ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS ${ORDER_IDS}`]),
       ...(this.deviceSerials.length === 0
         ? []
         : [
-            `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS __device_client_ids`,
-            `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS __device_serials`,
+            `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS ${DEVICE_CLIENT_IDS}`,
+            `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS ${DEVICE_SERIALS}`,
           ]),
     ];
     return lists.length === 0 ? "" : `WITH ${lists.join(", ")}`;
