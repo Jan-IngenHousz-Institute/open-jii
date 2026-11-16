@@ -162,7 +162,8 @@ the backend runs with the copier, owe each of them once, from a database session
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
-SELECT 'annotation', id, experiment_id, 'serving_store' FROM experiment_annotations
+SELECT 'annotation'::experiment_data_record_type, id, experiment_id,
+       'serving_store'::experiment_data_destination FROM experiment_annotations
 UNION ALL
 SELECT 'metadata_sheet', id, experiment_id, 'serving_store' FROM experiment_metadata_sheets
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
