@@ -1,10 +1,9 @@
 import { unstable_cache } from "next/cache";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { getContentfulClients } from "~/lib/contentful";
 
 import type { ComponentReleaseNoteFieldsFragment } from "@repo/cms";
 
-// Cached across all requests for 5 minutes — one Contentful hit per TTL window per locale,
-// mirroring the alerts bar (components/alerts-bar.tsx).
 const getCachedReleaseNotes = unstable_cache(
   async (locale: string): Promise<ComponentReleaseNoteFieldsFragment[]> => {
     const { client } = await getContentfulClients();
@@ -19,7 +18,7 @@ const getCachedReleaseNotes = unstable_cache(
     );
   },
   ["whats-new-release-notes"],
-  { revalidate: 300 },
+  { revalidate: PUBLISHED_CONTENT_SECONDS },
 );
 
 /**

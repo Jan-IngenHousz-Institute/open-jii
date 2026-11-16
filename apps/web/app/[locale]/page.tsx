@@ -3,6 +3,7 @@ import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subs
 import { PublicMetricsPanel } from "@/components/public-metrics/public-metrics-panel";
 import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { draftMode } from "next/headers";
 import { Suspense, cache } from "react";
 import { HomeFooter } from "~/components/cms/footer";
@@ -10,6 +11,7 @@ import { HomeHero as HomeHeroComponent } from "~/components/cms/home/hero";
 import { HomeKeyFeatures } from "~/components/cms/home/key-features";
 import { HomeAboutMission } from "~/components/cms/home/mission";
 import { HomePartners } from "~/components/cms/home/partners";
+import { PUBLISHED_CONTENT_SECONDS } from "~/lib/cms-cache";
 import { buildTimeLocaleParams, getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
@@ -28,10 +30,21 @@ interface HomePageProps {
   params: Promise<{ locale: string }>;
 }
 
-const getHomeData = cache(async (locale: string, preview: boolean) => {
+async function fetchHome(locale: string, preview: boolean) {
   const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const homeData = await gqlClient.pageHome({ locale, preview });
+  return (preview ? previewClient : client).pageHome({ locale, preview });
+}
+
+const getPublishedHome = unstable_cache(
+  (locale: string) => fetchHome(locale, false),
+  ["pageHome"],
+  {
+    revalidate: PUBLISHED_CONTENT_SECONDS,
+  },
+);
+
+const getHomeData = cache(async (locale: string, preview: boolean) => {
+  const homeData = await (preview ? fetchHome(locale, true) : getPublishedHome(locale));
   return {
     hero: homeData.pageHomeHeroCollection?.items[0] as PageHomeHeroFieldsFragment,
     mission: homeData.pageHomeMissionCollection?.items[0] as PageHomeMissionFieldsFragment,

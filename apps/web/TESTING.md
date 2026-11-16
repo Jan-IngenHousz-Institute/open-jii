@@ -45,6 +45,7 @@ These are already mocked globally. **Do not re-declare them in test files.**
 | `@repo/i18n`, `@repo/i18n/server` | `t(key)` returns the key                                                                                                           |
 | `next/navigation`                 | `useRouter()` returns spied router, `usePathname()` returns `"/platform/experiments"`, `useParams()` returns `{ locale: "en-US" }` |
 | `next/headers`                    | `headers()`, `cookies()`, `draftMode()` stubs                                                                                      |
+| `next/cache`                      | `unstable_cache(fn)` returns `fn`, so cached Contentful reads call the mocked client directly                                      |
 | `~/app/actions/auth`              | `auth()` resolves to `null` (unauthenticated)                                                                                      |
 | `~/app/actions/revalidate`        | `revalidateAuth()` noop                                                                                                            |
 | `@repo/auth/client`               | `authClient` methods resolve `{ data: null, error: null }`, `useSession()` returns `{ data: null, isPending: false }`              |

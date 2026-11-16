@@ -50,7 +50,6 @@ flowchart TD
   %% Warming flow
   EB -- "5min Schedule" --> WL
   WL -- "Keep Warm" --> SL
-  WL -- "Keep Warm" --> IL
 
   %% Logging connections (dashed lines)
   SL -.->|Logs| CW
@@ -222,6 +221,7 @@ module "opennext" {
 | `dynamodb_table_arn`                  | ARN of the DynamoDB revalidation table         |
 | `sqs_queue_url`                       | URL of the SQS revalidation queue              |
 | `sqs_queue_arn`                       | ARN of the SQS revalidation queue              |
+| `sqs_dlq_name`                        | Name of the SQS revalidation dead letter queue |
 | `application_url`                     | Primary URL for accessing the application      |
 | `custom_domain`                       | Custom domain name (if configured)             |
 | `deployment_region`                   | AWS region where resources are deployed        |

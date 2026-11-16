@@ -3,11 +3,6 @@ import { getContentfulClients } from "~/lib/contentful";
 
 import { fetchWebReleaseNotes } from "./fetch-release-notes";
 
-// unstable_cache requires Next.js incremental cache context unavailable in vitest — strip it to a passthrough
-vi.mock("next/cache", () => ({
-  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
-}));
-
 const mockActiveReleaseNotes = vi.fn();
 
 const makeNote = (id: string, overrides: Record<string, unknown> = {}) => ({

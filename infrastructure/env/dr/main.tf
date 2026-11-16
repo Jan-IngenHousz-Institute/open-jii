@@ -704,6 +704,7 @@ module "opennext_waf" {
   log_retention_days = 365
 
   managed_rules_excluded_paths = ["/ingest"]
+  allow_page_regeneration      = true
 
   tags = {
     Environment = var.environment
@@ -843,7 +844,7 @@ module "opennext" {
   enable_point_in_time_recovery = true
 
   enable_dlq        = true
-  max_receive_count = 3
+  max_receive_count = 5
 
   tags = {
     Project     = "open-jii"
