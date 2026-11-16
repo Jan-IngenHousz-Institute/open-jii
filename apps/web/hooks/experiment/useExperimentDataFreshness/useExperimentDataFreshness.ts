@@ -19,7 +19,7 @@ const BEHIND_AFTER_MS = 2 * 60_000;
 const RECONNECT_MS = 10_000;
 const MAX_RECONNECT_MS = 2 * 60_000;
 /** Answers a retry would get again, so the page polls instead. */
-const REFUSED_STATUSES = new Set([401, 403, 404, 429, 503]);
+const REFUSED_STATUSES = new Set([401, 403, 404]);
 
 export type DataFreshnessStatus = "live" | "paused" | "behind";
 
@@ -93,14 +93,19 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 async function followTableChanges(
   experimentId: string,
   signal: AbortSignal,
-  onEvent: (event: ExperimentTablesEvent) => void,
-  onDrop: () => void,
+  handlers: {
+    onConnect: () => void;
+    onEvent: (event: ExperimentTablesEvent) => void;
+    onDrop: () => void;
+  },
 ): Promise<void> {
+  const { onConnect, onEvent, onDrop } = handlers;
   let attempt = 0;
   // Read through a call, since the stream's awaits can abort the signal between two reads.
   const isStopped = () => signal.aborted;
 
   while (!isStopped()) {
+    onConnect();
     try {
       const events = await orpcClient.experiments.watchExperimentTables(
         { id: experimentId },
@@ -240,6 +245,14 @@ export const useExperimentDataFreshness = (
       input: { id: experimentId },
     });
 
+    let connectedAt = 0;
+    let isAwaitingFirstChange = false;
+
+    const handleConnect = () => {
+      connectedAt = Date.now();
+      isAwaitingFirstChange = true;
+    };
+
     const handleEvent = (event: ExperimentTablesEvent) => {
       setStreamHeardAt(Date.now());
       setIsStreamOpen(true);
@@ -249,21 +262,33 @@ export const useExperimentDataFreshness = (
         return;
       }
 
+      // Table names come only from the listing, so each stream reads it once unless a catch-up
+      // already has since the stream was asked for.
+      const listingState = queryClient.getQueryState(listingKey);
+      const isListedSinceConnect =
+        listingState !== undefined &&
+        (listingState.dataUpdatedAt >= connectedAt || listingState.fetchStatus === "fetching");
+      const needsNames = isAwaitingFirstChange && !isListedSinceConnect;
+      isAwaitingFirstChange = false;
+
       const listed = queryClient.getQueryData(listingKey);
-      const canApply = listed !== undefined && isSameTableSet(listed.body, event.tables);
+      const canApply =
+        !needsNames && listed !== undefined && isSameTableSet(listed.body, event.tables);
       if (canApply) {
         queryClient.setQueryData(listingKey, withVersions(listed, event.tables));
         return;
       }
 
-      // A new table needs its name from the listing. Joins a catch-up already loading.
+      // Joins a catch-up already loading.
       void refetch({ cancelRefetch: false });
     };
 
     const controller = new AbortController();
-    void followTableChanges(experimentId, controller.signal, handleEvent, () =>
-      setIsStreamOpen(false),
-    );
+    void followTableChanges(experimentId, controller.signal, {
+      onConnect: handleConnect,
+      onEvent: handleEvent,
+      onDrop: () => setIsStreamOpen(false),
+    });
     return () => {
       controller.abort();
       setIsStreamOpen(false);

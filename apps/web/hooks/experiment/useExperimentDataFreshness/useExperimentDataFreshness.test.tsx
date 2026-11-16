@@ -476,7 +476,44 @@ describe("useExperimentDataFreshness", () => {
       await waitFor(() => expect(stream.opened()).toBe(2));
     });
 
-    it.each([403, 404, 429])(
+    it.each([429, 503])(
+      "reconnects after the growing wait when the stream is refused with %i",
+      async (status) => {
+        server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+        const opens = server.mount(contract.experiments.watchExperimentTables, { status });
+        renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+        await waitFor(() => expect(opens.callCount).toBe(1));
+
+        await act(() => vi.advanceTimersByTimeAsync(9_900));
+        expect(opens.callCount).toBe(1);
+        await act(() => vi.advanceTimersByTimeAsync(100));
+
+        await waitFor(() => expect(opens.callCount).toBe(2));
+      },
+    );
+
+    it("reads the listing on a stream's first change, and not on a later one", async () => {
+      const queryClient = createTestQueryClient();
+      const listingKey = orpc.experiments.getExperimentTables.queryKey({ input: { id: "exp-1" } });
+      queryClient.setQueryDefaults(listingKey, { gcTime: Infinity });
+      queryClient.setQueryData(listingKey, { headers: { "x-data-source": "store" }, body: [RAW] });
+      await act(() => vi.advanceTimersByTimeAsync(1_000));
+      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const stream = mountChangeStream();
+      renderHook(() => useExperimentDataFreshness("exp-1", "store"), { queryClient });
+      await waitFor(() => expect(stream.opened()).toBe(1));
+
+      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
+      await waitFor(() => expect(listing.callCount).toBe(1));
+      await act(() =>
+        stream.send({ type: "changed", tables: [{ ...RAW_VERSION, totalRows: 11 }] }),
+      );
+      await act(() => vi.advanceTimersByTimeAsync(1_000));
+
+      expect(listing.callCount).toBe(1);
+    });
+
+    it.each([403, 404])(
       "polls instead of reconnecting when the stream is refused with %i",
       async (status) => {
         const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
