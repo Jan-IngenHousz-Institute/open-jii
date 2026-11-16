@@ -412,7 +412,9 @@ function describeModel(report: ModelReport): string[] {
     }
   }
   if (report.fields.reordered) lines.push("  fields are in a different order");
-  for (const id of report.dateControls) {
+  // A field the type does not have yet is already listed as added, with its widget set on apply.
+  const added = new Set(report.fields.added);
+  for (const id of report.dateControls.filter((field) => !added.has(field))) {
     lines.push(`  ~ field ${id} widget: apply sets the date and time picker with a time zone`);
   }
   if (report.kept.length > 0) {

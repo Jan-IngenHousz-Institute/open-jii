@@ -269,6 +269,16 @@ describe("diff", () => {
       expect(formatDiff(report)).toContain("apply with --expected-version");
     });
 
+    it("lists a Date field of a type missing live once, as added", async () => {
+      await writeModel("event", event);
+      const { models } = setup();
+
+      const text = formatDiff(await models.diff(["event"]));
+
+      expect(text).toContain("+ field startAt (in the file, not live)");
+      expect(text).not.toContain("~ field startAt widget");
+    });
+
     it("names none when the live widget already has the time zone picker", async () => {
       await writeModel("event", event);
       const { fake, models } = setup();
