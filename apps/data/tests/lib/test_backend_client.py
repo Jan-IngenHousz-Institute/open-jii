@@ -70,75 +70,27 @@ class TestHmacSignature:
         assert sig == _expected_signature(payload, ts)
 
 
-@responses.activate
-def test_get_user_metadata_happy_path(client: BackendClient) -> None:
-    responses.add(
-        responses.POST,
-        f"{BASE_URL}/api/v1/users/metadata",
-        json={
-            "success": True,
-            "users": [
-                {"userId": "u1", "firstName": "Ada", "lastName": "Lovelace", "avatarUrl": "https://x/y"},
-                {"userId": "u2", "firstName": "Linus", "lastName": "Pauling", "avatarUrl": None},
-            ],
-        },
-        status=200,
-    )
+_TRANSFER_URL = f"{BASE_URL}/api/v1/webhooks/project-transfer"
 
-    result = client.get_user_metadata(["u1", "u2"])
-    assert result == {
-        "u1": {"firstName": "Ada", "lastName": "Lovelace", "avatarUrl": "https://x/y"},
-        "u2": {"firstName": "Linus", "lastName": "Pauling", "avatarUrl": None},
-    }
-    # Verify the auth headers were attached.
+
+@responses.activate
+def test_a_request_carries_the_api_key_and_a_signature(client: BackendClient) -> None:
+    responses.add(responses.POST, _TRANSFER_URL, json={"success": True}, status=200)
+
+    assert client._make_request("/api/v1/webhooks/project-transfer", {"a": 1}) == {"success": True}
+
     sent = responses.calls[0].request
     assert sent.headers["x-api-key-id"] == API_KEY_ID
     assert re.fullmatch(r"[a-f0-9]{64}", sent.headers["x-databricks-signature"])
     assert sent.headers["x-databricks-timestamp"].isdigit()
 
 
-def test_get_user_metadata_empty_returns_empty(client: BackendClient) -> None:
-    # Short-circuit before hitting the network.
-    assert client.get_user_metadata([]) == {}
-
-
-def test_get_user_metadata_filters_blank_ids(client: BackendClient) -> None:
-    # All filtered out -> no HTTP call at all.
-    assert client.get_user_metadata([None, "  ", ""]) == {}  # type: ignore[list-item]
-
-
-def test_get_user_metadata_rejects_non_list(client: BackendClient) -> None:
-    with pytest.raises(BackendIntegrationError, match="must be a list"):
-        client.get_user_metadata("u1")  # type: ignore[arg-type]
-
-
-def test_get_user_metadata_rejects_oversized_batch(client: BackendClient) -> None:
-    with pytest.raises(BackendIntegrationError, match="Too many"):
-        client.get_user_metadata([f"u{i}" for i in range(501)])
-
-
 @responses.activate
-def test_get_user_metadata_propagates_api_error(client: BackendClient) -> None:
-    responses.add(
-        responses.POST,
-        f"{BASE_URL}/api/v1/users/metadata",
-        json={"success": False, "message": "boom"},
-        status=200,
-    )
+def test_an_answer_without_success_is_an_error(client: BackendClient) -> None:
+    responses.add(responses.POST, _TRANSFER_URL, json={"success": False, "message": "boom"}, status=200)
+
     with pytest.raises(BackendIntegrationError, match="boom"):
-        client.get_user_metadata(["u1"])
-
-
-@responses.activate
-def test_get_user_metadata_propagates_http_error(client: BackendClient) -> None:
-    responses.add(
-        responses.POST,
-        f"{BASE_URL}/api/v1/users/metadata",
-        json={"error": "internal"},
-        status=500,
-    )
-    with pytest.raises(BackendIntegrationError):
-        client.get_user_metadata(["u1"])
+        client._make_request("/api/v1/webhooks/project-transfer", {"a": 1})
 
 
 @responses.activate

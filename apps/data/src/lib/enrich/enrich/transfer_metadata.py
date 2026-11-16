@@ -2,8 +2,8 @@
 Project Transfer Enrichment
 
 Provides utilities for executing project transfers by calling the backend
-project-transfer webhook. Follows the same pattern as user_metadata.py:
-takes a DataFrame, fetches secrets, calls the backend, returns enriched DataFrame.
+project-transfer webhook: takes a DataFrame, fetches secrets, calls the
+backend, returns enriched DataFrame.
 """
 
 import base64
