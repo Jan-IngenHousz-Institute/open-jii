@@ -44,10 +44,12 @@ export class ServingStoreAdapter implements ServingStorePort {
 
   /**
    * Each table with rows, counted when read as gold's listing counts them, with the schemas the
-   * feed stored per batch merged into one per payload column.
+   * feed stored per batch merged into one per payload column, and the custom metadata schema on
+   * the tables whose rows take it.
    */
   async getExperimentTableMetadata(
     experimentId: string,
+    customMetadataSchema: string | null,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     const experiment = this.experimentArgument(experimentId);
     const tablesSql = [
@@ -78,16 +80,23 @@ export class ServingStoreAdapter implements ServingStorePort {
         const macroSchema = type === "macro" ? schemaOf("macro_output") : null;
         const questionsSchema = type === "upload" ? null : schemaOf("questions_data");
         const uploadSchema = type === "upload" ? schemaOf("uploaded_data") : null;
+        const takesCustomMetadata = StoreTables.of(type, name)?.takesCustomMetadata === true;
+        const metadataSchema = takesCustomMetadata ? customMetadataSchema : null;
         return {
           identifier: name,
           tableType: type,
           displayName: typeof displayName === "string" ? displayName : null,
           rowCount: Number(rowCount),
           latestRowAt: CellValues.text(latestRowAt, "TIMESTAMP"),
-          schemaRevision: this.schemaRevision([macroSchema, questionsSchema, null, uploadSchema]),
+          schemaRevision: this.schemaRevision([
+            macroSchema,
+            questionsSchema,
+            metadataSchema,
+            uploadSchema,
+          ]),
           macroSchema,
           questionsSchema,
-          customMetadataSchema: null,
+          customMetadataSchema: metadataSchema,
           uploadSchema,
         };
       },
@@ -124,7 +133,8 @@ export class ServingStoreAdapter implements ServingStorePort {
       .read(table, params.experimentId, identifier)
       .select(params.columns)
       .reserve(params.reservedColumns ?? [])
-      .serialNumbers(params.deviceSerials ?? []);
+      .serialNumbers(params.deviceSerials ?? [])
+      .metadataSheets(params.metadataSheets ?? []);
 
     if (params.distinct) {
       builder.distinct();
@@ -304,6 +314,9 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
     if (type.startsWith("STRUCT<")) {
       return "STRUCT";
+    }
+    if (type.startsWith("DECIMAL(")) {
+      return "DECIMAL";
     }
     return type === "BIGINT" ? "LONG" : type;
   }

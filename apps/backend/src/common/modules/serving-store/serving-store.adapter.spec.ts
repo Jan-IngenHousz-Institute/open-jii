@@ -70,7 +70,7 @@ describe("ServingStoreAdapter", () => {
         }),
       );
 
-    const result = await adapter.getExperimentTableMetadata("e1");
+    const result = await adapter.getExperimentTableMetadata("e1", null);
 
     assertSuccess(result);
     expect(query.mock.calls[0][0]).toContain("FROM experiment_measurements(experiment = 'e1')");
@@ -103,10 +103,37 @@ describe("ServingStoreAdapter", () => {
     ]);
   });
 
+  it("lists the sheets' schema on the tables whose rows take custom metadata, and in their revision", async () => {
+    vi.spyOn(client, "query")
+      .mockResolvedValueOnce(
+        success({
+          rows: [
+            ["static", "raw_data", null, 3, null],
+            ["macro", "m1", null, 2, null],
+            ["upload", "t1", "plots", 1, null],
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(success({ rows: [] }));
+    const schema = "OBJECT<area: DECIMAL(4,2)>";
+
+    const result = await adapter.getExperimentTableMetadata("e1", schema);
+
+    assertSuccess(result);
+    expect(result.value.map(({ customMetadataSchema }) => customMetadataSchema)).toEqual([
+      schema,
+      schema,
+      null,
+    ]);
+    expect(result.value[0].schemaRevision).toBe(
+      createHash("md5").update(`||${schema}|`).digest("hex"),
+    );
+  });
+
   it("passes on a failed listing", async () => {
     vi.spyOn(client, "query").mockResolvedValue(failure(AppError.internal("store down")));
 
-    const result = await adapter.getExperimentTableMetadata("e1");
+    const result = await adapter.getExperimentTableMetadata("e1", null);
 
     assertFailure(result);
     expect(result.error.message).toBe("store down");
@@ -510,7 +537,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
   });
 
   it("lists the experiment's tables with their counts, newest rows and merged schemas", async () => {
-    const result = await adapter.getExperimentTableMetadata(EXPERIMENT);
+    const result = await adapter.getExperimentTableMetadata(EXPERIMENT, null);
     assertSuccess(result);
 
     const tables = new Map(result.value.map((table) => [table.identifier, table]));
@@ -1485,6 +1512,170 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
     // One byte more, sent anyway, is a statement the store refuses too.
     assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
+  });
+
+  describe("custom metadata on a page", () => {
+    const experiment = "metadata-e";
+    // Gold's schema for the three sheets' rows below, without their _id and identifier.
+    const schema =
+      "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(22,2), extra: STRING, note: STRING, soil: STRING>";
+    const metadataSheets = [
+      { id: "s-old", matchOn: "plot" },
+      { id: "s-new", matchOn: "column:device_id" },
+      { id: "s-other", matchOn: "column:timezone" },
+    ];
+    let reader: ServingStoreClientService;
+    let readerAdapter: ServingStoreAdapter;
+
+    // A sheet row as the feed sends it from the lakehouse's copy of the sheet.
+    const sheetRow = (
+      sheetId: string,
+      createdAt: string,
+      matchOn: string,
+      identifier: string,
+      fields: Record<string, unknown>,
+    ) => ({
+      experiment_id: experiment,
+      sheet_id: sheetId,
+      sheet_created_at: createdAt,
+      match_on: matchOn,
+      identifier,
+      fields: JSON.stringify(fields),
+      is_deleted: 0,
+      _commit_version: 1,
+      _commit_timestamp: "2026-09-14 10:01:00",
+    });
+
+    const reading = (id: number, plot: string | null, deviceId: string | null) => ({
+      experiment_id: experiment,
+      id,
+      device_id: deviceId,
+      timestamp: `2026-09-14 10:00:0${id % 10}`,
+      questions_data: plot === null ? {} : { plot },
+      annotations: [],
+      _commit_version: 1,
+      _commit_timestamp: "2026-09-14 10:01:00",
+    });
+
+    async function page(
+      params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+    ) {
+      const query = readerAdapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: experiment,
+        variants: [{ columnName: "custom_metadata", schema, suffix: "metadata" }],
+        metadataSheets,
+        ...params,
+      });
+      assertSuccess(query);
+      const data = await readerAdapter.executeQuery(query.value);
+      assertSuccess(data);
+      return data.value.rows;
+    }
+
+    beforeAll(async () => {
+      // The store's profiles keep a dotted key as one key; this reader stands in for them.
+      await admin.command({
+        query: `CREATE USER IF NOT EXISTS metadata_reader IDENTIFIED BY '${STORE_PASSWORD}' SETTINGS json_type_escape_dots_in_keys = 1`,
+      });
+      await admin.command({ query: "GRANT SELECT ON store.* TO metadata_reader" });
+      const config = new ConfigService({
+        servingStore: { url: STORE_URL, username: "metadata_reader", password: STORE_PASSWORD },
+      });
+      reader = new ServingStoreClientService(new ServingStoreConfigService(config));
+      readerAdapter = new ServingStoreAdapter(reader);
+
+      await admin.insert({
+        table: "measurements",
+        values: [
+          reading(31, "A1", "d1"),
+          reading(32, "B2", "d2"),
+          reading(33, "Z9", "d9"),
+          reading(34, null, null),
+        ],
+        format: "JSONEachRow",
+      });
+      // The first row of each identifier wins, as the feed matches them.
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-old", "2026-09-01 08:00:00", "plot", "A1", {
+            "Plot no.": 3,
+            area: 1.15,
+            note: "dry",
+            soil: "clay",
+          }),
+          sheetRow("s-old", "2026-09-01 08:00:00", "plot", "B2", {
+            area: 12.25,
+            note: "wet",
+            soil: "sand",
+          }),
+          sheetRow("s-new", "2026-09-02 08:00:00", "column:device_id", "d1", { soil: "loam" }),
+          sheetRow("s-new", "2026-09-02 08:00:00", "column:device_id", "d2", {
+            area: 5,
+            note: null,
+          }),
+          sheetRow("s-other", "2026-09-03 08:00:00", "column:timezone", "UTC", {
+            extra: "matches nothing",
+          }),
+        ],
+        format: "JSONEachRow",
+      });
+    });
+
+    afterAll(async () => {
+      await reader.onModuleDestroy();
+      await admin.command({ query: "DROP USER IF EXISTS metadata_reader" });
+    });
+
+    it("folds the sheets oldest first, writes decimals at their scale and leaves an unmatched row null", async () => {
+      const rows = await page({
+        columns: ["id", "soil", "area", "note", "Plot no.", "extra"],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(rows).toEqual([
+        ["31", "loam", "1.15", "dry", "3", null],
+        ["32", "sand", "5.00", null, null, null],
+        ["33", null, null, null, null, null],
+        ["34", null, null, null, null, null],
+      ]);
+    });
+
+    it("sorts and filters by a metadata field, reading the whole table's metadata for the page's keys", async () => {
+      const byArea = await page({
+        columns: ["id", "area"],
+        ordering: { column: "area", direction: "DESC" },
+        limit: 2,
+      });
+      const loam = await page({
+        columns: ["id"],
+        filters: [{ column: "soil", operator: "equals", value: "loam" }],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(byArea).toEqual([
+        ["32", "5.00"],
+        ["31", "1.15"],
+      ]);
+      expect(loam).toEqual([["31"]]);
+    });
+
+    it("types the sheets' rows as the listing's schema says", () => {
+      const rows = [
+        { soil: "clay", area: 1.15, "Plot no.": 3, note: "dry" },
+        { soil: "sand", area: 12.25, note: "wet" },
+        { soil: "a repeat, which the first row wins" },
+        { soil: "loam" },
+        { area: 5, note: null },
+        { extra: "matches nothing" },
+      ].map((row) => JSON.stringify(row));
+
+      expect(VariantSchema.ofJson(rows)).toBe(schema);
+    });
   });
 });
 

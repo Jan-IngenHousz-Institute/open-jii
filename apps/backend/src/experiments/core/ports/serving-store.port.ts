@@ -28,12 +28,20 @@ export interface StoreQuery {
   columns: StoreQueryColumn[];
 }
 
+/** A metadata sheet as a read matches it: by a question's answer, or by `column:device_id`. */
+export interface StoreMetadataSheet {
+  id: string;
+  matchOn: string;
+}
+
 export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
   /** Each client id whose device has a serial number to show, with it, for the labels a read
    *  filters, sorts or lists by. */
   deviceSerials?: [string, string][];
+  /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
+  metadataSheets?: StoreMetadataSheet[];
 }
 
 /** Reads of experiment data from the serving store, in the shapes warehouse reads come in. */
@@ -44,7 +52,11 @@ export interface ServingStorePort {
   /** False for a table the store does not hold, such as the device table. */
   holdsTable(tableName: string): boolean;
 
-  getExperimentTableMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>>;
+  /** Each table with rows, those that take custom metadata with the schema the sheets give. */
+  getExperimentTableMetadata(
+    experimentId: string,
+    customMetadataSchema: string | null,
+  ): Promise<Result<ExperimentTableMetadata[]>>;
 
   getExperimentTableColumns(
     tableType: ExperimentTableType,

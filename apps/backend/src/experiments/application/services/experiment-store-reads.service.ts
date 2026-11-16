@@ -1,10 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { createHash } from "crypto";
 import { z } from "zod";
 
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import { VariantSchema } from "../../../common/modules/databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
-import { success } from "../../../common/utils/fp-utils";
+import { success, tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 import { UserRepository } from "../../../users/core/repositories/user.repository";
 import type {
@@ -13,18 +15,33 @@ import type {
   ExperimentTableType,
   FlaggedRows,
 } from "../../core/models/experiment-data.model";
+import { zMetadataSheetMatch } from "../../core/models/experiment-metadata.model";
+import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
 import { PageBytes } from "../../core/models/page-bytes.model";
+import { CachePort, SCHEMA_CACHE_PORT } from "../../core/ports/cache.port";
 import type {
   ExperimentTableReads,
   TableQuery,
 } from "../../core/ports/experiment-table-reads.port";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
-import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
+import type {
+  ServingStorePort,
+  StoreMetadataSheet,
+  StoreQueryColumn,
+} from "../../core/ports/serving-store.port";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
+import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
 import { NumberAnswersService } from "./number-answers.service";
 
 type IdColumns = Map<string, "contributor" | "device">;
+
+/** What an experiment's metadata sheets give its reads: the schema gold gives them, and the sheets
+ *  to match, oldest first. */
+interface CustomMetadata {
+  schema: string | null;
+  sheets: StoreMetadataSheet[];
+}
 
 /** A contributor as the warehouse's views show one. */
 interface ContributorCell {
@@ -64,10 +81,12 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
 
   constructor(
     @Inject(SERVING_STORE_PORT) private readonly store: ServingStorePort,
+    @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly userRepository: UserRepository,
     private readonly deviceRepository: ExperimentDeviceRegistryRepository,
     private readonly numberAnswers: NumberAnswersService,
     private readonly annotationsRepository: ExperimentAnnotationsRepository,
+    private readonly metadataRepository: ExperimentMetadataRepository,
   ) {}
 
   readsTable(tableName: string): boolean {
@@ -75,7 +94,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   async tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
-    const metadata = await this.store.getExperimentTableMetadata(experimentId);
+    const custom = await this.customMetadata(experimentId);
+    if (custom.isFailure()) {
+      return custom;
+    }
+    const metadata = await this.store.getExperimentTableMetadata(experimentId, custom.value.schema);
     if (metadata.isFailure()) {
       return metadata;
     }
@@ -115,6 +138,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return orderResult;
     }
 
+    const metadataResult = await this.customMetadata(params.experimentId);
+    if (metadataResult.isFailure()) {
+      return metadataResult;
+    }
+
     // Devices can fill in alike, such as a registered one under two names, so a limit on what the
     // store returns would stop short of the distinct devices behind it.
     const isDistinctDevice =
@@ -125,6 +153,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
       deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
+      metadataSheets: metadataResult.value.sheets,
     });
     if (built.isFailure()) {
       return built;
@@ -251,6 +280,65 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     }
     const [column, field] = this.structPath(ordering.column);
     return idColumns.get(column) === "device" && field === undefined;
+  }
+
+  /**
+   * Worked out from the sheets in Postgres, as gold works it out from their lakehouse copy, and
+   * kept until a sheet is added, edited or removed, which changes the key.
+   */
+  private async customMetadata(experimentId: string): Promise<Result<CustomMetadata>> {
+    const versions = await this.metadataRepository.findVersions(experimentId);
+    if (versions.isFailure()) {
+      return versions;
+    }
+
+    const ids = versions.value.map(({ id }) => id).sort();
+    const newest = Math.max(0, ...versions.value.map(({ updatedAt }) => updatedAt.getTime()));
+    const version = createHash("md5")
+      .update(`${ids.join(",")}|${newest}`)
+      .digest("hex");
+    return tryCatch(async () => {
+      const metadata = await this.schemaCache.tryCache(
+        `custom-metadata:${experimentId}:${version}`,
+        async () => {
+          const sheets = await this.metadataRepository.findByExperimentId(experimentId);
+          if (sheets.isFailure()) {
+            throw sheets.error;
+          }
+          return this.customMetadataOf(sheets.value);
+        },
+      );
+      return metadata ?? { schema: null, sheets: [] };
+    });
+  }
+
+  /** Gold types every row of every sheet without its `_id` and identifier, as the outbox wrote it. */
+  private customMetadataOf(records: MetadataSheetRecord[]): CustomMetadata {
+    const sheets = records.flatMap((record) => {
+      const shape = zMetadataSheetMatch.safeParse(record.metadata);
+      return shape.success ? [{ record, ...shape.data }] : [];
+    });
+
+    const rows = sheets.flatMap(({ identifierColumnId, rows: sheetRows }) =>
+      sheetRows.map((row) => {
+        const fields = Object.entries(row).filter(
+          ([key]) => key !== "_id" && key !== identifierColumnId,
+        );
+        return JSON.stringify(Object.fromEntries(fields));
+      }),
+    );
+    const oldestFirst = sheets.sort(
+      (a, b) =>
+        a.record.createdAt.getTime() - b.record.createdAt.getTime() ||
+        this.compareText(a.record.id, b.record.id),
+    );
+    return {
+      schema: VariantSchema.ofJson(rows),
+      sheets: oldestFirst.map(({ record, experimentQuestionId }) => ({
+        id: record.id,
+        matchOn: experimentQuestionId,
+      })),
+    };
   }
 
   private async contributorsOf(

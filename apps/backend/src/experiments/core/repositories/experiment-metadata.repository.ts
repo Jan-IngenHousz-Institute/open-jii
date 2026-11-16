@@ -73,6 +73,21 @@ export class ExperimentMetadataRepository {
     );
   }
 
+  /** Each of an experiment's sheets' id and last update, which tell whether a reading is current. */
+  async findVersions(experimentId: string): Promise<Result<{ id: string; updatedAt: Date }[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select({
+            id: experimentMetadataSheets.id,
+            updatedAt: experimentMetadataSheets.updatedAt,
+          })
+          .from(experimentMetadataSheets)
+          .where(eq(experimentMetadataSheets.experimentId, experimentId)),
+      (error) => this.queryError(error),
+    );
+  }
+
   /** Each sheet's size as text, which sizes a copy before its documents are read. */
   async findSizes(ids: string[]): Promise<Result<{ id: string; bytes: number }[]>> {
     return tryCatch(

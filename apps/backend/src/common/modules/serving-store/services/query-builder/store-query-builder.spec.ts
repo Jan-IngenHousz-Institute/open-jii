@@ -382,6 +382,80 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
+  describe("custom metadata", () => {
+    const sheets = [
+      { id: "s1", matchOn: "plot" },
+      { id: "s2", matchOn: "column:device_id" },
+      { id: "s3", matchOn: "column:timezone" },
+    ];
+    const withMetadata = () =>
+      measurements()
+        .parseVariant("custom_metadata", "OBJECT<area: DECIMAL(4,2), soil: STRING>", "metadata")
+        .metadataSheets(sheets);
+    const key = "timestamp, id, ifNull(device_id, '')";
+
+    it("reads a decimal field from its text and writes it at its scale", () => {
+      const sql = withMetadata().select(["area"]).build();
+
+      expect(sql).toContain(
+        "toDecimalString(accurateCastOrNull(toString(custom_metadata.`area`), 'Decimal(4, 2)'), 2) AS `area`",
+      );
+    });
+
+    it("joins each sheet a row can match, by an answer or the device, onto a sorted page's own rows", () => {
+      const sql = withMetadata()
+        .select(["id", "soil"])
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(10)
+        .build();
+
+      const lines = sql.split("\n");
+      expect(lines.slice(0, 4)).toEqual([
+        "SELECT toString(id) AS `id`, accurateCastOrNull(custom_metadata.`soil`, 'String') AS `soil`",
+        expect.stringMatching(/^FROM \(SELECT base\.\*, CAST\(concat\('\{'/),
+        "FROM (SELECT * FROM experiment_measurements(experiment = 'e1')",
+        `WHERE (${key}) IN (SELECT ${key}`,
+      ]);
+      expect(lines[4]).toBe("FROM experiment_measurements(experiment = 'e1')");
+      expect(sql).toContain(
+        "LEFT JOIN (SELECT identifier, fields, 1 AS matched FROM experiment_metadata_rows(experiment = 'e1') WHERE sheet_id = 's1') AS sheet_0 ON sheet_0.identifier = base.questions_data['plot']",
+      );
+      expect(sql).toContain(
+        "WHERE sheet_id = 's2') AS sheet_1 ON sheet_1.identifier = base.device_id",
+      );
+      expect(sql).not.toContain("'s3'");
+    });
+
+    it("joins the whole table's metadata to pick a page by a metadata field", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "soil", operator: "equals", value: "loam" })
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(10)
+        .build();
+
+      const page = sql.slice(sql.indexOf(`IN (SELECT ${key}`));
+      expect(page).toMatch(/^IN \(SELECT [^\n]+\nFROM \(SELECT base\.\*/);
+      expect(page).toContain(
+        "FROM (SELECT * FROM experiment_measurements(experiment = 'e1')) AS base",
+      );
+    });
+
+    it("joins nothing for a read that names no metadata, or a table whose rows take none", () => {
+      const plain = withMetadata().select(["id"]).orderBy({ column: "id" }).limit(10).build();
+      const upload = new StoreQueryBuilder()
+        .read(UPLOADS_TABLE, "e1", "t1")
+        .metadataSheets(sheets)
+        .select(["custom_metadata"])
+        .build();
+
+      expect(plain).not.toContain("experiment_metadata_rows");
+      expect(upload).toBe(
+        "SELECT CAST(NULL AS Nullable(String)) AS `custom_metadata`\nFROM experiment_uploads(experiment = 'e1')\nWHERE upload_table_id = 't1'",
+      );
+    });
+  });
+
   it("reads an unsorted page as one statement, which stops at its limit", () => {
     const sql = measurements().select(["id"]).limit(5).build();
 

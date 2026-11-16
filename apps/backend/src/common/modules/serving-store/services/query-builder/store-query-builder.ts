@@ -1,11 +1,13 @@
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
+import type { StoreMetadataSheet } from "../../../../../experiments/core/ports/serving-store.port";
 import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { numericStringOrdering } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import type { NumericStringKeys } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import { BaseQueryBuilder } from "../../../databricks/services/query-builder/query-builder.base";
 import type {
+  FilterCondition,
   FilterValue,
   QueryOrdering,
 } from "../../../databricks/services/query-builder/query-builder.types";
@@ -49,29 +51,35 @@ const STORE_SCALARS: Record<string, string> = {
  * field names and schema parsing a page depends on stay one implementation for both reads.
  */
 export class StoreQueryBuilder extends BaseQueryBuilder {
+  private experiment = "";
   private fromClause = "";
   private columns: StoreColumn[] = [];
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
   private phoneAnnotations?: string;
+  private takesCustomMetadata = false;
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
   private exceptColumns: string[] = [];
   private whereConditions: string[] = [];
+  private filterColumns: string[] = [];
   private deviceSerials: [string, string][] = [];
   private flaggedRowIds?: string[];
+  private sheets: StoreMetadataSheet[] = [];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
+    this.experiment = this.escapeValue(experimentId);
     this.columns = table.columns;
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
     this.phoneAnnotations = table.phoneAnnotations;
+    this.takesCustomMetadata = table.takesCustomMetadata ?? false;
     this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS, FLAGGED_ROW_IDS);
-    this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
+    this.from(`${table.view}(experiment = ${this.experiment})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
     }
@@ -111,9 +119,20 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
+  /** The experiment's metadata sheets, oldest first, which a read of custom metadata joins. */
+  metadataSheets(sheets: StoreMetadataSheet[]): this {
+    this.sheets = sheets;
+    return this;
+  }
+
   where(condition: string): this {
     this.whereConditions.push(condition);
     return this;
+  }
+
+  override filter(condition: FilterCondition): this {
+    this.filterColumns.push(condition.column);
+    return super.filter(condition);
   }
 
   /**
@@ -276,6 +295,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const limitClause = this.limitValue === undefined ? "" : `LIMIT ${this.limitValue}`;
     const offsetClause = this.offsetValue === undefined ? "" : `OFFSET ${this.offsetValue}`;
 
+    const sortColumns = this.ordering === undefined ? [] : [this.ordering.column];
+    const isMetadataPicked = this.readsMetadata([...this.filterColumns, ...sortColumns]);
+    const isMetadataShown = this.readsMetadata(this.outputColumns().map(({ name }) => name));
+    const isMetadataRead = isMetadataPicked || isMetadataShown;
+
     // Through FINAL, the store reads every column of every matching row before it applies LIMIT.
     // A sorted page therefore finds its rows' keys first, reading only the key columns, and then
     // reads just those rows. A key names one row, so the outer statement needs no LIMIT.
@@ -287,25 +311,29 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       // on two pages or on none. The key, unique per row, fixes the order.
       const page = this.joinClauses([
         `SELECT ${key}`,
-        `FROM ${this.fromClause}`,
+        `FROM ${isMetadataPicked ? this.withMetadata("") : this.fromClause}`,
         where,
         `${order}, ${key}`,
         limitClause,
         offsetClause,
       ]);
-      return this.joinClauses([
-        this.withClause(),
-        `SELECT ${projection}`,
-        `FROM ${this.fromClause}`,
-        `WHERE (${key}) IN (${page})`,
-        order,
-      ]);
+      const pageRows = `WHERE (${key}) IN (${page})`;
+      return this.joinClauses(
+        isMetadataRead
+          ? [
+              this.withClause(),
+              `SELECT ${projection}`,
+              `FROM ${this.withMetadata(pageRows)}`,
+              order,
+            ]
+          : [this.withClause(), `SELECT ${projection}`, `FROM ${this.fromClause}`, pageRows, order],
+      );
     }
 
     return this.joinClauses([
       this.withClause(),
       `${selectKeyword} ${projection}`,
-      `FROM ${this.fromClause}`,
+      `FROM ${isMetadataRead ? this.withMetadata("") : this.fromClause}`,
       where,
       order,
       limitClause,
@@ -328,6 +356,80 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         return `${carries ? text : "NULL"} AS ${this.quoteName(column.name)}`;
       })
       .join(", ");
+  }
+
+  /** Whether a name is custom metadata, whole or one of its fields, on a table that takes it. */
+  private readsMetadata(names: string[]): boolean {
+    if (!this.takesCustomMetadata) {
+      return false;
+    }
+    const fields = new Set(
+      this.flattenedFields()
+        .filter(({ column }) => column === "custom_metadata")
+        .map(({ key }) => key),
+    );
+    return names.some((name) => name === "custom_metadata" || fields.has(name));
+  }
+
+  /**
+   * The view's rows with their custom metadata: one LEFT JOIN per sheet, oldest first, a later
+   * sheet's value replacing an earlier one's, null ones included. The joins see only the rows
+   * `rowFilter` keeps, written on the left side rather than left to the store to push down.
+   */
+  private withMetadata(rowFilter: string): string {
+    const sheets = this.sheets.flatMap(({ id, matchOn }, index) => {
+      const match = this.sheetMatch(matchOn);
+      return match === null ? [] : [{ id, match, alias: `sheet_${index}` }];
+    });
+    const joins = sheets.map(
+      ({ id, match, alias }) =>
+        `LEFT JOIN (SELECT identifier, fields, 1 AS matched FROM experiment_metadata_rows(experiment = ${this.experiment}) WHERE sheet_id = ${this.escapeValue(id)}) AS ${alias} ON ${alias}.identifier = ${match}`,
+    );
+    const merged = sheets
+      .map(({ alias }) => this.sheetFields(alias))
+      .reduce<
+        string | null
+      >((earlier, later) => (earlier === null ? later : this.laterWins(earlier, later)), null);
+    const json = merged === null ? "'{}'" : this.jsonObject(merged);
+
+    const rows = this.joinClauses([`SELECT * FROM ${this.fromClause}`, rowFilter]);
+    const joined = this.joinClauses([
+      `SELECT base.*, CAST(${json} AS JSON) AS custom_metadata`,
+      `FROM (${rows}) AS base`,
+      ...joins,
+    ]);
+    return `(${joined})`;
+  }
+
+  /** A sheet matches a question's answer or the device; any other column matches no row. */
+  private sheetMatch(matchOn: string): string | null {
+    if (matchOn === "column:device_id") {
+      return "base.device_id";
+    }
+    return matchOn.startsWith("column:")
+      ? null
+      : `base.questions_data[${this.escapeValue(matchOn)}]`;
+  }
+
+  /**
+   * A matched sheet row's fields as their JSON text by key. The store's JSON reads no integer past
+   * UInt64, which a sheet's 20-digit number can be; written with a fraction it reads as a double,
+   * whose decimal cast from its text stays exact.
+   */
+  private sheetFields(alias: string): string {
+    const pairs = `JSONExtractKeysAndValuesRaw(if(${alias}.matched = 1, ${alias}.fields, '{}'))`;
+    const readable = `arrayMap(kv -> (kv.1, if(match(kv.2, '^-?[0-9]{20,}$'), concat(kv.2, '.0'), kv.2)), ${pairs})`;
+    return `CAST(${readable}, 'Map(String, String)')`;
+  }
+
+  private laterWins(earlier: string, later: string): string {
+    return `mapConcat(mapFilter((k, v) -> NOT has(mapKeys(${later}), k), ${earlier}), ${later})`;
+  }
+
+  /** A map of JSON values as one JSON object, its keys sorted. */
+  private jsonObject(map: string): string {
+    const members = `arrayMap(k -> concat(toJSONString(k), ':', ${map}[k]), arraySort(mapKeys(${map})))`;
+    return `concat('{', arrayStringConcat(${members}, ','), '}')`;
   }
 
   private outputColumn(name: string): StoreOutputColumn {
@@ -358,9 +460,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. A device
-   * comes back as its client id and the label its row's own names give, which the backend
-   * finishes with the registry's serial number.
+   * Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. A decimal
+   * comes back as text at its scale, as Spark writes 1.5 at scale 2 as 1.50. A device comes back
+   * as its client id and the label its row's own names give, which the backend finishes with the
+   * registry's serial number.
    */
   private projectedValue({ name, type, idOf }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
@@ -368,7 +471,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
     }
     const isInteger = type === "BIGINT" || type === "INT";
-    return isInteger ? `toString(${expression})` : expression;
+    if (isInteger) {
+      return `toString(${expression})`;
+    }
+    const decimal = VariantSchema.decimalOf(type);
+    return decimal === null ? expression : `toDecimalString(${expression}, ${decimal.scale})`;
   }
 
   private projectedExpression(name: string): string {
@@ -582,6 +689,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   private typedScalar(sql: string, type: string): string {
+    // From the value's text: the store holds a JSON fraction as a double, whose cast cuts 1.15 to
+    // 1.14 at scale 2.
+    const decimal = VariantSchema.decimalOf(type);
+    if (decimal !== null) {
+      const storeType = `Decimal(${decimal.precision}, ${decimal.scale})`;
+      return `accurateCastOrNull(toString(${sql}), ${this.escapeValue(storeType)})`;
+    }
+
     const storeType = STORE_SCALARS[type] ?? "String";
     return `accurateCastOrNull(${sql}, ${this.escapeValue(storeType)})`;
   }

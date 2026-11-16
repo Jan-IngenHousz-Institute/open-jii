@@ -1,3 +1,5 @@
+import { faker } from "@faker-js/faker";
+
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
@@ -9,10 +11,12 @@ import type {
   ExperimentTableMetadata,
   FlaggedRows,
 } from "../../core/models/experiment-data.model";
+import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
 import type { FlowGraphDto } from "../../core/models/flow.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
+import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
 import { FlowRepository } from "../../core/repositories/flow.repository";
 import { ExperimentStoreReadsService } from "./experiment-store-reads.service";
 
@@ -24,7 +28,7 @@ describe("ExperimentStoreReadsService", () => {
   const page: Pick<ExperimentQueryParams, "tableName" | "tableType" | "experimentId"> = {
     tableName: "raw_data",
     tableType: "static",
-    experimentId: "e1",
+    experimentId: "6f1c2a3e-5d4b-4c3a-9e8f-7a6b5c4d3e2f",
   };
 
   const unknownDevice = (label: string | null) => ({
@@ -459,5 +463,107 @@ describe("ExperimentStoreReadsService", () => {
     expect(reads.readsTable("raw_data")).toBe(true);
     expect(reads.readsTable("4f0c6b1e-macro")).toBe(true);
     expect(reads.readsTable("device")).toBe(false);
+  });
+
+  describe("custom metadata", () => {
+    let sheets: ExperimentMetadataRepository;
+    let userId: string;
+    let experimentId: string;
+
+    const sheet = (
+      createdAt: string,
+      [identifierColumnId, experimentQuestionId]: [string, string],
+      rows: Record<string, unknown>[],
+    ): MetadataSheetRecord => ({
+      id: faker.string.uuid(),
+      experimentId,
+      metadata: { name: "Plots", columns: [], rows, identifierColumnId, experimentQuestionId },
+      createdBy: userId,
+      createdAt: new Date(createdAt),
+      updatedAt: new Date(createdAt),
+    });
+
+    async function insert(...records: MetadataSheetRecord[]) {
+      for (const record of records) {
+        assertSuccess(await sheets.transaction((tx) => sheets.insert(tx, record)));
+      }
+    }
+
+    beforeEach(async () => {
+      sheets = testApp.module.get(ExperimentMetadataRepository);
+      userId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({ name: "Plots", userId });
+      experimentId = experiment.id;
+    });
+
+    it("lists the store's tables with the schema gold gives the sheets' rows, each without its identifier", async () => {
+      await insert(
+        sheet(
+          "2026-09-01T08:00:00Z",
+          ["plot", "plot"],
+          [
+            { _id: "r1", plot: "A1", area: 1.5 },
+            { _id: "r2", plot: "B2", area: 12.25 },
+          ],
+        ),
+        sheet(
+          "2026-09-02T08:00:00Z",
+          ["serial", "column:device_id"],
+          [{ _id: "r1", serial: "d1", plot: "a field of this sheet" }],
+        ),
+      );
+      const listing = vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success([]));
+
+      assertSuccess(await reads.tablesMetadata(experimentId));
+
+      expect(listing).toHaveBeenCalledWith(
+        experimentId,
+        "OBJECT<area: DECIMAL(4,2), plot: STRING>",
+      );
+    });
+
+    it("hands the store the sheets oldest first, each with what it matches", async () => {
+      const newer = sheet("2026-09-02T08:00:00Z", ["serial", "column:device_id"], []);
+      const older = sheet("2026-09-01T08:00:00Z", ["plot", "plot"], []);
+      await insert(newer, older);
+      const build = vi.spyOn(store, "buildExperimentQuery");
+
+      await reads.buildQuery({ ...page, experimentId });
+
+      expect(build).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadataSheets: [
+            { id: older.id, matchOn: "plot" },
+            { id: newer.id, matchOn: "column:device_id" },
+          ],
+        }),
+      );
+    });
+
+    it("works the schema out again once a sheet changes, and not before", async () => {
+      const record = sheet(
+        "2026-09-01T08:00:00Z",
+        ["plot", "plot"],
+        [{ _id: "r1", plot: "A1", area: 1.5 }],
+      );
+      await insert(record);
+      const listing = vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success([]));
+      const read = vi.spyOn(sheets, "findByExperimentId");
+
+      await reads.tablesMetadata(experimentId);
+      await reads.tablesMetadata(experimentId);
+      const metadata = { ...record.metadata, rows: [{ _id: "r1", plot: "A1", area: 1.25 }] };
+      await sheets.transaction((tx) =>
+        sheets.update(tx, experimentId, record.id, metadata, new Date("2026-09-05T08:00:00Z")),
+      );
+      await reads.tablesMetadata(experimentId);
+
+      expect(read).toHaveBeenCalledTimes(2);
+      expect(listing.mock.calls.map(([, schema]) => schema)).toEqual([
+        "OBJECT<area: DECIMAL(2,1)>",
+        "OBJECT<area: DECIMAL(2,1)>",
+        "OBJECT<area: DECIMAL(3,2)>",
+      ]);
+    });
   });
 });

@@ -25,6 +25,8 @@ export interface StoreTable {
   payloadTexts?: Record<string, string>;
   /** The column the phone's own annotations travel in, on a table whose rows carry them. */
   phoneAnnotations?: string;
+  /** Whether the experiment's metadata sheets match its rows, by an answer or by the device. */
+  takesCustomMetadata?: boolean;
 }
 
 const MACROS = "ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>";
@@ -68,11 +70,16 @@ const DEVICE: StoreColumn = {
   idOf: "device",
 };
 
-// The store holds the sheets (experiment_metadata_rows, experiment_metadata_sheets), but pages do
-// not join them yet, so custom metadata reads as none.
+// The builder joins a row's custom metadata on as a JSON column of this name, which holds no paths
+// when no sheet matched the row.
 const CUSTOM_METADATA: StoreColumn = {
   name: "custom_metadata",
   type: "VARIANT",
+  expression: "if(length(JSONAllPaths(custom_metadata)) = 0, NULL, toJSONString(custom_metadata))",
+};
+
+const NO_CUSTOM_METADATA: StoreColumn = {
+  ...CUSTOM_METADATA,
   expression: "CAST(NULL AS Nullable(String))",
 };
 
@@ -80,6 +87,7 @@ export const MEASUREMENTS_TABLE: StoreTable = {
   view: "experiment_measurements",
   key: ["timestamp", "id", "ifNull(device_id, '')"],
   phoneAnnotations: "annotations",
+  takesCustomMetadata: true,
   columns: [
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },
     { name: "id", type: "BIGINT", expression: "id" },
@@ -106,6 +114,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
   view: "experiment_macro_results",
   identifierColumn: "macro_id",
   phoneAnnotations: "annotations",
+  takesCustomMetadata: true,
   key: [
     "ifNull(macro_id, '')",
     "timestamp",
@@ -153,7 +162,7 @@ export const UPLOADS_TABLE: StoreTable = {
     { name: "uploaded_data", type: "VARIANT", expression: "uploaded_data" },
     { ...CONTRIBUTOR, expression: "created_by" },
     { name: "annotations", type: WellKnownColumnTypes.ANNOTATIONS, expression: "[]" },
-    CUSTOM_METADATA,
+    NO_CUSTOM_METADATA,
   ],
   payloadTexts: { uploaded_data: "uploaded_data_text" },
 };
