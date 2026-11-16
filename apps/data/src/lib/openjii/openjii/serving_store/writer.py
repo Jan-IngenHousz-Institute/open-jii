@@ -65,9 +65,9 @@ _REJECT_ROW_CHARS = 16_000_000
 # double, in an array too; written as 17 significant digits without an exponent, it reads every one
 # exactly. Measured on 25.8 from 1e-13 up, where precise_float_parsing changes nothing for an insert.
 # Its JSON columns read numbers exactly, so only the line's leading fields are rewritten, never a
-# payload's own. Spark writes NaN and Infinity in an array as strings, which stay as they are.
+# payload's own. Spark writes NaN and Infinity as strings, which stay as they are.
 _NUMBER = re.compile(r"-?\d[\d.eE+-]*")
-_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":({_NUMBER.pattern}),')
+_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":({_NUMBER.pattern}|"(?:NaN|-?Infinity)"),')
 _LEADING_FLOAT64_ARRAY = re.compile(rf'"({"|".join(SENSOR_READINGS)})":\[([^\]]*)\],')
 
 
