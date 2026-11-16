@@ -18,7 +18,14 @@ from collections.abc import Iterator
 
 import pytest
 import requests
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
+from openjii.serving_store.tables import (
+    DEVICE_EVENTS,
+    MACRO_RESULTS,
+    MEASUREMENTS,
+    METADATA_ROWS,
+    UPLOADS,
+    StoreTable,
+)
 from openjii.serving_store.writer import StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -86,6 +93,19 @@ _UPLOADED_DATA_CHANGES = """
       'up1' AS upload_id, 'u1' AS created_by, TIMESTAMP'2026-10-19 09:00:00' AS uploaded_at,
       parse_json('[{"ph": 6.5}]') AS uploaded_data,
       'insert' AS _change_type, 3L AS _commit_version, TIMESTAMP'2026-10-19 09:00:01' AS _commit_timestamp
+"""
+
+# Silver's lifecycle events, with the ingestion time silver adds.
+_LIFECYCLE_EVENT_CHANGES = """
+    SELECT client_id, event_type, ts AS event_timestamp, session AS session_identifier,
+      reason AS disconnect_reason, TIMESTAMP'2026-10-19 09:05:00' AS ingestion_timestamp,
+      change AS _change_type, 12L AS _commit_version, TIMESTAMP'2026-10-19 09:05:01' AS _commit_timestamp
+    FROM VALUES
+      ('c1', 'connected', TIMESTAMP'2026-10-19 09:00:00.123', 's1', CAST(NULL AS STRING), 'insert'),
+      ('c1', 'disconnected', TIMESTAMP'2026-10-19 09:04:00', 's1', 'CLIENT_INITIATED_DISCONNECT', 'insert'),
+      ('c2', 'connected', TIMESTAMP'1850-01-01 00:00:00', CAST(NULL AS STRING), CAST(NULL AS STRING), 'insert'),
+      ('c3', 'connected', TIMESTAMP'2026-10-19 09:00:00', 's3', CAST(NULL AS STRING), 'delete')
+    AS t(client_id, event_type, ts, session, reason, change)
 """
 
 
@@ -376,6 +396,35 @@ def test_each_line_carries_the_time_its_store_table_is_partitioned_by(
     assert sent == {row.id: row[column] for row in gold.collect()}
 
 
+def _events(lines: DataFrame) -> list[dict]:
+    rows = [json.loads(row.line) for row in lines.collect()]
+    return sorted(rows, key=lambda row: (row["client_id"], row["event_timestamp"]))
+
+
+def test_a_lifecycle_event_carries_silvers_columns_without_its_ingestion_time(spark: SparkSession) -> None:
+    [connected, disconnected, early] = _events(DEVICE_EVENTS.lines(spark.sql(_LIFECYCLE_EVENT_CHANGES)))
+
+    assert connected == {
+        "client_id": "c1",
+        "event_type": "connected",
+        "event_timestamp": "2026-10-19 09:00:00.123000",
+        "session_identifier": "s1",
+        "_commit_version": 12,
+        "_commit_timestamp": "2026-10-19 09:05:01.000000",
+    }
+    assert disconnected["disconnect_reason"] == "CLIENT_INITIATED_DISCONNECT"
+    assert early["event_timestamp"] == "1900-01-01 00:00:00.000000"
+    assert "session_identifier" not in early
+
+
+def test_a_lifecycle_event_is_partitioned_by_its_own_time(spark: SparkSession) -> None:
+    silver = spark.sql(_LIFECYCLE_EVENT_CHANGES).where("_change_type = 'insert'")
+
+    sent = sorted(row.partition_time for row in DEVICE_EVENTS.lines(silver).collect())
+
+    assert sent == sorted(row.event_timestamp for row in silver.collect())
+
+
 class _Store:
     """The test's view of a real store, as its admin."""
 
@@ -548,3 +597,36 @@ def test_coordinates_land_as_the_very_doubles_gold_holds(
         "WHERE experiment_id = 'exact'"
     )
     assert rows == [{"latitude": 51.986383, "longitude": 5.6631109, "device_battery": 87.5}] * 3
+
+
+@pytest.mark.clickhouse
+def test_measurements_the_writer_sends_reach_the_copy_ordered_by_device(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'by_device' AS experiment_id")
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    rows = store.rows(
+        f"SELECT client_id, id, device_battery, macros FROM {_DATABASE}.measurements_by_device FINAL "
+        "WHERE experiment_id = 'by_device' ORDER BY id"
+    )
+    assert [(row["client_id"], row["id"], row["device_battery"]) for row in rows] == [
+        ("c1", 1, 87.5),
+        ("c1", 2, 87.5),
+        ("c1", 3, 87.5),
+    ]
+    assert rows[0]["macros"] == [{"id": "m1", "name": "Phi2", "filename": "phi2.js"}]
+
+
+@pytest.mark.clickhouse
+def test_lifecycle_events_land_as_sent(spark: SparkSession, store: _Store, writer: StoreWriter) -> None:
+    lines = DEVICE_EVENTS.lines(spark.sql(_LIFECYCLE_EVENT_CHANGES))
+    columns = ("client_id", "event_type", "event_timestamp", "session_identifier", "disconnect_reason")
+
+    assert writer.write(lines, DEVICE_EVENTS.name) == Written(inserted=3)
+
+    stored = store.rows(
+        f"SELECT {', '.join(columns)} FROM {_DATABASE}.device_events FINAL ORDER BY client_id, event_timestamp"
+    )
+    assert stored == [{column: row.get(column) for column in columns} for row in _events(lines)]

@@ -24,7 +24,7 @@ DRIVER_RETRY_DELAYS = (10, 30, 60)
 
 class StoreFeed:
     """One pipeline's store sinks, each reading the change feed of its store table's source: a gold
-    table of the same pipeline, or the lakehouse's copy of the metadata sheets.
+    or silver table of the same pipeline, or the lakehouse's copy of the metadata sheets.
 
     A sink with a new checkpoint starts at the version in ``SERVING_STORE_FEED_START_<TABLE>``,
     which must still be within the source's file retention (seven days unless the table sets its
@@ -80,6 +80,8 @@ class StoreFeed:
         """The batch's payload schemas, or none and why when Spark cannot work them out. The rows
         still go, and the reason goes to ``feed_rejects``, since an upload's rows arrive in one batch
         and no later one would bring its schemas."""
+        if not table.payloads:
+            return [], None
         try:
             return [row.line for row in table.schema_lines(changes).collect()], None
         except Exception as error:

@@ -9,6 +9,7 @@ from pyspark.sql import Column, DataFrame, Window
 from pyspark.sql import functions as F
 
 from openjii.centrum.constants import (
+    CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE,
     EXPERIMENT_CUSTOM_METADATA_TABLE,
     EXPERIMENT_MACRO_DATA_TABLE,
     EXPERIMENT_RAW_DATA_TABLE,
@@ -73,8 +74,8 @@ def or_empty(column: str) -> Column:
 
 
 class StoreTable:
-    """A store table fed from the change feed of ``source_table``: a gold table, unless ``source``
-    names another."""
+    """A store table fed from the change feed of ``source_table``: a table of gold, or of silver for
+    rows no experiment holds, unless ``source`` names another."""
 
     name: str
     source_table: str
@@ -84,11 +85,17 @@ class StoreTable:
     # Gold's uploads carry none.
     processed_at: str | None = "processed_timestamp"
     # How gold's table listing (experiment_table_metadata) types the experiment tables this table
-    # holds, and the payload columns whose schemas it lists.
+    # holds, and the payload columns whose schemas it lists; a table without payloads lists none.
     table_type: str
-    payloads: tuple[str, ...]
+    payloads: tuple[str, ...] = ()
     # The store table its schema lines go to, after its rows.
     schema_table = PAYLOAD_SCHEMAS
+    # The column a reload counts rows by, and limits itself to one experiment by when it is the
+    # experiment's. Rows that belong to no experiment count by device and reload whole.
+    counted_by = "experiment_id"
+    # The store tables the migrations keep from this one by a materialized view, which a reload's
+    # delete reaches too, since a view only adds rows.
+    copies: tuple[str, ...] = ()
 
     def source(self, catalog: str) -> str:
         """The table whose change feed the store table is fed from."""
@@ -161,6 +168,7 @@ class Measurements(StoreTable):
     source_table = EXPERIMENT_RAW_DATA_TABLE
     table_type = "static"
     payloads = ("questions_data",)
+    copies = ("measurements_by_device",)
 
     def identifier(self) -> Column:
         return F.lit("raw_data")
@@ -402,7 +410,35 @@ class MetadataRows(StoreTable):
         )
 
 
+class DeviceEvents(StoreTable):
+    """Silver's connects and disconnects, which belong to a device and to no experiment."""
+
+    name = "device_events"
+    source_table = CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE
+    partitioned_by = "event_timestamp"
+    processed_at = "ingestion_timestamp"
+    counted_by = "client_id"
+
+    def key(self) -> list[Column]:
+        return [
+            F.col("client_id"),
+            clamped("event_timestamp"),
+            F.col("event_type"),
+            or_empty("session_identifier"),
+        ]
+
+    def columns(self) -> list[str | Column]:
+        return [
+            "client_id",
+            "event_type",
+            clamped("event_timestamp"),
+            "session_identifier",
+            "disconnect_reason",
+        ]
+
+
 MEASUREMENTS = Measurements()
 MACRO_RESULTS = MacroResults()
 UPLOADS = Uploads()
 METADATA_ROWS = MetadataRows()
+DEVICE_EVENTS = DeviceEvents()
