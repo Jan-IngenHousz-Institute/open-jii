@@ -1,7 +1,7 @@
 import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { ConfigService } from "@nestjs/config";
-import { readdirSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { resolve } from "path";
 import { z } from "zod";
 
@@ -13,6 +13,7 @@ import {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { StoreQueryParams } from "../../../../../experiments/core/ports/serving-store.port";
+import { storeMigrationStatements } from "../../../../../test/store-migrations";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { QueryBuilderService } from "../../../databricks/services/query-builder/query-builder.service";
 import { EXPERIMENT_SETTING, ServingStoreAdapter } from "../../serving-store.adapter";
@@ -21,10 +22,9 @@ import { ServingStoreConfigService } from "../config/config.service";
 import { MACRO_RESULTS_TABLE } from "./store-tables";
 
 const FIXTURES = resolve(__dirname, "../../../../../../../data/tests/fixtures");
-const MODULE = resolve(__dirname, "../../../../../../../../infrastructure/modules/serving-store");
-const MIGRATIONS = resolve(
+const MODULE = resolve(
   __dirname,
-  "../../../../../../../../packages/database/clickhouse/migrations",
+  "../../../../../../../../infrastructure/modules/serving-store/clickhouse-config",
 );
 
 const zRow = z.object({
@@ -270,7 +270,7 @@ describe("StoreAggregation", () => {
     )?.[1];
 
     expect(prefix !== undefined && EXPERIMENT_SETTING.startsWith(prefix)).toBe(true);
-    expect(moduleReader().rowFilter).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
+    expect(moduleRowFilter()).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
   });
 
   it("writes integer outputs as text, since a sum or an id may pass 2^53", () => {
@@ -377,15 +377,19 @@ describe("StoreAggregation", () => {
 });
 
 /**
- * Each chart case against a real store of the version the store runs, read by a user made as the
- * module makes its reader, through the tables and their row policies, compared with Spark's
- * results for the warehouse's own SQL on the same rows. It rebuilds the `store` database, so it
- * runs only against a throwaway store, and skips without one. The store must allow the module's
- * custom settings prefix: start the container of serving-store.adapter.spec.ts with
+ * Each chart case against a real store of the version the store runs, read by the module's own
+ * reader, through the tables and their row policies, compared with Spark's results for the
+ * warehouse's own SQL on the same rows. It rebuilds the `store` database, so it runs only against
+ * a throwaway store, and skips without one. Start the store with the module's config and users as
+ * infrastructure/modules/serving-store/clickhouse-config/local renders them:
  *
- *   -v "$PWD/custom-settings.xml:/etc/clickhouse-server/config.d/custom-settings.xml:ro"
+ *   docker run -d -p 127.0.0.1:18123:8123 -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local \
+ *     -v "$PWD/config.xml:/etc/clickhouse-server/config.d/openjii.xml:ro" \
+ *     -v "$PWD/users.xml:/etc/clickhouse-server/users.d/openjii.xml:ro" \
+ *     clickhouse/clickhouse-server:25.8.33.6
  *
- * where the file holds <clickhouse><custom_settings_prefixes>custom_</custom_settings_prefixes></clickhouse>.
+ * and run it with CLICKHOUSE_TEST_URL=http://127.0.0.1:18123, CLICKHOUSE_TEST_USER=admin and
+ * CLICKHOUSE_TEST_PASSWORD=local.
  */
 const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
 const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
@@ -414,7 +418,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       database: "store",
       clickhouse_settings: { json_type_escape_dots_in_keys: 1 },
     });
-    for (const statement of migrationStatements()) {
+    for (const statement of storeMigrationStatements()) {
       await admin.command({ query: statement });
     }
     const macroRow = (macroId: string) => (row: z.infer<typeof zRow>) => ({
@@ -438,9 +442,6 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       format: "JSONEachRow",
     });
 
-    for (const statement of readerStatements()) {
-      await admin.command({ query: statement });
-    }
     const config = new ConfigService({
       servingStore: { url, username: READER, password: READER_PASSWORD },
     });
@@ -454,13 +455,45 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
   });
 
   describe("the reader's row policies", () => {
-    it("fail a chart read that sends no experiment", async () => {
+    it("fail a chart read that sends no experiment, which reads with it", async () => {
       const query = adapter.buildExperimentQuery(storeRead("groupedStats"));
       assertSuccess(query);
+      const reader = createClient({
+        url: STORE_URL,
+        username: READER,
+        password: READER_PASSWORD,
+        database: "store",
+      });
 
-      const read = await client.stream(query.value.sql, {}, () => true);
+      const refusal = await reader
+        .query({ query: query.value.sql, format: "JSONCompactEachRow" })
+        .then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+      await reader.close();
+      const rows: unknown[][] = [];
+      const read = await client.stream(
+        query.value.sql,
+        { [EXPERIMENT_SETTING]: "charts" },
+        (row) => rows.push(row) > 0,
+      );
 
-      assertFailure(read);
+      expect(refusal).toMatchObject({ type: "UNKNOWN_SETTING" });
+      assertSuccess(read);
+      expect(rows.length).toBeGreaterThan(0);
+    });
+
+    it("leave a read of the views open without the setting, as pages read", async () => {
+      const rows: unknown[][] = [];
+      const read = await client.stream(
+        "SELECT count() FROM experiment_macro_results(experiment = 'charts') WHERE macro_id = 'm1'",
+        {},
+        (row) => rows.push(row) > 0,
+      );
+
+      assertSuccess(read);
+      expect(rows).toEqual([[FIXTURE.rows.filter((row) => row.experiment === undefined).length]]);
     });
 
     it("keep a read to the experiment it sends, whatever its statement names", async () => {
@@ -481,7 +514,27 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
     });
 
     it("leave the reader no table or view the module does not grant it", async () => {
-      const granted = new Set([...moduleReader().views, ...moduleReader().tables]);
+      const grants = await admin.query({
+        query: `SELECT DISTINCT table FROM system.grants WHERE user_name = '${READER}' AND database = 'store'`,
+        format: "JSONEachRow",
+      });
+      const granted = new Set(
+        z
+          .array(z.object({ table: z.string() }))
+          .parse(await grants.json())
+          .map(({ table }) => table),
+      );
+      expect([...granted].sort()).toEqual([
+        "experiment_client_ids",
+        "experiment_contributor_ids",
+        "experiment_macro_results",
+        "experiment_measurements",
+        "experiment_payload_schemas",
+        "experiment_uploads",
+        "macro_results",
+        "measurements",
+        "uploads",
+      ]);
       const listed = await admin.query({
         query: "SELECT name FROM system.tables WHERE database = 'store' ORDER BY name",
         format: "JSONEachRow",
@@ -840,90 +893,16 @@ function expectSameValue(actual: number | string | null, expected: number | stri
   expect(actual).toEqual(expectedValue);
 }
 
-const READER = "charts_test_reader";
-const READER_PASSWORD = "charts-test";
-const READER_PROFILE = "charts_test_reader_profile";
+/** The rendered module's reader, whose password the local render sets. */
+const READER = "openjii_reader";
+const READER_PASSWORD = process.env.CLICKHOUSE_TEST_READER_PASSWORD ?? "local";
 
-/** The reader's views, tables and row filter, as infrastructure/modules/serving-store/main.tf
- *  grants them. */
-function moduleReader(): { views: string[]; tables: string[]; rowFilter: string } {
+/** The reader's row filter, as infrastructure/modules/serving-store/clickhouse-config sets it. */
+function moduleRowFilter(): string {
   const main = readFileSync(resolve(MODULE, "main.tf"), "utf-8");
-  const listOf = (name: string) => {
-    const list = new RegExp(`${name}\\s*=\\s*\\[([^\\]]*)\\]`).exec(main)?.[1];
-    if (list === undefined) {
-      throw new Error(`main.tf no longer lists ${name}`);
-    }
-    return [...list.matchAll(/"([^"]+)"/g)].map(([, value]) => value);
-  };
   const rowFilter = /reader_row_filter\s*=\s*"([^"]+)"/.exec(main)?.[1];
   if (rowFilter === undefined) {
     throw new Error("main.tf no longer sets reader_row_filter");
   }
-  return { views: listOf("reader_views"), tables: listOf("reader_tables"), rowFilter };
-}
-
-/**
- * The statements that make a user as the module makes its reader: the reader profile of
- * templates/users.xml.tftpl over its default one, with its fixed settings fixed, and the grants
- * and row policies of main.tf.
- */
-function readerStatements(): string[] {
-  const users = readFileSync(resolve(MODULE, "templates/users.xml.tftpl"), "utf-8").replace(
-    /<!--[\s\S]*?-->/g,
-    "",
-  );
-  const block = (name: string) => {
-    const found = new RegExp(`<${name}>([\\s\\S]*?)</${name}>`).exec(users)?.[1];
-    if (found === undefined) {
-      throw new Error(`users.xml.tftpl no longer holds <${name}>`);
-    }
-    return found;
-  };
-  const reader = block("reader");
-  const constraints = block("constraints");
-  const fixed = new Set(
-    [...constraints.matchAll(/<(\w+)><const\/><\/\1>/g)].map(([, name]) => name),
-  );
-  const values = new Map(
-    [...`${block("default")}${reader.replace(constraints, "")}`.matchAll(/<(\w+)>([^<]*)<\/\1>/g)]
-      .filter(([, name]) => name !== "profile" && name !== "constraints")
-      .map(([, name, value]) => [name, value]),
-  );
-  const settings = [
-    ...[...values].map(([name, value]) => `${name} = ${value}${fixed.has(name) ? " CONST" : ""}`),
-    ...[...fixed].filter((name) => !values.has(name)).map((name) => `${name} CONST`),
-  ];
-  const { views, tables, rowFilter } = moduleReader();
-
-  return [
-    `DROP USER IF EXISTS ${READER}`,
-    `DROP SETTINGS PROFILE IF EXISTS ${READER_PROFILE}`,
-    ...tables.map((table) => `DROP ROW POLICY IF EXISTS ${READER}_${table} ON store.${table}`),
-    `CREATE SETTINGS PROFILE ${READER_PROFILE} SETTINGS ${settings.join(", ")}`,
-    `CREATE USER ${READER} IDENTIFIED BY '${READER_PASSWORD}' SETTINGS PROFILE '${READER_PROFILE}'`,
-    ...[...views, ...tables].map((name) => `GRANT SELECT ON store.${name} TO ${READER}`),
-    ...tables.map(
-      (table) =>
-        `CREATE ROW POLICY ${READER}_${table} ON store.${table} USING ${rowFilter} TO ${READER}`,
-    ),
-  ];
-}
-
-function migrationStatements(): string[] {
-  const files = readdirSync(MIGRATIONS)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-  return files.flatMap((file) => {
-    const statements: string[] = [];
-    let lines: string[] = [];
-    for (const line of readFileSync(resolve(MIGRATIONS, file), "utf-8").split("\n")) {
-      lines.push(line);
-      if (line.trimEnd().endsWith(";")) {
-        statements.push(lines.join("\n").trimEnd().replace(/;$/, ""));
-        lines = [];
-      }
-    }
-    const rest = lines.filter((line) => line.trim() !== "" && !line.trim().startsWith("--"));
-    return rest.length > 0 ? [...statements, lines.join("\n")] : statements;
-  });
+  return rowFilter;
 }

@@ -2,11 +2,10 @@ import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
-import { resolve } from "path";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
+import { storeMigrationStatements } from "../../../test/store-migrations";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
@@ -363,8 +362,6 @@ const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
 const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
 const STORE_PASSWORD = process.env.CLICKHOUSE_TEST_PASSWORD ?? "";
 
-const MIGRATIONS = resolve(__dirname, "../../../../../../packages/database/clickhouse/migrations");
-
 const EXPERIMENT = "e1";
 const ADA = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01";
 const BEN = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f02";
@@ -534,7 +531,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       database: "store",
       clickhouse_settings: { json_type_escape_dots_in_keys: 1 },
     });
-    for (const statement of migrationStatements()) {
+    for (const statement of storeMigrationStatements()) {
       await admin.command({ query: statement });
     }
     await admin.insert({ table: "measurements", values: MEASUREMENTS, format: "JSONEachRow" });
@@ -2174,7 +2171,7 @@ describe("StoreTables against the migrations", () => {
     "%s is read by its migration's sorting key, which holds its partition's time",
     (name, table) => {
       const create =
-        migrationStatements().find((statement) =>
+        storeMigrationStatements().find((statement) =>
           statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
         ) ?? "";
 
@@ -2193,27 +2190,7 @@ describe("StoreTables against the migrations", () => {
     expect(texts).toHaveLength(1);
     for (const text of texts) {
       const added = `ALTER TABLE ${name} ADD COLUMN IF NOT EXISTS ${text} Nullable(String)`;
-      expect(migrationStatements().some((statement) => statement.includes(added))).toBe(true);
+      expect(storeMigrationStatements().some((statement) => statement.includes(added))).toBe(true);
     }
   });
 });
-
-/** The migrations as their runner applies them, one statement at a time. */
-function migrationStatements(): string[] {
-  const files = readdirSync(MIGRATIONS)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-  return files.flatMap((file) => {
-    const statements: string[] = [];
-    let lines: string[] = [];
-    for (const line of readFileSync(resolve(MIGRATIONS, file), "utf-8").split("\n")) {
-      lines.push(line);
-      if (line.trimEnd().endsWith(";")) {
-        statements.push(lines.join("\n").trimEnd().replace(/;$/, ""));
-        lines = [];
-      }
-    }
-    const rest = lines.filter((line) => line.trim() !== "" && !line.trim().startsWith("--"));
-    return rest.length > 0 ? [...statements, lines.join("\n")] : statements;
-  });
-}
