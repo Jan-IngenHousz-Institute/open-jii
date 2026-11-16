@@ -3096,15 +3096,10 @@ describe("ExperimentDataRepository", () => {
       expect(store).not.toHaveBeenCalled();
     });
 
-    it("reads Device picker labels from the warehouse when the source is store", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([largeTable]),
-      );
-      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
-        success([...VIEW_COLUMNS, "client_id", "device_name", "device_id"]),
-      );
+    it("lists Device picker labels from the store, paged as the warehouse pages them", async () => {
       const labels = ["Ambit (d2)", "Ambit (d3)", "phone (d4)"];
-      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success(["phone"]));
+      const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
         success({
           columns: [
             { name: "serial_number", type_name: "STRING", type_text: "STRING", position: 0 },
@@ -3114,22 +3109,7 @@ describe("ExperimentDataRepository", () => {
           truncated: false,
         }),
       );
-      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success(["phone"]));
-      const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
-        success({
-          columns: [
-            {
-              name: "device",
-              type_name: "STRUCT",
-              type_text: WellKnownColumnTypes.DEVICE,
-              position: 0,
-            },
-          ],
-          rows: [["phone"]],
-          totalRows: 1,
-          truncated: false,
-        }),
-      );
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
 
       const result = await repository.getDistinctColumnValues({
         experimentId,
@@ -3143,39 +3123,14 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual({ values: labels, truncated: false });
-      expect(store).not.toHaveBeenCalled();
-      const sql = warehouse.mock.calls[0][1];
-      expect(sql).toContain("named_struct(");
-      expect(sql).toContain("nullif(trim(`device_name`), '')");
-      expect(sql).toContain("nullif(trim(`client_id`), '')");
-      expect(sql).toContain("SELECT DISTINCT `serial_number`");
-      expect(sql).toContain(
-        "ORDER BY lower(`serial_number`) ASC, `serial_number` ASC LIMIT 4 OFFSET 200",
-      );
-    });
-
-    it("returns a warehouse shape failure when routing the Device picker from the store", async () => {
-      const error = AppError.internal("Warehouse metadata is unavailable");
-      const metadata = vi
-        .spyOn(databricksPort, "getExperimentTableMetadata")
-        .mockResolvedValue(failure(error));
-      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
-      const store = vi.spyOn(servingStore, "executeQuery");
-
-      const result = await repository.getDistinctColumnValues({
-        experimentId,
-        experiment: mockExperiment,
-        tableName: "raw_data",
-        column: "device",
-        limit: 3,
-        source: "store",
-      });
-
-      assertFailure(result);
-      expect(result.error).toBe(error);
-      expect(metadata).toHaveBeenCalledWith(experimentId, { includeSchemas: true });
       expect(warehouse).not.toHaveBeenCalled();
-      expect(store).not.toHaveBeenCalled();
+      const sql = store.mock.calls[0][0].sql;
+      expect(sql).toContain("nullif(trim(device_name), '')");
+      expect(sql).toContain("indexOf(['phone'], client_id)");
+      expect(sql).toContain("SELECT DISTINCT `device.serial_number` AS serial_number");
+      expect(sql).toContain(
+        "ORDER BY lowerUTF8(`device.serial_number`) ASC, `device.serial_number` ASC\nLIMIT 4\nOFFSET 200",
+      );
     });
 
     it("keeps non-device distinct reads on the store", async () => {

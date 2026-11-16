@@ -164,6 +164,22 @@ export class ServingStoreAdapter implements ServingStorePort {
     };
   }
 
+  deviceLabelsQuery(query: StoreQuery, limit: number, offset: number): StoreQuery {
+    const label = new StoreQueryBuilder().quoteName("device.serial_number");
+    return {
+      sql: [
+        `SELECT DISTINCT ${label} AS serial_number`,
+        `FROM (${query.sql}) AS device_names`,
+        `WHERE ${label} IS NOT NULL AND trim(${label}) != ''`,
+        // Spark lowers text by Unicode, as lowerUTF8 does and lower does not.
+        `ORDER BY lowerUTF8(${label}) ASC, ${label} ASC`,
+        `LIMIT ${limit}`,
+        `OFFSET ${offset}`,
+      ].join("\n"),
+      columns: [{ name: "serial_number", type: "STRING" }],
+    };
+  }
+
   /** The rows as the warehouse writes its cells, with contributors and devices as their ids. */
   async executeQuery(query: StoreQuery): Promise<Result<SchemaData>> {
     const result = await this.client.query(query.sql);
@@ -180,7 +196,10 @@ export class ServingStoreAdapter implements ServingStorePort {
     const rows = result.value.rows.map((row) =>
       query.columns.map(({ type, idOf }, index) => {
         const value = row[index];
-        if (idOf !== undefined) {
+        if (idOf === "device") {
+          return JSON.stringify(value);
+        }
+        if (idOf === "contributor") {
           return typeof value === "string" ? value : null;
         }
         return CellValues.text(value, type);

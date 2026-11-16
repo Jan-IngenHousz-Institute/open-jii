@@ -1,3 +1,4 @@
+import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
 import { StoreQueryBuilder } from "./store-query-builder";
 import { MACRO_RESULTS_TABLE, MEASUREMENTS_TABLE, UPLOADS_TABLE } from "./store-tables";
@@ -54,9 +55,9 @@ describe("StoreQueryBuilder", () => {
       expect.objectContaining({ name: "contributor", idOf: "contributor" }),
       expect.objectContaining({ name: "device", idOf: "device" }),
     ]);
-    expect(measurements().select(["contributor", "device"]).build()).toContain(
-      "SELECT user_id AS `contributor`, client_id AS `device`",
-    );
+    const sql = measurements().select(["contributor", "device"]).build();
+    expect(sql).toContain("SELECT user_id AS `contributor`, tuple(client_id, CASE WHEN ");
+    expect(sql).toContain("nullif(trim(device_name), ''), nullif(trim(client_id), '')");
   });
 
   it("reads a scalar field by type, anything else as JSON, and an empty object as null", () => {
@@ -138,21 +139,41 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
-  it("filters and sorts a device's serial number through the serials it is given", () => {
-    const sql = measurements()
-      .select(["id"])
+  it("filters, sorts and lists a device by the warehouse's label, from the serials it is given", () => {
+    const builder = measurements()
+      .select(["device.serial_number"])
       .serialNumbers([
         ["thing-1", "SN-1"],
         ["thing-2", null],
       ])
       .filter({ column: "device.serial_number", operator: "equals", value: "SN-1" })
-      .orderBy({ column: "device.serial_number", direction: "DESC" })
-      .build();
+      .orderBy({ column: "device.serial_number", direction: "DESC" });
+    const sql = builder.build();
 
     const serial =
       "arrayElement(CAST(['SN-1', NULL] AS Array(Nullable(String))), indexOf(['thing-1', 'thing-2'], client_id))";
-    expect(sql).toContain(`WHERE ${serial} = 'SN-1'`);
-    expect(sql).toContain(`ORDER BY ${serial} DESC NULLS LAST`);
+    const label = deviceLabel({
+      serialNumber: serial,
+      deviceName: "device_name",
+      deviceId: "device_id",
+      clientId: "client_id",
+    });
+    expect(sql).toContain(`SELECT ${label} AS \`device.serial_number\``);
+    expect(sql).toContain(`WHERE ${label} = 'SN-1'`);
+    expect(sql).toContain(`ORDER BY ${label} DESC NULLS LAST`);
+    expect(builder.outputColumns()).toEqual([{ name: "device.serial_number", type: "STRING" }]);
+  });
+
+  it("sorts a whole device by the registry's order of the ids it is given, then by its label", () => {
+    const sql = measurements()
+      .select(["id"])
+      .orderBy({ column: "device", direction: "ASC" }, ["thing-2", "thing-1"])
+      .build();
+
+    expect(sql).toContain(
+      "ORDER BY indexOf(['thing-2', 'thing-1'], client_id) ASC NULLS FIRST, CASE WHEN ",
+    );
+    expect(sql).toMatch(/ END ASC NULLS FIRST$/);
   });
 
   it("sorts text that holds a number by its value, then by the text and the row id", () => {

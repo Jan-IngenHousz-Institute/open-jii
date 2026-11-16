@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 import { sanitizeQuestionLabel } from "@repo/api/transforms/label-sanitization";
 
+import { SqlQueryBuilder } from "../../../common/modules/databricks/services/query-builder/query-builder.base";
 import { VariantSchema } from "../../../common/modules/databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
@@ -79,6 +80,22 @@ export class ExperimentWarehouseReadsService implements ExperimentTableReads {
       sql: `SELECT COUNT(*) AS total FROM (${query.sql}) AS sub`,
       columns: [],
       distinct: false,
+    };
+  }
+
+  deviceLabelsQuery(query: TableQuery, limit: number, offset: number): TableQuery {
+    return {
+      ...query,
+      sql: new SqlQueryBuilder()
+        .select(["serial_number"])
+        .distinct()
+        .from(`(${query.sql}) AS device_names`)
+        .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
+        .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
+        .limit(limit)
+        .offset(offset)
+        .build(),
+      distinct: true,
     };
   }
 

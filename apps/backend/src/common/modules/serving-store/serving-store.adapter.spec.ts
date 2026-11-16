@@ -5,6 +5,7 @@ import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
+import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
@@ -513,7 +514,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       date: "2026-09-14",
       macros: '[{"id":"mac1","name":"Phi2","filename":"phi2.js"}]',
       contributor: ADA,
-      device: "thing-1",
+      device: '["thing-1","thing-1 (d1)"]',
       latitude: "52.1",
       data: '{"a":1}',
       measurement_time_local: "2026-09-14 09:56:31",
@@ -736,6 +737,126 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.rows).toEqual([["2"], ["1"]]);
+  });
+
+  describe("device labels", () => {
+    // The rows the warehouse's device-label Spark test reads, with the same registry serials.
+    const devices: [number, string | null, string | null, string | null][] = [
+      [1, "c1", "d1", "MultispeQ"],
+      [2, "c9", "d2", "Ambit"],
+      [3, "c9", "d3", "Ambit"],
+      [4, "phone-1", "d4", " "],
+      [5, null, "imported-1", null],
+      [6, "phone-1", null, "Probe"],
+      [7, " ", " ", " "],
+      [8, null, null, " Bench "],
+      [9, "blank-phone", "blank", "Probe"],
+      [10, "phone-only", null, null],
+      [11, "c1", "other-sensor", "MultispeQ"],
+    ];
+    const serials: [string, string | null][] = [
+      ["c1", " SN1 "],
+      ["blank-phone", " "],
+    ];
+    const read: Pick<StoreQueryParams, "tableName" | "tableType" | "experimentId"> = {
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "devices",
+    };
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: devices.map(([id, client_id, device_id, device_name]) => ({
+          experiment_id: "devices",
+          id,
+          client_id,
+          device_id,
+          device_name,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: {},
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+    });
+
+    it("labels each device as the warehouse does", async () => {
+      const data = await rowsOf({
+        ...read,
+        columns: ["id", "device.serial_number", "device"],
+        deviceSerials: serials,
+        ordering: { column: "id" },
+      });
+
+      expect(data.rows.map(([, label]) => label)).toEqual([
+        " SN1 ",
+        "Ambit (d2)",
+        "Ambit (d3)",
+        "phone-1 (d4)",
+        "imported-1",
+        "Probe (phone-1)",
+        null,
+        "Bench",
+        "Probe (blank)",
+        "phone-only",
+        " SN1 ",
+      ]);
+      // The device itself comes back as its client id and its label, for the backend to finish.
+      expect(data.rows[1][2]).toBe('["c9","Ambit (d2)"]');
+      expect(data.rows[4][2]).toBe('[null,"imported-1"]');
+    });
+
+    it("filters and sorts by the label", async () => {
+      const filtered = await rowsOf({
+        ...read,
+        columns: ["id"],
+        filters: [{ column: "device.serial_number", operator: "equals", value: "Ambit (d2)" }],
+        deviceSerials: serials,
+      });
+      expect(filtered.rows).toEqual([["2"]]);
+
+      const sorted = await rowsOf({
+        ...read,
+        columns: ["id"],
+        ordering: { column: "device.serial_number" },
+        deviceSerials: serials,
+      });
+      // No label sorts first, then the two rows of the registered device.
+      expect(sorted.rows[0]).toEqual(["7"]);
+      expect(sorted.rows.slice(1, 3).sort()).toEqual([["1"], ["11"]]);
+    });
+
+    it("lists the labels as the device picker pages them", async () => {
+      const labels = async (limit: number, offset: number) => {
+        const projected = adapter.buildExperimentQuery({
+          ...read,
+          columns: ["device.serial_number"],
+          deviceSerials: serials,
+        });
+        assertSuccess(projected);
+        const data = await adapter.executeQuery(
+          adapter.deviceLabelsQuery(projected.value, limit, offset),
+        );
+        assertSuccess(data);
+        return data.value.rows.map(([label]) => label);
+      };
+
+      expect(await labels(1001, 0)).toEqual([
+        " SN1 ",
+        "Ambit (d2)",
+        "Ambit (d3)",
+        "Bench",
+        "imported-1",
+        "phone-1 (d4)",
+        "phone-only",
+        "Probe (blank)",
+        "Probe (phone-1)",
+      ]);
+      expect(await labels(3, 3)).toEqual(["Bench", "imported-1", "phone-1 (d4)"]);
+    });
   });
 
   it("keeps ids past 2^53 and names a table by its newest upload", async () => {

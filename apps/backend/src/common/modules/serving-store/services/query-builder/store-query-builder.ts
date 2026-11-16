@@ -1,5 +1,6 @@
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
+import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { numericStringOrdering } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import type { NumericStringKeys } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import { BaseQueryBuilder } from "../../../databricks/services/query-builder/query-builder.base";
@@ -100,8 +101,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * `idOrder` sorts a contributor's field the store does not hold, such as the name, by the place
-   * of each row's contributor in it; names never enter a query, whose text the store logs.
+   * `idOrder` sorts by what the store does not hold, a contributor's name or a device's registry
+   * id, by the place of each row's id in it; names never enter a query, whose text the store logs.
    */
   orderBy(ordering: QueryOrdering, idOrder?: string[]): this {
     this.ordering = { ...ordering, idOrder };
@@ -136,7 +137,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
     const isSerialNumber = base.idOf === "device" && path === "serial_number";
     if (isSerialNumber) {
-      return this.serialNumberOf(base.expression);
+      return this.deviceLabelOf(base.expression);
     }
     throw new QueryBuilderInputError(`The store cannot read '${column}'`);
   }
@@ -211,7 +212,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
     const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
     const projection = this.outputColumns()
-      .map(({ name, type }) => `${this.projectedValue(name, type)} AS ${this.quoteName(name)}`)
+      .map((column) => `${this.projectedValue(column)} AS ${this.quoteName(column.name)}`)
       .join(", ");
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
@@ -265,13 +266,24 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (whole !== undefined) {
       return { name, type: this.variantCastType(whole.schema) };
     }
-    const { type, idOf } = this.baseColumn(name);
+    const [base, path] = this.structPath(name);
+    if (path !== undefined) {
+      return { name, type: this.typeOf(name) };
+    }
+    const { type, idOf } = this.baseColumn(base);
     return { name, type, idOf };
   }
 
-  /** Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. */
-  private projectedValue(name: string, type: string): string {
+  /**
+   * Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. A device
+   * comes back as its client id and the label its row's own names give, which the backend
+   * finishes with the registry's serial number.
+   */
+  private projectedValue({ name, type, idOf }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
+    if (idOf === "device") {
+      return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
+    }
     const isInteger = type === "BIGINT" || type === "INT";
     return isInteger ? `toString(${expression})` : expression;
   }
@@ -284,7 +296,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const whole = this.variantColumns.find(
       ({ column, schema }) => column === name && !VariantSchema.isObject(schema),
     );
-    return whole === undefined ? this.baseColumn(name).expression : this.wholeColumn(whole);
+    return whole === undefined ? this.columnExpression(name) : this.wholeColumn(whole);
   }
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
@@ -292,8 +304,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
+      const { expression, idOf } = this.baseColumn(name);
       const ids = idOrder.map((id) => this.escapeValue(id)).join(", ");
-      return `indexOf([${ids}], ${this.baseColumn(name).expression}) ${direction} ${nulls}`;
+      const place = `indexOf([${ids}], ${expression}) ${direction} ${nulls}`;
+      // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
+      // in the order carry, then by its label.
+      const isDevice = idOf === "device";
+      return isDevice ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}` : place;
     }
 
     const target = this.columnExpression(column);
@@ -313,6 +330,22 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const decimal = `CASE WHEN ${representable} THEN toDecimal128OrNull(${trimmed}, 18) END`;
     const group = `CASE WHEN (${decimal}) IS NOT NULL THEN 0 WHEN ${trimmed} IS NULL OR ${trimmed} = '' THEN 2 ELSE 1 END`;
     return { group, decimal, value, rowId };
+  }
+
+  /**
+   * The label the warehouse shows for a device, from the serial numbers the store is handed. A
+   * read handed none labels devices by their rows' names alone.
+   */
+  private deviceLabelOf(clientIdSql: string): string {
+    const hasSerials = this.deviceSerials.length > 0;
+    return deviceLabel({
+      serialNumber: hasSerials
+        ? this.serialNumberOf(clientIdSql)
+        : "CAST(NULL AS Nullable(String))",
+      deviceName: this.baseColumn("device_name").expression,
+      deviceId: this.baseColumn("device_id").expression,
+      clientId: clientIdSql,
+    });
   }
 
   private serialNumberOf(clientIdSql: string): string {

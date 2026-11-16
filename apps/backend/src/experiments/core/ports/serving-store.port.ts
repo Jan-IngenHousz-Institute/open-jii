@@ -11,7 +11,10 @@ export const SERVING_STORE_PORT = Symbol("SERVING_STORE_PORT");
 export interface StoreQueryColumn {
   name: string;
   type: string;
-  /** Set when the store holds a contributor or device as its id, whose details the backend fills. */
+  /**
+   * Set when the store holds a contributor or device as its id, whose details the backend fills.
+   * A device's cell is the JSON pair of its client id and the label its row's own names give.
+   */
   idOf?: "contributor" | "device";
 }
 
@@ -23,7 +26,7 @@ export interface StoreQuery {
 export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
-  /** Each device's client id and serial number, for filters and sorts on a serial number. */
+  /** Each device's client id and serial number, for the labels filters, sorts and lists read. */
   deviceSerials?: [string, string | null][];
 }
 
@@ -45,6 +48,9 @@ export interface ServingStorePort {
   buildExperimentQuery(params: StoreQueryParams): Result<StoreQuery>;
 
   countQuery(query: StoreQuery): StoreQuery;
+
+  /** The distinct labels a read of `device.serial_number` holds, as the device picker lists them. */
+  deviceLabelsQuery(query: StoreQuery, limit: number, offset: number): StoreQuery;
 
   executeQuery(query: StoreQuery): Promise<Result<SchemaData>>;
 

@@ -13,7 +13,6 @@ import {
 } from "@repo/api/transforms/column-type-utils";
 import { isJoinMatchColumn, joinedColumns } from "@repo/api/transforms/joined-columns";
 
-import { SqlQueryBuilder } from "../../../common/modules/databricks/services/query-builder/query-builder.base";
 import type {
   AggregationSpec,
   FilterCondition,
@@ -396,22 +395,11 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, experiment, tableName, column, limit, offset, source } = params;
 
-    let shapeResult = await this.tableShape(experimentId, tableName, source);
+    const shapeResult = await this.tableShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
 
-    // Device picker labels must match the charts they filter, which read from the warehouse.
-    if (
-      column === "device" &&
-      shapeResult.value.metadata.tableType !== "upload" &&
-      shapeResult.value.source === "store"
-    ) {
-      shapeResult = await this.tableShape(experimentId, tableName, "warehouse");
-      if (shapeResult.isFailure()) {
-        return shapeResult;
-      }
-    }
     const shape = shapeResult.value;
     const anonymizedResult = await this.anonymizedQuery(experiment, tableName, shape.source, {
       columns: [column],
@@ -424,7 +412,7 @@ export class ExperimentDataRepository {
     if (!deviceColumn && (offset ?? 0) > 0) {
       return failure(AppError.badRequest("Offset paging is supported only for device columns"));
     }
-    const queryResult = await (deviceColumn && shape.source === "warehouse"
+    const queryResult = await (deviceColumn
       ? this.deviceValuesSql(experimentId, shape, limit, offset)
       : this.buildQuery(experimentId, shape, {
           columns: [column],
@@ -1136,19 +1124,7 @@ export class ExperimentDataRepository {
     if (projected.isFailure()) {
       return projected;
     }
-    return success({
-      ...projected.value,
-      sql: new SqlQueryBuilder()
-        .select(["serial_number"])
-        .distinct()
-        .from(`(${projected.value.sql}) AS device_names`)
-        .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
-        .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
-        .limit(limit + 1)
-        .offset(offset)
-        .build(),
-      distinct: true,
-    });
+    return success(this.reads(shape).deviceLabelsQuery(projected.value, limit + 1, offset));
   }
 
   private async countRows(

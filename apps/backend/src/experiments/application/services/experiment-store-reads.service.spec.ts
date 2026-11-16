@@ -19,6 +19,14 @@ describe("ExperimentStoreReadsService", () => {
     experimentId: "e1",
   };
 
+  const unknownDevice = (label: string | null) => ({
+    id: null,
+    serial_number: label,
+    owner: null,
+    status: null,
+    device_type: null,
+  });
+
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -66,8 +74,8 @@ describe("ExperimentStoreReadsService", () => {
         },
       ],
       [
-        [ada, "thing-1"],
-        [null, null],
+        [ada, '["thing-1","MultispeQ (d1)"]'],
+        [null, "[null,null]"],
       ],
     );
 
@@ -87,7 +95,46 @@ describe("ExperimentStoreReadsService", () => {
           device_type: "generic",
         }),
       ],
-      [null, null],
+      [null, JSON.stringify(unknownDevice(null))],
+    ]);
+  });
+
+  it("labels a device without a serial number by its row's names, as the warehouse does", async () => {
+    const owner = await testApp.createTestUser({});
+    const blank = await testApp.createIotDevice({
+      createdBy: owner,
+      serialNumber: "  ",
+      thingName: "thing-blank",
+    });
+    storeRows(
+      [
+        {
+          name: "device",
+          type_name: "STRUCT",
+          type_text: WellKnownColumnTypes.DEVICE,
+          position: 0,
+        },
+      ],
+      [['["thing-blank","Probe (blank)"]'], ['["phone-1","Probe (phone-1)"]'], ['[null,"Bench"]']],
+    );
+
+    const query = await reads.buildQuery({ ...page, columns: ["device"] });
+    assertSuccess(query);
+    const result = await reads.runQuery(query.value);
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([
+      [
+        JSON.stringify({
+          id: blank.id,
+          serial_number: "Probe (blank)",
+          owner,
+          status: "registered",
+          device_type: "generic",
+        }),
+      ],
+      [JSON.stringify(unknownDevice("Probe (phone-1)"))],
+      [JSON.stringify(unknownDevice("Bench"))],
     ]);
   });
 
@@ -165,17 +212,36 @@ describe("ExperimentStoreReadsService", () => {
     );
   });
 
-  it("sorts devices as Spark sorts their structs, unknown devices first", async () => {
+  it("hands the store the serial numbers when a read lists devices' labels", async () => {
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["phone"]));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    await reads.buildQuery({ ...page, columns: ["device.serial_number"] });
+
+    expect(build).toHaveBeenCalledWith(
+      expect.objectContaining({ deviceSerials: [["phone", null]] }),
+    );
+  });
+
+  it("sorts devices as Spark sorts their structs, registered ones by id and the rest by label", async () => {
     const owner = await testApp.createTestUser({});
-    await testApp.createIotDevice({ createdBy: owner, thingName: "thing-b" });
-    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["thing-b", "phone-a"]));
+    const first = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-b" });
+    const second = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-c" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(
+      success(["thing-c", "phone-a", "thing-b"]),
+    );
     const build = vi.spyOn(store, "buildExperimentQuery");
 
     await reads.buildQuery({ ...page, ordering: { column: "device" } });
 
-    expect(build).toHaveBeenCalledWith(
-      expect.objectContaining({ orderByIds: ["phone-a", "thing-b"] }),
-    );
+    const byId = [
+      { thing: "thing-b", id: first.id },
+      { thing: "thing-c", id: second.id },
+    ].sort((a, b) => (a.id < b.id ? -1 : 1));
+    const [params] = build.mock.calls[0];
+    expect(params.orderByIds).toEqual(byId.map(({ thing }) => thing));
+    // The label that breaks the rest needs the serial numbers.
+    expect(params.deviceSerials).toContainEqual(["phone-a", null]);
   });
 
   it("folds devices that fill in alike before it limits a distinct read", async () => {
@@ -194,7 +260,12 @@ describe("ExperimentStoreReadsService", () => {
           position: 0,
         },
       ],
-      [["phone-a"], ["phone-b"], ["thing-1"]],
+      [
+        ['["phone-a","Phone"]'],
+        ['["phone-b","Phone"]'],
+        ['["thing-1","MultispeQ (d1)"]'],
+        ['["thing-1","MultispeQ (d2)"]'],
+      ],
     );
 
     const query = await reads.buildQuery({
@@ -210,15 +281,7 @@ describe("ExperimentStoreReadsService", () => {
     assertSuccess(result);
     expect(build).toHaveBeenCalledWith(expect.objectContaining({ limit: undefined }));
     const [unknown, known] = result.value.rows.map(([cell]) => cell ?? "");
-    expect(unknown).toBe(
-      JSON.stringify({
-        id: null,
-        serial_number: null,
-        owner: null,
-        status: null,
-        device_type: null,
-      }),
-    );
+    expect(unknown).toBe(JSON.stringify(unknownDevice("Phone")));
     expect(known).toContain('"serial_number":"SN-1"');
     expect(result.value.totalRows).toBe(2);
   });
