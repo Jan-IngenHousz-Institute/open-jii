@@ -51,7 +51,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private reservedColumns: string[] = [];
   private exceptColumns: string[] = [];
   private whereConditions: string[] = [];
-  private deviceSerials: [string, string | null][] = [];
+  private deviceSerials: [string, string][] = [];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
@@ -94,7 +94,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  serialNumbers(serials: [string, string | null][]): this {
+  /** The registered devices' serial numbers by client id; any other device reads none. */
+  serialNumbers(serials: [string, string][]): this {
     this.deviceSerials = serials;
     return this;
   }
@@ -255,6 +256,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         offsetClause,
       ]);
       return this.joinClauses([
+        this.withClause(),
         `SELECT ${projection}`,
         `FROM ${this.fromClause}`,
         `WHERE (${key}) IN (${page})`,
@@ -263,6 +265,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
 
     return this.joinClauses([
+      this.withClause(),
       `${selectKeyword} ${projection}`,
       `FROM ${this.fromClause}`,
       where,
@@ -347,8 +350,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
       const { expression, idOf } = this.baseColumn(name);
-      const ids = idOrder.map((id) => this.escapeValue(id)).join(", ");
-      const place = `indexOf([${ids}], ${expression}) ${direction} ${nulls}`;
+      const place = `indexOf(__order_ids, ${expression}) ${direction} ${nulls}`;
       // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
       // in the order carry, then by its label.
       const isDevice = idOf === "device";
@@ -397,12 +399,28 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     });
   }
 
+  /** A client id missing from the list reads 0 from indexOf, and the Nullable array's NULL there. */
   private serialNumberOf(clientIdSql: string): string {
-    const ids = this.deviceSerials.map(([clientId]) => this.escapeValue(clientId));
-    const serials = this.deviceSerials.map(([, serial]) =>
-      serial === null ? "NULL" : this.escapeValue(serial),
-    );
-    return `arrayElement(CAST([${serials.join(", ")}] AS Array(Nullable(String))), indexOf([${ids.join(", ")}], ${clientIdSql}))`;
+    return `arrayElement(__device_serials, indexOf(__device_client_ids, ${clientIdSql}))`;
+  }
+
+  /**
+   * The id lists a statement reads, each written once under a name: a sorted page reads them in
+   * its inner and outer statements, and a label reads its serial twice.
+   */
+  private withClause(): string {
+    const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
+    const idOrder = this.ordering?.idOrder;
+    const lists = [
+      ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS __order_ids`]),
+      ...(this.deviceSerials.length === 0
+        ? []
+        : [
+            `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS __device_client_ids`,
+            `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS __device_serials`,
+          ]),
+    ];
+    return lists.length === 0 ? "" : `WITH ${lists.join(", ")}`;
   }
 
   private structPath(column: string): [string, string | undefined] {

@@ -31,8 +31,9 @@ export interface StoreQuery {
 export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
-  /** Each device's client id and serial number, for the labels filters, sorts and lists read. */
-  deviceSerials?: [string, string | null][];
+  /** Each client id whose device has a serial number to show, with it, for the labels a read
+   *  filters, sorts or lists by. */
+  deviceSerials?: [string, string][];
 }
 
 /** Reads of experiment data from the serving store, in the shapes warehouse reads come in. */

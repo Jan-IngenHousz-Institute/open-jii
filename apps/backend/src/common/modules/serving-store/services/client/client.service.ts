@@ -64,8 +64,8 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // separately, which is faster. The adapter spec checks each table's partition time is
               // in its sorting key, which this depends on.
               do_not_merge_across_partitions_select_final: 1,
-              // A sort by contributor name or device serial writes the experiment's ids into the
-              // query, twice on a sorted page; the default 256 KiB would cap that near 3,000 ids.
+              // A sort by contributor name and a device label write the experiment's ids into the
+              // query, once each; the default 256 KiB would cap that near 5,000 ids.
               max_query_size: "1048576",
               // Text read as a number, such as a Number question's answer, lands on the nearest
               // double as Spark's does; the fast parser misses it for about 1 % of decimals.

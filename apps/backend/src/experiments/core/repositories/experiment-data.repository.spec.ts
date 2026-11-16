@@ -3154,7 +3154,6 @@ describe("ExperimentDataRepository", () => {
       expect(warehouse).not.toHaveBeenCalled();
       const sql = store.mock.calls[0][0].sql;
       expect(sql).toContain("nullif(trim(device_name), '')");
-      expect(sql).toContain("indexOf(['phone'], client_id)");
       expect(sql).toContain("SELECT DISTINCT `device.serial_number` AS serial_number");
       expect(sql).toContain(
         "ORDER BY lowerUTF8(`device.serial_number`) ASC, `device.serial_number` ASC\nLIMIT 4\nOFFSET 200",

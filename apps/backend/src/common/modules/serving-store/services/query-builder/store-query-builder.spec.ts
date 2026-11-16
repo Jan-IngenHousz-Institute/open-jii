@@ -170,20 +170,21 @@ describe("StoreQueryBuilder", () => {
       .select(["device.serial_number"])
       .serialNumbers([
         ["thing-1", "SN-1"],
-        ["thing-2", null],
+        ["thing-2", "SN-2"],
       ])
       .filter({ column: "device.serial_number", operator: "equals", value: "SN-1" })
       .orderBy({ column: "device.serial_number", direction: "DESC" });
     const sql = builder.build();
 
-    const serial =
-      "arrayElement(CAST(['SN-1', NULL] AS Array(Nullable(String))), indexOf(['thing-1', 'thing-2'], client_id))";
     const label = deviceLabel({
-      serialNumber: serial,
+      serialNumber: "arrayElement(__device_serials, indexOf(__device_client_ids, client_id))",
       deviceName: "device_name",
       deviceId: "device_id",
       clientId: "client_id",
     });
+    expect(sql).toMatch(
+      /^WITH \['thing-1', 'thing-2'\] AS __device_client_ids, CAST\(\['SN-1', 'SN-2'\] AS Array\(Nullable\(String\)\)\) AS __device_serials\n/,
+    );
     expect(sql).toContain(`SELECT ${label} AS \`device.serial_number\``);
     expect(sql).toContain(`WHERE ${label} = 'SN-1'`);
     expect(sql).toContain(`ORDER BY ${label} DESC NULLS LAST`);
@@ -196,10 +197,29 @@ describe("StoreQueryBuilder", () => {
       .orderBy({ column: "device", direction: "ASC" }, ["thing-2", "thing-1"])
       .build();
 
-    expect(sql).toContain(
-      "ORDER BY indexOf(['thing-2', 'thing-1'], client_id) ASC NULLS FIRST, CASE WHEN ",
-    );
+    expect(sql).toMatch(/^WITH \['thing-2', 'thing-1'\] AS __order_ids\n/);
+    expect(sql).toContain("ORDER BY indexOf(__order_ids, client_id) ASC NULLS FIRST, CASE WHEN ");
     expect(sql).toMatch(/ END ASC NULLS FIRST$/);
+  });
+
+  it("writes each list a sorted page reads once, so 2,500 registered devices stay under 1 MiB", () => {
+    const devices = Array.from({ length: 2_500 }, (_, index): [string, string] => [
+      `mobile_${String(index).padStart(36, "0")}`,
+      `MSQ-${String(index).padStart(10, "0")}`,
+    ]);
+    const sql = measurements()
+      .serialNumbers(devices)
+      .filter({ column: "device.serial_number", operator: "contains", value: "MSQ" })
+      .orderBy(
+        { column: "device", direction: "DESC" },
+        devices.map(([clientId]) => clientId),
+      )
+      .limit(100)
+      .offset(200)
+      .build();
+
+    expect(sql.split(devices[1234][0])).toHaveLength(3);
+    expect(Buffer.byteLength(sql)).toBeLessThan(1_048_576);
   });
 
   it("sorts text that holds a number by its value, then by the text and the row id", () => {
@@ -239,7 +259,8 @@ describe("StoreQueryBuilder", () => {
       .orderBy({ column: "contributor.name", direction: "ASC" }, ["u2", "u1"])
       .build();
 
-    expect(sql).toContain("ORDER BY indexOf(['u2', 'u1'], user_id) ASC NULLS FIRST");
+    expect(sql).toMatch(/^WITH \['u2', 'u1'\] AS __order_ids\n/);
+    expect(sql).toContain("ORDER BY indexOf(__order_ids, user_id) ASC NULLS FIRST");
   });
 
   it("sorts and filters a field by its extraction, never by its output name", () => {

@@ -193,10 +193,11 @@ describe("ExperimentStoreReadsService", () => {
     expect(ids).not.toHaveBeenCalled();
   });
 
-  it("hands the store each device's serial number for a filter on one", async () => {
+  it("hands the store only the serial numbers a label shows, for a filter on one", async () => {
     const owner = await testApp.createTestUser({});
     await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-7", thingName: "thing-7" });
-    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["thing-7", "phone"]));
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: "  ", thingName: "thing-8" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["thing-7", "thing-8", "phone"]));
     const build = vi.spyOn(store, "buildExperimentQuery");
 
     const query = await reads.buildQuery({
@@ -206,33 +207,38 @@ describe("ExperimentStoreReadsService", () => {
 
     assertSuccess(query);
     expect(build).toHaveBeenCalledWith(
-      expect.objectContaining({
-        deviceSerials: [
-          ["thing-7", "SN-7"],
-          ["phone", null],
-        ],
-      }),
+      expect.objectContaining({ deviceSerials: [["thing-7", "SN-7"]] }),
     );
   });
 
   it("hands the store the serial numbers when a read lists devices' labels", async () => {
-    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["phone"]));
+    const owner = await testApp.createTestUser({});
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-9", thingName: "thing-9" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["thing-9", "phone"]));
     const build = vi.spyOn(store, "buildExperimentQuery");
 
     await reads.buildQuery({ ...page, columns: ["device.serial_number"] });
 
     expect(build).toHaveBeenCalledWith(
-      expect.objectContaining({ deviceSerials: [["phone", null]] }),
+      expect.objectContaining({ deviceSerials: [["thing-9", "SN-9"]] }),
     );
   });
 
   it("sorts devices as Spark sorts their structs, registered ones by id and the rest by label", async () => {
     const owner = await testApp.createTestUser({});
-    const first = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-b" });
-    const second = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-c" });
-    vi.spyOn(store, "getExperimentIds").mockResolvedValue(
-      success(["thing-c", "phone-a", "thing-b"]),
-    );
+    const first = await testApp.createIotDevice({
+      createdBy: owner,
+      serialNumber: "SN-B",
+      thingName: "thing-b",
+    });
+    const second = await testApp.createIotDevice({
+      createdBy: owner,
+      serialNumber: "SN-C",
+      thingName: "thing-c",
+    });
+    const ids = vi
+      .spyOn(store, "getExperimentIds")
+      .mockResolvedValue(success(["thing-c", "phone-a", "thing-b"]));
     const build = vi.spyOn(store, "buildExperimentQuery");
 
     await reads.buildQuery({ ...page, ordering: { column: "device" } });
@@ -243,8 +249,12 @@ describe("ExperimentStoreReadsService", () => {
     ].sort((a, b) => (a.id < b.id ? -1 : 1));
     const [params] = build.mock.calls[0];
     expect(params.orderByIds).toEqual(byId.map(({ thing }) => thing));
-    // The label that breaks the rest needs the serial numbers.
-    expect(params.deviceSerials).toContainEqual(["phone-a", null]);
+    // The label that breaks the rest needs the serial numbers, from the same one lookup.
+    expect(params.deviceSerials).toEqual([
+      ["thing-c", "SN-C"],
+      ["thing-b", "SN-B"],
+    ]);
+    expect(ids).toHaveBeenCalledTimes(1);
   });
 
   it("folds devices that fill in alike before it limits a distinct read", async () => {

@@ -938,7 +938,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       [10, "phone-only", null, null],
       [11, "c1", "other-sensor", "MultispeQ"],
     ];
-    const serials: [string, string | null][] = [
+    const serials: [string, string][] = [
       ["c1", " SN1 "],
       ["blank-phone", " "],
     ];
@@ -1002,31 +1002,40 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       });
       expect(filtered.rows).toEqual([["2"]]);
 
+      // A page, so the serials are read inside the statement that picks its keys too.
       const sorted = await rowsOf({
         ...read,
         columns: ["id"],
         ordering: { column: "device.serial_number" },
         deviceSerials: serials,
+        limit: 3,
       });
       // No label sorts first, then the two rows of the registered device.
       expect(sorted.rows[0]).toEqual(["7"]);
       expect(sorted.rows.slice(1, 3).sort()).toEqual([["1"], ["11"]]);
     });
 
-    it("sorts whole devices by registry order, the unregistered first by their labels", async () => {
-      const sorted = await rowsOf({
-        ...read,
-        columns: ["id"],
-        ordering: { column: "device" },
-        orderByIds: ["c1", "blank-phone"],
-        deviceSerials: serials,
-      });
-      const ids = sorted.rows.map(([id]) => id);
+    // Rows 1 and 11 are one registered device, so either may come first.
+    const wholeDeviceSorts: { direction: "ASC" | "DESC"; order: string[] }[] = [
+      { direction: "ASC", order: ["7", "2", "3", "8", "6", "5", "4", "10", "1", "1", "9"] },
+      { direction: "DESC", order: ["9", "1", "1", "10", "4", "5", "6", "8", "3", "2", "7"] },
+    ];
 
-      expect(ids.slice(0, 8)).toEqual(["7", "2", "3", "8", "6", "5", "4", "10"]);
-      expect(ids.slice(8, 10).sort()).toEqual(["1", "11"]);
-      expect(ids[10]).toBe("9");
-    });
+    it.each(wholeDeviceSorts)(
+      "sorts whole devices $direction by registry order, the unregistered by their labels",
+      async ({ direction, order }) => {
+        const sorted = await rowsOf({
+          ...read,
+          columns: ["id"],
+          ordering: { column: "device", direction },
+          orderByIds: ["c1", "blank-phone"],
+          deviceSerials: serials,
+          limit: 11,
+        });
+
+        expect(sorted.rows.map(([id]) => (id === "11" ? "1" : id))).toEqual(order);
+      },
+    );
 
     it("lists the labels as the device picker pages them", async () => {
       const labels = async (limit: number, offset: number) => {
