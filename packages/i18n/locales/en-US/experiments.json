@@ -432,6 +432,11 @@
       "identifierHint": "To choose the identifier column, open the ⋯ menu in its header and select \"Set as identifier\". Its values are matched against the match target below.",
       "columnsTruncated_one": "{{columns}} and {{count}} more",
       "columnsTruncated_other": "{{columns}} and {{count}} more",
+      "storeCopy": {
+        "pending": "Being prepared for filtering in the data table",
+        "failed": "Could not be prepared for filtering in the data table",
+        "retry": "Try again"
+      },
       "saveMetadata": "Save Metadata",
       "savingMetadata": "Saving..."
     },

@@ -9,10 +9,13 @@ import {
   Trash2,
 } from "lucide-react";
 
+import type { MetadataStoreCopy } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
+
+import { MetadataStoreCopyStatus } from "./metadata-store-copy-status";
 
 export type DeleteStatus = "idle" | "deleting" | "deleted";
 
@@ -22,8 +25,11 @@ interface MetadataCardProps {
   rowCount: number;
   columnNames: string[];
   updatedAt: string;
+  storeCopy: MetadataStoreCopy | null | undefined;
+  isRetryingStoreCopy: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onRetryStoreCopy: () => void;
   deleteStatus: DeleteStatus;
 }
 
@@ -33,8 +39,11 @@ export function MetadataCard({
   rowCount,
   columnNames,
   updatedAt,
+  storeCopy,
+  isRetryingStoreCopy,
   onEdit,
   onDelete,
+  onRetryStoreCopy,
   deleteStatus,
 }: MetadataCardProps) {
   const { t } = useTranslation("experiments");
@@ -89,6 +98,11 @@ export function MetadataCard({
             {dateStr}
           </span>
         </div>
+        <MetadataStoreCopyStatus
+          storeCopy={storeCopy}
+          isRetrying={isRetryingStoreCopy}
+          onRetry={onRetryStoreCopy}
+        />
       </div>
 
       <div className="flex shrink-0 gap-1">
