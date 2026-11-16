@@ -2549,6 +2549,21 @@ describe("StoreTables against the migrations", () => {
     },
   );
 
+  it.each(["measurements_by_device", "device_events"])(
+    "%s, which the device views fold, holds its partition's time in its sorting key",
+    (name) => {
+      const create =
+        migrationStatements().find((statement) =>
+          statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
+        ) ?? "";
+
+      const partitionTime = /PARTITION BY toYYYYMM\((\w+)\)/.exec(create)?.[1] ?? "";
+      const sortingKey = /^ORDER BY \((.*)\)$/m.exec(create)?.[1].split(", ") ?? [];
+      expect(partitionTime).not.toBe("");
+      expect(sortingKey).toContain(partitionTime);
+    },
+  );
+
   it.each([
     ["macro_results", MACRO_RESULTS_TABLE],
     ["uploads", UPLOADS_TABLE],
