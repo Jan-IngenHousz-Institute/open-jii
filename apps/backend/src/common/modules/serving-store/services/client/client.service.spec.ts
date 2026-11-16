@@ -1,4 +1,5 @@
 import { ConfigService } from "@nestjs/config";
+import { once } from "events";
 import { createServer } from "http";
 import type { Server, ServerResponse } from "http";
 
@@ -24,15 +25,13 @@ describe("ServingStoreClientService", () => {
   async function streamLines(
     response: ServerResponse,
     { line, count }: { line: string; count: number },
+    closed: Promise<void>,
   ) {
     sent = 0;
     for (let index = 0; index < count && !response.destroyed; index++) {
       sent += line.length;
       if (!response.write(line)) {
-        await new Promise((resolve) => {
-          response.once("drain", resolve);
-          response.once("close", resolve);
-        });
+        await Promise.race([once(response, "drain"), closed]);
       }
     }
     response.end();
@@ -50,7 +49,7 @@ describe("ServingStoreClientService", () => {
           return;
         }
         answered = new Promise((resolve) => response.once("close", resolve));
-        void streamLines(response, lines);
+        void streamLines(response, lines, answered);
       });
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -164,6 +163,14 @@ describe("ServingStoreClientService", () => {
     await client.query(STATEMENT);
 
     expect(requested.get("precise_float_parsing")).toBe("1");
+  });
+
+  it("asks the store to quote a double JSON has no number for, which it would write as null", async () => {
+    answer = { status: 200, body: "" };
+
+    await client.query(STATEMENT);
+
+    expect(requested.get("output_format_json_quote_denormals")).toBe("1");
   });
 
   it("answers a result past the store's guard as a page too large", async () => {

@@ -28,12 +28,18 @@ describe("ServingStoreAdapter", () => {
     adapter = new ServingStoreAdapter(client);
   });
 
-  /** The store sends these rows, one at a time, for as long as the reader takes them. */
+  /** The store sends these rows, one at a time, for as long as the reader takes them; `handed`
+   *  counts the rows it handed over. */
   function storeSends(rows: unknown[][]) {
+    const sent = { handed: 0 };
     vi.spyOn(client, "stream").mockImplementation((_sql, take) => {
-      const isComplete = rows.every((row) => take(row));
+      const isComplete = rows.every((row) => {
+        sent.handed += 1;
+        return take(row);
+      });
       return Promise.resolve(success({ complete: isComplete }));
     });
+    return sent;
   }
 
   it("is not configured without a store", () => {
@@ -197,6 +203,35 @@ describe("ServingStoreAdapter", () => {
       ["2", null, null, null, null],
     ]);
     expect(result.value).toMatchObject({ totalRows: 2, truncated: false });
+  });
+
+  it("writes each payload field's cell from the text the first of its columns carries", async () => {
+    storeSends([['{"PAR":1.0E-7,"vH+":null}', null]]);
+
+    const result = await adapter.executeQuery({
+      sql: "SELECT …",
+      columns: [
+        { name: "vH+", type: "VARIANT", text: { column: "macro_output_text", key: "vH+" } },
+        { name: "PAR", type: "DOUBLE", text: { column: "macro_output_text", key: "PAR" } },
+      ],
+    });
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["null", "1.0E-7"]]);
+  });
+
+  it("stops at the row that takes a read past the page limit and marks it truncated", async () => {
+    const sent = storeSends([["a"], ["x".repeat(PAGE_BYTE_LIMIT)], ["c"]]);
+
+    const result = await adapter.executeQuery({
+      sql: "SELECT …",
+      columns: [{ name: "device_name", type: "STRING" }],
+    });
+
+    assertSuccess(result);
+    expect(result.value.rows).toHaveLength(2);
+    expect(result.value.truncated).toBe(true);
+    expect(sent.handed).toBe(2);
   });
 
   it("counts a read as text", () => {
