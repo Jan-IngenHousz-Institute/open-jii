@@ -70,7 +70,16 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
       return entry.value;
     }
 
+    const isNewLoad = !this.inFlight.has(cacheKey);
     const load = this.startLoad(cacheKey, fetchFn);
+
+    // A caller served stale, or one that stops waiting, leaves nobody to observe a rejection.
+    const isUnobserved = entry !== null || this.namespace.waitMs !== undefined;
+    if (isNewLoad && isUnobserved) {
+      load.catch((error: unknown) => {
+        this.logger.warn({ msg: "Background cache load failed", cacheKey, error });
+      });
+    }
 
     // A stale value is served at once; the load refreshes it behind the reply.
     // Waiting here is what turned a slow source into an empty page.
@@ -104,11 +113,6 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
       }
     });
     this.inFlight.set(cacheKey, load);
-
-    // A caller that stopped waiting leaves nobody to observe a rejection.
-    load.catch((error: unknown) => {
-      this.logger.warn({ msg: "Cache load failed", cacheKey, error });
-    });
 
     return load;
   }

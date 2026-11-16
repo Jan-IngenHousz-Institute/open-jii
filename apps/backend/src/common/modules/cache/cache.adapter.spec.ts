@@ -1,4 +1,5 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
 import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
@@ -338,6 +339,18 @@ describe("CacheAdapter", () => {
       expect(await cacheManager.get("swr:failing")).toMatchObject({ value: "old" });
     });
 
+    it("logs a refresh behind a stale value that fails, since nobody waits on it", async () => {
+      await cacheManager.set("swr:logged", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
+      const warn = vi.spyOn(Logger.prototype, "warn");
+
+      await adapter.tryCache("logged", () => Promise.reject(new Error("warehouse asleep")));
+      await settle();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: "Background cache load failed", cacheKey: "swr:logged" }),
+      );
+    });
+
     it("gives a caller with nothing to serve null after the wait, and finishes the load anyway", async () => {
       // Fresh long enough for the final read to find it fresh, not merely servable.
       const adapter = new CacheAdapter(cacheManager, { ...namespace, ttlMs: 60_000 });
@@ -447,6 +460,16 @@ describe("CacheAdapter", () => {
       await cacheManager.set("refresh:stale", { value: "old", freshUntil: Date.now() - 1 });
 
       expect(await adapter.refresh("stale", () => Promise.resolve("new"))).toBe("new");
+    });
+
+    it("leaves a failed load to the caller waiting on it, without logging it", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn");
+
+      await expect(
+        adapter.refresh("awaited", () => Promise.reject(new Error("store unreachable"))),
+      ).rejects.toThrow("store unreachable");
+
+      expect(warn).not.toHaveBeenCalled();
     });
 
     it("rejects with a failed load and keeps the stored value for the next read", async () => {
