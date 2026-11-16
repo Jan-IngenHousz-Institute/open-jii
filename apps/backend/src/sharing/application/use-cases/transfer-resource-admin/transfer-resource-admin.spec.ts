@@ -5,6 +5,7 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
@@ -415,7 +416,12 @@ describe("TransferResourceAdminUseCase", () => {
       testUserId,
     );
     await checkFinished;
-    assertSuccess(await new UserRepository(secondary.database).delete(target));
+    assertSuccess(
+      await new UserRepository(
+        secondary.database,
+        testApp.module.get(ExperimentDataOutboxRepository),
+      ).delete(target),
+    );
     release();
 
     const result = await transferring;

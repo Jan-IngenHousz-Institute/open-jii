@@ -17,7 +17,7 @@ import {
   ensurePersonalOrganization,
   experimentDevices,
 } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, Transaction } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, ftsMatch, searchScore, tsQuery } from "../../../common/utils/fts";
@@ -25,6 +25,7 @@ import {
   accessibleResourceCondition,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
+import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
 
@@ -43,11 +44,17 @@ export function deviceRungSql() {
     else ${status}::text end`;
 }
 
+/**
+ * Creating, updating or deleting a device owes its current state to the registry's lakehouse copy
+ * in the same transaction; the pipelines join that copy to name the devices behind an experiment's
+ * rows. The copy holds no name, so filling one in owes nothing.
+ */
 @Injectable()
 export class IotDeviceRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    private readonly outbox: ExperimentDataOutboxRepository,
   ) {}
 
   private buildListing({ userId, search, status, family, sort }: DeviceListingParams) {
@@ -146,6 +153,7 @@ export class IotDeviceRepository {
         // A plain org `member` may register a device but is read-only, so without a
         // grant they could not manage certificates on the device they just added.
         await seedCreatorControl(tx, "device", results[0].id, organizationId, userId);
+        await this.oweCopies(tx, results);
 
         return results;
       });
@@ -277,8 +285,8 @@ export class IotDeviceRepository {
     });
   }
 
-  // Cross-owner lookup for the Databricks lineage webhook: the pipeline resolves
-  // broker-authenticated thing names to registry rows, so this is not owner-scoped.
+  // Not owner-scoped: an experiment's publishers resolve to their registry rows
+  // by the thing names they authenticated as, whoever owns the devices.
   async findByThingNames(thingNames: string[]): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
       if (thingNames.length === 0) {
@@ -308,14 +316,18 @@ export class IotDeviceRepository {
   }
 
   async update(deviceId: string, patch: UpdateIotDeviceDto): Promise<Result<IotDeviceDto | null>> {
-    return tryCatch(async () => {
-      const results = await this.database
-        .update(iotDevices)
-        .set(patch)
-        .where(eq(iotDevices.id, deviceId))
-        .returning(deviceColumns);
-      return results.length === 0 ? null : results[0];
-    });
+    return tryCatch(() =>
+      this.database.transaction(async (tx) => {
+        const results = await tx
+          .update(iotDevices)
+          .set(patch)
+          .where(eq(iotDevices.id, deviceId))
+          .returning(deviceColumns);
+        await this.oweCopies(tx, results);
+
+        return results.length === 0 ? null : results[0];
+      }),
+    );
   }
 
   async delete(deviceId: string): Promise<Result<IotDeviceDto[]>> {
@@ -327,8 +339,21 @@ export class IotDeviceRepository {
 
         await deleteResourceGrants(tx, "device", deviceId);
 
-        return tx.delete(iotDevices).where(eq(iotDevices.id, deviceId)).returning(deviceColumns);
+        const deleted = await tx
+          .delete(iotDevices)
+          .where(eq(iotDevices.id, deviceId))
+          .returning(deviceColumns);
+        await this.oweCopies(tx, deleted);
+
+        return deleted;
       }),
+    );
+  }
+
+  private oweCopies(tx: Transaction, devices: IotDeviceDto[]): Promise<void> {
+    return this.outbox.owe(
+      tx,
+      devices.map(({ id }) => ({ recordType: "device", recordId: id, experimentId: null })),
     );
   }
 }

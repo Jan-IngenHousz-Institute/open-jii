@@ -30,7 +30,10 @@ function createMockContext(
 describe("UserAuthHook", () => {
   let hook: UserAuthHook;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
-  let mockUserRepository: { update: ReturnType<typeof vi.fn> };
+  let mockUserRepository: {
+    update: ReturnType<typeof vi.fn>;
+    reactivateProfile: ReturnType<typeof vi.fn>;
+  };
   let mockNotifyUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -39,6 +42,7 @@ describe("UserAuthHook", () => {
     };
     mockUserRepository = {
       update: vi.fn().mockResolvedValue(success([])),
+      reactivateProfile: vi.fn().mockResolvedValue(success(false)),
     };
     mockNotifyUseCase = {
       execute: vi.fn().mockResolvedValue(success(0)),
@@ -236,6 +240,45 @@ describe("UserAuthHook", () => {
       await hook.handleEmailSignIn(ctx);
 
       expect(mockUseCase.execute).toHaveBeenCalledWith("new-user", "invited@example.com");
+    });
+  });
+
+  describe("reactivateProfile (via handlers)", () => {
+    it.each([
+      ["handleEmailSignIn"],
+      ["handleEmailOtpSignIn"],
+      ["handleSocialSignIn"],
+      ["handleOAuthCallback"],
+    ] as const)("reactivates the signed-in profile on %s", async (handler) => {
+      await hook[handler](createMockContext());
+
+      expect(mockUserRepository.reactivateProfile).toHaveBeenCalledExactlyOnceWith("user-123");
+    });
+
+    it("leaves the profile alone when an email is only verified", async () => {
+      await hook.handleOtpVerify(createMockContext());
+
+      expect(mockUserRepository.reactivateProfile).not.toHaveBeenCalled();
+    });
+
+    it("reactivates nothing without a signed-in user", async () => {
+      await hook.handleEmailSignIn(createMockContext({ userId: null }));
+
+      expect(mockUserRepository.reactivateProfile).not.toHaveBeenCalled();
+    });
+
+    it("logs a failed reactivation and signs the user in anyway", async () => {
+      mockUserRepository.reactivateProfile.mockResolvedValue(
+        failure(AppError.internal("outbox unavailable")),
+      );
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      await expect(hook.handleEmailSignIn(createMockContext())).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "profile-reactivation", userId: "user-123" }),
+      );
+      expect(mockUseCase.execute).toHaveBeenCalled();
     });
   });
 

@@ -23,6 +23,7 @@ import {
   failure,
   success,
 } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import type { CachePort } from "../../../../macros/core/ports/cache.port";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
@@ -151,7 +152,12 @@ describe("createGrant", () => {
       role: "viewer",
     });
     await checkFinished;
-    assertSuccess(await new UserRepository(secondary.database).delete(grantee));
+    assertSuccess(
+      await new UserRepository(
+        secondary.database,
+        testApp.module.get(ExperimentDataOutboxRepository),
+      ).delete(grantee),
+    );
     release();
 
     const result = await creating;

@@ -53,6 +53,7 @@ import {
   getAnonymizedAvatarUrl,
   getAnonymizedEmail,
 } from "../../../common/utils/profile-anonymization";
+import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import {
   findBlockingOrganizations,
   findBlockingResources,
@@ -85,11 +86,17 @@ export const SOLE_RESOURCE_ADMIN_MESSAGE =
 export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
 
+/**
+ * A write that changes a profile, or whether it is activated, owes the contributor's current state
+ * to its lakehouse copy in the same transaction; the pipelines join that copy to name the people
+ * behind an experiment's rows.
+ */
 @Injectable()
 export class UserRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
+    private readonly outbox: ExperimentDataOutboxRepository,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<Result<UserDto[]>> {
@@ -468,6 +475,7 @@ export class UserRepository {
               deletedAt: sql`now() AT TIME ZONE 'UTC'`,
             },
           });
+        await this.oweContributorCopy(tx, id);
 
         // 4. Soft-delete user: scrub PII
         await tx
@@ -560,12 +568,15 @@ export class UserRepository {
 
       if (result.length > 0) {
         // Update profile — org name is set once at registration, not synced here.
-        await this.database
-          .update(profiles)
-          .set({
-            ...createUserProfileDto,
-          })
-          .where(eq(profiles.userId, userId));
+        await this.database.transaction(async (tx) => {
+          await tx
+            .update(profiles)
+            .set({
+              ...createUserProfileDto,
+            })
+            .where(eq(profiles.userId, userId));
+          await this.oweContributorCopy(tx, userId);
+        });
       } else {
         // First registration: create the profile and name the personal org from
         // it (first + last) in one transaction, so a failed sync rolls the
@@ -580,6 +591,7 @@ export class UserRepository {
             id: userId,
             name: `${createUserProfileDto.firstName} ${createUserProfileDto.lastName}`,
           });
+          await this.oweContributorCopy(tx, userId);
         });
       }
 
@@ -650,5 +662,30 @@ export class UserRepository {
 
       return result.length > 0 ? result[0].whatsNewLastSeenAt : null;
     });
+  }
+
+  /** Activates a deactivated profile again, which unmasks its name. False when it was active. */
+  async reactivateProfile(userId: string): Promise<Result<boolean>> {
+    return tryCatch(() =>
+      this.database.transaction(async (tx) => {
+        const reactivated = await tx
+          .update(profiles)
+          .set({ activated: true })
+          .where(and(eq(profiles.userId, userId), eq(profiles.activated, false)))
+          .returning({ userId: profiles.userId });
+        if (reactivated.length === 0) {
+          return false;
+        }
+
+        await this.oweContributorCopy(tx, userId);
+        return true;
+      }),
+    );
+  }
+
+  private oweContributorCopy(tx: Transaction, userId: string): Promise<void> {
+    return this.outbox.owe(tx, [
+      { recordType: "contributor", recordId: userId, experimentId: null },
+    ]);
   }
 }

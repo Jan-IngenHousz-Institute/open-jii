@@ -10,13 +10,15 @@ import {
   and,
   asc,
   eq,
+  experimentDataOutbox,
   experimentDevices,
   iotDevices,
   organizationMembers,
   resourceGrants,
 } from "@repo/database";
 
-import { assertSuccess } from "../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
+import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../test/test-harness";
 import type { IotDeviceDto, CreateIotDeviceDto } from "../models/iot-device.model";
 import { deviceRungSql, IotDeviceRepository } from "./iot-device.repository";
@@ -308,6 +310,95 @@ describe("IotDeviceRepository", () => {
       .from(iotDevices)
       .where(eq(iotDevices.id, created.value[0].id));
     expect(rows).toHaveLength(0);
+  });
+
+  describe("the registry's lakehouse copy", () => {
+    const owed = () =>
+      testApp.database
+        .select({
+          recordType: experimentDataOutbox.recordType,
+          recordId: experimentDataOutbox.recordId,
+          experimentId: experimentDataOutbox.experimentId,
+          destination: experimentDataOutbox.destination,
+        })
+        .from(experimentDataOutbox);
+    const copyOf = (deviceId: string) => ({
+      recordType: "device",
+      recordId: deviceId,
+      experimentId: null,
+      destination: "lakehouse",
+    });
+    const outboxFails = () =>
+      vi
+        .spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe")
+        .mockRejectedValue(new Error("outbox unavailable"));
+
+    it("is owed a registered device's state", async () => {
+      const created = await repository.create(buildDto(), userId);
+      assertSuccess(created);
+
+      expect(await owed()).toEqual([copyOf(created.value[0].id)]);
+    });
+
+    it("is owed a device's new status", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      assertSuccess(await repository.update(device.id, { status: "retired" }));
+
+      expect(await owed()).toEqual([copyOf(device.id)]);
+    });
+
+    it("is owed a deleted device's removal", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      assertSuccess(await repository.delete(device.id));
+
+      expect(await owed()).toEqual([copyOf(device.id)]);
+    });
+
+    it("is owed nothing for a name, which it does not hold, or for a device that is not there", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId, name: null });
+
+      assertSuccess(await repository.fillNameIfMissing(device.id, "Field MultispeQ"));
+      assertSuccess(await repository.update(faker.string.uuid(), { status: "retired" }));
+
+      expect(await owed()).toEqual([]);
+    });
+
+    it("keeps no device when the copy it owes cannot be written", async () => {
+      outboxFails();
+      const dto = buildDto();
+
+      assertFailure(await repository.create(dto, userId));
+
+      const rows = await testApp.database
+        .select()
+        .from(iotDevices)
+        .where(eq(iotDevices.thingName, dto.thingName));
+      expect(rows).toEqual([]);
+    });
+
+    it("keeps the old status when the copy it owes cannot be written", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+      outboxFails();
+
+      assertFailure(await repository.update(device.id, { status: "retired" }));
+
+      const stored = await repository.findById(device.id);
+      assertSuccess(stored);
+      expect(stored.value?.status).toBe("active");
+    });
+
+    it("keeps the device when the copy its removal owes cannot be written", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      outboxFails();
+
+      assertFailure(await repository.delete(device.id));
+
+      const stored = await repository.findById(device.id);
+      assertSuccess(stored);
+      expect(stored.value?.id).toBe(device.id);
+    });
   });
 });
 

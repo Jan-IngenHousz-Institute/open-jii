@@ -46,18 +46,21 @@ export class UserAuthHook {
 
   @AfterHook("/sign-in/email")
   async handleEmailSignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/sign-in/email-otp")
   async handleEmailOtpSignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/sign-in/social")
   async handleSocialSignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
@@ -70,6 +73,7 @@ export class UserAuthHook {
    */
   @AfterHook("/callback/:id")
   async handleOAuthCallback(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
@@ -83,6 +87,24 @@ export class UserAuthHook {
   /* v8 ignore next 3 */
   protected async getSessionFromCtx(ctx: AuthHookContext) {
     return getSessionFromCtx(ctx);
+  }
+
+  /** Signing in again undoes a deactivation. A failure is logged and the sign-in stands. */
+  private async reactivateProfile(ctx: AuthHookContext) {
+    const user = ctx.context.newSession?.user;
+    if (!user?.id) {
+      return;
+    }
+
+    const result = await this.userRepository.reactivateProfile(user.id);
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to reactivate the profile on sign-in, the sign-in stands",
+        operation: "profile-reactivation",
+        userId: user.id,
+        error: result.error.message,
+      });
+    }
   }
 
   private async acceptInvitationsForNewUser(ctx: AuthHookContext) {

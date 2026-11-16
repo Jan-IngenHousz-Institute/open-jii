@@ -3,10 +3,9 @@ import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware } from "better-auth/api";
 import { genericOAuth, lastLoginMethod } from "better-auth/plugins";
 
-import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
+import { db, ensurePersonalOrganization } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
@@ -240,32 +239,8 @@ export const auth = betterAuth({
       },
     },
   },
-  // Lifecycle hooks
-  hooks: {
-    after: createAuthMiddleware(async (ctx) => {
-      // Trigger on any sign-in method (social, email OTP, etc.)
-      const isSignIn = ["/sign-in/social", "/sign-in/email-otp", "/sign-in/email"].includes(
-        ctx.path,
-      );
-
-      const isSignInCallback = ctx.path.startsWith("/callback/");
-
-      if (isSignIn || isSignInCallback) {
-        try {
-          const session = ctx.context.newSession;
-          if (session?.user.id) {
-            // Reactivate user profile on successful sign-in
-            await db
-              .update(profiles)
-              .set({ activated: true })
-              .where(and(eq(profiles.userId, session.user.id), eq(profiles.activated, false)));
-          }
-        } catch (err) {
-          console.warn("Failed to reactivate profile on sign-in:", err);
-        }
-      }
-    }),
-  },
+  // Empty, but nestjs-better-auth attaches the backend's @Hook providers to it.
+  hooks: {},
 });
 
 export type Auth = typeof auth;

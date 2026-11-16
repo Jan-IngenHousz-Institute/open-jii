@@ -8,6 +8,7 @@ import {
   apiKeys,
   passkeys,
   sessions,
+  experimentDataOutbox,
   experimentMembers,
   organizationInvitations,
   organizationJoinRequests,
@@ -31,6 +32,7 @@ import type { DatabaseInstance } from "@repo/database";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../common/utils/fp-utils";
+import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { IotDeviceGroupRepository } from "../../../iot/core/repositories/iot-device-group.repository";
 import { CACHE_PORT } from "../../../macros/core/ports/cache.port";
 import { MacroRepository } from "../../../macros/core/repositories/macro.repository";
@@ -1555,6 +1557,130 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("the contributor's lakehouse copy", () => {
+    const owed = () =>
+      testApp.database
+        .select({
+          recordType: experimentDataOutbox.recordType,
+          recordId: experimentDataOutbox.recordId,
+          experimentId: experimentDataOutbox.experimentId,
+          destination: experimentDataOutbox.destination,
+        })
+        .from(experimentDataOutbox);
+    const copyOf = (userId: string) => ({
+      recordType: "contributor",
+      recordId: userId,
+      experimentId: null,
+      destination: "lakehouse",
+    });
+    const outboxFails = () =>
+      vi
+        .spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe")
+        .mockRejectedValue(new Error("outbox unavailable"));
+    const profileOf = async (userId: string) => {
+      const [profile] = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userId));
+      return profile;
+    };
+
+    it("is owed a new profile", async () => {
+      const userId = await testApp.createTestUser({ createProfile: false });
+
+      assertSuccess(
+        await repository.createOrUpdateUserProfile(userId, {
+          firstName: "Ada",
+          lastName: "Lovelace",
+        }),
+      );
+
+      expect(await owed()).toEqual([copyOf(userId)]);
+    });
+
+    it("is owed an edited profile, its activation among the edits", async () => {
+      assertSuccess(
+        await repository.createOrUpdateUserProfile(testUserId, {
+          firstName: "Ada",
+          lastName: "Lovelace",
+          activated: false,
+        }),
+      );
+
+      expect(await owed()).toEqual([copyOf(testUserId)]);
+    });
+
+    it("is owed a closed account's scrubbed name", async () => {
+      assertSuccess(await repository.delete(testUserId));
+
+      expect(await owed()).toEqual([copyOf(testUserId)]);
+    });
+
+    it("is owed a profile signing in again unmasks", async () => {
+      const userId = await testApp.createTestUser({ activated: false });
+
+      const reactivated = await repository.reactivateProfile(userId);
+
+      assertSuccess(reactivated);
+      expect(reactivated.value).toBe(true);
+      expect((await profileOf(userId)).activated).toBe(true);
+      expect(await owed()).toEqual([copyOf(userId)]);
+    });
+
+    it("is owed nothing when the profile signing in was active already", async () => {
+      const reactivated = await repository.reactivateProfile(testUserId);
+
+      assertSuccess(reactivated);
+      expect(reactivated.value).toBe(false);
+      expect(await owed()).toEqual([]);
+    });
+
+    it("keeps the old name when the copy an edit owes cannot be written", async () => {
+      const before = await profileOf(testUserId);
+      outboxFails();
+
+      assertFailure(
+        await repository.createOrUpdateUserProfile(testUserId, {
+          firstName: "Ada",
+          lastName: "Lovelace",
+        }),
+      );
+
+      expect((await profileOf(testUserId)).firstName).toBe(before.firstName);
+    });
+
+    it("keeps no new profile when the copy it owes cannot be written", async () => {
+      const userId = await testApp.createTestUser({ createProfile: false });
+      outboxFails();
+
+      assertFailure(
+        await repository.createOrUpdateUserProfile(userId, {
+          firstName: "Ada",
+          lastName: "Lovelace",
+        }),
+      );
+
+      expect(await profileOf(userId)).toBeUndefined();
+    });
+
+    it("keeps the account open when the copy its closing owes cannot be written", async () => {
+      outboxFails();
+
+      assertFailure(await repository.delete(testUserId));
+
+      expect((await profileOf(testUserId)).deletedAt).toBeNull();
+    });
+
+    it("keeps the profile deactivated when the copy signing in owes cannot be written", async () => {
+      const userId = await testApp.createTestUser({ activated: false });
+      outboxFails();
+
+      assertFailure(await repository.reactivateProfile(userId));
+
+      expect((await profileOf(userId)).activated).toBe(false);
+    });
+  });
+
   describe("findUsersByIds", () => {
     let testUser1Id: string;
     let testUser2Id: string;
@@ -2172,7 +2298,10 @@ describe("UserRepository", () => {
       const blocker = createSecondaryDatabase();
       const deleter = createSecondaryDatabase();
       try {
-        const deleterRepo = new UserRepository(deleter.database);
+        const deleterRepo = new UserRepository(
+          deleter.database,
+          testApp.module.get(ExperimentDataOutboxRepository),
+        );
 
         const org = await testApp.createOrganization();
         const ownerA = await testApp.createTestUser({ email: "co-owner-a@example.com" });
@@ -2219,7 +2348,10 @@ describe("UserRepository", () => {
       const blocker = createSecondaryDatabase();
       const deleter = createSecondaryDatabase();
       try {
-        const deleterRepo = new UserRepository(deleter.database);
+        const deleterRepo = new UserRepository(
+          deleter.database,
+          testApp.module.get(ExperimentDataOutboxRepository),
+        );
 
         const org = await testApp.createOrganization();
         const ownerA = await testApp.createTestUser({ email: "empty-co-owner-a@example.com" });
@@ -2431,7 +2563,10 @@ describe("UserRepository", () => {
       // is what serializes them.
       const secondary = createSecondaryDatabase();
       try {
-        const secondaryRepo = new UserRepository(secondary.database);
+        const secondaryRepo = new UserRepository(
+          secondary.database,
+          testApp.module.get(ExperimentDataOutboxRepository),
+        );
 
         // A husk-org experiment: its owner is gone, so the two admin grants are the
         // only thing keeping it answerable — which is when the invariant bites and
@@ -2483,7 +2618,10 @@ describe("UserRepository", () => {
       const blocker = createSecondaryDatabase();
       const deleter = createSecondaryDatabase();
       try {
-        const deleterRepo = new UserRepository(deleter.database);
+        const deleterRepo = new UserRepository(
+          deleter.database,
+          testApp.module.get(ExperimentDataOutboxRepository),
+        );
 
         // Both resources stay owned by a living owner, so neither deletion is
         // refused — what is under test is the order the locks are taken in, not the
