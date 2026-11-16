@@ -1,4 +1,3 @@
-import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import { buildAggregation } from "../../../databricks/services/query-builder/expressions/aggregation";
@@ -37,11 +36,6 @@ export class StoreAggregation {
       throw new QueryBuilderInputError("The store does not expand arrays into rows");
     }
 
-    // Grouped, the store reads only the columns the aggregation names; it does not leave the
-    // others out of a statement it aggregates over by itself.
-    if (!this.keepsRows()) {
-      this.rows.select(this.namesRead(page.ordering));
-    }
     const inner = this.rows.outputColumns().map(({ name, type, idOf }) => ({ name, type, idOf }));
     const names = inner.map(({ name }) => name);
     const dialect = new StoreQueryBuilder(names).over(inner);
@@ -62,39 +56,6 @@ export class StoreAggregation {
     // The outer statement keeps the aggregate's order; under prefer_column_name_to_alias each text
     // conversion reads the inner column, not its own alias.
     return { sql: dialect.buildOver(`SELECT ${cells.join(", ")} FROM (${sql})`), columns };
-  }
-
-  /** With nothing grouped and only windows, every row comes back with all its columns. */
-  private keepsRows(): boolean {
-    const hasGroups = (this.aggregation.groupBy ?? []).length > 0;
-    const isWindow = ({ function: fn }: AggregateExpression) =>
-      fn === "cumsum" || aggregateKind(fn) === "rowWindow";
-    return !hasGroups && (this.aggregation.functions ?? []).every(isWindow);
-  }
-
-  /** The read's own columns the aggregation and its sort name; a struct path reads its column. */
-  private namesRead(ordering?: QueryOrdering): string[] {
-    const all = new Set(this.rows.outputColumns().map(({ name }) => name));
-    const named = [
-      ...(this.aggregation.groupBy ?? []).map(({ column }) => column),
-      ...(this.aggregation.functions ?? []).flatMap((item) => [
-        item.column,
-        item.secondColumn,
-        item.partitionColumn,
-        item.orderColumn,
-        item.tieBreaker,
-      ]),
-      ordering?.column,
-    ];
-    const read = named.flatMap((name) => {
-      if (name === undefined) {
-        return [];
-      }
-      const column = all.has(name) ? name : name.split(".")[0];
-      return all.has(column) ? [column] : [];
-    });
-    // A count of rows names no column, yet the statement must read one.
-    return read.length > 0 ? [...new Set(read)] : ["id"];
   }
 
   private outputColumns(

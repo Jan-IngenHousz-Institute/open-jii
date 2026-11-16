@@ -654,7 +654,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private deviceKeyOf({ clientId, label }: DeviceParts): string {
     const registered =
       this.deviceSerials.length > 0
-        ? `if(has(${DEVICE_CLIENT_IDS}, ${clientId}), ${clientId}, NULL)`
+        ? `if(${clientId} IN ${DEVICE_CLIENT_IDS}, ${clientId}, NULL)`
         : "CAST(NULL AS Nullable(String))";
     return `tuple(${registered}, ${label})`;
   }
@@ -1001,9 +1001,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     });
   }
 
-  /** A client id missing from the list reads 0 from indexOf, and the Nullable array's NULL there. */
+  /** A hash lookup per row, where a scan of the list per row costs as much as the rest of a read. */
   private serialNumberOf(clientIdSql: string): string {
-    return `arrayElement(${DEVICE_SERIALS}, indexOf(${DEVICE_CLIENT_IDS}, ${clientIdSql}))`;
+    return `transform(${clientIdSql}, ${DEVICE_CLIENT_IDS}, ${DEVICE_SERIALS}, CAST(NULL AS Nullable(String)))`;
   }
 
   /**

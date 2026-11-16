@@ -240,7 +240,7 @@ describe("StoreAggregation", () => {
 
     assertSuccess(query);
     expect(query.value.sql).toContain(
-      "tuple(if(has(__device_client_ids, client_id), client_id, NULL)",
+      "tuple(if(client_id IN __device_client_ids, client_id, NULL)",
     );
     expect(query.value.columns[0]).toMatchObject({ name: "device", idOf: "device" });
   });

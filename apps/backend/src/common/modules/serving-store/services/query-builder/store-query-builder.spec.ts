@@ -213,7 +213,8 @@ describe("StoreQueryBuilder", () => {
     const sql = builder.build();
 
     const label = deviceLabel({
-      serialNumber: "arrayElement(__device_serials, indexOf(__device_client_ids, client_id))",
+      serialNumber:
+        "transform(client_id, __device_client_ids, __device_serials, CAST(NULL AS Nullable(String)))",
       deviceName: "device_name",
       deviceId: "device_id",
       clientId: "client_id",
