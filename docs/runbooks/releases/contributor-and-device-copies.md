@@ -1,42 +1,51 @@
 # contributor-and-device-copies
 
-**Owes the lakehouse a copy of every existing profile and device once, so the pipelines can name an
-experiment's contributors and devices without calling the backend.** From this release on, the gold
-tables `experiment_contributors` and `experiment_devices` join two lakehouse tables,
-`centrum.contributor_profiles` and `centrum.device_registry`, instead of asking the backend for
-names (OJD-1924). The backend keeps both tables to Postgres through `experiment_data_outbox`: every
-profile edit, deactivation, reactivation and account closing owes its contributor's copy, and every
-device registration, status change and deletion owes its device's copy. The profiles and devices
-already in Postgres are owed nothing, so until this step has run the two gold tables name nobody.
+**Owes the lakehouse a copy of every existing profile and device once, then switches Centrum to
+naming an experiment's contributors and devices from those copies instead of calling the backend.**
+From this release on, the gold tables `experiment_contributors` and `experiment_devices` join two
+lakehouse tables, `centrum.contributor_profiles` and `centrum.device_registry` (OJD-1924). The
+backend keeps both tables to Postgres through `experiment_data_outbox`: every profile edit,
+deactivation, reactivation and account closing owes its contributor's copy, and every device
+registration, status change and deletion owes its device's copy. The profiles and devices already
+in Postgres are owed nothing until step 2 runs.
+
+The bundle deploy does not switch the code. Centrum runs continuously and keeps running the
+notebooks it started with until it restarts, so after the release it still asks the backend for
+names. This release keeps the two routes it asks, `POST /api/v1/users/metadata` and
+`POST /api/v1/iot/devices/registry`, so names stay in place throughout. Step 5's restart is the
+switch, and it waits until the copies have landed.
 
 This runs by hand once per environment. It is a copy done once, so nothing in the repository runs
 it.
 
-## 1. Owe every profile and device
+## 1. Wait for the backend rollout to finish
 
 The release deploys infrastructure first, which creates the two tables, then applies the database
 migration, which adds the `contributor` and `device` record types, then the backend, then the
-Databricks bundle. Run this from a database session as soon as the migration has applied:
+Databricks bundle. Wait until every backend task runs the new release: the ECS service shows one
+deployment, and none of the old task definition. A task of the previous release owes nothing when a
+profile or device changes, so a write it takes after step 2 would never reach the copy. Waiting
+loses nothing, since no task of the previous release copies these records anyway.
+
+## 2. Owe every profile and device
+
+From a database session:
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, destination)
-SELECT 'contributor', user_id, 'lakehouse' FROM profiles
+SELECT 'contributor'::experiment_data_record_type, user_id,
+       'lakehouse'::experiment_data_destination
+FROM profiles
 UNION ALL
 SELECT 'device', id, 'lakehouse' FROM iot_devices
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
 ```
 
-A task of the previous release claims only annotations and sheets, so the rows wait for the new
-tasks, which copy them as they start. The rows carry no experiment: a profile or a device belongs to
-none. A profile or device written meanwhile is already owed, and the conflict clause leaves its row
-alone; owing a copy twice does no harm, since a copy writes each record's state at the time of the
-copy.
+The rows carry no experiment: a profile or a device belongs to none. A profile or device written
+since step 1 is already owed, and the conflict clause leaves its row alone. Running the insert
+twice does no harm, since a copy writes each record's state at the time of the copy.
 
-If the bundle lands before the copies, the enriched views show no contributor name and an empty
-device for the minutes the copies take. Where the Databricks deploy waits for an approval of its
-own, give it once step 2 reads 0.
-
-## 2. Wait until no copy is owed
+## 3. Wait until no copy is owed
 
 ```sql
 SELECT record_type, count(*), max(attempts), max(last_error)
@@ -45,42 +54,85 @@ GROUP BY record_type;
 ```
 
 It reads no rows once every copy landed. Each task copies 200 rows a statement, one claim after
-another, so a few thousand profiles should take minutes. A row whose attempts keep climbing names the
-lakehouse's refusal in `last_error`; [experiment-data-outbox-waiting](../experiment-data-outbox-waiting.md)
-covers why, and fires if one waits over 30 minutes.
+another, so a few thousand profiles should take minutes. A row whose attempts keep climbing names
+the lakehouse's refusal in `last_error`;
+[experiment-data-outbox-waiting](../experiment-data-outbox-waiting.md) covers why, and fires if one
+waits over 30 minutes.
 
-## 3. Check, once
+## 4. Check that every record has its copy
 
-Count both sides. In psql:
-
-```sql
-SELECT (SELECT count(*) FROM profiles) AS profiles, (SELECT count(*) FROM iot_devices) AS devices;
-```
-
-In the environment's Databricks SQL editor:
+Compare ids, not counts, so a missed record shows by name. In the environment's Databricks SQL
+editor:
 
 ```sql
 USE CATALOG open_jii_<env>;
 
-SELECT (SELECT count(*) FROM centrum.contributor_profiles) AS profiles,
-       (SELECT count(*) FROM centrum.device_registry) AS devices;
+SELECT 'contributor' AS record_type, user_id AS id FROM centrum.contributor_profiles
+UNION ALL
+SELECT 'device', id FROM centrum.device_registry;
 ```
 
-The two agree. A write between the two queries can leave one off by its own record; step 2 then
-shows the copy owed, and the counts agree once it lands. Any other difference is a copy that has
-not landed: owe the missing ones again by id, as step 1 does with `AND user_id IN (...)` or
-`AND id IN (...)`.
+Download the result as CSV, `copies.csv`. In a psql session to the environment's Aurora, from the
+folder holding it:
 
-The same insert repairs either table if it is ever emptied.
+```sql
+CREATE TEMP TABLE lakehouse_copies (record_type text, id uuid);
+\copy lakehouse_copies FROM 'copies.csv' WITH (FORMAT csv, HEADER)
+
+SELECT 'contributor' AS record_type, p.user_id AS id FROM profiles p
+LEFT JOIN lakehouse_copies c ON c.record_type = 'contributor' AND c.id = p.user_id
+WHERE c.id IS NULL
+UNION ALL
+SELECT 'device', d.id FROM iot_devices d
+LEFT JOIN lakehouse_copies c ON c.record_type = 'device' AND c.id = d.id
+WHERE c.id IS NULL;
+```
+
+It lists no rows. A record created after the export can show here; step 3 then shows its copy
+owed, and it is gone from the list once that lands. Owe any other listed record again, naming the
+ids:
+
+```sql
+INSERT INTO experiment_data_outbox (record_type, record_id, destination)
+SELECT 'contributor', user_id, 'lakehouse' FROM profiles WHERE user_id IN ('<id>', '<id>')
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+
+INSERT INTO experiment_data_outbox (record_type, record_id, destination)
+SELECT 'device', id, 'lakehouse' FROM iot_devices WHERE id IN ('<id>', '<id>')
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+The same step 2 insert refills either table if it is ever emptied. Delete `copies.csv` once the
+check is clean; it holds every account's id.
+
+## 5. Restart Centrum
+
+Stop Centrum in the Databricks workspace, wait until it reads `IDLE`, and start it again, without a
+full refresh. It comes back on the new bundle's notebooks, which join the copies. A restart often
+takes more than ten minutes, and measurements wait in Kinesis meanwhile.
+
+Then check, in the SQL editor, that names stayed in place:
+
+```sql
+SELECT count_if(user.name = '') AS blank, count(*) AS contributors
+FROM centrum.experiment_contributors;
+
+SELECT count_if(device.id IS NULL AND startswith(client_id, 'ambyte_')) AS unregistered_ambytes
+FROM centrum.experiment_devices;
+```
+
+Run both before the release as well and compare: each reads the same before and after the
+restart. A user without a profile reads blank in both, as the backend's lookup left them.
 
 ## Rolling back
 
-The previous release's gold tables call the backend again, and its backend serves them. Its tasks
-never claim a `contributor` or `device` row, so any left owed would wait and fire
-`experiment-data-outbox-waiting`. Once the rollback is out, delete them:
+Before the restart, nothing has switched: roll back as any release. After it, the previous
+release's gold tables call the backend again, and its backend serves them, but only once Centrum
+restarts on the previous bundle. Its tasks never claim a `contributor` or `device` row, so any left
+owed would wait and fire `experiment-data-outbox-waiting`. Once the rollback is out, delete them:
 
 ```sql
 DELETE FROM experiment_data_outbox WHERE record_type IN ('contributor', 'device');
 ```
 
-When the release comes back, run step 1 again: the copies missed every change made meanwhile.
+When the release comes back, run steps 2 to 4 again: the copies missed every change made meanwhile.
