@@ -137,6 +137,15 @@ incident links an update that is unpublished, archived or deleted, so that updat
 until it is published, and the run goes on with everything else. Any other error in the answer fails
 the read.
 
+An entry the publisher cannot use, such as an incident with no kind, impact or component, is left
+off the page and the run goes on. The log names it in one JSON line with
+`"warning": "status-entry-dropped"` and the ids of the incidents and notices it left out. Fix the
+entry in Contentful and publish it again:
+
+```bash
+aws logs tail /aws/lambda/<env>-status-publisher --since 30m --filter-pattern '"status-entry-dropped"'
+```
+
 The next successful read clears the warning on its own, and the events for anything that changed in
 the meantime go out then.
 

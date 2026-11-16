@@ -85,8 +85,8 @@ sense on its own.
 2. Add an update with Stage `resolved`, Posted at now and no Next update by.
 3. Publish the update, then the incident.
 
-The component goes back to what our checks measure within about two minutes, and the incident moves
-to Past incidents.
+The component goes back to what our checks measure within about seven minutes, and the incident
+moves to Past incidents.
 
 ## Plan maintenance
 
@@ -144,7 +144,7 @@ Slack gets its message when the publisher sees the change, in the same window.
    at must be after Starts at, except when you cancel planned work before it starts, where it is the
    moment you cancelled (see Plan maintenance).
 3. Check that Kind, Impact and at least one component are set, and that no update is empty.
-4. Wait the two minutes and reload.
+4. Wait about seven minutes and reload.
 5. Read the "Last checked" line under the page title. If it is more than five minutes old, or the
    headline reads "Status may be out of date", the publisher has stopped. Tell the engineer on call.
    They start from `status-publisher-stopped.md` and `status-publisher-errors.md`.
@@ -192,7 +192,7 @@ by.
 
 ## Correct a mistake
 
-The page follows edits. Change the entry, publish it, and the new text shows within about two
+The page follows edits. Change the entry, publish it, and the new text shows within about seven
 minutes. Slack posts each message once and never edits or deletes it, so an edit is invisible there.
 
 - A typo, or a wrong time nobody acted on: edit the entry and publish. Editing an update, even its
@@ -233,5 +233,6 @@ describes for the footer.
    role can create and publish entries but not change the content model, which needs an
    administrator. Give it to at least two people per duty rota and ask them to sign in once before
    they need it.
-6. Create a test incident in the dev environment, check it on https://status.dev.openjii.org, then
-   resolve it.
+6. Check the page with `pnpm status:fixtures`, which serves sample incidents to the status page's
+   dev server. Never publish a test incident: dev and prod read the same Contentful space, so it
+   would show on https://status.openjii.org too.
