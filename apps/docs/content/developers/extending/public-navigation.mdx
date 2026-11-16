@@ -22,7 +22,7 @@ Button labels are localized in Contentful. Edit Label for each supported locale;
 
 ## About JII
 
-JII has a short section in the homepage mission content and an external footer link to the institute website. The old `/{locale}/about` route permanently redirects to `/{locale}#about-jii` and no longer appears in the sitemap. The old About entry is retained in Contentful as an archive, but the deployed route does not read it. Its Contentful preview also redirects to the homepage. The removal is permanent; retaining the content is an archive, not a guarantee that browsers will forget the permanent redirect if the route is restored.
+JII has a short section in the homepage mission content and an external footer link to the institute website. The old `/{locale}/about` route permanently redirects to `/{locale}#about-jii` and no longer appears in the sitemap. The About content type and its entry are no longer in Contentful; `packages/cms/content-archive/pageAbout.json` keeps a copy of both. The removal is permanent; that copy is no guarantee that browsers will forget the permanent redirect if the route is restored.
 
 ## Model and code
 
