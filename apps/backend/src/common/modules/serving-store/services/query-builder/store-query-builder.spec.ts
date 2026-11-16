@@ -130,6 +130,19 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("ORDER BY if(dynamicType(macro_output.`vH+`) != 'None'");
   });
 
+  it("reads a chart's payload fields as values from the JSON column, never the payload's text", () => {
+    const builder = new StoreQueryBuilder()
+      .read(MACRO_RESULTS_TABLE, "e1", "m1")
+      .plotValues()
+      .parseVariant("macro_output", "OBJECT<PAR: DOUBLE>", "output")
+      .select(["id", "PAR"]);
+    const sql = builder.build();
+
+    expect(builder.outputColumns().map(({ text }) => text)).toEqual([undefined, undefined]);
+    expect(sql).toContain("accurateCastOrNull(macro_output.`PAR`, 'Float64') AS `PAR`");
+    expect(sql).not.toContain("macro_output_text");
+  });
+
   it("escapes backslashes in a quoted name, which the store reads as escapes", () => {
     const sql = new StoreQueryBuilder()
       .read(UPLOADS_TABLE, "e1", "t1")
