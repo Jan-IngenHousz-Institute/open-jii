@@ -5,6 +5,7 @@ import { useDepartureRouter } from "@/components/navigation/list-departure/list-
 import { ownName, personName } from "@/components/people/person-name";
 import { UserAvatar } from "@/components/user-avatar";
 import {
+  Activity,
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
@@ -133,6 +134,23 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
             </DepartureLink>
           </DropdownMenuItem>
 
+          {/* STATUS */}
+          <DropdownMenuItem asChild>
+            <DepartureLink
+              href={env.NEXT_PUBLIC_STATUS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full cursor-default items-center"
+            >
+              <Avatar className="bg-muted mr-2 h-4 w-4">
+                <AvatarFallback className="rounded-lg">
+                  <Activity className="h-4 w-4" />
+                </AvatarFallback>
+              </Avatar>
+              {t("navigation.status")}
+            </DepartureLink>
+          </DropdownMenuItem>
+
           {/* FAQ */}
           <DropdownMenuItem asChild>
             <DepartureLink
@@ -234,6 +252,23 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                   </AvatarFallback>
                 </Avatar>
                 {t("navigation.support")}
+              </DepartureLink>
+            </DropdownMenuItem>
+
+            {/* STATUS */}
+            <DropdownMenuItem asChild>
+              <DepartureLink
+                href={env.NEXT_PUBLIC_STATUS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full cursor-default items-center"
+              >
+                <Avatar className="bg-muted mr-2 h-4 w-4">
+                  <AvatarFallback className="rounded-lg">
+                    <Activity className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                {t("navigation.status")}
               </DepartureLink>
             </DropdownMenuItem>
 
