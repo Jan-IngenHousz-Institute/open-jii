@@ -28,9 +28,12 @@ When a session expires mid-task, ask for every expired login at once rather than
 
 ## Production
 
-Read production when the person asks for it. Write to it only through the release path: PR, then
-`main`, then dev, then a release. A direct CLI write to a shared resource, such as a cluster policy
-edit, has taken the production pipeline down before.
+Read production when the person asks for it. An AWS or Databricks read of production from an agent
+session also needs the developer to open the window with `pnpm analyst:prod-window`, which
+`docs/agents/cloud-access.md` describes. The daily round's Grafana and PostHog reads use scoped
+tokens and do not. Write to it only through the release path: PR, then `main`, then dev, then a
+release. A direct CLI write to a shared resource, such as a cluster policy edit, has taken the
+production pipeline down before.
 
 ## The dev API with an API key
 

@@ -5,16 +5,16 @@ verify them against the code.
 
 ## What lives where
 
-| Path                 | What it is                                                                                                                   | Read first                                                          |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `apps/web`           | Platform UI. Auth-gated; talks to the backend through the shared contracts.                                                  | `apps/web/README.md`, `apps/web/TESTING.md`                         |
-| `apps/backend`       | The API on `:3020`. Boots through a long `getOrThrow` config list.                                                           | `apps/backend/README.md`, `apps/backend/.env.example`               |
-| `apps/mobile`        | Field companion. Android is the only published platform — USB serial and Bluetooth Classic rule out iOS for data collection. | `apps/mobile/CONTEXT.md` (domain glossary), `apps/mobile/README.md` |
-| `apps/data`          | Databricks pipelines and notebooks. Separate Python toolchain, outside the pnpm dev loop.                                    | `apps/data/README.md`                                               |
-| `apps/macro-sandbox` | Sandboxed runtimes that execute user-authored macros.                                                                        | `apps/macro-sandbox/README.md`                                      |
-| `apps/docs`          | The public documentation site.                                                                                               | `apps/docs/README.md`                                               |
-| `apps/status`        | Public status page. Static export, hosted apart from the platform; reads data/status.json.                                   | `apps/status/README.md`                                             |
-| `apps/tools`         | Standalone device utilities, e.g. the MultispeQ MQTT interface.                                                              | `apps/tools/multispeq_mqtt_interface/README.md`                     |
+| Path                 | What it is                                                                                                                          | Read first                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `apps/web`           | Platform UI. Auth-gated; talks to the backend through the shared contracts.                                                         | `apps/web/README.md`, `apps/web/TESTING.md`                         |
+| `apps/backend`       | The API on `:3020`. Boots through a long `getOrThrow` config list.                                                                  | `apps/backend/README.md`, `apps/backend/.env.example`               |
+| `apps/mobile`        | Field companion. Android is the only published platform, because USB serial and Bluetooth Classic rule out iOS for data collection. | `apps/mobile/CONTEXT.md` (domain glossary), `apps/mobile/README.md` |
+| `apps/data`          | Databricks pipelines and notebooks. Separate Python toolchain, outside the pnpm dev loop.                                           | `apps/data/README.md`                                               |
+| `apps/macro-sandbox` | Sandboxed runtimes that execute user-authored macros.                                                                               | `apps/macro-sandbox/README.md`                                      |
+| `apps/docs`          | The public documentation site.                                                                                                      | `apps/docs/README.md`                                               |
+| `apps/status`        | Public status page. Static export, hosted apart from the platform; reads data/status.json.                                          | `apps/status/README.md`                                             |
+| `apps/tools`         | Standalone device utilities, e.g. the MultispeQ MQTT interface.                                                                     | `apps/tools/multispeq_mqtt_interface/README.md`                     |
 
 | Package                                                           | Owns                                                                |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -28,7 +28,7 @@ verify them against the code.
 
 `tooling/*` holds shared eslint, tailwind, tsconfig and vitest config, plus release scripting and
 the devkit (`tooling/devkit/README.md`: the local commands that need a credential).
-`infrastructure/` is OpenTofu — change it only when that is explicitly the task.
+`infrastructure/` is OpenTofu. Change it only when that is explicitly the task.
 
 ## Running things locally
 
@@ -36,13 +36,13 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 
 - After the user authorizes resetting local data, run `pnpm db:setup` to start Postgres,
   **reset** the local database, and apply migrations.
-- `pnpm --filter database db:seed` — seeds the local user and development data.
-- `pnpm local:login` — signs in the seed user with no browser and no email (it reads the OTP from
+- `pnpm --filter database db:seed` seeds the local user and development data.
+- `pnpm local:login` signs in the seed user with no browser and no email (it reads the OTP from
   Postgres) and writes the session to `.claude/session.header` for
   `curl -H @.claude/session.header`; the cookie never prints unless you pass `--print`.
-- `pnpm dev:fb` — runs backend and web together.
-- `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
-- `pnpm lint`, `pnpm test`, `pnpm typecheck`, `pnpm format:check` — validation.
+- `pnpm dev:fb` runs backend and web together.
+- `pnpm e2e` runs the browser end-to-end suite against an already-running stack.
+- `pnpm lint`, `pnpm test`, `pnpm typecheck` and `pnpm format:check` validate a change.
 - `pnpm --filter <pkg> exec vitest run <path inside the package>` runs one test file. Coverage
   runs only under `CI` or `COVERAGE=1`, so a single file does not trip the thresholds. In a fresh
   worktree run `pnpm build:packages` first, because a direct vitest call skips Turbo's builds.
@@ -68,7 +68,8 @@ Task guides live in `.agents/skills/<name>/SKILL.md`. They are plain markdown an
 read the file when the situation matches. `.claude/skills/` holds symlinks to the same files so
 Claude Code auto-discovers them, but the files under `.agents/` are the source. The symlink layer
 assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
-Git, and `jq`; a missing `jq` prints a warning and skips the hook.
+Git and `jq`, and a missing `jq` prints a warning and skips them. The cloud guard needs `node`
+instead, and without it refuses every command.
 
 | Skill                      | Read it when                                                                                                  |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -98,18 +99,18 @@ role says what the session is for, what it refuses, which standards and skills a
 tier suits it, and when it is finished. A session that takes no role works as it always did, and the
 standards apply either way.
 
-| Role              | Take it when                                                                              |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| `generalist`      | Nobody picked a role: a question, a first look around, a small change.                    |
-| `butler`          | One short factual lookup, with no edits.                                                  |
-| `triage`          | Someone pasted an error, a failing build or a failing test.                               |
-| `engineer`        | Building or changing something. Takes a scope: web, backend, mobile, data, infra or wide. |
-| `reviewer`        | A diff or a pull request needs reviewing properly.                                        |
-| `designer`        | How a surface should look and behave, and building the front end of it.                   |
-| `pm`              | What should be built: framing, solution design, a project and its tickets.                |
-| `analyst`         | Evidence from a running environment: AWS, Databricks, a deployed service, a phone.        |
-| `release-manager` | Cutting or rehearsing a release.                                                          |
-| `docs-writer`     | Documentation a user reads, and its screenshots.                                          |
+| Role              | Take it when                                                                                                                      |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `generalist`      | Nobody picked a role: a question, a first look around, a small change.                                                            |
+| `butler`          | One short factual lookup, with no edits.                                                                                          |
+| `triage`          | Someone pasted an error, a failing build or a failing test, as opposed to the `openjii-triage` skill for a heartbeat metric.      |
+| `engineer`        | Building or changing something. Takes a scope: web, backend, mobile, data, infra, status, monitoring, sandboxes, tooling or wide. |
+| `reviewer`        | A diff or a pull request needs reviewing properly.                                                                                |
+| `designer`        | How a surface should look and behave, and building the front end of it.                                                           |
+| `pm`              | What should be built: framing, solution design, a project and its tickets.                                                        |
+| `analyst`         | Evidence from a running environment: AWS, Databricks, a deployed service, a phone.                                                |
+| `release-manager` | Cutting or rehearsing a release.                                                                                                  |
+| `docs-writer`     | Documentation a user reads, and its screenshots.                                                                                  |
 
 Invoke one as `/openjii-role-<name>`, with the engineer taking a scope as its first argument. With
 another tool, read `.agents/skills/openjii-role-<name>/SKILL.md` and follow it; the file is
@@ -141,21 +142,26 @@ Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, whic
 
 ## Cloud access is read-only from a session
 
-A session may read what is running in AWS, Databricks or a cluster, and may not change it. A
-`PreToolUse` hook refuses every mutating verb, refuses OpenTofu beyond `fmt` and `validate`
-(`plan` and `init` included), and refuses anything touching production until the developer opens a
-two-hour window with `pnpm analyst:prod-window`. Applies happen in CI or in your own terminal.
-`docs/agents/cloud-access.md` has the details and the developer procedure, and the `analyst` role
-carries the rules a hook cannot enforce.
+A session may read what is running in AWS, Databricks or a cluster, and may not change it, read
+data or secrets, or read production without the developer. The analyst permission set in
+`infrastructure/policies/` is the boundary. The cloud guard, `.claude/hooks/analyst-guard.sh`, runs
+before every shell command in Claude Code and in Codex: it refuses every mutating verb, OpenTofu
+beyond `fmt` and `validate` (`plan` and `init` included), reads of secret files, and anything
+touching production until the developer opens a two-hour window with `pnpm analyst:prod-window` in
+their own terminal. `.claude/settings.json` and `.codex/rules/openjii.rules` add the same deny and
+ask rules to both tools. Applies happen in CI or in your own terminal. `docs/agents/cloud-access.md`
+has the details and the developer procedure, and the `analyst` role carries the rules a hook cannot
+enforce. The runbooks the heartbeat alerts point to are in `docs/runbooks/`, hung from
+`docs/monitoring/metrics-catalog.yaml`.
 
 ## main is protected
 
 GitHub's ruleset protects `main`: every change arrives through a PR with an approval and green
-checks, and nobody, admins included, can bypass it. The local `PreToolUse` hook only guards work
-in progress: it blocks `reset --hard`, `clean -f`, `checkout .` and `restore .` while the repo the
+checks, and nobody, admins included, can bypass it. The local `protect-main.sh` hook only guards
+work in progress: it blocks `reset --hard`, `clean -f`, `checkout .` and `restore .` while the repo the
 command targets is on `main`. Claude Code runs it from `.claude/settings.json` and Codex from
-`.codex/hooks.json`, which Codex runs once you trust it through `/hooks`. On your own branches
-nothing is restricted.
+`.codex/hooks.json`, which Codex runs once you trust it through `/hooks`. On your own branches git
+is not restricted, while the cloud guard and the permission rules apply on every branch.
 
 ## Pull requests feed releases
 

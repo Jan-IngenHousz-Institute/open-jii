@@ -45,6 +45,11 @@ The generated file is what an agent actually reads, and it is self-contained. Ru
 committed output matches its source, that the symlink exists, and that the prose holds up. Both run
 in the devkit, and `pnpm --filter @repo/devkit test` covers them.
 
+Three names sound alike and are different things. The `triage` role is the first look at a pasted
+failure. The `openjii-triage` skill is the investigation of a heartbeat metric or an error-tracking
+issue, and a session in the analyst or the triage role may use it. `openjii-backlog-triage` checks
+the backlog's tickets against their gates and labels, and is neither.
+
 ## Why it is compiled rather than assembled at read time
 
 The baseline carries the safety rules, the git rules and the communication standard. Those are the
@@ -52,8 +57,7 @@ parts that must not be skipped, so they are in the file the agent reads rather t
 instruction to go and read another file. Three alternatives were rejected:
 
 - Inlining the baseline with a shell command in the skill body runs on every invocation, needs a
-  permission rule, is replaced with a policy notice in some environments, and shows other tools a
-  literal backtick command.
+  permission rule, and shows other tools a literal backtick command.
 - "Read the baseline first" makes the least skippable content the most skippable.
 - A subagent definition under `.claude/agents/` cannot compose from a shared baseline either, locks
   a whole session to one role, and is invisible to every tool that is not Claude Code.
@@ -63,31 +67,36 @@ check is what makes that safe: a stale copy fails the test rather than quietly d
 
 ## How a session gets a role
 
-Two hooks, both bash and jq, both silent unless they have something to say. A third hook,
-`analyst-guard.sh`, is unrelated to roles: it keeps every session from changing cloud state, and
-`docs/agents/cloud-access.md` covers it.
+Two hooks do this work, both written in bash with jq, and both stay silent unless they have
+something to say. A third hook, `analyst-guard.sh`, is unrelated to roles: it is a launcher for a
+Node script that keeps every session from changing cloud state, and `docs/agents/cloud-access.md`
+covers it. The role hooks and the repository's other hooks need `jq`, and each prints a warning and
+skips when it is missing. The cloud guard needs `node` and refuses every shell command without it.
 
 `session-start.sh` runs on startup and on clear, and prints the role list with the instruction to
-pick one. On resume and after a compaction it instead names the role the session already had, since
-a re-attached skill can fall out of context when the budget is tight.
+pick one. On resume and after a compaction it instead names the role the session was offered, which
+is the one the router last suggested or the developer named on the first prompt, and says to read it
+again if the developer took it. A re-attached skill can fall out of context when the budget is
+tight.
 
 `role-router.sh` runs on every prompt. On the first one it classifies the text and suggests a role.
 The order is the classifier and the first match wins: a pasted stack trace goes to triage; a ticket
 reference with design words to project management, and a bare ticket reference to the engineer; a
 review request to the reviewer; release words to the release manager; a design request with no
-ticket to project management; documentation or screenshots to the docs writer; anything about a
-running environment to the analyst; a build verb such as add, implement or rename to the engineer; a
-visual complaint to the designer; a short question to the butler; and anything else to the
-generalist.
+ticket to project management; documentation or screenshots to the docs writer; a build verb such as
+add, implement or rename to the engineer; anything about a running environment, its monitoring or
+the daily round to the analyst; a visual complaint to the designer; a short question to the butler;
+and anything else to the generalist.
 
-The build verb deliberately outranks the visual words, so "implement the threshold colour mode" is
-engineering rather than design. The classification is otherwise crude on purpose, because the model
-makes the fine decision and the hook only saves the first exchange. It writes what it read to
-`candidate` and what it suggested to `role`, which differ while a role is still being written: a
-suggestion always falls back to a role whose skill actually exists.
+The build verb deliberately outranks the running-system words and the visual words, so "implement
+the threshold colour mode" is engineering rather than design, and "add a databricks job for the
+status export" is engineering rather than analysis. The classification is otherwise crude on
+purpose, because the model makes the fine decision and the hook only saves the first exchange. It
+writes what it read to `candidate` and what it suggested to `role`, which differ while a role is
+still being written: a suggestion always falls back to a role whose skill actually exists.
 
-The router never exits non-zero. A non-zero exit on this event discards the developer's prompt,
-which would be a much worse failure than a missed suggestion.
+The router always exits 0. An exit code of 2 on this event blocks the developer's prompt, which
+would be a much worse failure than a missed suggestion.
 
 ## Drift
 
@@ -103,16 +112,20 @@ results does not get nudged.
 
 ## State
 
-Per session, under `${TMPDIR}/openjii-roles/<session id>/`, the same shape the docs reminder uses:
-`routed` once the first prompt has been handled, `role` and `candidate` as described above, and a
-marker per drift threshold so each fires once. Nothing persists between sessions, which is the
-point.
+Each session keeps its state under `${TMPDIR}/openjii-roles/<session id>/`, in the same shape the
+docs reminder uses: `routed` once the first prompt has been handled, `role` and `candidate` as
+described above, and a marker per drift threshold so each fires once. Nothing persists between
+sessions, which is the point.
 
 ## Using a role without Claude Code
 
 Read `.agents/skills/openjii-role-<name>/SKILL.md` and follow it. The file is self-contained, so
-nothing is lost except the hooks: no suggestion on the first turn and no drift nudge, which is why
-the baseline also states the drift rule in prose.
+nothing is lost except the role hooks: no suggestion on the first turn and no drift nudge, which is
+why the baseline also states the drift rule in prose.
+
+Codex runs the main-branch hook and the cloud guard from `.codex/hooks.json`, but not the role
+hooks. Any other tool runs no hooks at all, so give it the analyst profile and never your own;
+`docs/agents/cloud-access.md` says why.
 
 ## Adding a role
 
@@ -121,4 +134,7 @@ description saying when to use it, then a level-one heading and the body. Say wh
 how to work in it, what it refuses and hands off instead, which skills it reaches for, its model
 tier and fan-out policy, and how it knows it is done. Then run `pnpm roles:generate`, add the
 symlink, and add the role to the list in `session-start.sh` and to the classifier in
-`role-router.sh` if a prompt should route to it.
+`role-router.sh` if a prompt should route to it. A test keeps the list complete.
+
+A role's `disallowed-tools` line holds for one turn only. A restriction that must last the session
+belongs in a permission deny rule in settings.

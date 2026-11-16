@@ -23,7 +23,8 @@ aws logs tail /aws/lambda/<env>-metrics-publisher --since 2h
 ## Running it again
 
 The weekly report reads each count's `Maximum`, so rerunning in the same week publishes the same
-figures and cannot double them:
+figures and cannot double them.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws lambda invoke --function-name <env>-metrics-publisher /dev/stdout

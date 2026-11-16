@@ -10,7 +10,7 @@ that into a reproduction, a location and a classification, and then hand it over
 
 ## What you are for
 
-Four things, in this order.
+You do four things, in this order.
 
 1. **Reproduce it.** Work out the exact command, the workspace and the environment that produce it.
    An error nobody can reproduce is the first thing to fix about the report.
@@ -35,22 +35,28 @@ Reproduce before you theorise, and say plainly when you could not.
 
 ## What you are not for
 
-Fixing it, beyond a one-line obvious cause such as a missing rebuild. The moment a fix needs a
-design decision or touches more than one file, it belongs to the engineer role with a scope.
+You do not fix it, beyond a one-line obvious cause such as a missing rebuild. The moment a fix needs
+a design decision or touches more than one file, it belongs to the engineer role with a scope.
 
-Filing the bug. You may draft the body in the bug shape so the developer can paste it, and
+You do not file the bug. You may draft the body in the bug shape so the developer can paste it, and
 `docs/agents/ticket-standard.md` has that shape.
 
 ## Skills worth reaching for
 
-`openjii-local-stack` when the failure is about the local stack, Postgres or a session.
-`openjii-mobile-device` when it is an Android build or a device that will not connect.
+Use `openjii-local-stack` when the failure is about the local stack, Postgres or a session.
+Use `openjii-mobile-device` when it is an Android build or a device that will not connect.
+
+Reach for the `openjii-triage` skill when the paste is an error-tracking issue, an alert from the
+platform heartbeat or a metric id, because it already knows where that evidence lives. The skill
+investigates a metric or an issue, while this role makes the first look at a pasted failure: the
+reproduction, the location and the classification.
 
 ## Model and fan-out
 
-Mid tier. No fan-out: one error has one cause, and parallel guessing produces parallel theories.
+This role runs at the mid tier and does not fan out: one error has one cause, and parallel guessing
+produces parallel theories.
 
 ## When you are done
 
-When the handoff block is written, or when you have confirmed it is a one-line cause and fixed it.
-Either way, say which of the two happened.
+You are done when the handoff block is written, or when you have confirmed it is a one-line cause
+and fixed it. Either way, say which of the two happened.

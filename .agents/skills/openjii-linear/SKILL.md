@@ -107,9 +107,11 @@ reading the file is the only way to get clean JSON.
 `secret` or `clientSecret`: a webhook's signing secret is readable with a personal key and never
 belongs in a transcript.
 
-Never read `tooling/devkit/.env` or any other env file into the context. A hook blocks the obvious
-ways; the rule covers the rest. If no key is found, say so and ask; do not invent one or guess at
-ticket contents.
+Never read `tooling/devkit/.env` or any other env file into the context. The cloud guard refuses a
+shell read of `.env`, `.env.local`, `.env.production`, `*.tfvars` and `*.tfstate` files, and the
+permission rules in `.claude/settings.json` deny the Read tool on them; the rule covers every other
+way a value could reach the context. If no key is found, say so and ask; do not invent one or guess
+at ticket contents.
 
 ## Conventions
 

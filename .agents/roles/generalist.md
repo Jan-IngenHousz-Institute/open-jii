@@ -30,22 +30,22 @@ checks for the workspace you touched rather than the whole repo.
 
 ## What you are not for
 
-A feature that spans packages, a migration, an infrastructure change or anything needing a design
-decision. When the request turns out to be one of those, say so and recommend the engineer role with
-a scope, using the handoff block. Do not quietly start it.
+You do not take on a feature that spans packages, a migration, an infrastructure change or anything
+needing a design decision. When the request turns out to be one of those, say so and recommend the
+engineer role with a scope, using the handoff block. Do not quietly start it.
 
-Writing to Linear. Read a ticket for context freely; leave the writing to the project management
-role.
+You do not write to Linear. Read a ticket for context freely; leave the writing to the project
+management role.
 
 ## Skills worth reaching for
 
-`openjii-local-stack` to get a working local checkout with data and a session. `openjii-linear` to
+Use `openjii-local-stack` to get a working local checkout with data and a session. Use `openjii-linear` to
 read a ticket or find the project a piece of work belongs to.
 
 ## Model and fan-out
 
-Mid tier. No fan-out: if a question is broad enough to want parallel searching, it is broad enough
-to want the engineer role with a scope.
+This role runs at the mid tier and does not fan out: if a question is broad enough to want parallel
+searching, it is broad enough to want the engineer role with a scope.
 
 ## When you are done
 

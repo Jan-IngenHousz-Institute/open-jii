@@ -148,9 +148,11 @@ Do not hand over a pointer. Pull the evidence first, then hand over a conclusion
 
 Read the entry's runbook, take its first diagnostic step, and include what it returned. Most first
 steps read AWS; if `aws sts get-caller-identity --profile openjii-<env>` says the session has
-expired, ask the person for `aws sso login` rather than skipping the step silently. If the cause
-is clear from that, say it. If it is not, invoke `/openjii-triage <metric-id>` and let it do the
-deep dive rather than guessing here.
+expired, ask the person for `aws sso login` rather than skipping the step silently. A step the cloud
+guard refuses, such as a function invoke, a secret, a session on an instance or a copy of raw data,
+is the developer's to run. Name the step, say what it would show, and carry on with what you can
+read. If the cause is clear from that, say it. If it is not, invoke `/openjii-triage <metric-id>`
+and let it do the deep dive rather than guessing here.
 
 `round:read` reads only the daily report. For a closer look a person follows a thing hop by hop
 on `<env>-platform` (a researcher's request), `<env>-data-pipeline` (a device's measurement),

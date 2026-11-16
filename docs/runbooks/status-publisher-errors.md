@@ -38,7 +38,8 @@ ends with the error instead.
 - **The saved state is corrupt.** The publisher carries its history between runs in
   `publisher-state.json`, and a state that no longer parses stops every run on purpose, so history
   does not silently restart. The log shows a schema error from reading it. Restore the previous
-  version of the object in `open-jii-status-state-<env>`, which keeps old versions for 7 days:
+  version of the object in `open-jii-status-state-<env>`, which keeps old versions for 7 days.
+  An agent session cannot run this step; the developer runs it and pastes what it shows.
 
   ```bash
   aws s3api list-object-versions --bucket open-jii-status-state-<env> --prefix publisher-state.json
@@ -62,7 +63,8 @@ ends with the error instead.
 
 ## Running it again
 
-After fixing the cause, run it by hand rather than waiting for the next minute:
+After fixing the cause, run it by hand rather than waiting for the next minute.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws lambda invoke --function-name <env>-status-publisher /dev/stdout

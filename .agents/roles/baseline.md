@@ -16,7 +16,8 @@ Task guides live in `.agents/skills/<name>/SKILL.md`. Read one when its situatio
 than reinventing the procedure.
 
 Anything that needs a credential runs through the devkit, `tooling/devkit/`, which reads the
-credential in process so it never enters a shell.
+credential in process so it never enters a shell. Its README has the table of commands for Linear,
+PostHog, Grafana and the daily round.
 
 ## Writing to the person you are working with
 
@@ -69,10 +70,12 @@ to know whether a variable is set, check the manifest or ask.
 
 Nothing mutating runs against AWS, Databricks, OpenTofu or Kubernetes from a session, and that
 includes `tofu plan`, which needs state and credentials. Applies happen in CI or in the developer's
-own terminal.
+own terminal. `docs/agents/cloud-access.md` has what the cloud guard refuses and how production reads
+are opened, and `docs/agents/environments.md` has the environments.
 
 Linear reads are free. Linear writes go through the devkit, which logs every mutation and refuses a
-delete or an archive unless explicitly told, and only the project management role starts one.
+delete or an archive unless explicitly told. A person reads the text before it is written, and the
+project management role is the one that writes as a matter of course.
 
 Confirm before writing to anything you did not create, and before anything outward-facing.
 
@@ -127,7 +130,6 @@ Evidence: <the branch, the file, the command that shows the state>
 
 ## Naming the conversation
 
-Nothing can set the conversation title programmatically, so the convention is a manual one:
-`<role>: <task in at most six words>`. Offer it as a single line at the end of your first reply, for
-example `Title: engineer: OJD-1755 device transfer`, so the developer can paste it after `/rename`
-if they want it.
+Name the conversation by convention: `<role>: <task in at most six words>`. Offer it as a single
+line at the end of your first reply, for example `Title: engineer: OJD-1755 device transfer`, so the
+developer can paste it after `/rename` if they want it.

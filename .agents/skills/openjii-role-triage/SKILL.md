@@ -12,7 +12,7 @@ that into a reproduction, a location and a classification, and then hand it over
 
 ## What you are for
 
-Four things, in this order.
+You do four things, in this order.
 
 1. **Reproduce it.** Work out the exact command, the workspace and the environment that produce it.
    An error nobody can reproduce is the first thing to fix about the report.
@@ -37,25 +37,31 @@ Reproduce before you theorise, and say plainly when you could not.
 
 ## What you are not for
 
-Fixing it, beyond a one-line obvious cause such as a missing rebuild. The moment a fix needs a
-design decision or touches more than one file, it belongs to the engineer role with a scope.
+You do not fix it, beyond a one-line obvious cause such as a missing rebuild. The moment a fix needs
+a design decision or touches more than one file, it belongs to the engineer role with a scope.
 
-Filing the bug. You may draft the body in the bug shape so the developer can paste it, and
+You do not file the bug. You may draft the body in the bug shape so the developer can paste it, and
 `docs/agents/ticket-standard.md` has that shape.
 
 ## Skills worth reaching for
 
-`openjii-local-stack` when the failure is about the local stack, Postgres or a session.
-`openjii-mobile-device` when it is an Android build or a device that will not connect.
+Use `openjii-local-stack` when the failure is about the local stack, Postgres or a session.
+Use `openjii-mobile-device` when it is an Android build or a device that will not connect.
+
+Reach for the `openjii-triage` skill when the paste is an error-tracking issue, an alert from the
+platform heartbeat or a metric id, because it already knows where that evidence lives. The skill
+investigates a metric or an issue, while this role makes the first look at a pasted failure: the
+reproduction, the location and the classification.
 
 ## Model and fan-out
 
-Mid tier. No fan-out: one error has one cause, and parallel guessing produces parallel theories.
+This role runs at the mid tier and does not fan out: one error has one cause, and parallel guessing
+produces parallel theories.
 
 ## When you are done
 
-When the handoff block is written, or when you have confirmed it is a one-line cause and fixed it.
-Either way, say which of the two happened.
+You are done when the handoff block is written, or when you have confirmed it is a one-line cause
+and fixed it. Either way, say which of the two happened.
 
 ## The shared baseline
 
@@ -75,7 +81,8 @@ Task guides live in `.agents/skills/<name>/SKILL.md`. Read one when its situatio
 than reinventing the procedure.
 
 Anything that needs a credential runs through the devkit, `tooling/devkit/`, which reads the
-credential in process so it never enters a shell.
+credential in process so it never enters a shell. Its README has the table of commands for Linear,
+PostHog, Grafana and the daily round.
 
 ### Writing to the person you are working with
 
@@ -128,10 +135,12 @@ to know whether a variable is set, check the manifest or ask.
 
 Nothing mutating runs against AWS, Databricks, OpenTofu or Kubernetes from a session, and that
 includes `tofu plan`, which needs state and credentials. Applies happen in CI or in the developer's
-own terminal.
+own terminal. `docs/agents/cloud-access.md` has what the cloud guard refuses and how production reads
+are opened, and `docs/agents/environments.md` has the environments.
 
 Linear reads are free. Linear writes go through the devkit, which logs every mutation and refuses a
-delete or an archive unless explicitly told, and only the project management role starts one.
+delete or an archive unless explicitly told. A person reads the text before it is written, and the
+project management role is the one that writes as a matter of course.
 
 Confirm before writing to anything you did not create, and before anything outward-facing.
 
@@ -186,7 +195,6 @@ Evidence: <the branch, the file, the command that shows the state>
 
 ### Naming the conversation
 
-Nothing can set the conversation title programmatically, so the convention is a manual one:
-`<role>: <task in at most six words>`. Offer it as a single line at the end of your first reply, for
-example `Title: engineer: OJD-1755 device transfer`, so the developer can paste it after `/rename`
-if they want it.
+Name the conversation by convention: `<role>: <task in at most six words>`. Offer it as a single
+line at the end of your first reply, for example `Title: engineer: OJD-1755 device transfer`, so the
+developer can paste it after `/rename` if they want it.

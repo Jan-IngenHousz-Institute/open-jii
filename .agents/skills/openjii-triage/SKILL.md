@@ -34,7 +34,9 @@ read it in full. It gives you the namespace, metric name, statistic, dimensions,
 names invented from the id are the most common way this goes wrong.
 
 Then read the runbook it names in `docs/runbooks/`. It lists the likely causes and first moves, which
-is your hypothesis list: confirm or eliminate them, don't restate them.
+is your hypothesis list: confirm or eliminate them, don't restate them. A step the cloud guard
+refuses, such as a function invoke, a secret, a session on an instance or a copy of raw data, is the
+developer's to run. Name the step, say what it would show, and carry on with what you can read.
 
 Two entry fields change what you should do:
 

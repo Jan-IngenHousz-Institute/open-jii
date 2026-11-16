@@ -60,7 +60,7 @@ on_main() {
 
 block() {
   echo "BLOCKED: $1 is on main and this discards local work." >&2
-  echo "Switch to a branch first; on your own branches nothing is restricted." >&2
+  echo "Switch to a branch first; on your own branches git is not restricted." >&2
   exit 2
 }
 

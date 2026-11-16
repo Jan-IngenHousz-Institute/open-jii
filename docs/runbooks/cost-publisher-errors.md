@@ -30,7 +30,8 @@ error in `forecastError`, so only the projected tile goes quiet.
 
 ## Running it again
 
-After fixing the cause, run it by hand rather than waiting for the next slot:
+After fixing the cause, run it by hand rather than waiting for the next slot.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws lambda invoke --function-name <env>-cost-publisher /dev/stdout

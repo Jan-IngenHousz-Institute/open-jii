@@ -16,7 +16,8 @@ with `[serving store]`.
 ## Work the chain in order
 
 **1. Is the timer reporting?** For "Serving Store Feed Timer Silent", and whenever `store-answers`
-fires too, start here; for the stall alert, skip to step 2. Find the instance and open a session:
+fires too, start here; for the stall alert, skip to step 2. Find the instance and open a session.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws ec2 describe-instances --filters Name=tag:Name,Values=openjii-serving-store-<env> \
@@ -96,7 +97,8 @@ the rows gold gained before the new start version.
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.
 2. In the Databricks UI, switch the pipeline to triggered and start one update that resets the
-   flow's checkpoint, by its full name:
+   flow's checkpoint, by its full name.
+   An agent session cannot run this step; the developer runs it and pastes what it shows.
 
    ```bash
    databricks pipelines start-update <pipeline-id> \

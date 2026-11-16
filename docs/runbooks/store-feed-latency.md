@@ -22,7 +22,8 @@ with `[serving store]`.
 
 **1. Is it a catch-up?** After a pipeline restart, a deploy or the feed being switched back on, the
 sink works through what gold gained meanwhile, and those rows are old by definition. Find the
-store's instance and open a session on it:
+store's instance and open a session on it.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws ec2 describe-instances --filters Name=tag:Name,Values=openjii-serving-store-<env> \

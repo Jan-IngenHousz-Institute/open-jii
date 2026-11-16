@@ -1,65 +1,99 @@
 # Cloud access from a session
 
-A session may read what is running. It may not change it. That holds for every role, because an
-engineer session has no more business applying infrastructure than an analyst one, and it is
-enforced by a hook rather than left to good intentions.
+An agent session may read what is running. It may not change it, read data or secrets, or read
+production without the developer's say-so. That holds for every role and every agent, because an
+engineer session has no more business applying infrastructure than an analyst one.
 
 The analyst role, `.agents/skills/openjii-role-analyst/SKILL.md`, is the one built for this kind of
-work and carries the full contract. This document is the shared part: what the hook does, what the
-developer does, and what is still only a rule.
+work and carries the full contract. This document is the shared part: the layers that enforce it,
+what the developer does, and what is still only a rule.
 
-## What the hook blocks
+## The layers
 
-`.claude/hooks/analyst-guard.sh` runs before every Bash command and refuses:
+Four layers do different jobs, and none of them is enough alone.
 
-- Anything mutating in `aws`, `databricks` or `kubectl`. Only describe, list and get-class verbs
-  pass, minus the ones that read data or mint credentials: object reads, secret values, table items,
-  stream records, login passwords, session tokens, shadow reads, invocations and command execution.
-- OpenTofu beyond `fmt`, `validate`, `providers`, `graph` and `version`. `plan` and `init` are
-  blocked with `apply`, because a plan needs state and credentials, and developer machines are not
-  expected to hold the variable files a plan requires. `pnpm tf` is blocked for the same reason.
-- A parameter read with `--with-decryption`, which returns the secret rather than its name.
-- `--debug`, which prints signing material, and `--endpoint-url`, which sends the call elsewhere.
-- A log read with no time window, with no limit, or with a limit above 1000.
-- A statement that does not start with `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` or `WITH`, or that
-  contains a semicolon and could therefore carry a second statement.
-- Credentials written on the command line as an inline environment assignment.
-- A cloud command wrapped in `bash -c`, `eval`, `xargs`, a command substitution or backticks, where
-  the guard cannot see what actually runs.
-- Anything touching production, unless the developer has opened a window. Production is recognised
-  three ways, on the whole command line rather than per segment: a profile whose name contains prod,
-  production or dr; a path under `infrastructure/env/prod` or `env/dr`; and a resource name carrying
-  the environment as a suffix, so `--log-group-name /aws/ecs/backend-service-prod` counts whatever
-  profile is active. The separators are anchored, so a bucket called `open-jii-products` does not.
-- Creating the window marker itself, because that decision is the developer's.
+1. The analyst permission set in AWS is the boundary. It grants describe, list and get, and denies
+   data reads, secret values, credential mints and irreversible writes, whatever command reaches the
+   API. `infrastructure/policies/README.md` describes it and how it is created.
+2. The cloud guard, `.claude/hooks/analyst-guard.sh`, runs before every shell command in Claude Code
+   and in Codex. It refuses a mistaken command with a reason before it reaches AWS, Databricks or
+   OpenTofu. It is a guardrail: a command that reaches an API by another route meets only the
+   permission set.
+3. The permission rules in `.claude/settings.json` and `.codex/rules/openjii.rules` deny the
+   production window command, `gh secret` and reads of secret files, and ask before a session
+   dispatches a workflow, merges, releases or writes through `gh api`. A test in the devkit keeps
+   the two tools' lists the same.
+4. The role text carries what no tool can check, listed at the end of this document.
 
-Every command that passes is appended to `.claude/cloud-commands.log`, which is ignored by git.
+## What the guard refuses
 
-The guard splits a command on separators and checks each part, so a mutation hidden behind a read is
-refused. Within a part it scans for the CLI rather than assuming it comes first, because `env aws`,
-`time aws`, `/usr/local/bin/aws`, an escaped `\aws` and a loop body all put something else in
-position one, and each of those walked straight past an earlier version of this hook.
+The guard reads a command the way a shell does: quotes, escapes, line continuations, command
+substitutions, heredocs and nested shells. A command inside `$(...)`, `bash -c`, `eval` or
+`find -exec` is checked like any other, while quoted text and heredoc bodies are data, so a commit
+message that mentions `tofu apply` is not a command.
 
-Two deliberate imprecisions. A separator inside a quoted string splits the command anyway, which can
-refuse something harmless. And quoted text is excluded when deciding whether a part invokes a CLI at
-all, so `git commit -m "fix the aws ecs update-service call"` is not refused; the cost is that a
-command whose name is itself quoted, like `"aws" s3 rm`, is not seen. Both are recorded here rather
-than discovered later.
+It refuses:
 
-A command that mentions none of these tools exits the hook immediately, so the cost on an ordinary
-`ls` or `git status` is a few milliseconds rather than the full check.
+- Anything that changes state in `aws`, `databricks` or `kubectl`. Only describe, list and get pass,
+  minus the ones that read data, run code or mint credentials: object reads, secret values, table
+  items, stream records, login passwords, session tokens, function invocations, command execution
+  and instance sessions.
+- OpenTofu beyond `fmt`, `validate`, `providers`, `graph` and `version`, `plan` and `init` included,
+  because a plan needs state and credentials. `pnpm tf` and `pnpm tf:dev` are refused for the same
+  reason, and `pnpm tf:fmt` is allowed.
+- A parameter read with `--with-decryption`, `--debug`, `--endpoint-url`, and a payload passed with
+  `--cli-input-json`.
+- A log read with no time window, a `filter-log-events` without `--max-items` or a
+  `get-log-events` without `--limit`, either above 1000, `--unmask`, and `aws logs tail --follow`.
+  `filter-log-events` pages on its own, so only `--max-items` caps what it returns.
+- A SQL statement that is not a single `SELECT`, `SHOW`, `DESCRIBE`, `EXPLAIN` or `WITH` query, that
+  names a write anywhere, or that is not passed with `--statement`.
+- `databricks api` beyond `get`, and a `get` of a secrets or token endpoint. `kubectl get secret` and
+  `kubectl config view --raw`.
+- Credentials written on the command line, and a shell read of a file that holds secrets: `.env`,
+  `.env.local`, `*.tfvars`, `*.tfstate` and the AWS and Databricks credential files. The tracked
+  `.env.example`, `.env.test` and `.env.default` files stay readable.
+- A command whose name comes from a variable or a substitution, when the command mentions a cloud
+  tool, because the guard cannot tell what it runs.
+- Anything that reads production, unless the developer has opened the window. Production is
+  recognised by a profile ending in prod, production or dr, whether on the command, exported earlier
+  in it or set in the session's environment; by a resource name that carries the environment, such
+  as `/aws/ecs/backend-service-prod`; and by a `cd` into `infrastructure/env/prod` or `env/dr`.
+- Opening the production window, by command or by writing its marker.
+
+Two reads of operational state are allowed because the runbooks need them: an object from the
+heartbeat or status-state bucket written to stdout, as in
+`aws s3 cp s3://open-jii-heartbeat-dev/heartbeat/2026/11/16/120000.json -`, and `$(date ...)` time
+windows inside a command. Every command that touches a cloud tool and passes is appended to
+`.claude/cloud-commands.log`, which git ignores.
+
+The guard fails closed. Without `node` on the path, or when it cannot read the tool call, it refuses
+the command rather than letting a cloud call through unchecked.
+
+## Writing a command that passes
+
+- Put options such as `--profile` and `--region` after the service and the verb, or right after
+  `aws`. An option the guard does not know, placed before the service, is refused.
+- Put the profile on the command, where it is visible.
+- Give every log read a window, every `filter-log-events` a `--max-items` and every
+  `get-log-events` a `--limit`.
+- Pass SQL with `--statement`, as one query.
+- A step the guard refuses, such as a function invoke, a secret, a session on an instance or a copy
+  of raw data, is the developer's to run. Name it, say what it would show, and carry on with what you
+  can read.
 
 ## What the developer does
 
-Once, per machine. Add a profile per account to `~/.aws/config`, pointing at the `openjii-analyst`
-permission set. The portal URL and the region come from whoever administers Identity Center:
+Install `node` and `jq`. The cloud guard needs `node` and the other hooks need `jq`. A missing `jq`
+makes those hooks print a warning and skip, while a missing `node` makes the cloud guard refuse
+every command.
+
+Once per machine, add a profile per account to `~/.aws/config`, pointing at the `openjii-analyst`
+permission set. The portal URL and the region come from whoever administers Identity Center. Add
+the two profiles to the `[sso-session openjii]` block you already have for `openjii-dev` and
+`openjii-prod` rather than declaring a second one:
 
 ```ini
-[sso-session openjii]
-sso_start_url = https://<portal>.awsapps.com/start
-sso_region = eu-central-1
-sso_registration_scopes = sso:account:access
-
 [profile openjii-analyst-dev]
 sso_session = openjii
 sso_account_id = <dev account id>
@@ -75,21 +109,23 @@ region = eu-central-1
 output = json
 ```
 
-Then per session, authenticate yourself. The agent never runs a login and never reads a credential
-file:
+Authenticate yourself in your own terminal. The agent never runs a login and never reads a
+credential file:
 
 ```bash
 aws sso login --profile openjii-analyst-dev
 databricks auth login --host <workspace url> --profile openjii-analyst-dev
 ```
 
-Do not export `AWS_PROFILE` in the shell that starts the agent. The profile belongs on each command,
-where it is visible. Worth doing once yourself: `aws sts get-caller-identity --profile
-openjii-analyst-dev` should show a role containing `AWSReservedSSO_openjii-analyst_`. If it shows
-something wider, the profile is pointing at the wrong permission set and the guard is the only thing
-standing between the agent and a mutation.
+Do not export `AWS_PROFILE` in the shell that starts the agent. If you do, the guard treats a
+production profile as production for every command. Check the profile once with
+`aws sts get-caller-identity --profile openjii-analyst-dev`: the role should contain
+`AWSReservedSSO_openjii-analyst_`. If it shows something wider, the profile points at the wrong
+permission set.
 
-For production, open the window in your own terminal and say so in the conversation:
+For production, open the window in your own terminal and say so in the conversation. The command
+asks you to type `prod`, and it refuses to run without a terminal, which is how an agent's shell
+runs it:
 
 ```bash
 pnpm analyst:prod-window            # two hours
@@ -97,32 +133,34 @@ pnpm analyst:prod-window --status   # how long is left
 pnpm analyst:prod-window --close    # end it early
 ```
 
-The window permits reads. It does not permit changes, and the guard still refuses every mutation
+The marker is `.claude/analyst-prod.ok` in the checkout you run it in, so open it in the checkout
+the session works in, which for a worktree session is the worktree. The window lasts two hours for
+every session in that checkout. It permits reads only, and the guard still refuses every change
 while it is open.
+
+## Other agents
+
+Codex runs the same guard and the main-branch hook from `.codex/hooks.json`, and the forbidden and
+prompt rules from `.codex/rules/openjii.rules`. Both load only once you trust the project in Codex,
+and Codex asks you to review a hook again whenever it changes. Codex rules match command prefixes,
+so the `gh api` write rules exist only on the Claude Code side.
+
+Any other tool reads `AGENTS.md` and the role files but runs none of these hooks or rules. In such a
+tool the permission set is the only layer that holds, so give it the analyst profile and never your
+own.
 
 ## What is still only a rule
 
-The hook cannot check intent, so the analyst role carries these and a reviewer should too:
+The guard cannot check intent, so the analyst role carries these and a reviewer should too:
 
 - State a numbered plan of the exact commands before the first remote one, and wait for approval.
-- One environment per session.
+- Read one environment per session for AWS and Databricks. The daily round's Grafana and PostHog
+  reads use scoped read tokens and are the exception.
 - Summarise findings. No email address, name, IP address or token reaches a reply, a ticket, a
   document or a memory file.
 - A refusal ends the attempt. Report it and propose another read, rather than finding another route.
 - Write findings with the commands that produced them, so a person can rerun them.
 
-## Permissions
-
-The `openjii-analyst` permission set grants describe, list and get
-across the services this estate runs, log reads on the named application log groups, parameter reads
-on the four plain-string prefixes, and explicit denies on every data read, every credential mint and
-every irreversible write. Its README explains the shape and the two things it deliberately withholds.
-
-Two layers, then, doing different jobs. The permission set is what AWS enforces, and it holds even
-if a command reaches the API by a route the hook never saw. The hook is what catches a mistake
-before it becomes an API call, and it covers Databricks, where there is no per-session narrowing at
-all.
-
-Until the permission set is applied and a developer's profile points at it, the hook is the only
-layer, and a session inherits whatever that developer's own credentials allow. That is the reason
+Until the permission set exists and a developer's profile points at it, the guard and the rules are
+the only layers, and a session inherits whatever that developer's own credentials allow. That is why
 the numbered plan and the approval step are not optional.

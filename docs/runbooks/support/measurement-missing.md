@@ -49,7 +49,7 @@ every run of the topic rule that hands it on, both under the phone's thing name,
 
 ```bash
 aws logs filter-log-events --profile openjii-<env> --log-group-name AWSIotLogsV2 \
-  --start-time <epoch ms> --end-time <epoch ms> \
+  --start-time <epoch ms> --end-time <epoch ms> --max-items 1000 \
   --filter-pattern '{ ($.eventType = "Publish-In" || $.eventType = "RuleExecution") && $.clientId = "<thing name>" }' \
   --query 'events[].message' --output text | tr '\t' '\n' \
   | jq -r '[.timestamp, .eventType, .status, .topicName, (.ruleName // ""), (.reason // "")] | @tsv'
@@ -76,7 +76,8 @@ one JSON message per line. A measurement from the phone carries its own id here,
 phone's row UUID. Bronze keeps it as a column, and silver and gold give the row the id
 `xxhash64('<experiment id>', '<_client_id>') & 9223372036854775807`, so from here on the row is found by that id.
 That holds for rows bronze wrote once it kept `_client_id`; an older row has the id it was given
-then, and is found by its phone or device and its time:
+then, and is found by its phone or device and its time.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws s3 cp --profile openjii-<env> --recursive \
@@ -108,7 +109,8 @@ while the consumer is stopped, as on prod from 12:15 to 16:15 UTC on 16 October 
 Query the tables through the Investigations warehouse, which exists so people's queries do not wake
 the backend's warehouse. `<profile>` is your Databricks CLI profile for the environment
 (`docs/agents/environments.md`). Pass values as named parameters rather than pasting them into the
-SQL:
+SQL.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 WH=$(databricks warehouses list -p <profile> -o json | jq -r '.[] | select(.name == "Investigations") | .id')

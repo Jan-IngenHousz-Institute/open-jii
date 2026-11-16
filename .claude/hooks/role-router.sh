@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Suggests a role on the first developer turn, and nudges once the session has drifted past the
-# program it was started for. Always exits 0: a non-zero exit here would discard the prompt.
+# program it was started for. Always exits 0: an exit code of 2 here would block the prompt.
 set -uo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -74,7 +74,7 @@ DESIGN_WORK='refine|ticket shape|granular|backlog|design a project|new project|c
 REVIEW='(review|audit|look over|second pair of eyes).*(pr|diff|branch|#[0-9]+)'
 RELEASE='cut a release|release for|release notes|changelog|force update|version bump|promote to prod'
 DOCUMENTATION='docs? page|documentation|user guide|screenshots?|glossary'
-RUNNING_SYSTEM='in production|on prod|prod is|production right now|databricks|cloudwatch|lambda|opennext|ecs task|(^|[[:space:]])aws[[:space:]]|overnight'
+RUNNING_SYSTEM='in production|on prod|prod is|production right now|databricks|cloudwatch|lambda|opennext|ecs task|(^|[[:space:]])aws[[:space:]]|overnight|grafana|posthog|heartbeat|runbook|daily round|serving store|clickhouse'
 VISUAL='(^|[[:space:]])ui([[:space:]]|$)|ux|shadcn|design scheme|layout|responsive|looks? (cramped|wrong|off|bad)|cramped|spacing|overlap|narrow screen|dark mode|colour|color|visual'
 BUILD='(^|[[:space:]])(add|implement|build|create|support|migrate|refactor|rename|wire up|hook up|expose|extend)[[:space:]]'
 QUESTION='^(what|which|where|who|why|how|does|do|is|are|can)[[:space:]]'
@@ -94,10 +94,10 @@ elif printf '%s' "$LOWER" | grep -qE "$DESIGN_WORK"; then
   candidate="pm"
 elif printf '%s' "$LOWER" | grep -qE "$DOCUMENTATION"; then
   candidate="docs-writer"
-elif printf '%s' "$LOWER" | grep -qE "$RUNNING_SYSTEM"; then
-  candidate="analyst"
 elif printf '%s' "$LOWER" | grep -qE "$BUILD"; then
   candidate="engineer"
+elif printf '%s' "$LOWER" | grep -qE "$RUNNING_SYSTEM"; then
+  candidate="analyst"
 elif printf '%s' "$LOWER" | grep -qE "$VISUAL"; then
   candidate="designer"
 elif [ "$(printf '%s' "$PROMPT" | wc -w | tr -d ' ')" -le 25 ] &&

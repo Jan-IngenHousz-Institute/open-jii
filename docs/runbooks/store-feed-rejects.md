@@ -8,7 +8,8 @@ them for 90 days.
 
 ## Work the chain in order
 
-**1. What was refused, and why?** Find the store's instance and open a session on it:
+**1. What was refused, and why?** Find the store's instance and open a session on it.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws ec2 describe-instances --filters Name=tag:Name,Values=openjii-serving-store-<env> \

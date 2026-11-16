@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -93,11 +93,25 @@ describe("role-router.sh", () => {
     ["a question about what to build", "what should we build for the export flow", "pm"],
     ["a question about production", "why is the backend slow in production right now", "analyst"],
     ["an overnight pipeline failure", "databricks pipeline centrum failed overnight", "analyst"],
+    ["a daily round request", "run the daily round", "analyst"],
+    ["a Grafana alert", "check grafana for the ingest-lag alert", "analyst"],
+    ["an error-tracking question", "the posthog error issue count is climbing", "analyst"],
+    ["a heartbeat question", "what does the heartbeat report say", "analyst"],
+    ["a runbook request", "follow the runbook for stale experiments", "analyst"],
+    ["a serving store question", "is the serving store keeping up", "analyst"],
+    ["a ClickHouse symptom", "clickhouse is out of memory", "analyst"],
     ["a review request", "please review the diff on this branch", "reviewer"],
     ["a release request", "cut a release for this week", "release-manager"],
     ["a documentation request", "the docs page for sharing is out of date", "docs-writer"],
     ["a screenshot request", "re-capture the screenshots for the overview", "docs-writer"],
     ["an implementation request", "add a column for the embargo date", "engineer"],
+    [
+      "a build verb with a running-system word",
+      "add a databricks job for the status export",
+      "engineer",
+    ],
+    ["a build verb with a cache word", "implement the opennext cache change", "engineer"],
+    ["a build verb with a monitoring word", "add a posthog event for device transfer", "engineer"],
     [
       "an implementation request with visual words",
       "implement the threshold colour mode",
@@ -265,11 +279,23 @@ describe("session-start.sh", () => {
     expect(result.stdout).toContain("roles-off");
   });
 
-  it("names the remembered role when a session resumes", () => {
+  it("lists every role that has a source file", () => {
+    const roles = readdirSync(join(root, ".agents/roles"))
+      .filter((file) => file.endsWith(".md") && file !== "baseline.md")
+      .map((file) => file.replace(/\.md$/, ""));
+    const result = runHook(sessionStart, { session_id: session, source: "startup" }, temp);
+
+    expect(roles.length).toBeGreaterThan(0);
+    for (const role of roles) {
+      expect(result.stdout).toMatch(new RegExp(`^  ${role}\\s{2,}`, "m"));
+    }
+  });
+
+  it("names the role a resumed session was offered", () => {
     runHook(router, { session_id: session, prompt: "/openjii-role-triage the build" }, temp);
     const result = runHook(sessionStart, { session_id: session, source: "resume" }, temp);
 
-    expect(result.stdout).toContain("triage");
+    expect(result.stdout).toContain("was offered the triage role");
   });
 
   it("says nothing when a resumed session never had a role", () => {

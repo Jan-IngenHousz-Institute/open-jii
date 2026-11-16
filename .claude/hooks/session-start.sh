@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tells a fresh session that no role is active, and reminds a resumed one which role it had.
+# Tells a fresh session that no role is active, and reminds a resumed one which role it was offered.
 set -uo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -24,7 +24,7 @@ resume | compact)
   # context. Naming it is cheaper than the session carrying on without it.
   [ -f "$STATE_DIR/role" ] || exit 0
   ROLE=$(cat "$STATE_DIR/role")
-  printf 'This session is working in the %s role. If %s is no longer in context, read %s again.\n' \
+  printf 'This session was offered the %s role. If the developer took it and %s is no longer in context, read %s again.\n' \
     "$ROLE" "openjii-role-$ROLE" ".agents/skills/openjii-role-$ROLE/SKILL.md"
   exit 0
   ;;
@@ -38,14 +38,16 @@ fine, and nothing will ask again after this message.
 If one of these fits what the developer asks for, read its skill and follow it. Invoke it as
 /openjii-role-<name>, or just carry on without one.
 
-  generalist  a question about the repo, a first look around, or a small contained change
-  butler      one factual lookup: a command, a path, a flag, what something is set to
-  triage      a pasted error, a failing build or a failing test
-  engineer    implementing a ticket or a problem, with a scope
-  reviewer    an adversarial multi-pass review of a diff
-  designer    how a screen should look and behave, and building the front end of it
-  pm          deciding what to build, then writing it up as a project and tickets
-  analyst     what a running environment is actually doing: logs, metrics, tables, a device
+  generalist       a question about the repo, a first look around, or a small contained change
+  butler           one factual lookup: a command, a path, a flag, what something is set to
+  triage           a pasted error, a failing build or a failing test
+  engineer         implementing a ticket or a problem, with a scope
+  reviewer         an adversarial multi-pass review of a diff
+  designer         how a screen should look and behave, and building the front end of it
+  pm               deciding what to build, then writing it up as a project and tickets
+  analyst          what a running environment is actually doing: logs, metrics, tables, a device
+  release-manager  cutting or rehearsing a release
+  docs-writer      documentation a user reads, and its screenshots
 
 If you take one, say which in one line so the developer can redirect you. To switch the whole thing
 off on this machine: touch .claude/roles-off, or set OPENJII_ROLES=off.

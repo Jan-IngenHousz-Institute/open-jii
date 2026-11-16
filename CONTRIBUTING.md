@@ -31,7 +31,7 @@ pnpm db:setup     # first-time setup: start Postgres, reset + migrate the DB (wi
 pnpm dev:fb       # run web + backend (or `pnpm dev` for everything)
 ```
 
-This is a pnpm + Turborepo monorepo — see the [README](README.md#monorepo-layout) for the app/package layout. To work on a single app, use turbo filters, e.g. `pnpm --filter web dev` or `pnpm --filter backend test`.
+This is a pnpm + Turborepo monorepo. See the [README](README.md#monorepo-layout) for the app/package layout. To work on a single app, use turbo filters, e.g. `pnpm --filter web dev` or `pnpm --filter backend test`.
 
 Local development commands that need a credential (a dev session, Linear access) live in
 `tooling/devkit`. See [its README](tooling/devkit/README.md) for the one-time setup.
@@ -46,17 +46,12 @@ Local development commands that need a credential (a dev session, Linear access)
 
    ```bash
    pnpm lint
-   pnpm turbo run check-types   # the apps
-   pnpm typecheck               # the packages
+   pnpm typecheck
    pnpm test
    pnpm format
    ```
 
-   The two type-check commands cover different halves of the workspace today, because the apps and
-   the packages declare the script under different names. `docs/standards/tooling.md` has the
-   detail.
-
-4. Commit using **Conventional Commits** — releases are automated with semantic-release, so commit messages matter:
+4. Commit using **Conventional Commits**. Releases are automated with semantic-release, so commit messages matter:
 
    - `feat(web): add experiment archive filter`
    - `fix(backend): reject expired API keys`

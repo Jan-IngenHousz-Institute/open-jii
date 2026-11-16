@@ -8,7 +8,8 @@ there is time to do it without a window.
 
 Connect from a session on the instance (`aws ssm start-session --target <instance-id>`) with
 `clickhouse-client --user openjii_admin --password`. The instance cannot read secrets, so take the
-password from your own machine:
+password from your own machine.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws secretsmanager get-secret-value --secret-id openjii-serving-store-<env>-admin \

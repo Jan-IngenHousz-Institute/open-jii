@@ -34,7 +34,8 @@ are lines the forwarder rejected on purpose, and they do not fail the invocation
 
 S3 retries an asynchronous invocation twice and then drops it, so an object that failed all three
 times is not coming back on its own. Re-deliver it by copying it onto itself, which raises a fresh
-`ObjectCreated`:
+`ObjectCreated`.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws s3 cp s3://open-jii-heartbeat-<env>/<key> s3://open-jii-heartbeat-<env>/<key> --metadata-directive REPLACE

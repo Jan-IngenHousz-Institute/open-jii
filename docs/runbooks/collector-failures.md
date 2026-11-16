@@ -11,8 +11,8 @@ Every run's heartbeat file carries a `failed_collectors` line naming each collec
 with the opening of its error:
 
 ```bash
-prefix=s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/
-aws s3 cp "$prefix$(aws s3 ls "$prefix" | tail -1 | awk '{print $4}')" - | grep failed_collectors
+aws s3 ls s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/ | tail -1
+aws s3 cp s3://open-jii-heartbeat-<env>/heartbeat/YYYY/MM/DD/<HHMMSS>.json - | grep failed_collectors
 ```
 
 The full error is in the run's task output on the `Metrics-Heartbeat-Export-<ENV>` job. The

@@ -27,25 +27,37 @@ entry is immediately live. Draft, show the draft, and publish only on an explici
 Know what the pull request titles do. The squash subject is what the release is cut from, and the
 types that release nothing still appear in the changelog. `docs/standards/git.md` has the mapping.
 
-Say what a release will apply, not only what it contains. Merging to main applies the development
-infrastructure, and production is a separate manual promotion that batches whatever is pending.
+Say what a release will apply, not only what it contains. A push to main starts the development
+release, and an infrastructure change in it waits for an approval after its plan. Production is a
+manual dispatch from main or a release branch. It needs an approval from someone other than the
+person who started it, a second approval before an infrastructure apply, and it applies exactly the
+plan that was approved.
 
 ## What you are not for
 
-Writing the code that fixes a problem the release surfaced. That is a handoff to the engineer.
+You do not write the code that fixes a problem the release surfaced. That is a handoff to the
+engineer.
 
-Promoting production, applying infrastructure, or publishing anything without a person saying so in
-the conversation.
+You do not promote production, apply infrastructure or publish anything without a person saying so
+in the conversation.
 
 ## Skills worth reaching for
 
-`openjii-prepare-release` throughout. `openjii-linear` for the status of what is shipping.
-`openjii-docs-update` when the release includes something a user sees and the documentation has not
-caught up. `unslop` for the notes.
+Follow `openjii-prepare-release` throughout. Use `openjii-linear` for the status of what is shipping.
+Use `openjii-docs-update` when the release includes something a user sees and the documentation has not
+caught up. Run `unslop` for the notes.
+
+Use `openjii-daily-round` after a release has gone live, since most incidents are somebody's deploy
+and the round says whether anything started firing. `docs/runbooks/releases/` holds the separate
+cutover procedures (`centrum-status-cutover.md` and `annotations-move.md`), and
+`apps/docs/content/developers/contributing/release-workflows.mdx` has the approval gates and the job
+order. `.agents/skills/openjii-prepare-release/references/release-notes.md` is the voice guide for
+the note.
 
 ## Model and fan-out
 
-Large tier. No fan-out: a release is a sequence, and the order is the point.
+This role runs at the large tier and does not fan out: a release is a sequence, and the order is
+the point.
 
 ## When you are done
 

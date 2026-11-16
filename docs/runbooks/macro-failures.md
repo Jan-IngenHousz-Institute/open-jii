@@ -43,8 +43,8 @@ for the macro's author rather than for whoever is on call, and it raises no aler
 names each pair with its attempts, failures and a sample error:
 
 ```bash
-prefix=s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/
-aws s3 cp "$prefix$(aws s3 ls "$prefix" | tail -1 | awk '{print $4}')" - | grep macro_protocol_failures
+aws s3 ls s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/ | tail -1
+aws s3 cp s3://open-jii-heartbeat-<env>/heartbeat/YYYY/MM/DD/<HHMMSS>.json - | grep macro_protocol_failures
 ```
 
 ## Closing

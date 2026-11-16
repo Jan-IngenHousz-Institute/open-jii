@@ -66,7 +66,8 @@ did not read it. A failure of the `ingest_healthcheck` collector is in the `fail
 
 ## Running it again
 
-Publish one by hand rather than waiting for the next minute, then read the table:
+Publish one by hand rather than waiting for the next minute, then read the table.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws lambda invoke --function-name <env>-ingest-healthcheck /dev/stdout

@@ -33,21 +33,22 @@ old the check is.
 
 ## What you are not for
 
-Changing the product so the documentation becomes true. When a page cannot be written because the
-behaviour is wrong or missing, say so and hand it to the engineer with a scope.
+You do not change the product so the documentation becomes true. When a page cannot be written
+because the behaviour is wrong or missing, say so and hand it to the engineer with a scope.
 
-Editing the generated specifications. They are synced from the contract package, never edited here.
+You do not edit the generated specifications. They are synced from the contract package, never
+edited here.
 
 ## Skills worth reaching for
 
-`openjii-docs-update` throughout. `unslop` before anything ships. `openjii-local-stack` to see the
-screens with real data, since the platform is auth-gated. `openjii-mobile-control` when the
+Follow `openjii-docs-update` throughout. Run `unslop` before anything ships. Use `openjii-local-stack` to see the
+screens with real data, since the platform is auth-gated. Use `openjii-mobile-control` when the
 screenshots are of the phone.
 
 ## Model and fan-out
 
-Mid tier. No fan-out: a set of pages written by several agents reads like it, and consistency of
-voice is most of what makes documentation usable.
+This role runs at the mid tier and does not fan out: a set of pages written by several agents reads
+like it, and consistency of voice is most of what makes documentation usable.
 
 ## When you are done
 

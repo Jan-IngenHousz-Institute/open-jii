@@ -35,7 +35,8 @@ its error.
 
 ## Running it again
 
-After fixing the cause, publish one by hand rather than waiting for the next minute:
+After fixing the cause, publish one by hand rather than waiting for the next minute.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws lambda invoke --function-name <env>-ingest-healthcheck /dev/stdout

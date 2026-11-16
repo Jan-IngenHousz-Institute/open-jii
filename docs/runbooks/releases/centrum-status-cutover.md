@@ -22,7 +22,7 @@ This procedure applies to an environment that still has the old materialized vie
    ```
 
 3. Approve the infrastructure gate and the later release gates for the selected ref. OpenTofu creates the replacement plain views; the bundle deploys the changed bridge flows. If OpenTofu reports that a name is still occupied, stop and inspect the object type before proceeding.
-4. Full-refresh **only** `bridge_experiment_device` and `bridge_experiment_contributor` after the new bundle is in place. The `DLT pipeline full-refresh` workflow accepts those two table names as its comma-separated `tables` input and handles stopping and restoring continuous mode in prod. The corresponding Databricks CLI selection is:
+4. Full-refresh **only** `bridge_experiment_device` and `bridge_experiment_contributor` after the new bundle is in place. The `DLT pipeline full-refresh` workflow accepts those two table names as its comma-separated `tables` input and handles stopping and restoring continuous mode in prod. An agent session cannot run this step; the developer runs it and pastes what it shows. The corresponding Databricks CLI selection is:
 
    ```text
    databricks pipelines start-update <pipeline-id> --json '{"full_refresh_selection":["bridge_experiment_device","bridge_experiment_contributor"],"cause":"API_CALL"}'

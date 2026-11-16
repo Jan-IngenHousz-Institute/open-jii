@@ -51,7 +51,8 @@ The rule should be `ENABLED` with `rate(1 minute)`, and carry one target, the
 
 ## Running it once
 
-To check that the function itself works, invoke it by hand:
+To check that the function itself works, invoke it by hand.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws lambda invoke --function-name <env>-status-publisher /dev/stdout

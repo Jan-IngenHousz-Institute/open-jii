@@ -71,7 +71,9 @@ its count may each take up to an hour; a run that times out is safe to run again
 
 Give the experiment's id, or `all`, and one table (`measurements`, `macro_results`, `uploads`), or
 `all`. A run without an experiment fails rather than reloading everything. In the Databricks UI,
-open the job and choose "Run now with different parameters". From a terminal:
+open the job and choose "Run now with different parameters".
+An agent session cannot run this step; the developer runs it and pastes what it shows.
+From a terminal:
 
 ```bash
 databricks jobs list --name Serving-Store-Reload-<ENV>

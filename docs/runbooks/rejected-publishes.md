@@ -19,7 +19,7 @@ The broker logs every refusal. Group them by client and topic:
 ```bash
 aws logs filter-log-events --log-group-name AWSIotLogsV2 \
   --start-time $(( ($(date +%s) - 3600) * 1000 )) \
-  --filter-pattern '{ $.eventType = "Publish-In" && $.status = "Failure" }' \
+  --filter-pattern '{ $.eventType = "Publish-In" && $.status = "Failure" }' --max-items 1000 \
   --query 'events[].message' --output text | tr '\t' '\n' \
   | jq -r '[.clientId, .topicName, (.reason // "")] | @tsv' | sort | uniq -c | sort -rn | head
 ```

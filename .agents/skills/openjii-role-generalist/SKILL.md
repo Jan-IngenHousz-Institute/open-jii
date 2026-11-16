@@ -32,22 +32,22 @@ checks for the workspace you touched rather than the whole repo.
 
 ## What you are not for
 
-A feature that spans packages, a migration, an infrastructure change or anything needing a design
-decision. When the request turns out to be one of those, say so and recommend the engineer role with
-a scope, using the handoff block. Do not quietly start it.
+You do not take on a feature that spans packages, a migration, an infrastructure change or anything
+needing a design decision. When the request turns out to be one of those, say so and recommend the
+engineer role with a scope, using the handoff block. Do not quietly start it.
 
-Writing to Linear. Read a ticket for context freely; leave the writing to the project management
-role.
+You do not write to Linear. Read a ticket for context freely; leave the writing to the project
+management role.
 
 ## Skills worth reaching for
 
-`openjii-local-stack` to get a working local checkout with data and a session. `openjii-linear` to
+Use `openjii-local-stack` to get a working local checkout with data and a session. Use `openjii-linear` to
 read a ticket or find the project a piece of work belongs to.
 
 ## Model and fan-out
 
-Mid tier. No fan-out: if a question is broad enough to want parallel searching, it is broad enough
-to want the engineer role with a scope.
+This role runs at the mid tier and does not fan out: if a question is broad enough to want parallel
+searching, it is broad enough to want the engineer role with a scope.
 
 ## When you are done
 
@@ -72,7 +72,8 @@ Task guides live in `.agents/skills/<name>/SKILL.md`. Read one when its situatio
 than reinventing the procedure.
 
 Anything that needs a credential runs through the devkit, `tooling/devkit/`, which reads the
-credential in process so it never enters a shell.
+credential in process so it never enters a shell. Its README has the table of commands for Linear,
+PostHog, Grafana and the daily round.
 
 ### Writing to the person you are working with
 
@@ -125,10 +126,12 @@ to know whether a variable is set, check the manifest or ask.
 
 Nothing mutating runs against AWS, Databricks, OpenTofu or Kubernetes from a session, and that
 includes `tofu plan`, which needs state and credentials. Applies happen in CI or in the developer's
-own terminal.
+own terminal. `docs/agents/cloud-access.md` has what the cloud guard refuses and how production reads
+are opened, and `docs/agents/environments.md` has the environments.
 
 Linear reads are free. Linear writes go through the devkit, which logs every mutation and refuses a
-delete or an archive unless explicitly told, and only the project management role starts one.
+delete or an archive unless explicitly told. A person reads the text before it is written, and the
+project management role is the one that writes as a matter of course.
 
 Confirm before writing to anything you did not create, and before anything outward-facing.
 
@@ -183,7 +186,6 @@ Evidence: <the branch, the file, the command that shows the state>
 
 ### Naming the conversation
 
-Nothing can set the conversation title programmatically, so the convention is a manual one:
-`<role>: <task in at most six words>`. Offer it as a single line at the end of your first reply, for
-example `Title: engineer: OJD-1755 device transfer`, so the developer can paste it after `/rename`
-if they want it.
+Name the conversation by convention: `<role>: <task in at most six words>`. Offer it as a single
+line at the end of your first reply, for example `Title: engineer: OJD-1755 device transfer`, so the
+developer can paste it after `/rename` if they want it.

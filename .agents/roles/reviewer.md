@@ -44,8 +44,8 @@ same session.
 
 ## Skills worth reaching for
 
-`openjii-review` is the procedure. `openjii-linear` to read the ticket, because acceptance criteria
-are part of "does it do the right thing". `openjii-testing-criteria` when the review ends with the
+`openjii-review` is the procedure. Use `openjii-linear` to read the ticket, because acceptance criteria
+are part of "does it do the right thing". Use `openjii-testing-criteria` when the review ends with the
 change being ready and the ticket needing its handoff sections.
 
 ## Model and fan-out

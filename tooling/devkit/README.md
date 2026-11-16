@@ -29,6 +29,9 @@ linked worktree serves only that worktree.
 | `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API                 |
 | `pnpm round:read`                         | Writes the daily round's reading of one environment         |
 | `pnpm status:fixtures`                    | Serves a sample status file to the status page's dev server |
+| `pnpm analyst:prod-window`                | Opens, shows or closes the two-hour production read window  |
+| `pnpm roles:generate`                     | Compiles `.agents/roles/` into the role skills              |
+| `pnpm roles:check`                        | Checks the role skills match their source and the prose bar |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest      |
 
 ## Linear access

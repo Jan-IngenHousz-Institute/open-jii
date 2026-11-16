@@ -18,7 +18,7 @@ objects rather than writing one per message. Either can fail alone, so establish
 ```bash
 aws logs filter-log-events --log-group-name AWSIotLogsV2 \
   --start-time $(( ($(date +%s) - 3600) * 1000 )) \
-  --filter-pattern '{ $.eventType = "RuleExecution" && $.status = "Failure" }'
+  --filter-pattern '{ $.eventType = "RuleExecution" && $.status = "Failure" }' --max-items 100
 ```
 
 The `ruleName` and `reason` fields in the matched events answer both "which channel" and "which
@@ -61,7 +61,8 @@ Each object names the rule, topic and client, lists every failed action under `f
 resource it failed on and its error, and carries the device's original payload in
 `base64OriginalPayload`. Only a message whose Kinesis delivery failed is missing from the pipeline.
 One whose failures name only the Firehose stream reached Kinesis and is missing only from the raw
-archive; replaying it would count it twice. These are the objects to replay:
+archive; replaying it would count it twice. These are the objects to replay.
+An agent session cannot run this step; the developer runs it and pastes what it shows.
 
 ```bash
 aws s3 cp --recursive s3://open-jii-iot-raw-archive-<env>/iot-rule-errors/$DAY/ ./rule-errors/
