@@ -11,7 +11,9 @@ upper bound.
 
 Run this on the environment's Investigations warehouse, with the first day of the month and the
 workspace id (the heartbeat job's `WORKSPACE_ID` parameter). It prices usage the way the heartbeat
-does (`apps/data/src/lib/openjii/openjii/heartbeat/costs.py`), and a test holds the two together.
+does (`apps/data/src/lib/openjii/openjii/heartbeat/costs.py`), and `test_heartbeat_costs.py` holds
+the two together. CI runs that test only when `apps/data` changes, so after editing the query run
+`pnpm --filter data exec uv run pytest tests/lib/test_heartbeat_costs.py` yourself.
 
 <!-- monthly-cost-databricks -->
 
@@ -40,12 +42,12 @@ The VMs the pipelines run on are billed by AWS as EC2, below.
 
 ## AWS, per service
 
-The Cost dashboard's "the whole month before" figures and its service table give the month just
-ended. For any other month, ask Cost Explorer the way the cost publisher does
-(`packages/monitoring/src/cost.ts`), usage alone, by service:
+The Cost dashboard gives the month just ended only as totals, and its service table is last week.
+For any month by service, the month just ended included, ask Cost Explorer the way the cost
+publisher does (`packages/monitoring/src/cost.ts`), usage alone:
 
 ```bash
-aws ce get-cost-and-usage --profile openjii-<env> \
+aws ce get-cost-and-usage --profile openjii-<env> --region us-east-1 \
   --time-period Start=<first day>,End=<first day of the next month> \
   --granularity MONTHLY --metrics UnblendedCost \
   --group-by Type=DIMENSION,Key=SERVICE \
@@ -72,14 +74,16 @@ Then read one update's events forward from its start, where each flow plans its 
 
 ```bash
 databricks api get "/api/2.0/pipelines/<pipeline id>/events?max_results=250&order_by=timestamp%20asc&filter=timestamp%20%3E%3D%20%27<update start>%27" -p <profile> \
-  | jq -r '.events[]
-      | select(.event_type == "planning_information")
-      | [.timestamp, .origin.update_id, .origin.flow_name,
-         (.details.planning_information.technique_information[] | select(.is_chosen) | .maintenance_type)]
-      | @tsv'
+  > events.json
+jq -r '.events[]
+    | select(.event_type == "planning_information")
+    | [.timestamp, .origin.update_id, .origin.flow_name,
+       (.details.planning_information.technique_information[]? | select(.is_chosen) | .maintenance_type)]
+    | @tsv' events.json
+jq -r '.next_page_token // "last page"' events.json
 ```
 
 Each line is one flow in one update and the refresh technique it chose, such as
-`MAINTENANCE_TYPE_NO_OP` or `MAINTENANCE_TYPE_COMPLETE_RECOMPUTE`. A page holds at most 250 events.
-For the next, pass the response's `next_page_token` as `page_token` with `max_results` alone: the
-API refuses a page token beside `order_by` or `filter`.
+`MAINTENANCE_TYPE_NO_OP` or `MAINTENANCE_TYPE_COMPLETE_RECOMPUTE`; a flow that planned no technique
+shows none. A page holds at most 250 events, and the last line is the token for the next. Pass it as
+`page_token` with `max_results` alone: the API refuses a page token beside `order_by` or `filter`.
