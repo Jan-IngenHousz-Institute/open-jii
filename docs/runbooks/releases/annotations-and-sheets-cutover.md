@@ -6,9 +6,28 @@ instead of two.** The usual path ships a first release that writes both stores, 
 ships a second release that makes Postgres the source. Use this page instead when one release
 carries both, so an environment goes from writing the lakehouse alone straight to reading Postgres.
 
-From the moment the release is out until step 4 ends, pages show no annotation or sheet written
-before it, and editing or deleting one answers that it was not found. New annotations and sheets
-save as usual. So run it when nobody annotates: the query in step 1 shows when that is.
+The pull requests behind both releases, #2402, #2424 and #2425, merge back to back, and no
+production release is cut between them, so production takes all three in one release.
+
+## Before you start
+
+Follow this page as it stands only on an environment that never ran a first-release build. A
+backend from v1.151.0 on writes annotations to both stores, and one built from main after #2402
+merged but before #2424 did writes sheets to both. Dev has run both, since it deploys main on every
+push. The image tag of the ECS service's task definition names the version an environment runs.
+
+On an environment that did run one, first run steps 1 to 5 of both move runbooks to a clean check
+while the lakehouse is still the source, on dev between the merges of #2402 and #2424. That check
+makes Postgres match the lakehouse wherever the first release left them apart, such as a delete or
+an edit whose Postgres copy failed. Old tasks keep writing both stores until the cutoff in step 2,
+so a "not copied to Postgres" warning the backend logs after the check's second export names a
+record to settle the same way, by hand, before step 4. Then follow this page.
+
+From the moment the release is out until step 4 ends, pages show no annotation or sheet Postgres
+lacks, and editing or deleting one answers that it was not found. On an environment that never ran
+a first release, that is every one written before the release; after a clean check, it is none.
+New annotations and sheets save as usual. So run it when nobody annotates: the query in step 1
+shows when that is.
 
 ## 1. Before the night
 
@@ -96,7 +115,10 @@ got there, whether by step 4 or 5 or by its own save, and the removal's copy has
 experiment is gone from Postgres. Owe its removal again, as that section shows. A record missing or
 older in the lakehouse is a copy still owed: owe it again the same way. A record created between the
 deploy start and the cutoff is the exception: an old task may have edited or deleted it after its
-copy landed, so ask its author before owing anything for it. Never run step 4 again and never delete
-from Postgres: from here on, Postgres is right, and only the outbox writes the lakehouse.
+copy landed, so ask its author before owing anything for it. A record from before the deploy start
+that the lakehouse holds newer than Postgres, or differently at the same time, is a first-release
+write whose Postgres copy failed and was not settled before step 4: a person decides which is right,
+and nothing is owed until they have. Never run step 4 again and never delete from Postgres: from
+here on, Postgres is right, and only the outbox writes the lakehouse.
 
 Delete the exports and any parts once the checks are clean. They hold researchers' data.
