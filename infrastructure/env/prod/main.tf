@@ -3592,8 +3592,8 @@ module "cost_publisher" {
 }
 
 locals {
-  # Flip once the centrum pipeline that drops health checks from raw_data is running here.
-  ingest_healthcheck_publishing = false
+  # Needs the centrum pipeline that drops health checks from raw_data to be running here.
+  ingest_healthcheck_publishing = true
 
   # The pipeline carries the notebook only while publishing is on: a settings change starts it before
   # a release has deployed a new notebook.
