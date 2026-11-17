@@ -49,7 +49,7 @@ GROUP BY 1 ORDER BY 2, 1;
 Note the time the deploy starts, in UTC. Wait until every backend task runs the new release (the
 ECS service shows one deployment, and none of the old task definition), and note that time too.
 That second time is the cutoff: until it, old tasks may still have written to the lakehouse alone.
-Step 4 copies what was created before the deploy start, and step 5 settles what was created between
+Step 4 copies what was created before the deploy start, and step 6 settles what was created between
 the two.
 
 ## 3. Export the lakehouse's records
@@ -59,10 +59,12 @@ them beside Postgres in one psql session.
 
 ## 4. Copy the records created before the deploy started
 
-Only records created before the deploy start come from the lakehouse unattended. No new task can
-edit or delete one until this step ends, and no old task runs after the cutoff, so the export holds
-each as it last stood. A record Postgres already holds is never replaced: by now Postgres is the
-source.
+Only records created before the deploy start come from the lakehouse unattended. Until this step
+ends, a new task asked to edit or delete one by its id answers that it was not found, and no old
+task runs after the cutoff, so the export holds each as it last stood. A bulk annotation delete is
+the exception: it removes the annotations Postgres holds on the rows it names and succeeds, so one
+it also meant to remove can come back here, and step 5 removes it again. A record Postgres already
+holds is never replaced: by now Postgres is the source.
 
 Run both statements in one transaction. If it fails, it rolls back and can run again on the same
 export. Once it commits, never run it again: researchers can delete these records from then on,
@@ -86,7 +88,40 @@ ON CONFLICT (id) DO NOTHING;
 COMMIT;
 ```
 
-## 5. Settle the rollout's records by hand
+## 5. Remove again what a bulk delete asked to remove
+
+A bulk annotation delete names a table, a kind and rows, and removes the annotations of that kind
+that Postgres holds on those rows. Until step 4 committed, Postgres lacked the rows' older
+annotations, so step 4 brought back any of them such a delete was meant to remove. List the bulk
+deletes of that span in CloudWatch Logs Insights, on `/aws/ecs/backend-service-<env>`, with the time
+range set from the deploy start to step 4's commit:
+
+```text
+fields @timestamp, experimentId, userId, tableName, type, @message
+| filter msg = "Deleting annotation(s) from experiment data" and req.url like /bulk-delete$/
+| sort @timestamp asc
+```
+
+Most nights this lists nothing. A line without a `tableName` came from an old task before the
+cutoff, which removed the annotations from the lakehouse itself, so the export already lacked them.
+For every other line, take the row ids from `rowIds` in its message, and in the psql session remove
+the annotations of that kind on those rows that step 4 brought back, owing each removal:
+
+```sql
+WITH removed AS (
+  DELETE FROM experiment_annotations
+  WHERE experiment_id = '<experimentId>' AND table_name = '<tableName>' AND type = '<type>'
+    AND row_id IN ('<row id>', '<row id>') AND created_at < '<deploy start>'
+  RETURNING id, experiment_id
+)
+INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
+SELECT 'annotation', id, experiment_id, 'lakehouse' FROM removed
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+The backend then removes their copies from the lakehouse. Note each line's experiment in OJD-2153.
+
+## 6. Settle the rollout's records by hand
 
 A record created between the deploy start and the cutoff may come from either release. An old task
 wrote it to the lakehouse alone, or a new task wrote it to Postgres and may have deleted it there
@@ -107,11 +142,11 @@ Off-hours this lists nothing. A row it does list needs a person: ask its author 
 exist. Only if it should, copy it once with step 4's INSERT, its `WHERE` replaced by
 `WHERE l.id = '<id>'`. Note any such id in OJD-2153.
 
-## 6. Check, once
+## 7. Check, once
 
 Wait until the outbox owes nothing, as the move runbooks' last section shows, then run step 5 of both
 move runbooks with a fresh export. A record in the lakehouse alone was removed in Postgres since it
-got there, whether by step 4 or 5 or by its own save, and the removal's copy has not landed; or its
+got there, whether by step 4 or 6 or by its own save, and the removal's copy has not landed; or its
 experiment is gone from Postgres. Owe its removal again, as that section shows. A record missing or
 older in the lakehouse is a copy still owed: owe it again the same way. A record created between the
 deploy start and the cutoff is the exception: an old task may have edited or deleted it after its
