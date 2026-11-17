@@ -6,11 +6,12 @@ each row's gold commit (`_commit_timestamp`) to its insert (`inserted_at`). Rows
 the store holds data that is minutes old rather than missing. If rows stopped arriving altogether,
 `store-feed-stalled` fires instead.
 
-The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Centrum also sends the metadata sheets and their rows, from
-the backend's copy of the sheets rather than from gold. Before each attempt at a batch the driver checks that the
-store answers, so while it does not, the executors get no work from the feed at all. When the store
-answers inserts with errors, the executors retry for about half a minute, then hand the batch back;
+The feed's sinks run inside the pipelines that write gold: measurements, uploads and silver's device
+lifecycle events in Centrum, macro results in the macro pipeline. Device events measure from
+silver's commit rather than gold's. Centrum also sends the metadata sheets and their rows, from the
+backend's copy of the sheets rather than from gold. Before each attempt at a batch the driver checks
+that the store answers, so while it does not, the executors get no work from the feed at all. When
+the store answers inserts with errors, the executors retry for about half a minute, then hand the batch back;
 a missing table or column they hand back at once.
 Either way the sink waits on the pipeline's driver and writes the batch again, so a slow feed is
 either a store taking inserts slowly or a pipeline reaching its sink late.
