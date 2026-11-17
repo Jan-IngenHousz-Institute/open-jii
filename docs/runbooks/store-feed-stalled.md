@@ -85,26 +85,26 @@ the sheets' rows are filled by owing every sheet to the lakehouse once
 `clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so set
 `device_events` in the map to that table's latest version, never one before it. Left empty, it keeps
 the device events sink off. After switching on, watch the first batches in each pipeline's driver
-log (`[serving store] measurements batch 0: ... inserted`). A
-first batch numbered 0 means the sink started at its start version, and rows gold gained while the
-feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number
-means it resumed from its checkpoint. For `metadata_rows`, a batch 0 after the feed was off means
-the deletions made meanwhile were skipped, so [reset the sheets' sink](#resetting-the-sheets-sink)
-instead of only owing the sheets. In the first two hours the stall alert can fire once if gold's
-newest half hour gained rows before the start versions; it clears as soon as new rows arrive.
+log (`[serving store] measurements batch 0: ... inserted`). A first batch numbered 0 means the sink
+started at its start version, and rows gold gained while the feed was off stay missing until a
+[reload](procedures/serving-store-reload.md); a higher number means it resumed from its checkpoint.
+For `metadata_rows`, a batch 0 after the feed was off means the deletions made meanwhile were
+skipped, so [reset the sheets' sink](#resetting-the-sheets-sink) instead of only owing the sheets.
+In the first two hours the stall alert can fire once if gold's newest half hour gained rows before
+the start versions; it clears as soon as new rows arrive.
 
 ## Resetting a sink's checkpoint
 
 Needed when the feed was off for more than seven days, or when a gold table was recreated. Its
 versions then restart, so first empty the store table with `TRUNCATE TABLE store.<table>` as the
 admin, for measurements also `store.measurements_by_device`, which holds the same versions, and
-`TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left
-behind, either keeps a reload from running. Empty a store table only with `TRUNCATE`: after a
-`DELETE` the store still holds the dedup tokens of the deleted rows' inserts, and drops those rows
-when the feed sends them again. `payload_schemas` holds every table's schemas, so once the feed has
-caught up, [reload](procedures/serving-store-reload.md) every table for `all`; that also brings back
-the rows gold gained before the new start version. This clears neither of the sheets' tables, so
-reset `metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead.
+`TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left behind, either
+keeps a reload from running. Empty a store table only with `TRUNCATE`: after a `DELETE` the store
+still holds the dedup tokens of the deleted rows' inserts, and drops those rows when the feed sends
+them again. `payload_schemas` holds every table's schemas, so once the feed has caught up,
+[reload](procedures/serving-store-reload.md) every table for `all`; that also brings back the rows
+gold gained before the new start version. This clears neither of the sheets' tables, so reset
+`metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead.
 
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.

@@ -64,16 +64,16 @@ least gold's newest commit that added rows. As the admin, `SELECT max(_commit_ve
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
 (`experiment_raw_data`, `experiment_macro_data`, `experiment_uploaded_data` or, for device events,
 silver's `clean_device_lifecycle_events`) and the newest version whose `operationMetrics` show
-`numOutputRows` above 0. A feed batch writes the commits it carries in parallel, so the store's newest version can reach gold's while that batch still
-writes older ones. So also check that batch has finished. `SELECT max(inserted_at) FROM
-store.<table> WHERE _commit_version = <gold's newest version>` gives when the feed landed that
-commit's rows, and the pipeline's driver log must show a `[serving store] <table> batch <n>: ...
-inserted` line written after that time. A batch logs it only once all its rows are in, and batches
-run one at a time, so a line after that time cannot be an earlier batch's. A `writing the batch
-again` line instead means the batch is still writing, so wait for the `inserted` one.
-Then the feed has sent every commit before the reload's, and a feed that stopped cannot later send
-rows from before it, such as an experiment the reload removes. For a new store, as on prod's first
-rollout, switch the feed on first and reload `all` once it has caught up.
+`numOutputRows` above 0. A feed batch writes the commits it carries in parallel, so the store's
+newest version can reach gold's while that batch still writes older ones. So also check that batch
+has finished. `SELECT max(inserted_at) FROM store.<table> WHERE _commit_version = <gold's newest
+version>` gives when the feed landed that commit's rows, and the pipeline's driver log must show a
+`[serving store] <table> batch <n>: ... inserted` line written after that time. A batch logs it only
+once all its rows are in, and batches run one at a time, so a line after that time cannot be an
+earlier batch's. A `writing the batch again` line instead means the batch is still writing, so wait
+for the `inserted` one. Then the feed has sent every commit before the reload's, and a feed that
+stopped cannot later send rows from before it, such as an experiment the reload removes. For a new
+store, as on prod's first rollout, switch the feed on first and reload `all` once it has caught up.
 
 Never run it while gold's table is being refreshed. A full refresh rewrites the table over many
 commits, so at any one of them gold holds part of it, and a reload then deletes the rest from the
@@ -137,8 +137,9 @@ background merges can leave them that way for a day or more. On dev, a 37M-row e
 took 1.5 to 2.9 s in that state and 0.4 s once merged; its pages took up to twice as long.
 
 When the run has finished, merge the tables it wrote once, as the admin, starting
-`clickhouse-client` with `--receive_timeout=3600`. A merge writes each month's new part beside the old ones before it
-drops them, so first check the store's disk has about the table's size free (`store-disk`, or
+`clickhouse-client` with `--receive_timeout=3600`. A merge writes each month's new part beside the
+old ones before it drops them, so first check the store's disk has about the table's size free
+(`store-disk`, or
 `SELECT formatReadableSize(sum(bytes_on_disk)) FROM system.parts WHERE database = 'store' AND table = 'measurements' AND active`
 against `SELECT formatReadableSize(free_space) FROM system.disks`):
 
@@ -221,10 +222,9 @@ no copy of annotations: a read filtered by flags takes the flagged rows from Pos
 - **The store holds a version newer than gold's.** Gold's table was recreated and its versions
   restarted, so the load's rows and schemas would lose to the old ones. As the admin, empty the store
   table, for measurements also `store.measurements_by_device`, and `store.payload_schemas` with
-  `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says
-  why). Then set the feed's start version to gold's latest and reset its checkpoint as
-  `store-feed-stalled` describes, and once the feed has caught up, reload every table for `all`, since
-  `payload_schemas` held every table's schemas.
+  `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says why). Then set the feed's start version
+  to gold's latest and reset its checkpoint as `store-feed-stalled` describes, and once the feed has
+  caught up, reload every table for `all`, since `payload_schemas` held every table's schemas.
 - **Neither gold nor the store holds the experiment.** The run succeeds and says so. Unless the
   experiment was deleted, check its id.
 - **Rows not sent after six attempts.** The store could not take the load; `store-answers` and
