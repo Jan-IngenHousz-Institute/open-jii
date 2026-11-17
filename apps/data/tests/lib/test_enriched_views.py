@@ -216,6 +216,18 @@ def test_annotations_from_the_device_come_before_those_added_in_the_app(
     assert rows[2]["annotations"] == []
 
 
+@pytest.mark.parametrize(
+    ("view", "row_id"), [("enriched_experiment_raw_data", 1), ("enriched_experiment_macro_data", 101)]
+)
+def test_the_phones_annotations_also_read_alone(
+    spark: SparkSession, centrum: str, view: str, row_id: int
+) -> None:
+    rows = _rows(spark, view)
+
+    assert [annotation["id"] for annotation in rows[row_id]["payload_annotations"]] == ["payload-1"]
+    assert all(row["payload_annotations"] == [] for id_, row in rows.items() if id_ != row_id)
+
+
 def test_custom_metadata_matches_by_question_or_device_and_later_uploads_win(
     spark: SparkSession, centrum: str
 ) -> None:

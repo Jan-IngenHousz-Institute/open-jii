@@ -22,6 +22,7 @@ import { ProtocolRepository } from "../protocols/core/repositories/protocol.repo
 import { SharingModule } from "../sharing/sharing.module";
 import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
+import { AnnotationMergerService } from "./application/services/annotation-merger.service";
 // Services
 import { AnnotationsLakehouseCopier } from "./application/services/annotations-lakehouse-copier";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
@@ -245,6 +246,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataOutboxWorker,
     AnnotationsLakehouseCopier,
     MetadataSheetsLakehouseCopier,
+    AnnotationMergerService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     ExperimentDataSourceService,

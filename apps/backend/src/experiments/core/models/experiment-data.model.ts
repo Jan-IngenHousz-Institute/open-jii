@@ -30,6 +30,8 @@ export interface TableConfig {
   errorColumn?: string;
   exceptColumns: string[];
   variantColumns: VariantColumn[];
+  /** The warehouse view's column holding the phone's annotations alone, beside the merged ones. */
+  phoneAnnotationsColumn?: string;
 }
 
 /** Full configuration for known static tables (display + query). */
@@ -39,6 +41,7 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
     defaultSortColumn: "timestamp",
     exceptColumns: ["experiment_id", "client_id"],
     variantColumns: ["questions_data", "custom_metadata"],
+    phoneAnnotationsColumn: "payload_annotations",
   },
   [ExperimentTableName.DEVICE]: {
     displayName: "Device Metadata",
@@ -63,6 +66,7 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
     "date",
   ],
   variantColumns: ["macro_output", "questions_data", "custom_metadata"],
+  phoneAnnotationsColumn: "payload_annotations",
 };
 
 /** Full configuration for user-uploaded tables (display + query). */

@@ -249,6 +249,38 @@ describe("ExperimentAnnotationsRepository", () => {
     expect(found.value).toEqual([{ ...orphan, userName: null }]);
   });
 
+  it("finds the annotations on given rows of one table, oldest first, with their authors' names", async () => {
+    const later = record({ rowId: "1", createdAt: new Date("2026-09-03T08:00:00.000Z") });
+    const earlier = record({ rowId: "2", createdAt: new Date("2026-09-02T08:00:00.000Z") });
+    const otherRow = record({ rowId: "3" });
+    const otherTable = record({ rowId: "1", tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c" });
+    const { experiment: other } = await testApp.createExperiment({ name: "Other trial", userId });
+    const otherExperiment = record({ rowId: "1", experimentId: other.id });
+    await insert(later, earlier, otherRow, otherTable, otherExperiment);
+    await testApp.database
+      .update(profiles)
+      .set({ firstName: "Ada", lastName: "Lovelace" })
+      .where(eq(profiles.userId, userId));
+
+    const found = await repository.findOnRows(experimentId, "raw_data", ["1", "2"]);
+
+    assertSuccess(found);
+    expect(found.value.map(({ id, userName }) => [id, userName])).toEqual([
+      [earlier.id, "Ada Lovelace"],
+      [later.id, "Ada Lovelace"],
+    ]);
+  });
+
+  it("finds annotations on more rows than one statement takes", async () => {
+    const rowIds = Array.from({ length: 10_005 }, (_, index) => String(index));
+    await insert(record({ rowId: "10004" }));
+
+    const found = await repository.findOnRows(experimentId, "raw_data", rowIds);
+
+    assertSuccess(found);
+    expect(found.value.map(({ rowId }) => rowId)).toEqual(["10004"]);
+  });
+
   it("reports a refused write by Postgres's code, without the annotation in it", async () => {
     const comment = record({ contentText: "Plot 12 was trampled" });
     await insert(comment);
