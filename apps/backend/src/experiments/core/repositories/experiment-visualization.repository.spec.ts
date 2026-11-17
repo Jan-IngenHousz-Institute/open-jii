@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { eq, experiments, experimentVisualizations } from "@repo/database";
+import { eq, experiments, experimentVisualizations, profiles } from "@repo/database";
 
 import { assertSuccess, assertFailure } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -402,6 +402,31 @@ describe("ExperimentVisualizationRepository", () => {
   });
 
   describe("findById", () => {
+    it("reads and lists a visualization whose creator has no profile", async () => {
+      const [visualization] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: testExperimentId,
+          name: "Profile-less chart",
+          createdBy: testUserId,
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig: {},
+        })
+        .returning({ id: experimentVisualizations.id });
+      await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
+
+      const found = await repository.findById(visualization.id);
+      assertSuccess(found);
+      expect(found.value).toMatchObject({ id: visualization.id, createdByName: undefined });
+      const listed = await repository.listVisualizations(testExperimentId);
+      assertSuccess(listed);
+      expect(listed.value).toEqual([
+        expect.objectContaining({ id: visualization.id, createdByName: undefined }),
+      ]);
+    });
+
     it("should return null when visualization does not exist", async () => {
       // Arrange
       const nonExistentId = faker.string.uuid();

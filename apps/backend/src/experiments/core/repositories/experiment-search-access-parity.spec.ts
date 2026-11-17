@@ -4,6 +4,7 @@ import {
   experimentVisualizations,
   experiments,
   organizationMembers,
+  resourceGrants,
   teams,
   teamMembers,
 } from "@repo/database";
@@ -36,6 +37,13 @@ describe("experiment child search access parity", () => {
       outsider: await testApp.createTestUser(),
       orgMember: await testApp.createTestUser(),
       orgAdmin: await testApp.createTestUser(),
+      orgMultiRole: await testApp.createTestUser(),
+      orgUnknownRole: await testApp.createTestUser(),
+      orgNonReadRole: await testApp.createTestUser(),
+      unknownGrantRole: await testApp.createTestUser(),
+      unknownTeamGrantRole: await testApp.createTestUser(),
+      unknownOrgGrantRole: await testApp.createTestUser(),
+      multiGrantRole: await testApp.createTestUser(),
       userGrant: await testApp.createTestUser(),
       teamGrant: await testApp.createTestUser(),
       orgGrant: await testApp.createTestUser(),
@@ -46,10 +54,14 @@ describe("experiment child search access parity", () => {
     const outsideOrgId = await testApp.createOrganization();
     const teamOrgId = await testApp.createOrganization();
     const granteeOrgId = await testApp.createOrganization();
+    const deniedGranteeOrgId = await testApp.createOrganization();
     for (const [userId, role] of [
       [userIds.owner, "owner"],
       [userIds.orgMember, "member"],
       [userIds.orgAdmin, "admin"],
+      [userIds.orgMultiRole, "member,admin"],
+      [userIds.orgUnknownRole, "custom-role"],
+      [userIds.orgNonReadRole, "viewer"],
     ]) {
       await testApp.database
         .insert(organizationMembers)
@@ -58,6 +70,18 @@ describe("experiment child search access parity", () => {
     await testApp.addOrganizationMember(outsideOrgId, userIds.outsider, "member");
     await testApp.addOrganizationMember(teamOrgId, userIds.teamGrant, "member");
     await testApp.addOrganizationMember(granteeOrgId, userIds.orgGrant, "member");
+    await testApp.addOrganizationMember(teamOrgId, userIds.unknownTeamGrantRole, "member");
+    await testApp.addOrganizationMember(deniedGranteeOrgId, userIds.unknownOrgGrantRole, "member");
+    const [deniedTeam] = await testApp.database
+      .insert(teams)
+      .values({
+        organizationId: teamOrgId,
+        name: `Team ${crypto.randomUUID()}`,
+      })
+      .returning();
+    await testApp.database
+      .insert(teamMembers)
+      .values({ teamId: deniedTeam.id, userId: userIds.unknownTeamGrantRole });
     const [team] = await testApp.database
       .insert(teams)
       .values({
@@ -120,6 +144,35 @@ describe("experiment child search access parity", () => {
           resourceId: experiment.id,
           role: "viewer",
           ...grantee,
+        });
+      }
+      if (kind === "user") {
+        for (const [granteeId, role] of [
+          [userIds.unknownGrantRole, "custom-role"],
+          [userIds.multiGrantRole, "custom-role, viewer"],
+          [userIds.orgNonReadRole, "viewer"],
+        ]) {
+          await testApp.database.insert(resourceGrants).values({
+            resourceType: "experiment",
+            resourceId: experiment.id,
+            granteeType: "user",
+            granteeId,
+            role,
+          });
+        }
+      }
+      const deniedGrantee =
+        kind === "team"
+          ? { granteeType: "team" as const, granteeId: deniedTeam.id }
+          : kind === "org"
+            ? { granteeType: "organization" as const, granteeId: deniedGranteeOrgId }
+            : null;
+      if (deniedGrantee) {
+        await testApp.database.insert(resourceGrants).values({
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          role: "custom-role",
+          ...deniedGrantee,
         });
       }
       const name = `Canopy ${token}`;

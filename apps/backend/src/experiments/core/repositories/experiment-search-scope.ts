@@ -1,20 +1,19 @@
-import { experiments, ne, sql } from "@repo/database";
+import { eq, experiments, ne, or, sql } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import { readingResourceCondition } from "../../../common/utils/resource-access-scope";
 
 export function searchableExperimentCondition(database: DatabaseInstance, userId: string): SQL {
-  const access = accessibleResourceCondition({
+  const related = readingResourceCondition({
     database,
     resourceType: "experiment",
     resourceIdColumn: experiments.id,
     organizationIdColumn: experiments.organizationId,
-    visibilityColumn: experiments.visibility,
     userId,
   });
-  if (!access) {
+  if (!related) {
     throw new Error("Experiment search requires an access scope");
   }
-  // and() drops undefined operands, so validate the scope before combining it.
+  const access = or(eq(experiments.visibility, "public"), related);
   return sql`(${access} AND ${ne(experiments.status, "archived")})`;
 }

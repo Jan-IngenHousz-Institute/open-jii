@@ -76,18 +76,19 @@ export class ExperimentVisualizationRepository {
       const results = await this.database
         .select({
           experiment_visualizations: visualizationColumns,
+          profileUserId: profiles.userId,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
         .from(experimentVisualizations)
-        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.experimentId, experimentId))
         .orderBy(desc(experimentVisualizations.createdAt));
 
       return results.map((result) => {
         const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
         augmentedResult.createdByName =
-          result.firstName && result.lastName
+          result.profileUserId && result.firstName && result.lastName
             ? `${result.firstName} ${result.lastName}`
             : undefined;
         return augmentedResult;
@@ -142,11 +143,12 @@ export class ExperimentVisualizationRepository {
       const result = await this.database
         .select({
           experiment_visualizations: visualizationColumns,
+          profileUserId: profiles.userId,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
         .from(experimentVisualizations)
-        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.id, id))
         .limit(1);
 
@@ -156,7 +158,7 @@ export class ExperimentVisualizationRepository {
 
       const augmentedResult = result[0].experiment_visualizations as ExperimentVisualizationDto;
       augmentedResult.createdByName =
-        result[0].firstName && result[0].lastName
+        result[0].profileUserId && result[0].firstName && result[0].lastName
           ? `${result[0].firstName} ${result[0].lastName}`
           : undefined;
       return augmentedResult;
