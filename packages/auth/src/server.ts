@@ -7,11 +7,12 @@ import { createAuthMiddleware } from "better-auth/api";
 import { genericOAuth, lastLoginMethod } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
-import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { openJiiEmailOTP } from "./email-otp";
+import { sendConfirmEmailOtpEmail } from "./email/confirmEmailOtpEmail";
 import { sendOtpEmail } from "./email/otpEmail";
+import { authSchema, sharedAuthOptions } from "./options";
 import { openJiiOrganization } from "./organization/plugin";
 import { legacyOAuth2SignIn } from "./providers/legacy-oauth2-sign-in";
 import { orcidProvider } from "./providers/orcid";
@@ -44,29 +45,16 @@ if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
 }
 
 export const auth = betterAuth({
+  ...sharedAuthOptions,
   logger: {
     level: "info",
     disabled: false,
   },
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: {
-      user: schema.users,
-      session: schema.sessions,
-      account: schema.accounts,
-      verification: schema.verifications,
-      rateLimit: schema.rateLimits,
-      organization: schema.organizations,
-      member: schema.organizationMembers,
-      invitation: schema.organizationInvitations,
-      team: schema.teams,
-      teamMember: schema.teamMembers,
-      apikey: schema.apiKeys,
-      passkey: schema.passkeys,
-    },
+    schema: authSchema,
   }),
   secret: process.env.AUTH_SECRET,
-  basePath: "/api/v1/auth",
   baseURL: apiUrl, // Points to the backend where auth runs
   trustedOrigins: [
     clientUrl,
@@ -81,18 +69,6 @@ export const auth = betterAuth({
         ]
       : []),
   ],
-  session: {
-    // Sliding session: 30-day absolute lifetime with daily rolling renewal.
-    // While the user is active, every authenticated request inside
-    // `updateAge` extends the cookie expiry, so active users effectively
-    // never get logged out. After 30 days of inactivity the session ends.
-    expiresIn: 60 * 60 * 24 * 30, // 30 days
-    updateAge: 60 * 60 * 24, // 1 day (slide the session forward daily)
-    cookieCache: {
-      enabled: true,
-      maxAge: 60 * 60 * 24, // 1 day
-    },
-  },
   rateLimit: {
     window: 60, // 60 seconds
     max: 100, // 100 requests per window
@@ -127,39 +103,6 @@ export const auth = betterAuth({
       "/get-session": false, // Disable rate limiting for session checks
     },
   },
-  account: {
-    accountLinking: {
-      enabled: true,
-      // Applies only to an explicit link from a signed-in account. Linking at
-      // sign-in still needs the same verified address on both sides.
-      allowDifferentEmails: true,
-      // The library refuses to unlink a person's last account row; the backend
-      // replaces that count with its own check that a way to sign in remains.
-      allowUnlinkingAll: true,
-      // A private ORCID email reaches us as the bare iD, unverified, which the
-      // library refuses to link from an untrusted provider. orcidProvider drops
-      // unverified emails itself, so trusting ORCID admits no unverified address.
-      // The placeholder iD is safe to trust only while no verified user can hold a
-      // non-address as its email. The only path that sets a user's email to something
-      // else is the email-code change, which takes only an address and proves it first.
-      trustedProviders: ["orcid"],
-    },
-  },
-  user: {
-    // As configured this route cannot change an address: it needs an
-    // emailVerification.sendVerificationEmail sender and none is set. An address
-    // changes only through the email-code change in openJiiEmailOTP.
-    changeEmail: {
-      enabled: true,
-    },
-    additionalFields: {
-      registered: {
-        type: "boolean",
-        defaultValue: false,
-        required: false,
-      },
-    },
-  },
   advanced: {
     cookiePrefix: `better-auth.${environmentPrefix}`,
     ...(cookieDomain
@@ -170,12 +113,7 @@ export const auth = betterAuth({
           },
         }
       : {}),
-    database: {
-      generateId: false, // Let Postgres generate UUIDs via defaultRandom()
-    },
-  },
-  emailAndPassword: {
-    enabled: false,
+    database: sharedAuthOptions.advanced.database,
   },
   plugins: [
     expo(), // Add Expo plugin for mobile app support
@@ -189,14 +127,14 @@ export const auth = betterAuth({
         const emailFrom = process.env.AUTH_EMAIL_FROM;
 
         if (emailServer && emailFrom) {
-          await sendOtpEmail({
+          const send = type === "change-email" ? sendConfirmEmailOtpEmail : sendOtpEmail;
+          await send({
             to: email,
             otp,
             emailServer,
             emailFrom,
             senderName: "openJII",
             baseUrl: clientUrl,
-            purpose: type === "change-email" ? "confirm-email" : "sign-in",
           });
         }
       },

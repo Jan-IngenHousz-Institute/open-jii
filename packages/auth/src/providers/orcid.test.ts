@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
-import { genericOAuth } from "better-auth/plugins";
+import { emailOTP, genericOAuth } from "better-auth/plugins";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { orcidProvider } from "./orcid";
@@ -48,6 +48,7 @@ function getUserInfo(raw: Record<string, unknown> = { orcid: ORCID_ID }) {
 describe("orcidProvider getUserInfo", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("uses a verified primary email", async () => {
@@ -74,8 +75,7 @@ describe("orcidProvider getUserInfo", () => {
 
     const user = await getUserInfo();
 
-    expect(user.email).toBe(ORCID_ID);
-    expect(user.emailVerified).toBe(false);
+    expect(user).toMatchObject({ email: ORCID_ID, emailVerified: false });
   });
 
   it("uses a verified secondary email over an unverified primary", async () => {
@@ -86,8 +86,7 @@ describe("orcidProvider getUserInfo", () => {
 
     const user = await getUserInfo();
 
-    expect(user.email).toBe("verified@example.com");
-    expect(user.emailVerified).toBe(true);
+    expect(user).toMatchObject({ email: "verified@example.com", emailVerified: true });
   });
 
   it("falls back to the iD when the record has no emails", async () => {
@@ -95,21 +94,129 @@ describe("orcidProvider getUserInfo", () => {
 
     const user = await getUserInfo();
 
-    expect(user.email).toBe(ORCID_ID);
-    expect(user.emailVerified).toBe(false);
+    expect(user).toMatchObject({ email: ORCID_ID, emailVerified: false });
   });
 
-  it("throws when the token response carries no iD", async () => {
+  it("answers null, with a warning, when the token response carries no iD", async () => {
     const fetchMock = stubRecord([]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    await expect(getUserInfo({})).rejects.toThrow("ORCID ID not found in token response");
+    await expect(getUserInfo({})).resolves.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith("ORCID token response carried no iD");
+  });
+
+  it("answers null when the token response carries no access token", async () => {
+    const fetchMock = stubRecord([]);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(provider.getUserInfo({ raw: { orcid: ORCID_ID } })).resolves.toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("throws when the record API answers with an error", async () => {
+  it("answers null, logging the status and no token, when the record API refuses", async () => {
     stubRecord([], 404);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    await expect(getUserInfo()).rejects.toThrow("Failed to fetch ORCID record: Not Found");
+    await expect(getUserInfo()).resolves.toBeNull();
+    expect(warn.mock.calls).toEqual([["Failed to fetch the ORCID record", { status: 404 }]]);
+  });
+
+  it("answers null when the record API cannot be reached", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new TypeError("fetch failed"))),
+    );
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(getUserInfo()).resolves.toBeNull();
+  });
+});
+
+describe("connecting ORCID when the record cannot be read", () => {
+  const WEB = "http://localhost:3000";
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function cookiesFrom(response: Response, previous = "") {
+    const fresh = response.headers.getSetCookie().map((cookie) => cookie.split(";", 1)[0]);
+    return [previous, ...fresh].filter(Boolean).join("; ");
+  }
+
+  it("returns to the error URL with unable_to_get_user_info and writes no account row", async () => {
+    const tables = { user: [], session: [], account: [], verification: [] };
+    const auth = betterAuth({
+      baseURL: BASE_URL,
+      basePath: BASE_PATH,
+      secret: "orcid-record-failure-test-secret-0123456789",
+      trustedOrigins: [WEB],
+      database: memoryAdapter(tables),
+      plugins: [
+        emailOTP({ sendVerificationOTP: () => Promise.resolve() }),
+        genericOAuth({
+          config: [
+            orcidProvider({ clientId: "orcid-client", clientSecret: "s", environment: "sandbox" }),
+          ],
+        }),
+      ],
+    });
+    const request = (path: string, init: RequestInit) =>
+      auth.handler(new Request(`${BASE_URL}${BASE_PATH}${path}`, init));
+
+    const email = "researcher@example.com";
+    await auth.api.sendVerificationOTP({ body: { email, type: "sign-in" } });
+    const { otp } = await auth.api.getVerificationOTP({ query: { email, type: "sign-in" } });
+    const signedIn = await request("/sign-in/email-otp", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: WEB },
+      body: JSON.stringify({ email, otp }),
+    });
+    let cookie = cookiesFrom(signedIn);
+
+    const linked = await request("/link-social", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: WEB, cookie },
+      body: JSON.stringify({
+        provider: "orcid",
+        callbackURL: `${WEB}/security?connected=orcid`,
+        errorCallbackURL: `${WEB}/security?connect=orcid`,
+      }),
+    });
+    cookie = cookiesFrom(linked, cookie);
+    const { url } = (await linked.json()) as { url: string };
+    const state = new URL(url).searchParams.get("state") ?? "";
+
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const target = input instanceof Request ? input.url : input.toString();
+        if (target === "https://sandbox.orcid.org/oauth/token") {
+          return Promise.resolve(
+            Response.json({ access_token: "token", token_type: "bearer", orcid: ORCID_ID }),
+          );
+        }
+        if (target === `https://pub.sandbox.orcid.org/v3.0/${ORCID_ID}`) {
+          return Promise.resolve(new Response("unavailable", { status: 503 }));
+        }
+        return Promise.reject(new Error(`Unexpected fetch to ${target}`));
+      }),
+    );
+
+    const callback = await request(`/callback/orcid?code=a-code&state=${state}`, {
+      method: "GET",
+      headers: { cookie },
+    });
+
+    expect(callback.status).toBe(302);
+    const location = new URL(callback.headers.get("location") ?? "");
+    expect(location.origin + location.pathname).toBe(`${WEB}/security`);
+    expect(location.searchParams.get("connect")).toBe("orcid");
+    expect(location.searchParams.get("error")).toBe("unable_to_get_user_info");
+    expect(tables.account).toEqual([]);
   });
 });
 

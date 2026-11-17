@@ -9,12 +9,10 @@ interface SendOtpEmailParams {
   emailFrom: string;
   senderName: string;
   baseUrl: string;
-  /** The same code confirms a new address during registration; the subject says which. */
-  purpose?: "sign-in" | "confirm-email";
 }
 
 export async function sendOtpEmail(params: SendOtpEmailParams) {
-  const { to, otp, emailServer, emailFrom, senderName, baseUrl, purpose = "sign-in" } = params;
+  const { to, otp, emailServer, emailFrom, senderName, baseUrl } = params;
 
   const url = new URL(baseUrl);
   const host = url.host;
@@ -29,10 +27,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams) {
       name: senderName,
       address: emailFrom,
     },
-    subject:
-      purpose === "confirm-email"
-        ? `Your code to confirm your email address for ${senderName}`
-        : `Your login code for ${senderName}`,
+    subject: `Your login code for ${senderName}`,
     html,
     text,
   });

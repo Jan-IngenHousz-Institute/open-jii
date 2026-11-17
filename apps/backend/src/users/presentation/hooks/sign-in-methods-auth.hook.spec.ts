@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { APIError } from "better-auth/api";
 
@@ -116,13 +117,23 @@ describe("SignInMethodsAuthHook", () => {
       expect(findSignInMethods).not.toHaveBeenCalled();
     });
 
-    it("refuses with a 500 when the methods cannot be read", async () => {
+    it("refuses with a 500 when the methods cannot be read, and logs why", async () => {
       const { hook } = hookWith("fails");
       signedIn(hook);
+      const logError = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
 
       const error = await refusal(hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW })));
 
       expect(error.status).toBe("INTERNAL_SERVER_ERROR");
+      expect(logError).toHaveBeenCalledExactlyOnceWith({
+        msg: "Failed to read the ways to sign in, the removal is refused",
+        errorCode: "INTERNAL_SERVER_ERROR",
+        operation: "guard-sign-in-method-removal",
+        userId: USER_ID,
+        error: expect.objectContaining({ message: "connection reset" }) as unknown,
+      });
+      expect(JSON.stringify(logError.mock.calls)).not.toContain(ORCID_ROW);
+      logError.mockRestore();
     });
   });
 

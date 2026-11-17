@@ -22,6 +22,14 @@
       "types": "./src/sign-in-methods.ts",
       "default": "./dist/sign-in-methods.js"
     },
+    "./options": {
+      "types": "./src/options.ts",
+      "default": "./dist/options.js"
+    },
+    "./providers/orcid": {
+      "types": "./src/providers/orcid.ts",
+      "default": "./dist/providers/orcid.js"
+    },
     "./organization": {
       "types": "./src/organization/plugin.ts",
       "default": "./dist/organization/plugin.js"
