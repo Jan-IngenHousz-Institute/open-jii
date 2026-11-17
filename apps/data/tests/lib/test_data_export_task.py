@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from openjii.helpers import TableMetadataNotFound
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/data_export_task.py"
 _NAMES = {
@@ -16,6 +17,7 @@ _NAMES = {
     "check_driver_format_limits",
     "build_manifest",
     "is_part_file",
+    "count_rows",
 }
 
 
@@ -31,7 +33,7 @@ def _defined_name(node: ast.stmt) -> str | None:
 def task() -> dict[str, Any]:
     module = ast.parse(_TASK_PATH.read_text())
     body = [node for node in module.body if _defined_name(node) in _NAMES]
-    namespace: dict[str, Any] = {"math": math}
+    namespace: dict[str, Any] = {"math": math, "TableMetadataNotFound": TableMetadataNotFound}
     exec(compile(ast.Module(body=body, type_ignores=[]), _TASK_PATH, "exec"), namespace)
     return namespace
 
@@ -91,3 +93,12 @@ def test_manifest_names_the_parts_in_the_shape_the_backend_reads(task) -> None:
 )
 def test_only_data_files_count_as_parts(task, name: str, is_part: bool) -> None:
     assert task["is_part_file"](name) is is_part
+
+
+def test_a_table_that_never_held_a_row_counts_as_empty(task) -> None:
+    def load():
+        raise TableMetadataNotFound("No metadata found for experiment e1, identifier raw_data")
+
+    task["load"] = load
+
+    assert task["count_rows"]() == 0

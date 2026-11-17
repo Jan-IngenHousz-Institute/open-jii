@@ -13,7 +13,7 @@ import math
 import tempfile
 from datetime import datetime, timezone
 
-from openjii.helpers import load_experiment_table
+from openjii.helpers import TableMetadataNotFound, load_experiment_table
 from pyspark.dbutils import DBUtils
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, expr, lit, struct, to_json, when
@@ -270,8 +270,15 @@ def load(parts=None):
     )
 
 
+def count_rows():
+    try:
+        return load().count()
+    except TableMetadataNotFound:
+        return 0
+
+
 def main():
-    row_count = load().count()
+    row_count = count_rows()
     log(f"Loaded {row_count} rows")
 
     parts = []
