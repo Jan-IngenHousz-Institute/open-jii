@@ -7,7 +7,9 @@ ships a second release that makes Postgres the source. Use this page instead whe
 carries both, so an environment goes from writing the lakehouse alone straight to reading Postgres.
 
 The pull requests behind both releases, #2402, #2424 and #2425, merge back to back, and no
-production release is cut between them, so production takes all three in one release.
+production release is cut between them, so production takes all three in one release. This page
+needs #2424: it adds the outbox that step 5 and step 7 owe copies through, and the outbox steps of
+the move runbooks' section "Before the second release, and after".
 
 ## Before you start
 
@@ -144,16 +146,17 @@ exist. Only if it should, copy it once with step 4's INSERT, its `WHERE` replace
 
 ## 7. Check, once
 
-Wait until the outbox owes nothing, as the move runbooks' last section shows, then run step 5 of both
-move runbooks with a fresh export. A record in the lakehouse alone was removed in Postgres since it
-got there, whether by step 4 or 6 or by its own save, and the removal's copy has not landed; or its
-experiment is gone from Postgres. Owe its removal again, as that section shows. A record missing or
-older in the lakehouse is a copy still owed: owe it again the same way. A record created between the
-deploy start and the cutoff is the exception: an old task may have edited or deleted it after its
-copy landed, so ask its author before owing anything for it. A record from before the deploy start
-that the lakehouse holds newer than Postgres, or differently at the same time, is a first-release
-write whose Postgres copy failed and was not settled before step 4: a person decides which is right,
-and nothing is owed until they have. Never run step 4 again and never delete from Postgres: from
-here on, Postgres is right, and only the outbox writes the lakehouse.
+Wait until the outbox owes nothing, as the move runbooks' section "Before the second release, and
+after" shows, then run step 5 of both move runbooks with a fresh export. A record in the lakehouse
+alone was removed in Postgres since it got there, whether by step 4 or 6 or by its own save, and
+the removal's copy has not landed; or its experiment is gone from Postgres. Owe its removal again,
+as that section shows. A record missing or older in the lakehouse is a copy still owed: owe it again
+the same way. A record created between the deploy start and the cutoff is the exception: an old
+task may have edited or deleted it after its copy landed, so ask its author before owing anything
+for it. A record from before the deploy start that the lakehouse holds newer than Postgres, or
+differently at the same time, is a first-release write whose Postgres copy failed and was not
+settled before step 4: a person decides which is right, and nothing is owed until they have. Never
+run step 4 again and never delete from Postgres: from here on, Postgres is right, and only the
+outbox writes the lakehouse.
 
 Delete the exports and any parts once the checks are clean. They hold researchers' data.
