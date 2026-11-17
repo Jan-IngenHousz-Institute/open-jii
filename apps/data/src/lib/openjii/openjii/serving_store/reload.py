@@ -79,8 +79,8 @@ class StoreReload:
     deletes the store's rows from older versions.
 
     Inserting first keeps an experiment readable throughout. The store keeps a row's newest commit,
-    so the delete takes the copies the load replaced and the rows the source no longer holds, and leaves
-    what the live feed writes meanwhile.
+    so the delete takes the copies the load replaced and the rows the source no longer holds, and
+    leaves what the live feed writes meanwhile.
     """
 
     def __init__(self, spark: SparkSession, writer: StoreWriter, source_schema: str):
@@ -92,11 +92,12 @@ class StoreReload:
         self, table: StoreTable, experiment_id: str | None = None, allow_removal: bool = False
     ) -> Reloaded:
         """Reloads one experiment, or every experiment when ``experiment_id`` is None. An
-        experiment the source no longer holds leaves the store with it, once ``allow_removal`` says more
-        than ``REMOVAL_LIMIT`` rows may go. When the store refuses any row, nothing is deleted,
+        experiment the source no longer holds leaves the store with it, once ``allow_removal`` says
+        more than ``REMOVAL_LIMIT`` rows may go. When the store refuses any row, nothing is deleted,
         since a refused row's older copy is the only one the store has, and a refused schema keeps
         the older schemas for the same reason."""
-        # Read first, so a commit the feed sends meanwhile cannot look newer than the source's latest.
+        # Read first, so a commit the feed sends meanwhile cannot look newer than the source's
+        # latest.
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
         if newest > version:
@@ -157,11 +158,11 @@ class StoreReload:
 
     def _newest_copies(self, table: StoreTable, rows: DataFrame) -> DataFrame:
         """The source's newest copy of each store key, the one the store keeps from the feed. The
-        source tables only append, so a recomputed row stands beside the one it replaces, and a load sends every
-        row at one version, which would leave the store to keep either.
+        source tables only append, so a recomputed row stands beside the one it replaces, and a load
+        sends every row at one version, which would leave the store to keep either.
 
-        The newest copy is the one the source processed last. The commit that added a row would say it
-        more exactly, but the job's dedicated compute reads the streaming tables through a view,
+        The newest copy is the one the source processed last. The commit that added a row would say
+        it more exactly, but the job's dedicated compute reads the streaming tables through a view,
         which hides ``_metadata.row_commit_version``. Copies with one processing time, and copies of
         an upload row, keep any one of them."""
         processed_last = F.col(table.processed_at).desc_nulls_last() if table.processed_at else F.lit(0)
