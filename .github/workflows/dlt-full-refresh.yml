@@ -26,8 +26,22 @@ permissions:
   contents: read
 
 jobs:
+  # A prod refresh rewrites production tables, so it waits for the same approval as a prod deploy.
+  approval-gate:
+    name: Approval Gate
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment == 'prod' && 'prod-approval' || inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - name: Await approval for the refresh
+        run: echo "Approved full refresh for $TARGET_ENVIRONMENT."
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+
   refresh:
     name: Full-refresh selected DLT tables
+    needs: approval-gate
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:
