@@ -94,7 +94,13 @@ export class UpdateAnnotationUseCase {
       return failure(written.error);
     }
 
+    if (!written.value) {
+      return failure(
+        AppError.notFound(`No ${data.content.type} with ID ${annotationId} was found`),
+      );
+    }
+
     this.outboxWorker.nudge();
-    return success({ rowsAffected: written.value ? 1 : 0 });
+    return success({ rowsAffected: 1 });
   }
 }

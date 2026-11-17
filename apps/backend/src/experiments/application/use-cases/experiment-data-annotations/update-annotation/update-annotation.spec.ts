@@ -124,7 +124,7 @@ describe("UpdateAnnotation", () => {
     ]);
   });
 
-  it("leaves a comment alone, and owes no copy, when the update is a flag", async () => {
+  it("answers not found, leaves a comment alone and owes no copy, when the update is a flag", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Drought trial",
       userId: testUserId,
@@ -138,17 +138,18 @@ describe("UpdateAnnotation", () => {
       testUserId,
     );
 
-    assertSuccess(result);
-    expect(result.value).toEqual({ rowsAffected: 0 });
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
     expect(await annotations()).toEqual([record]);
     expect(await outbox()).toEqual([]);
   });
 
-  it("affects no row, and owes no copy, when the annotation is not there", async () => {
+  it("answers not found, and owes no copy, for an annotation Postgres does not hold", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Drought trial",
       userId: testUserId,
     });
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
 
     const result = await useCase.execute(
       experiment.id,
@@ -157,9 +158,10 @@ describe("UpdateAnnotation", () => {
       testUserId,
     );
 
-    assertSuccess(result);
-    expect(result.value).toEqual({ rowsAffected: 0 });
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
     expect(await outbox()).toEqual([]);
+    expect(nudge).not.toHaveBeenCalled();
   });
 
   it("refuses a request without a user", async () => {
