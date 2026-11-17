@@ -250,7 +250,40 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("toFloat64OrNull(replaceRegexpOne(replaceRegexpAll('n/a', ");
     expect(sql).toContain(") > 10");
     expect(sql).toContain("questions_data['plot'] = '007'");
-    expect(sql).toMatch(/ORDER BY toFloat64OrNull\(.*\) DESC NULLS LAST, id ASC$/);
+    expect(sql).toMatch(
+      /ORDER BY isNaN\(toFloat64OrNull\(.*\)\) DESC NULLS LAST, toFloat64OrNull\(.*\) DESC NULLS LAST, id ASC$/,
+    );
+  });
+
+  it("sorts a double with NaN above every number, as Spark does, and text without", () => {
+    const sorted = (column: string) =>
+      new StoreQueryBuilder()
+        .read(UPLOADS_TABLE, "e1", "t1")
+        .parseVariant("uploaded_data", "OBJECT<h: DOUBLE, plot: STRING>", "upload")
+        .select([column])
+        .orderBy({ column, direction: "ASC" })
+        .build();
+
+    const h = "accurateCastOrNull(uploaded_data.`h`, 'Float64')";
+    expect(sorted("h")).toContain(`ORDER BY isNaN(${h}) ASC NULLS FIRST, ${h} ASC NULLS FIRST`);
+    expect(sorted("plot")).not.toContain("isNaN");
+  });
+
+  it("compares a payload's BIGINT with text as two doubles, as Spark does", () => {
+    const sql = new StoreQueryBuilder()
+      .read(UPLOADS_TABLE, "e1", "t1")
+      .parseVariant("uploaded_data", "OBJECT<plot: BIGINT>", "upload")
+      .select(["plot"])
+      .filter({ column: "plot", operator: "in", value: ["9007199254740993"] })
+      .filter({ column: "plot", operator: "greater_than", value: 5 })
+      .filter({ column: "plot", operator: "contains", value: "900" })
+      .build();
+
+    const plot = "accurateCastOrNull(uploaded_data.`plot`, 'Int64')";
+    expect(sql).toContain(`toFloat64(${plot}) IN (toFloat64OrNull(`);
+    expect(sql).toContain(`${plot} > 5`);
+    expect(sql).not.toContain(`toFloat64(${plot}) > 5`);
+    expect(sql).toContain(`toString(${plot}) LIKE '%900%'`);
   });
 
   it("sorts a contributor's name by the place of each row's id, with Spark's null order", () => {

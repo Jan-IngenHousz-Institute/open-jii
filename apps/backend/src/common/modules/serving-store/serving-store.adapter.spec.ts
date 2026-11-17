@@ -970,6 +970,34 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
       expect(data.rows).toEqual(unbounded.map(([, cell]) => [cell]));
     });
+
+    it("sorts an answer of NaN above every number both ways, as Spark does", async () => {
+      await admin.insert({
+        table: "measurements",
+        values: ["1", "NaN", "", "5"].map((height, index) => ({
+          experiment_id: "nan-answers",
+          id: 230 + index,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: { height },
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+      const sorted = async (direction: "ASC" | "DESC") =>
+        (
+          await rowsOf({
+            ...read,
+            experimentId: "nan-answers",
+            columns: ["id"],
+            ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+          })
+        ).rows.map(([id]) => id);
+
+      expect(await sorted("ASC")).toEqual(["230", "233", "231", "232"]);
+      expect(await sorted("DESC")).toEqual(["231", "233", "230", "232"]);
+    });
   });
 
   it("filters and sorts devices by the serial numbers it is given", async () => {
@@ -1153,6 +1181,74 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ["9007199254740993", "7", "0.1"],
       ["5", "8", "1000.0"],
     ]);
+  });
+
+  it("compares a payload's integer past 2^53 with text as two doubles, as Spark does", async () => {
+    // Raw text, since a JavaScript number cannot hold 2^53 + 1.
+    const row = (id: number, plot: string) =>
+      `{"experiment_id":"big-plots","id":${id},"upload_table_id":"t3","uploaded_at":"2026-09-03 10:00:00",` +
+      `"uploaded_data":{"plot":${plot}},"uploaded_data_text":${JSON.stringify(`{"plot":${plot}}`)},` +
+      `"_commit_version":1,"_commit_timestamp":"2026-09-03 10:00:01"}`;
+    await admin.command({
+      query: `INSERT INTO uploads FORMAT JSONEachRow ${row(1, "9007199254740992")} ${row(2, "9007199254740993")}`,
+    });
+    const ids = async (filters: FilterCondition[]) =>
+      (
+        await rowsOf({
+          tableName: "t3",
+          tableType: "upload",
+          experimentId: "big-plots",
+          variants: [
+            { columnName: "uploaded_data", schema: "OBJECT<plot: BIGINT>", suffix: "upload" },
+          ],
+          columns: ["id"],
+          filters,
+          ordering: { column: "id" },
+        })
+      ).rows;
+
+    const text = "9007199254740993";
+    expect(await ids([{ column: "plot", operator: "equals", value: text }])).toEqual([
+      ["1"],
+      ["2"],
+    ]);
+    expect(await ids([{ column: "plot", operator: "in", value: [text] }])).toEqual([["1"], ["2"]]);
+  });
+
+  it("sorts a double field with NaN above every number, its distinct values too", async () => {
+    const values: (number | string | undefined)[] = [1.5, "NaN", undefined, 3];
+    await admin.insert({
+      table: "uploads",
+      values: values.map((h, index) => ({
+        experiment_id: "nan-uploads",
+        id: index + 1,
+        upload_table_id: "t4",
+        uploaded_at: "2026-09-04 10:00:00",
+        uploaded_data: h === undefined ? {} : { h },
+        uploaded_data_text: JSON.stringify(h === undefined ? {} : { h }),
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-04 10:00:01",
+      })),
+      format: "JSONEachRow",
+    });
+    const read = {
+      tableName: "t4",
+      tableType: "upload",
+      experimentId: "nan-uploads",
+      variants: [{ columnName: "uploaded_data", schema: "OBJECT<h: DOUBLE>", suffix: "upload" }],
+    } satisfies Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0];
+    const sorted = async (direction: "ASC" | "DESC") =>
+      (await rowsOf({ ...read, columns: ["id"], ordering: { column: "h", direction } })).rows;
+
+    expect(await sorted("ASC")).toEqual([["3"], ["1"], ["4"], ["2"]]);
+    expect(await sorted("DESC")).toEqual([["2"], ["4"], ["1"], ["3"]]);
+    const distinct = await rowsOf({
+      ...read,
+      columns: ["h"],
+      distinct: true,
+      ordering: { column: "h", direction: "DESC" },
+    });
+    expect(distinct.rows).toEqual([["NaN"], ["3.0"], ["1.5"], [null]]);
   });
 
   it("reads a key that ends in a backslash, and a missing array as null", async () => {

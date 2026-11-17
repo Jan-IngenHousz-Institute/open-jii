@@ -182,6 +182,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this.escapeScalarValue(value);
   }
 
+  /** Spark compares a payload's integer with text as two doubles, so text past 2^53 matches every
+   *  integer that rounds to its double; the store compares them the same way. */
+  comparedColumn(columnSql: string, column: string, value: FilterValue): string {
+    const field = this.flattenedFields().find(({ key }) => key === column);
+    const isBigintField =
+      field !== undefined && this.variantCastType(field.field.type) === "BIGINT";
+    const isText = (Array.isArray(value) ? value : [value]).some(
+      (item) => typeof item === "string",
+    );
+    return isBigintField && isText ? `toFloat64(${columnSql})` : columnSql;
+  }
+
   /** The store reads text as a number column's value only as plain digits, with a fraction where
    *  the type holds one. */
   private readsAsNumber(text: string, type: string): boolean {
@@ -373,11 +385,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
     }
     if (mode?.kind === "number") {
-      return `${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
+      const nan = this.nanKey(target, column, direction, "NULLS LAST");
+      return `${nan}${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
     }
     const sorted =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${sorted} ${direction} ${nulls}`;
+    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}`;
+  }
+
+  /** Spark sorts NaN above every number, where the store sorts it beside null. */
+  private nanKey(sorted: string, column: string, direction: string, nulls: string): string {
+    const isDouble = this.typeOf(column) === "DOUBLE";
+    return isDouble ? `isNaN(${sorted}) ${direction} ${nulls}, ` : "";
   }
 
   /** The warehouse's keys for text that holds a number, in the store's functions. */
