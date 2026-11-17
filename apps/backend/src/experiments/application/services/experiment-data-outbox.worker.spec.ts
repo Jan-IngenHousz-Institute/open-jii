@@ -225,7 +225,7 @@ describe("ExperimentDataOutboxWorker", () => {
 
       expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
 
-      expect(write).toHaveBeenCalledWith([sheet], expect.any(Date));
+      expect(write).toHaveBeenCalledWith([sheet], expect.any(Date), expect.any(Function));
       expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }], expect.any(Date));
     });
 
