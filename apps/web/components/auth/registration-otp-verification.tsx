@@ -29,7 +29,8 @@ export function RegistrationOtpVerification({
   pendingEmail: string;
   isPending: boolean;
   setIsPending: React.Dispatch<React.SetStateAction<boolean>>;
-  onEditEmail: () => void;
+  /** Left out once the account has taken the address, which can no longer be changed here. */
+  onEditEmail?: () => void;
   onComplete: () => void;
   OTP_LENGTH: number;
 }) {
@@ -72,16 +73,20 @@ export function RegistrationOtpVerification({
       <h2 className="text-xl font-bold">{t("auth.checkEmail")}</h2>
       <div className="muted-foreground mb-4 text-sm">
         {t("auth.otpInstructions")}{" "}
-        <Button
-          type="button"
-          variant="link"
-          size="inline"
-          className="font-medium"
-          onClick={onEditEmail}
-          aria-label="Edit email address"
-        >
-          {pendingEmail} <Pencil className="h-3 w-3" aria-hidden="true" />
-        </Button>
+        {onEditEmail ? (
+          <Button
+            type="button"
+            variant="link"
+            size="inline"
+            className="font-medium"
+            onClick={onEditEmail}
+            aria-label="Edit email address"
+          >
+            {pendingEmail} <Pencil className="h-3 w-3" aria-hidden="true" />
+          </Button>
+        ) : (
+          <span className="font-medium">{pendingEmail}</span>
+        )}
       </div>
       <FormField
         control={form.control}
