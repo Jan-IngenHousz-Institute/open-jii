@@ -55,6 +55,8 @@ describe("ExperimentMetadataWarehouseRepository", () => {
   });
 
   describe("merge", () => {
+    const canContinue = () => true;
+
     function sheet(overrides: Partial<MetadataSheetRecord> = {}): MetadataSheetRecord {
       return {
         id: faker.string.uuid(),
@@ -74,8 +76,10 @@ describe("ExperimentMetadataWarehouseRepository", () => {
       const plots = sheet();
       const devices = sheet({ metadata: { name: "Devices" } });
 
-      assertSuccess(await repository.merge([plots, devices]));
+      const result = await repository.merge([plots, devices], canContinue);
 
+      assertSuccess(result);
+      expect(result.value).toBe("merged");
       expect(execute).toHaveBeenCalledTimes(1);
       const [, statement, parameters] = execute.mock.calls[0];
       expect(statement).toContain("experiment_custom_metadata AS target");
@@ -99,7 +103,7 @@ describe("ExperimentMetadataWarehouseRepository", () => {
       const large = () => sheet({ metadata: { note: "x".repeat(1_500_000) } });
       const sheets = [large(), large(), large()];
 
-      assertSuccess(await repository.merge(sheets));
+      assertSuccess(await repository.merge(sheets, canContinue));
 
       expect(execute).toHaveBeenCalledTimes(2);
       const written = execute.mock.calls.map(([, , parameters]) =>
@@ -116,7 +120,10 @@ describe("ExperimentMetadataWarehouseRepository", () => {
         .mockResolvedValue(success(emptySchemaData));
 
       assertSuccess(
-        await repository.merge([sheet({ metadata: { note: "x".repeat(5_000_000) } }), sheet()]),
+        await repository.merge(
+          [sheet({ metadata: { note: "x".repeat(5_000_000) } }), sheet()],
+          canContinue,
+        ),
       );
 
       expect(execute).toHaveBeenCalledTimes(2);
@@ -128,9 +135,26 @@ describe("ExperimentMetadataWarehouseRepository", () => {
         .mockResolvedValue(failure(AppError.internal("Warehouse down")));
       const large = () => sheet({ metadata: { note: "x".repeat(3_000_000) } });
 
-      const result = await repository.merge([large(), large()]);
+      const result = await repository.merge([large(), large()], canContinue);
 
       expect(result.isFailure()).toBe(true);
+      expect(execute).toHaveBeenCalledTimes(1);
+    });
+
+    it("starts no further statement once the claim cannot continue", async () => {
+      const execute = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(emptySchemaData));
+      const large = () => sheet({ metadata: { note: "x".repeat(3_000_000) } });
+      const stopAfterFirst = vi
+        .fn<() => boolean>()
+        .mockReturnValueOnce(true)
+        .mockReturnValue(false);
+
+      const result = await repository.merge([large(), large()], stopAfterFirst);
+
+      assertSuccess(result);
+      expect(result.value).toBe("stopped");
       expect(execute).toHaveBeenCalledTimes(1);
     });
 
@@ -139,7 +163,9 @@ describe("ExperimentMetadataWarehouseRepository", () => {
         .spyOn(databricksPort, "executeSqlQuery")
         .mockResolvedValue(success(emptySchemaData));
 
-      assertSuccess(await repository.merge([sheet({ metadata: { field: "farmer's plot" } })]));
+      assertSuccess(
+        await repository.merge([sheet({ metadata: { field: "farmer's plot" } })], canContinue),
+      );
 
       expect(execute.mock.calls[0][1]).not.toContain("farmer");
     });
@@ -147,7 +173,7 @@ describe("ExperimentMetadataWarehouseRepository", () => {
     it("sends nothing when there is nothing to write", async () => {
       const execute = vi.spyOn(databricksPort, "executeSqlQuery");
 
-      assertSuccess(await repository.merge([]));
+      assertSuccess(await repository.merge([], canContinue));
 
       expect(execute).not.toHaveBeenCalled();
     });
@@ -157,7 +183,7 @@ describe("ExperimentMetadataWarehouseRepository", () => {
         failure(AppError.internal("Warehouse down")),
       );
 
-      const result = await repository.merge([sheet()]);
+      const result = await repository.merge([sheet()], canContinue);
 
       expect(result.isFailure()).toBe(true);
     });

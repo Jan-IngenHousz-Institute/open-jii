@@ -63,16 +63,26 @@ export class ExperimentMetadataWarehouseRepository {
     return groups;
   }
 
-  /** Writes each sheet's current state, in statements of at most `MERGE_BYTES` of documents. */
-  async merge(sheets: MetadataSheetRecord[]): Promise<Result<void>> {
+  /**
+   * Writes each sheet's current state, in statements of at most `MERGE_BYTES` of documents, and
+   * starts none once `canContinue` says no.
+   */
+  async merge(
+    sheets: MetadataSheetRecord[],
+    canContinue: () => boolean,
+  ): Promise<Result<"merged" | "stopped">> {
     for (const documents of this.bySize(sheets)) {
+      if (!canContinue()) {
+        return success("stopped");
+      }
+
       const merged = await this.mergeStatement(documents);
       if (merged.isFailure()) {
         return merged;
       }
     }
 
-    return success(undefined);
+    return success("merged");
   }
 
   private bySize(sheets: MetadataSheetRecord[]): SheetDocument[][] {

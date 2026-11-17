@@ -29,9 +29,12 @@ export abstract class ExperimentDataLakehouseCopier<T extends { id: string }> {
     }
 
     if (found.value.length > 0) {
-      const merged = await this.merge(found.value);
+      const merged = await this.merge(found.value, canContinue);
       if (merged.isFailure()) {
         return { failed: merged.error.message };
+      }
+      if (merged.value === "stopped") {
+        return "stopped";
       }
     }
 
@@ -49,7 +52,11 @@ export abstract class ExperimentDataLakehouseCopier<T extends { id: string }> {
 
   protected abstract find(ids: string[]): Promise<Result<T[]>>;
 
-  protected abstract merge(records: T[]): Promise<Result<void>>;
+  /** Merges in one statement or several, starting none once `canContinue` says no. */
+  protected abstract merge(
+    records: T[],
+    canContinue: () => boolean,
+  ): Promise<Result<"merged" | "stopped">>;
 
   protected abstract remove(ids: string[]): Promise<Result<void>>;
 

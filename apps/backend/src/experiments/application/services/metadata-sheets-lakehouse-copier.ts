@@ -34,8 +34,11 @@ export class MetadataSheetsLakehouseCopier extends ExperimentDataLakehouseCopier
     return this.sheets.findByIds(ids);
   }
 
-  protected merge(records: MetadataSheetRecord[]): Promise<Result<void>> {
-    return this.warehouse.merge(records);
+  protected merge(
+    records: MetadataSheetRecord[],
+    canContinue: () => boolean,
+  ): Promise<Result<"merged" | "stopped">> {
+    return this.warehouse.merge(records, canContinue);
   }
 
   protected remove(ids: string[]): Promise<Result<void>> {

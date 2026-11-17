@@ -134,7 +134,7 @@ describe("ExperimentDataOutboxWorker", () => {
 
   it("copies the sheets Postgres holds and deletes the copies of gone ones", async () => {
     const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
-    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success("merged"));
     const remove = vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
     const sheet: MetadataSheetRecord = {
       id: faker.string.uuid(),
@@ -156,7 +156,7 @@ describe("ExperimentDataOutboxWorker", () => {
 
     expect(await worker.drain()).toEqual({ applied: 2, retried: 0, released: 0 });
 
-    expect(merge).toHaveBeenCalledWith([sheet]);
+    expect(merge).toHaveBeenCalledWith([sheet], expect.any(Function));
     expect(remove).toHaveBeenCalledWith([gone]);
     expect(await outboxRows()).toEqual([]);
   });
@@ -239,7 +239,7 @@ describe("ExperimentDataOutboxWorker", () => {
 
   it("reads and sends large sheets a statement at a time, clearing each statement's rows as it lands", async () => {
     const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
-    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success("merged"));
     const read = vi.spyOn(testApp.module.get(ExperimentMetadataRepository), "findByIds");
     await saveSheets(3, 3 * 1024 * 1024);
 
@@ -254,7 +254,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
     const merge = vi.spyOn(warehouse, "merge").mockImplementation(async () => {
       await new Promise((resolve) => setTimeout(resolve, 300));
-      return success(undefined);
+      return success("merged");
     });
     const release = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "release");
     const retry = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "markRetry");
@@ -288,6 +288,22 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(await outboxRows()).toEqual([]);
   });
 
+  it("puts back a claim whose sheets stopped between statements, without counting an attempt", async () => {
+    const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
+    const merge = vi
+      .spyOn(warehouse, "merge")
+      .mockResolvedValueOnce(success("stopped"))
+      .mockResolvedValue(success("merged"));
+    const retry = vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "markRetry");
+    await saveSheets(1, 10);
+
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 0, released: 1 });
+
+    expect(merge).toHaveBeenCalledTimes(2);
+    expect(retry).not.toHaveBeenCalled();
+    expect(await outboxRows()).toEqual([]);
+  });
+
   it("waits for a slow statement rather than letting it run on after its rows go back", async () => {
     let finished = false;
     vi.spyOn(
@@ -311,7 +327,7 @@ describe("ExperimentDataOutboxWorker", () => {
     vi.spyOn(testApp.module.get(ExperimentMetadataWarehouseRepository), "merge").mockImplementation(
       () => {
         void stopping.onApplicationShutdown();
-        return Promise.resolve(success(undefined));
+        return Promise.resolve(success("merged"));
       },
     );
     await saveSheets(3, 3 * 1024 * 1024);
@@ -324,7 +340,7 @@ describe("ExperimentDataOutboxWorker", () => {
   it("sends what is left back to wait when a later statement fails", async () => {
     const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
     vi.spyOn(warehouse, "merge")
-      .mockResolvedValueOnce(success(undefined))
+      .mockResolvedValueOnce(success("merged"))
       .mockResolvedValue(
         failure(AppError.internal("Failed to merge metadata sheets: Warehouse down")),
       );
