@@ -9,6 +9,7 @@ import { renderApiKeyCreatedNotification } from "../render/api-key-created-notif
 import { renderCalibrationRunApprovedNotification } from "../render/calibration-run-approved-notification";
 import { renderCalibrationRunAwaitingApprovalNotification } from "../render/calibration-run-awaiting-approval-notification";
 import { renderCalibrationRunRejectedNotification } from "../render/calibration-run-rejected-notification";
+import { renderConfirmEmailOtp } from "../render/confirm-email-otp";
 import { renderDataUploadCompletedNotification } from "../render/data-upload-completed-notification";
 import { renderDataUploadFailedNotification } from "../render/data-upload-failed-notification";
 import { renderDataUploadPartlyCompletedNotification } from "../render/data-upload-partly-completed-notification";
@@ -43,6 +44,16 @@ async function main(): Promise<void> {
   write(
     "otp",
     await renderOtpEmail({
+      otp: "123456",
+      senderName: "openJII",
+      host,
+      baseUrl,
+    }),
+  );
+
+  write(
+    "confirm-email-otp",
+    await renderConfirmEmailOtp({
       otp: "123456",
       senderName: "openJII",
       host,

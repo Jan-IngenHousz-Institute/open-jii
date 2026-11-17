@@ -31,6 +31,11 @@ describe("ConnectResultBanner", () => {
       "signInMethods.nothingChanged",
       "signInMethods.connectDidNotFinish:ORCID",
     ],
+    [
+      "connect=orcid&error=unable_to_get_user_info",
+      "signInMethods.nothingChanged",
+      "signInMethods.connectDidNotFinish:ORCID",
+    ],
     ["connect=github", "signInMethods.nothingChanged", "signInMethods.connectDidNotFinish:GitHub"],
   ])("on ?%s says %s %s", (query, title, body) => {
     arriveWith(query);

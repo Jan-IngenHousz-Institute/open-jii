@@ -2,8 +2,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { openJiiEmailOTP } from "@repo/auth/email-otp";
+import { authSchema, sharedAuthOptions } from "@repo/auth/options";
 import { and, db, eq, sessions, users, accounts } from "@repo/database";
-import * as schema from "@repo/database/schema";
 
 import { TestHarness } from "../test/test-harness";
 
@@ -16,52 +16,15 @@ const sendEmail = vi.fn((_message: { email: string; otp: string; type: string })
 
 /**
  * `src/test/setup.ts` mocks `@repo/auth/server`, so this builds a real instance on the test
- * database with the server config's schema mapping, ids, session and user settings, and its
- * email OTP plugin. The memory adapter in `packages/auth` cannot see Postgres refuse a row the
- * library writes, which is how registration broke before; this can.
+ * database from the options the server itself is built from, with its email OTP plugin. The
+ * memory adapter in `packages/auth` cannot see Postgres refuse a row the library writes, which
+ * is how registration broke before; this can.
  */
 const auth = betterAuth({
+  ...sharedAuthOptions,
   secret: "registration-email-change-spec-secret-0123456789",
   baseURL: "http://localhost:3020",
-  basePath: "/api/v1/auth",
-  emailAndPassword: { enabled: false },
-  advanced: { database: { generateId: false } },
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    schema: {
-      user: schema.users,
-      session: schema.sessions,
-      account: schema.accounts,
-      verification: schema.verifications,
-      rateLimit: schema.rateLimits,
-      organization: schema.organizations,
-      member: schema.organizationMembers,
-      invitation: schema.organizationInvitations,
-      team: schema.teams,
-      teamMember: schema.teamMembers,
-      apikey: schema.apiKeys,
-      passkey: schema.passkeys,
-    },
-  }),
-  session: {
-    expiresIn: 60 * 60 * 24 * 30,
-    updateAge: 60 * 60 * 24,
-    cookieCache: { enabled: true, maxAge: 60 * 60 * 24 },
-  },
-  account: {
-    accountLinking: {
-      enabled: true,
-      allowDifferentEmails: true,
-      allowUnlinkingAll: true,
-      trustedProviders: ["orcid"],
-    },
-  },
-  user: {
-    changeEmail: { enabled: true },
-    additionalFields: {
-      registered: { type: "boolean", defaultValue: false, required: false },
-    },
-  },
+  database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
   plugins: [openJiiEmailOTP({ playReview: { email: undefined, otp: undefined }, sendEmail })],
 });
 

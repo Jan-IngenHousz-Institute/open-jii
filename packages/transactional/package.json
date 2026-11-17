@@ -19,6 +19,10 @@
       "types": "./dist/render/otp-email.d.ts",
       "default": "./dist/render/otp-email.js"
     },
+    "./render/confirm-email-otp": {
+      "types": "./dist/render/confirm-email-otp.d.ts",
+      "default": "./dist/render/confirm-email-otp.js"
+    },
     "./render/verification-request": {
       "types": "./dist/render/verification-request.d.ts",
       "default": "./dist/render/verification-request.js"

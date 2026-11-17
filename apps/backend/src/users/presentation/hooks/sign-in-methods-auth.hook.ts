@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { BASE_ERROR_CODES } from "better-auth";
@@ -8,13 +8,15 @@ import { z } from "zod";
 import { canRemoveSignInMethod } from "@repo/auth/sign-in-methods";
 import type { SignInMethodRemoval } from "@repo/auth/sign-in-methods";
 
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import type { UserSignInMethods } from "../../core/models/user.model";
 import { UserRepository } from "../../core/repositories/user.repository";
+import { isRecord } from "./account-security-auth.hook";
 
 /** `ctx.body` is untyped; anything but a string id is left to the library's validation. */
 function bodyId(body: unknown, field: string): string | null {
-  if (typeof body !== "object" || body === null) return null;
-  const value = (body as Record<string, unknown>)[field];
+  if (!isRecord(body)) return null;
+  const value = body[field];
   return typeof value === "string" ? value : null;
 }
 
@@ -41,6 +43,8 @@ function refuseNonCanonicalId(id: string) {
 @Hook()
 @Injectable()
 export class SignInMethodsAuthHook {
+  private readonly logger = new Logger(SignInMethodsAuthHook.name);
+
   constructor(private readonly userRepository: UserRepository) {}
 
   @BeforeHook("/unlink-account")
@@ -102,6 +106,13 @@ export class SignInMethodsAuthHook {
 
     const result = await this.userRepository.findSignInMethods(session.user.id);
     if (result.isFailure()) {
+      this.logger.error({
+        msg: "Failed to read the ways to sign in, the removal is refused",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "guard-sign-in-method-removal",
+        userId: session.user.id,
+        error: result.error,
+      });
       throw new APIError("INTERNAL_SERVER_ERROR", {
         message: "Could not check the ways to sign in to this account",
       });
