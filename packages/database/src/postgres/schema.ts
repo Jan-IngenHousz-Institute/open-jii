@@ -1063,9 +1063,7 @@ export const workbooks = pgTable(
     }),
     visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
-    // Name (A), description (B), markdown and question text (C). Excluded from API responses.
-    // Cap cell text before parsing so a large paste cannot exceed the 1 MB tsvector limit.
-    // See migration 0066 for the generated expression and GIN index.
+    // Cell text is capped so a large paste cannot exceed Postgres' 1 MB tsvector limit.
     searchVector: tsvector("search_vector").generatedAlwaysAs(
       (): SQL =>
         sql`setweight(to_tsvector('english', coalesce(${workbooks.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${workbooks.description}, '')), 'B') || setweight(to_tsvector('english', left(regexp_replace((jsonb_path_query_array(${workbooks.cells}, '$[*] ? (@.type == "markdown").content') || jsonb_path_query_array(${workbooks.cells}, '$[*] ? (@.type == "question").question.text'))::text, '\\\\[nrtbf]', ' ', 'g'), 100000)), 'C')`,

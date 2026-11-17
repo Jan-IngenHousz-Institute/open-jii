@@ -46,7 +46,6 @@ describe("experiment child search access parity", () => {
     const outsideOrgId = await testApp.createOrganization();
     const teamOrgId = await testApp.createOrganization();
     const granteeOrgId = await testApp.createOrganization();
-    // Only canonical roles are covered; malformed legacy role strings are a shared-scope follow-up.
     for (const [userId, role] of [
       [userIds.owner, "owner"],
       [userIds.orgMember, "member"],
