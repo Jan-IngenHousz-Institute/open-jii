@@ -50,8 +50,9 @@ export function RegistrationForm({
   const [pendingEmail, setPendingEmail] = useState("");
   // The account takes the address once the code is accepted, and the library refuses to
   // confirm it a second time, so a retry after a later step fails must skip the confirm. The
-  // address can no longer be edited either: the server would refuse a code for another one.
+  // address can no longer be edited or sent a new code either: the server refuses both.
   const [confirmedEmail, setConfirmedEmail] = useState<string | null>(null);
+  const addressTaken = confirmedEmail === pendingEmail;
   const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
   const updateUser = useUpdateUser();
@@ -170,7 +171,7 @@ export function RegistrationForm({
 
       // User has entered OTP, verify it.
       if (needsEmailVerification && showOTPInput && data.otp) {
-        if (confirmedEmail !== pendingEmail) {
+        if (!addressTaken) {
           const result = await confirmEmailChange.mutateAsync({
             newEmail: pendingEmail,
             otp: data.otp,
@@ -227,7 +228,8 @@ export function RegistrationForm({
               pendingEmail={pendingEmail}
               isPending={isPending}
               setIsPending={setIsPending}
-              onEditEmail={confirmedEmail === pendingEmail ? undefined : handleEditEmail}
+              onEditEmail={addressTaken ? undefined : handleEditEmail}
+              canResendCode={!addressTaken}
               onComplete={() => form.handleSubmit(onSubmit)()}
               OTP_LENGTH={OTP_LENGTH}
             />

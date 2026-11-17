@@ -227,7 +227,7 @@
     "promptSuccessDescription": "Wählen Sie beim nächsten Mal \"Mit Passkey anmelden\" oder den Vorschlag im E-Mail-Feld.",
     "promptDone": "Fertig",
     "added": "Hinzugefügt",
-    "onlyWayIn": "Dies ist Ihre einzige Möglichkeit, sich anzumelden. Verbinden Sie zuerst GitHub oder ORCID."
+    "onlyWayIn": "Dies ist Ihre einzige Möglichkeit, sich anzumelden. Fügen Sie zuerst einen weiteren Passkey hinzu oder verbinden Sie GitHub oder ORCID."
   },
   "signInMethods": {
     "title": "So melden Sie sich an",

@@ -609,6 +609,7 @@ describe("RegistrationForm", () => {
       await user.type(screen.getByLabelText("registration.lastName"), "Ndlovu");
       await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
       await reachCodeStep(user);
+      expect(screen.getByRole("button", { name: /resend code/i })).toBeInTheDocument();
 
       // A complete code submits the form by itself.
       enterCode("123456");
@@ -616,14 +617,16 @@ describe("RegistrationForm", () => {
       await waitFor(() =>
         expect(toastMock).toHaveBeenCalledWith({ description: "registration.errorMessage" }),
       );
-      // The account has taken the address, so it can no longer be edited here.
+      // The account has taken the address, so it can no longer be edited or sent a new code.
       expect(screen.getByText("carol@uni.edu")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Edit email address" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /resend code/i })).toBeNull();
 
       await submitCode(user);
 
       await waitFor(() => expect(createUserProfileMock).toHaveBeenCalledTimes(2));
       expect(authClient.emailOtp.changeEmail).toHaveBeenCalledTimes(1);
+      expect(authClient.emailOtp.requestEmailChange).toHaveBeenCalledTimes(1);
       await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/platform"));
     });
 

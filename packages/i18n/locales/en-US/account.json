@@ -227,7 +227,7 @@
     "promptSuccessDescription": "Next time, choose \"Sign in with a passkey\" or pick it from the email field's suggestions.",
     "promptDone": "Done",
     "added": "Added",
-    "onlyWayIn": "This is your only way to sign in. Connect GitHub or ORCID first."
+    "onlyWayIn": "This is your only way to sign in. Add another passkey or connect GitHub or ORCID first."
   },
   "signInMethods": {
     "title": "How you sign in",
