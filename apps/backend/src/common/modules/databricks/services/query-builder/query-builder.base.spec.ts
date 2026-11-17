@@ -86,7 +86,6 @@ describe("QueryBuilder Base", () => {
       );
     });
 
-    // Spark runs this fixture against the pair the anonymizer's spec pins.
     it("keeps the Spark contributor-pseudonym fixture in sync with the generated SQL", async () => {
       const experimentId = "5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61";
       const filtered = new QueryBuilderService().buildQuery({
