@@ -124,14 +124,15 @@ An environment whose feed is off, as prod's is before its first rollout, needs o
 reload of `all`.
 
 0010 fills `measurements_by_device` from the rows measurements already holds, as it applies, and
-needs no reload for it. Its `device_events` starts empty, so go in this order before the
-`store-device-reads` flag targets anyone:
+needs no reload for it. Its `device_events` starts empty, and device pages read the store wherever
+`store-experiment-reads` is on. So go in this order before device pages read the store: before the
+backend that reads them deploys where the flag already targets someone, or before widening it.
 
 1. Once the pipeline update above has given silver's lifecycle events their change feed, set
    `device_events` in `serving_store_feed_start_versions` (`store-feed-stalled`), which switches
    their sink on.
 2. Reload `device_events` for `all`.
-3. Target the flag.
+3. Deploy that backend, or widen the flag.
 
 A device page read from the store before that reload shows no connects, sessions or uptime and no
 error, while its counts beside them look right.

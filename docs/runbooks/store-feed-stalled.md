@@ -84,8 +84,8 @@ the sheets' rows are filled by owing every sheet to the lakehouse once
 ([reload](procedures/serving-store-reload.md#metadata-sheets)). Device events read silver's
 `clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so set
 `device_events` in the map to that table's latest version, never one before it. Left empty, it keeps
-the device events sink off. Device pages read these events once `store-device-reads` targets
-someone, so switch the sink on and reload `device_events` before that, as the
+the device events sink off. Device pages read these events wherever `store-experiment-reads` is on,
+so switch the sink on and reload `device_events` before they do, as the
 [reload procedure](procedures/serving-store-reload.md#after-a-migration-the-feed-fills) orders it.
 After switching on, watch the first batches in each pipeline's driver log
 (`[serving store] measurements batch 0: ... inserted`). A first batch numbered 0 means the sink

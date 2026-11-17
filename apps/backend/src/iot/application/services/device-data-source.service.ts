@@ -26,7 +26,7 @@ export class DeviceDataSourceService {
       return "warehouse";
     }
     const isStoreRead = await this.analyticsPort.isFeatureFlagEnabled(
-      FEATURE_FLAGS.STORE_DEVICE_READS,
+      FEATURE_FLAGS.STORE_EXPERIMENT_READS,
       user,
     );
     return isStoreRead ? "store" : "warehouse";

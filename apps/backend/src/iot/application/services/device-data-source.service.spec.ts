@@ -42,7 +42,7 @@ describe("DeviceDataSourceService", () => {
     const source = await service.sourceFor(user);
 
     expect(source).toBe("store");
-    expect(flag).toHaveBeenCalledWith(FEATURE_FLAGS.STORE_DEVICE_READS, user);
+    expect(flag).toHaveBeenCalledWith(FEATURE_FLAGS.STORE_EXPERIMENT_READS, user);
   });
 
   it("reads from the warehouse while the flag is off", async () => {
