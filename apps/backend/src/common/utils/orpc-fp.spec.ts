@@ -95,16 +95,24 @@ describe("orpc-fp", () => {
     });
 
     it("falls back to INTERNAL_SERVER_ERROR for an unmapped 5xx status and logs at error level", () => {
-      const error = new AppError("Service unavailable", "UNAVAILABLE", 503, {
+      const error = new AppError("Bad gateway", "BAD_GATEWAY", 502, {
         service: "external",
       });
 
       const thrown = captureOrpcError(() => throwOrpcError(error, logger));
 
       expect(thrown.code).toBe("INTERNAL_SERVER_ERROR");
-      expect(thrown.status).toBe(503);
+      expect(thrown.status).toBe(502);
       expect(errorSpy).toHaveBeenCalled();
       expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it("maps an unavailable service to SERVICE_UNAVAILABLE and logs at error level", () => {
+      const thrown = captureOrpcError(() => throwOrpcError(AppError.unavailable(), logger));
+
+      expect(thrown.code).toBe("SERVICE_UNAVAILABLE");
+      expect(thrown.status).toBe(503);
+      expect(errorSpy).toHaveBeenCalled();
     });
 
     it("logs a sub-500 status at warn level", () => {
