@@ -24,6 +24,9 @@ export abstract class ExperimentDataLakehouseCopier<T extends { id: string }> {
     if (found.isFailure()) {
       return { failed: found.error.message };
     }
+    if (!canContinue()) {
+      return "stopped";
+    }
 
     if (found.value.length > 0) {
       const merged = await this.merge(found.value);

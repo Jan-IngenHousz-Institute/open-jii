@@ -270,6 +270,24 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(await outboxRows()).toEqual([]);
   });
 
+  it("starts no merge once the deadline passed during the lookup, putting the rows back for a fresh claim", async () => {
+    const merge = mergeAnnotations();
+    const [record] = await annotate("1");
+    vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsRepository),
+      "findCopies",
+    ).mockImplementationOnce(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return success([{ ...record, userName: "Ada Lovelace" }]);
+    });
+
+    expect(await workerWithDeadline(200).drain()).toEqual({ applied: 1, retried: 0, released: 1 });
+
+    expect(merge).toHaveBeenCalledTimes(1);
+    expect(merge).toHaveBeenCalledWith([{ ...record, userName: "Ada Lovelace" }]);
+    expect(await outboxRows()).toEqual([]);
+  });
+
   it("waits for a slow statement rather than letting it run on after its rows go back", async () => {
     let finished = false;
     vi.spyOn(
