@@ -4,18 +4,23 @@ terraform {
   required_providers {
     databricks = {
       source  = "databricks/databricks"
-      version = ">=1.13.0"
+      version = "~> 1.142"
     }
 
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0"
+      version = "~> 6.72"
     }
   }
 }
 
 provider "aws" {
   region = var.aws_region
+}
+
+provider "aws" {
+  alias  = "dr"
+  region = "eu-west-1"
 }
 
 provider "databricks" {
