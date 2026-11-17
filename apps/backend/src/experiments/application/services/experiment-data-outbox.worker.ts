@@ -55,10 +55,11 @@ export interface OutboxDrainCounts {
 export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   private readonly logger = new Logger(ExperimentDataOutboxWorker.name);
   private draining = false;
+  /** The latest drain, which a task shutting down waits for. */
+  private running: Promise<OutboxDrainCounts> | null = null;
   private stopping = false;
   /** A nudge that arrived mid-drain; the running drain owes it one more look. */
   private nudged = false;
-  private inFlight: Promise<unknown> | null = null;
   /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
   private readonly copiers: Record<
@@ -89,21 +90,28 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     void this.drain();
   }
 
-  /** Nothing new is claimed or started, and the claim in hand finishes its statement in flight. */
+  /**
+   * Nothing new is claimed or started, and the drain running finishes: a claim in flight still
+   * commits, and its rows go back rather than wait out the lease.
+   */
   async onApplicationShutdown(): Promise<void> {
     this.stopping = true;
-    await this.inFlight;
+    await this.running;
   }
 
   /** Claims and copies batches until nothing is due. A second call while one runs returns at once. */
   async drain(): Promise<OutboxDrainCounts> {
-    const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-
     if (this.draining) {
-      return counts;
+      return { applied: 0, retried: 0, released: 0 };
     }
 
     this.draining = true;
+    this.running = this.drainBatches();
+    return this.running;
+  }
+
+  private async drainBatches(): Promise<OutboxDrainCounts> {
+    const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
 
     try {
       while (!this.stopping) {
@@ -128,10 +136,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
           break;
         }
 
-        const attempt = this.applyClaim(claimed.value, Date.now() + this.attemptDeadlineMs);
-        this.inFlight = attempt;
-        const outcome = await attempt;
-        this.inFlight = null;
+        const outcome = await this.applyClaim(claimed.value, Date.now() + this.attemptDeadlineMs);
         counts.applied += outcome.applied;
         counts.retried += outcome.retried;
         counts.released += outcome.released;
@@ -146,7 +151,6 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     } finally {
       this.draining = false;
       this.nudged = false;
-      this.inFlight = null;
     }
 
     if (counts.applied > 0 || counts.retried > 0 || counts.released > 0) {

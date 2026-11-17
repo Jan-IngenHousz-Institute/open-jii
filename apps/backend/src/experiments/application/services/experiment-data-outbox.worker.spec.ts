@@ -475,6 +475,38 @@ describe("ExperimentDataOutboxWorker", () => {
     );
   });
 
+  it("waits, on shutdown, for a claim still in flight, and puts its rows back unattempted", async () => {
+    const merge = mergeAnnotations();
+    await annotate("1");
+    const shared = testApp.module.get(ExperimentDataOutboxRepository);
+    // The worker's own handle, so its calls can be watched while the shared one does the work.
+    const outbox = new ExperimentDataOutboxRepository(testApp.database);
+    const stopping = realWorker(outbox);
+    const order: string[] = [];
+    let shutdown: Promise<void> = Promise.resolve();
+    // Shutdown arrives once the drain is under way, while its claim's statement runs.
+    vi.spyOn(outbox, "claimDue").mockImplementationOnce(async (leaseMs, limit) => {
+      const claiming = shared.claimDue(leaseMs, limit);
+      await Promise.resolve();
+      shutdown = stopping.onApplicationShutdown().then(() => {
+        order.push("shut down");
+      });
+      return claiming;
+    });
+    vi.spyOn(outbox, "release").mockImplementation(async (claims) => {
+      const released = await shared.release(claims);
+      order.push("released");
+      return released;
+    });
+
+    expect(await stopping.drain()).toEqual({ applied: 0, retried: 0, released: 1 });
+    await shutdown;
+
+    expect(order).toEqual(["released", "shut down"]);
+    expect(merge).not.toHaveBeenCalled();
+    expect(await outboxRows()).toEqual([expect.objectContaining({ attempts: 0, claimedAt: null })]);
+  });
+
   it("counts a copy whose rows could not be cleared, and leaves them to the lease", async () => {
     mergeAnnotations();
     await annotate("1");
