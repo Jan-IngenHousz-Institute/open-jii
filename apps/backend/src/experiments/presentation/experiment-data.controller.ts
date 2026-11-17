@@ -47,12 +47,12 @@ export class ExperimentDataController {
   getExperimentData(@Session() session: UserSession) {
     return implement(experimentDataContract.getExperimentData).handler(async ({ input }) => {
       const { id, ...query } = input;
-      const sources = await this.dataSource.sourcesFor(session.user);
+      const source = await this.dataSource.sourceFor(session.user);
       const result = await this.getExperimentDataUseCase.execute(
         id,
         session.user.id,
         query,
-        sources,
+        source,
       );
       if (result.isSuccess()) {
         return result.value;
@@ -86,12 +86,12 @@ export class ExperimentDataController {
     return implement(experimentDataContract.getExperimentTableColumns).handler(
       async ({ input }) => {
         const { id, ...query } = input;
-        const sources = await this.dataSource.sourcesFor(session.user);
+        const source = await this.dataSource.sourceFor(session.user);
         const result = await this.getExperimentTableColumnsUseCase.execute(
           id,
           session.user.id,
           query,
-          sources,
+          source,
         );
         if (result.isSuccess()) {
           return result.value;

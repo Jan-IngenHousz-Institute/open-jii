@@ -8,7 +8,6 @@ import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experim
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
-import type { ExperimentDataSources } from "../core/models/experiment-data.model";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
@@ -128,7 +127,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data", page: 1, pageSize: 10 }),
-        { pages: "warehouse", charts: "warehouse" },
+        "warehouse",
       );
     });
 
@@ -210,7 +209,7 @@ describe("ExperimentDataController", () => {
         experimentId,
         testUserId,
         expect.objectContaining({ tableName: "raw_data" }),
-        { pages: "warehouse", charts: "warehouse" },
+        "warehouse",
       );
     });
 
@@ -236,13 +235,27 @@ describe("ExperimentDataController", () => {
             .mockResolvedValue(failure(AppError.notFound("No tables"))),
       },
       {
+        path: "data?tableName=raw_data",
+        mockUseCase: () =>
+          vi
+            .spyOn(getExperimentDataUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No data"))),
+      },
+      {
         path: "data/distinct?tableName=raw_data&column=site",
         mockUseCase: () =>
           vi
             .spyOn(getDistinctColumnValuesUseCase, "execute")
             .mockResolvedValue(failure(AppError.notFound("No values"))),
       },
-    ])("reads $path from the source the pages' flag picks", async ({ path, mockUseCase }) => {
+      {
+        path: "data/columns?tableName=raw_data",
+        mockUseCase: () =>
+          vi
+            .spyOn(getExperimentTableColumnsUseCase, "execute")
+            .mockResolvedValue(failure(AppError.notFound("No columns"))),
+      },
+    ])("reads $path from the source the store flag picks", async ({ path, mockUseCase }) => {
       const sourceFor = vi
         .spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor")
         .mockResolvedValue("store");
@@ -256,40 +269,6 @@ describe("ExperimentDataController", () => {
       expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
       expect(execute.mock.lastCall?.at(-1)).toBe("store");
     });
-
-    it.each([
-      {
-        path: "data?tableName=raw_data",
-        mockUseCase: () =>
-          vi
-            .spyOn(getExperimentDataUseCase, "execute")
-            .mockResolvedValue(failure(AppError.notFound("No data"))),
-      },
-      {
-        path: "data/columns?tableName=raw_data",
-        mockUseCase: () =>
-          vi
-            .spyOn(getExperimentTableColumnsUseCase, "execute")
-            .mockResolvedValue(failure(AppError.notFound("No columns"))),
-      },
-    ])(
-      "reads $path from the sources the pages' and charts' flags pick",
-      async ({ path, mockUseCase }) => {
-        const sources = { pages: "store", charts: "warehouse" } satisfies ExperimentDataSources;
-        const sourcesFor = vi
-          .spyOn(testApp.module.get(ExperimentDataSourceService), "sourcesFor")
-          .mockResolvedValue(sources);
-        const execute = mockUseCase();
-
-        await testApp
-          .get(`/api/v1/experiments/${readableExperimentId}/${path}`)
-          .withAuth(testUserId)
-          .expect(404);
-
-        expect(sourcesFor).toHaveBeenCalledWith(expect.objectContaining({ id: testUserId }));
-        expect(execute.mock.lastCall?.at(-1)).toEqual(sources);
-      },
-    );
   });
 
   describe("authorization", () => {

@@ -23,7 +23,6 @@ import type { AnnotationRecord } from "../models/experiment-data-annotation.mode
 import { PAGE_BYTE_LIMIT, PAGE_TOO_LARGE_MESSAGE } from "../models/experiment-data.model";
 import type {
   ExperimentDataSource,
-  ExperimentDataSources,
   ExperimentTableMetadata,
 } from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
@@ -41,8 +40,6 @@ import { ExperimentDataRepository } from "./experiment-data.repository";
 type ExperimentQuery = Parameters<DatabricksPort["buildExperimentQuery"]>[0];
 
 const WAREHOUSE: ExperimentDataSource = "warehouse";
-const WAREHOUSE_READS: ExperimentDataSources = { pages: "warehouse", charts: "warehouse" };
-const STORE_READS: ExperimentDataSources = { pages: "store", charts: "store" };
 
 describe("ExperimentDataRepository", () => {
   const testApp = TestHarness.App;
@@ -140,7 +137,7 @@ describe("ExperimentDataRepository", () => {
       experimentId,
       experiment: mockExperiment,
       tableName: "raw_data",
-      sources: WAREHOUSE_READS,
+      source: WAREHOUSE,
     };
 
     it("should successfully get table data with pagination", async () => {
@@ -1546,7 +1543,7 @@ describe("ExperimentDataRepository", () => {
     const readParams = {
       experimentId: faker.string.uuid(),
       experiment: mockExperiment,
-      sources: WAREHOUSE_READS,
+      source: WAREHOUSE,
     };
     const macroTable: ExperimentTableMetadata = {
       identifier: "macro_123",
@@ -1570,7 +1567,7 @@ describe("ExperimentDataRepository", () => {
       const aggregation = { groupBy: [{ column: "phi2" }], functions: [] };
 
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId: faker.string.uuid(),
         experiment: mockExperiment,
         tableName: "macro_123",
@@ -1601,7 +1598,7 @@ describe("ExperimentDataRepository", () => {
         experimentId: faker.string.uuid(),
         experiment: mockExperiment,
         tableName: "macro_123",
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       };
 
       const aggregated = await repository.getTableData({
@@ -1749,7 +1746,7 @@ describe("ExperimentDataRepository", () => {
     const readPage = (metadata: ExperimentTableMetadata, extra: object = {}) => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([metadata]));
       return repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         ...{ experimentId: faker.string.uuid(), experiment: mockExperiment },
         tableName: metadata.identifier,
         page: 1,
@@ -1937,7 +1934,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "device",
@@ -1978,7 +1975,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(failure(error));
 
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2012,7 +2009,7 @@ describe("ExperimentDataRepository", () => {
       );
 
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "unknown_table",
@@ -2404,7 +2401,7 @@ describe("ExperimentDataRepository", () => {
       experiment: mockExperiment,
       page: 1,
       pageSize: 5,
-      sources: WAREHOUSE_READS,
+      source: WAREHOUSE,
     };
 
     it.each([
@@ -2563,7 +2560,7 @@ describe("ExperimentDataRepository", () => {
         const filters = [{ column: "q", operator: "contains" as const, value: "0" }];
 
         const result = await repository.getTableData({
-          sources: WAREHOUSE_READS,
+          source: WAREHOUSE,
           experimentId: params.experimentId,
           experiment: mockExperiment,
           tableName: "raw_data",
@@ -2596,7 +2593,7 @@ describe("ExperimentDataRepository", () => {
       const execute = vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
 
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId: params.experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2700,7 +2697,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         columns: ["id", "annotations"],
         join,
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       const joined = vi
@@ -2729,7 +2726,7 @@ describe("ExperimentDataRepository", () => {
 
     it("passes a scoped semantic secondary source and anonymizes joined contributor cells", async () => {
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: { ...mockExperiment, anonymizeContributors: true },
         tableName: "raw_data",
@@ -2758,7 +2755,7 @@ describe("ExperimentDataRepository", () => {
 
     it("pseudonymizes secondary contributor filters and ordering", async () => {
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: { ...mockExperiment, anonymizeContributors: true },
         tableName: "raw_data",
@@ -2805,7 +2802,7 @@ describe("ExperimentDataRepository", () => {
       );
       const filters = [{ column: "Plant.id", operator: "equals" as const, value: "literal" }];
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: { ...mockExperiment, anonymizeContributors: true },
         tableName: "raw_data",
@@ -2827,7 +2824,7 @@ describe("ExperimentDataRepository", () => {
         success(metadata.slice(0, 1)),
       );
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2851,7 +2848,7 @@ describe("ExperimentDataRepository", () => {
         }),
       );
       const result = await repository.getTableData({
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -2900,7 +2897,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         page: 2,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -2973,7 +2970,7 @@ describe("ExperimentDataRepository", () => {
         orderDirection: "DESC",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3007,7 +3004,7 @@ describe("ExperimentDataRepository", () => {
         filters: [{ column: "plot", operator: "equals", value: "A1" }],
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3032,7 +3029,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertFailure(result);
@@ -3070,7 +3067,7 @@ describe("ExperimentDataRepository", () => {
         flagged: "only",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3102,7 +3099,7 @@ describe("ExperimentDataRepository", () => {
         flagged: "only",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3125,7 +3122,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         aggregation: { groupBy: [{ column: "plot" }] },
         flagged: "only",
-        sources: { pages: "store", charts: WAREHOUSE },
+        source: WAREHOUSE,
       });
       const warehousePage = await repository.getTableData({
         experimentId,
@@ -3134,7 +3131,7 @@ describe("ExperimentDataRepository", () => {
         flagged: "exclude",
         page: 1,
         pageSize: 10,
-        sources: WAREHOUSE_READS,
+        source: "warehouse",
       });
       const deviceTable = await repository.getTableData({
         experimentId,
@@ -3143,7 +3140,7 @@ describe("ExperimentDataRepository", () => {
         flagged: "only",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       for (const result of [chart, warehousePage, deviceTable]) {
@@ -3154,7 +3151,7 @@ describe("ExperimentDataRepository", () => {
       expect(warehouse).not.toHaveBeenCalled();
     });
 
-    it("reads charts from the charts' source, apart from the pages'", async () => {
+    it("reads an aggregated and an unpaged read from the store as chart reads", async () => {
       const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
       const store = vi
         .spyOn(servingStore, "executeQuery")
@@ -3163,21 +3160,20 @@ describe("ExperimentDataRepository", () => {
         );
       const build = vi.spyOn(servingStore, "buildExperimentQuery");
       vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
-      const charts: ExperimentDataSources = { pages: WAREHOUSE, charts: "store" };
 
       const aggregated = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
         aggregation: { groupBy: [{ column: "plot" }] },
-        sources: charts,
+        source: "store",
       });
       const series = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
         columns: ["plot"],
-        sources: charts,
+        source: "store",
       });
 
       assertSuccess(aggregated);
@@ -3197,7 +3193,6 @@ describe("ExperimentDataRepository", () => {
       );
       const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(success(rows));
       vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
-      const charts: ExperimentDataSources = { pages: WAREHOUSE, charts: "store" };
       const read = (groupBy: AggregationSpec["groupBy"], limit?: number) =>
         repository.getTableData({
           experimentId,
@@ -3205,7 +3200,7 @@ describe("ExperimentDataRepository", () => {
           tableName: "raw_data",
           aggregation: { groupBy, functions: [{ column: "*", function: "count" }] },
           limit,
-          sources: charts,
+          source: "store",
         });
 
       const pastTheCap = await read([{ column: "timestamp" }, { column: "device" }]);
@@ -3272,7 +3267,7 @@ describe("ExperimentDataRepository", () => {
           groupBy: [{ column: "timestamp" }, { column: "second__device" }],
           functions: [{ column: "*", function: "count" }],
         },
-        sources: { pages: WAREHOUSE, charts: "store" },
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3280,33 +3275,10 @@ describe("ExperimentDataRepository", () => {
       expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY"))).toBe(true);
     });
 
-    it("keeps charts on the warehouse while pages read the store and the charts' flag is off", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([largeTable]),
-      );
-      const warehouse = vi
-        .spyOn(databricksPort, "executeSqlQuery")
-        .mockResolvedValue(
-          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
-        );
-      const store = vi.spyOn(servingStore, "executeQuery");
-
-      await repository.getTableData({
-        experimentId,
-        experiment: mockExperiment,
-        tableName: "raw_data",
-        aggregation: { groupBy: [{ column: "plot" }] },
-        sources: { pages: "store", charts: WAREHOUSE },
-      });
-
-      expect(warehouse).toHaveBeenCalled();
-      expect(store).not.toHaveBeenCalled();
-    });
-
     const joinedReads: ExperimentDataSource[] = ["store", WAREHOUSE];
     it.each(joinedReads)(
-      "reads a joined table where charts read, paged or not: %s",
-      async (charts) => {
+      "reads a paged joined table from the read's source: %s",
+      async (source) => {
         const warehouseMetadata = vi
           .spyOn(databricksPort, "getExperimentTableMetadata")
           .mockResolvedValue(success([]));
@@ -3324,12 +3296,12 @@ describe("ExperimentDataRepository", () => {
           },
           page: 1,
           pageSize: 10,
-          sources: { pages: charts === "store" ? WAREHOUSE : "store", charts },
+          source,
         });
 
         // Neither source lists the second table here, so the read stops at finding it.
         assertFailure(result);
-        const isStore = charts === "store";
+        const isStore = source === "store";
         const listed = isStore ? servingStore.getExperimentTableMetadata : warehouseMetadata;
         const skipped = isStore ? warehouseMetadata : servingStore.getExperimentTableMetadata;
         expect(listed).toHaveBeenCalled();
@@ -3354,7 +3326,7 @@ describe("ExperimentDataRepository", () => {
           toleranceMinutes: 5,
         },
         columns: ["id"],
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertFailure(result);
@@ -3382,7 +3354,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "device",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3477,7 +3449,7 @@ describe("ExperimentDataRepository", () => {
           filters: [{ column: "contributor", operator: "equals", value: faker.string.uuid() }],
           page: 1,
           pageSize: 10,
-          sources: STORE_READS,
+          source: "store",
         });
 
         assertFailure(result);
@@ -3501,7 +3473,7 @@ describe("ExperimentDataRepository", () => {
           filters: [{ column: "contributor.id", operator: "equals", value: pseudo }],
           page: 1,
           pageSize: 10,
-          sources: STORE_READS,
+          source: "store",
         });
 
         assertSuccess(result);
@@ -3526,7 +3498,7 @@ describe("ExperimentDataRepository", () => {
           orderBy: "contributor.name",
           page: 1,
           pageSize: 10,
-          sources: STORE_READS,
+          source: "store",
         });
 
         assertSuccess(result);
@@ -3627,7 +3599,7 @@ describe("ExperimentDataRepository", () => {
         experiment,
         tableName: "raw_data",
         columns: ["id", "annotations"],
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
@@ -3691,7 +3663,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3730,7 +3702,7 @@ describe("ExperimentDataRepository", () => {
         filters: [{ column: "id", operator: "equals", value: "1" }],
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3762,7 +3734,7 @@ describe("ExperimentDataRepository", () => {
         tableName: "raw_data",
         page: 1,
         pageSize: 10,
-        sources: STORE_READS,
+        source: "store",
       });
 
       assertSuccess(result);
@@ -3805,7 +3777,7 @@ describe("ExperimentDataRepository", () => {
         experiment,
         tableName: "raw_data",
         columns: ["id", "annotations"],
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
@@ -3829,7 +3801,7 @@ describe("ExperimentDataRepository", () => {
         experiment,
         tableName: "macro_123",
         columns: ["id", "annotations"],
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
@@ -3849,7 +3821,7 @@ describe("ExperimentDataRepository", () => {
         experiment,
         tableName: uploadId,
         columns: ["id", "annotations"],
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
@@ -3874,7 +3846,7 @@ describe("ExperimentDataRepository", () => {
         experiment,
         tableName: uploadId,
         aggregation: { groupBy: [{ column: "id" }, { column: "annotations" }] },
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
@@ -3893,7 +3865,7 @@ describe("ExperimentDataRepository", () => {
         experiment,
         tableName: "raw_data",
         aggregation: { functions: [{ column: "id", function: "count" }] },
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);
@@ -3924,7 +3896,7 @@ describe("ExperimentDataRepository", () => {
         experiment: { ...experiment, anonymizeContributors: true },
         tableName: "raw_data",
         columns: ["id", "annotations"],
-        sources: WAREHOUSE_READS,
+        source: WAREHOUSE,
       });
 
       assertSuccess(result);

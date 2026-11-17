@@ -70,7 +70,7 @@ describe("GetExperimentDataUseCase", () => {
       experiment.id,
       testUserId,
       { tableName: "raw_data", filters },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
     assertSuccess(first);
     expect(read.mock.calls[0]?.[0].filters).toEqual([
@@ -86,7 +86,7 @@ describe("GetExperimentDataUseCase", () => {
       experiment.id,
       testUserId,
       { tableName: "raw_data", filters },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
     assertSuccess(second);
     expect(read.mock.calls[1]?.[0].filters).toEqual([
@@ -110,7 +110,7 @@ describe("GetExperimentDataUseCase", () => {
       experiment.id,
       testUserId,
       { tableName: "raw_data", filters: absolute },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
     assertSuccess(fixed);
     expect(read.mock.calls[2]?.[0].filters).toEqual(absolute);
@@ -159,7 +159,7 @@ describe("GetExperimentDataUseCase", () => {
         page: 1,
         pageSize: 5,
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -176,7 +176,7 @@ describe("GetExperimentDataUseCase", () => {
       orderDirection: "ASC",
       page: 1,
       pageSize: 5,
-      sources: { pages: "warehouse", charts: "warehouse" },
+      source: "warehouse",
     });
   });
 
@@ -217,7 +217,7 @@ describe("GetExperimentDataUseCase", () => {
         page: 1,
         pageSize: 5,
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -233,7 +233,7 @@ describe("GetExperimentDataUseCase", () => {
       orderDirection: "ASC",
       page: 1,
       pageSize: 5,
-      sources: { pages: "warehouse", charts: "warehouse" },
+      source: "warehouse",
     });
   });
 
@@ -272,7 +272,7 @@ describe("GetExperimentDataUseCase", () => {
         orderBy: "timestamp",
         orderDirection: "DESC",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -299,7 +299,7 @@ describe("GetExperimentDataUseCase", () => {
       {
         tableName: "bronze_data",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isFailure()).toBe(true);
@@ -344,7 +344,7 @@ describe("GetExperimentDataUseCase", () => {
       {
         tableName: "bronze_data",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isSuccess()).toBe(true);
@@ -357,12 +357,7 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const result = await useCase.execute(
-      experiment.id,
-      testUserId,
-      { tableName: "" },
-      { pages: "warehouse", charts: "warehouse" },
-    );
+    const result = await useCase.execute(experiment.id, testUserId, { tableName: "" }, "warehouse");
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
@@ -388,18 +383,12 @@ describe("GetExperimentDataUseCase", () => {
       const storeQuery = vi.spyOn(store, "executeQuery");
       const getTableData = vi.spyOn(experimentDataRepository, "getTableData");
 
-      const refused = await useCase.execute(experiment.id, testUserId, query, {
-        pages: "warehouse",
-        charts: "warehouse",
-      });
+      const refused = await useCase.execute(experiment.id, testUserId, query, "warehouse");
 
       assertFailure(refused);
       expect(refused.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
       expect(getTableData).toHaveBeenCalledWith(
-        expect.objectContaining({
-          flagged: "only",
-          sources: { pages: "warehouse", charts: "warehouse" },
-        }),
+        expect.objectContaining({ flagged: "only", source: "warehouse" }),
       );
       expect(storeQuery).not.toHaveBeenCalled();
     });
@@ -413,15 +402,10 @@ describe("GetExperimentDataUseCase", () => {
         .spyOn(experimentDataRepository, "getTableData")
         .mockResolvedValue(success([]));
 
-      assertSuccess(
-        await useCase.execute(experiment.id, testUserId, query, {
-          pages: "store",
-          charts: "store",
-        }),
-      );
+      assertSuccess(await useCase.execute(experiment.id, testUserId, query, "store"));
 
       expect(getTableData).toHaveBeenCalledWith(
-        expect.objectContaining({ flagged: "only", sources: { pages: "store", charts: "store" } }),
+        expect.objectContaining({ flagged: "only", source: "store" }),
       );
     });
   });
@@ -442,7 +426,7 @@ describe("GetExperimentDataUseCase", () => {
       {
         tableName: "bronze_data",
       },
-      { pages: "warehouse", charts: "warehouse" },
+      "warehouse",
     );
 
     expect(result.isFailure()).toBe(true);

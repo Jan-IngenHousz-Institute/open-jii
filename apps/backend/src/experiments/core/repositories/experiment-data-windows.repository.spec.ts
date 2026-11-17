@@ -95,7 +95,7 @@ function setup(
       experimentId: experiment.id,
       experiment: { ...experiment, anonymizeContributors },
       tableName: "raw_data",
-      sources: { pages: "warehouse", charts: "warehouse" },
+      source: "warehouse",
       aggregation: { functions: [item] },
     });
   return { read, build, execute, repository, experiment };
@@ -119,7 +119,7 @@ describe("row-window repository inputs", () => {
       experimentId: experiment.id,
       experiment: { ...experiment, anonymizeContributors: true },
       tableName: "raw_data",
-      sources: { pages: "warehouse", charts: "warehouse" },
+      source: "warehouse",
       aggregation: {
         functions: [{ column: "value", function: "latest", orderColumn: "timestamp" }, correlation],
       },
@@ -217,7 +217,7 @@ describe("row-window repository inputs", () => {
       experimentId: experiment.id,
       experiment,
       tableName: "raw_data",
-      sources: { pages: "warehouse", charts: "warehouse" },
+      source: "warehouse",
       join: {
         tableName: "weather",
         matchColumn: "station",
@@ -296,7 +296,7 @@ describe("row-window repository inputs", () => {
         experimentId: experiment.id,
         experiment: { ...experiment, anonymizeContributors: true },
         tableName: "raw_data",
-        sources: { pages: "warehouse", charts: "warehouse" },
+        source: "warehouse",
         join: {
           tableName: "weather",
           matchColumn: "station",
@@ -331,7 +331,7 @@ describe("row-window repository inputs", () => {
           experimentId: experiment.id,
           experiment: { ...experiment, anonymizeContributors: true },
           tableName: "raw_data",
-          sources: { pages: "warehouse", charts: "warehouse" },
+          source: "warehouse",
           ...(orderColumn === "second__contributor"
             ? {
                 join: {

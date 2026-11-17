@@ -57,7 +57,7 @@
     "filters": { "groups": [{ "rollout_percentage": 0 }] }
   },
   "store-experiment-reads": {
-    "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts follow store-chart-reads. On for one organisation's members while both read paths are compared, off for everyone else.",
+    "name": "Every read the serving store answers comes from it, so a page never mixes the store's columns with the warehouse's cells. On for one organisation's members while both read paths are compared, off for everyone else.",
     "active": true,
     "continuity": false,
     "tags": ["backend", "serving-store"],
@@ -76,12 +76,5 @@
         }
       ]
     }
-  },
-  "store-chart-reads": {
-    "name": "Charts read from the serving store, for users whose pages already do (store-experiment-reads). Off until charts' own comparison of both read paths.",
-    "active": true,
-    "continuity": false,
-    "tags": ["backend", "serving-store"],
-    "filters": { "groups": [{ "rollout_percentage": 0 }] }
   }
 }

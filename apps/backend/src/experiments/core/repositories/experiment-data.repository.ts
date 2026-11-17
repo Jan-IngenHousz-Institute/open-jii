@@ -40,7 +40,6 @@ import {
 import type {
   ExperimentAsOfJoin,
   ExperimentDataSource,
-  ExperimentDataSources,
   ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
@@ -157,8 +156,7 @@ export class ExperimentDataRepository {
    *   - none of the above: plain paginated read using the cached row count.
    *
    * The two one-page reads stop at `limit`, or `DATA_QUERY_MAX_LIMIT` when it is omitted, and
-   * say when they stopped short. They feed charts, which read from the charts' source, as does a
-   * read joined to a second table.
+   * say when they stopped short.
    */
   async getTableData(params: {
     experimentId: string;
@@ -174,7 +172,7 @@ export class ExperimentDataRepository {
     pageSize?: number;
     limit?: number;
     flagged?: ExperimentDataFlagged;
-    sources: ExperimentDataSources;
+    source: ExperimentDataSource;
   }): Promise<Result<TableDataDto[]>> {
     const {
       experimentId,
@@ -190,7 +188,7 @@ export class ExperimentDataRepository {
       pageSize,
       limit,
       flagged,
-      sources,
+      source,
     } = params;
 
     const hasAggregation =
@@ -200,13 +198,11 @@ export class ExperimentDataRepository {
     const hasColumns = join !== undefined || (columns?.length ?? 0) > 0;
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
-    const isChartRead = hasAggregation || ((hasFilters || hasColumns) && !hasPaging);
-    const readSource = isChartRead || join !== undefined ? sources.charts : sources.pages;
 
     // Only the store's read builds the flag filter, so a read the warehouse would answer is refused.
     const isFlaggedReadUnsupported =
       flagged !== undefined &&
-      (readSource !== "store" || !this.sourceReads(readSource).readsTable(tableName));
+      (source !== "store" || !this.sourceReads(source).readsTable(tableName));
     if (isFlaggedReadUnsupported) {
       return failure(
         AppError.badRequest(
@@ -219,14 +215,14 @@ export class ExperimentDataRepository {
     const read: ReadTrace = {
       experimentId,
       tableName,
-      source: readSource,
+      source,
       mode: "page",
       startedAt: performance.now(),
       metadataMs: 0,
     };
 
     const [shapeResult, metadataMs] = await this.measure(() =>
-      this.tableShape(experimentId, tableName, readSource),
+      this.tableShape(experimentId, tableName, source),
     );
     read.metadataMs = metadataMs;
 
