@@ -22,9 +22,12 @@ _DATABASE = "views_test"
 _READER = "views_test_reader"
 _READER_PROFILE = "views_test_reader_profile"
 
-_USERS_XML = Path(__file__).parents[4] / "infrastructure/modules/serving-store/templates/users.xml.tftpl"
+_USERS_XML = (
+    Path(__file__).parents[4]
+    / "infrastructure/modules/serving-store/clickhouse-config/templates/users.xml.tftpl"
+)
 
-# The reader's grants in infrastructure/modules/serving-store/main.tf.
+# The reader's view grants in infrastructure/modules/serving-store/clickhouse-config/main.tf.
 _READER_VIEWS = (
     "experiment_measurements",
     "experiment_macro_results",
