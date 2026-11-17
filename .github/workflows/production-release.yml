@@ -70,7 +70,7 @@ jobs:
   sync-linear-release:
     name: Sync Linear Release
     needs: deploy-environment
-    if: ${{ !failure() && !cancelled() && (needs.deploy-environment.result == 'success' || needs.deploy-environment.result == 'skipped') }}
+    if: ${{ !failure() && !cancelled() && inputs.deploy_app == '' && (needs.deploy-environment.result == 'success' || needs.deploy-environment.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -139,7 +139,7 @@ jobs:
   label-deployed-prs:
     name: Label Deployed PRs
     needs: deploy-environment
-    if: ${{ !failure() && !cancelled() && (needs.deploy-environment.result == 'success' || needs.deploy-environment.result == 'skipped') }}
+    if: ${{ !failure() && !cancelled() && inputs.deploy_app == '' && (needs.deploy-environment.result == 'success' || needs.deploy-environment.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

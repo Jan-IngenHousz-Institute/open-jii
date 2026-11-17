@@ -92,6 +92,21 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
+      # The apply checks out this commit, so a branch that moves between the jobs cannot hand it
+      # a lock file the saved plan was not made with. It goes as an artifact rather than a job
+      # output for the reason given at the plan's upload below.
+      - name: Record the planned commit
+        run: |
+          mkdir -p "$RUNNER_TEMP/planned-commit"
+          git rev-parse HEAD > "$RUNNER_TEMP/planned-commit/sha"
+
+      - name: Upload the planned commit
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tofu-planned-commit-${{ inputs.environment }}
+          path: ${{ runner.temp }}/planned-commit/sha
+          retention-days: 7
+
       - name: Setup OpenTofu and AWS Credentials
         uses: ./.github/actions/tofu/tofu-setup
         with:
@@ -200,10 +215,27 @@ jobs:
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
     steps:
+      - name: Download the planned commit
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tofu-planned-commit-${{ inputs.environment }}
+          path: ${{ runner.temp }}/planned-commit
+
+      - name: Read the planned commit
+        id: planned
+        run: |
+          SHA=$(cat "$RUNNER_TEMP/planned-commit/sha")
+          if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::The planned commit '$SHA' is not a commit SHA."
+            exit 1
+          fi
+          echo "Applying the plan made at ${SHA:0:7}"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ steps.planned.outputs.sha }}
           persist-credentials: false
 
       - name: Setup OpenTofu and AWS Credentials
