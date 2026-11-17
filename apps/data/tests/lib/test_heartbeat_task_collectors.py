@@ -3,21 +3,31 @@
 from __future__ import annotations
 
 import ast
+import gzip
+import os
 import re
 from collections.abc import Callable, Iterator
-from datetime import datetime, timezone
+from dataclasses import asdict
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 from openjii.heartbeat import (
     DATA_NAMESPACE,
+    FLOW_BATCH_P95_METRIC,
+    FLOW_BATCHES_DETAIL,
+    FLOW_BUSY_METRIC,
+    FLOW_RESTARTS_METRIC,
     HEALTHCHECK_AGE_METRIC,
     HEALTHCHECK_LATENCY_METRIC,
     INGEST_IDLE_METRIC,
     MACRO_IDLE_METRIC,
+    WATCHED_FLOWS,
     bronze_idle_sql,
+    detail,
     ingest_healthcheck_sql,
+    latest_pipeline_hour,
     observation,
 )
 from pyspark.sql import DataFrame, SparkSession
@@ -32,6 +42,8 @@ _NAMES = {
     "idle_minutes",
     "collect_ingest_healthcheck",
     "collect_path_idle",
+    "FLOW_HOUR_MAX_AGE",
+    "collect_flow_batches",
 }
 _NOW = datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc)
 
@@ -74,6 +86,17 @@ def _task(session: SparkSession) -> dict[str, Any]:
         "HEALTHCHECK_LATENCY_METRIC": HEALTHCHECK_LATENCY_METRIC,
         "ingest_healthcheck_sql": ingest_healthcheck_sql,
         "observation": observation,
+        "os": os,
+        "asdict": asdict,
+        "timedelta": timedelta,
+        "PIPELINE_LOGS_PATH": "",
+        "WATCHED_FLOWS": WATCHED_FLOWS,
+        "latest_pipeline_hour": latest_pipeline_hour,
+        "FLOW_BUSY_METRIC": FLOW_BUSY_METRIC,
+        "FLOW_RESTARTS_METRIC": FLOW_RESTARTS_METRIC,
+        "FLOW_BATCH_P95_METRIC": FLOW_BATCH_P95_METRIC,
+        "FLOW_BATCHES_DETAIL": FLOW_BATCHES_DETAIL,
+        "detail": detail,
     }
     exec(compile(ast.Module(body=body, type_ignores=[]), _TASK_PATH, "exec"), namespace)
     return namespace
@@ -158,3 +181,34 @@ def test_a_health_check_table_with_a_message_emits_its_age_and_latency(spark: Sp
     records = _collect(spark)
 
     assert {record["metric"] for record in records} == {HEALTHCHECK_AGE_METRIC, HEALTHCHECK_LATENCY_METRIC}
+
+
+def _progress(name: str, duration: int) -> str:
+    return (
+        "26/11/03 11:00:18 INFO ProgressReporter: [queryId = 405ab] [batchId = 1] Streaming query made progress: {\n"
+        f'  "name" : "{name}",\n  "batchDuration" : {duration}\n}}\n'
+    )
+
+
+def test_flow_batches_publish_the_p95_of_a_flow_with_batches_and_none_for_an_idle_one(
+    spark: SparkSession, tmp_path: Path
+) -> None:
+    driver = tmp_path / "centrum" / "1103-100000-aaaaaaaa" / "driver"
+    driver.mkdir(parents=True)
+    (driver / "stdout").write_text("")
+    with gzip.open(driver / "log4j-2026-11-03-11.log.gz", "wt", encoding="utf-8") as log:
+        log.write(
+            _progress("__materialization_mat_raw_data_1", 2_000)
+            + _progress("__materialization_mat_raw_data_1", 4_000)
+        )
+    task = _task(spark)
+    task["PIPELINE_LOGS_PATH"] = str(tmp_path)
+
+    records = task["collect_flow_batches"](_NOW)
+
+    p95 = {
+        record["dimensions"]["Flow"]: record["value"]
+        for record in records
+        if record.get("metric") == FLOW_BATCH_P95_METRIC
+    }
+    assert p95 == {"raw_data": 4.0}

@@ -5209,12 +5209,13 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
   }
 
-  # Catalog entry 127. Published per pipeline and flow, once per hour the driver logged, and an
+  # Catalog entry 150. Published per pipeline and flow, once per hour the driver logged, and an
   # hour reaches the volume about an hour after it closes, so the window reaches back five hours.
-  # A reading stays the latest for about an hour, so the three hours pending take about three busy
-  # hours in a row, and a burst of one or two stays quiet.
+  # One reading over 30 seconds fires it. From 3 to 17 November 2026 no prod flow's hourly p95
+  # passed 22 seconds, and a load test on dev's single worker held raw_data at 20 with 300
+  # messages a second, about sixty times prod's busiest hour.
   rule {
-    name      = "Pipeline Flow Busy"
+    name      = "Pipeline Flow Batches Slow"
     condition = "C"
 
     data {
@@ -5226,7 +5227,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
         refId      = "A"
         region     = var.aws_region
         namespace  = "OpenJII/Data"
-        metricName = "FlowBusyPercent"
+        metricName = "FlowBatchP95Seconds"
         statistic  = "Maximum"
         # Named with a wildcard so each series keeps its own label; left out, every alert carries
         # only the environment and cannot say which pipeline or flow it is.
@@ -5269,7 +5270,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 80"
+        expression = "$B > 30"
         type       = "math"
         refId      = "C"
       })
@@ -5281,24 +5282,24 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "3h"
+    for            = "0m"
 
     annotations = {
-      description      = "For three hours in a row, a flow that streamed measurements wait on spent over 80% of each hour in batches, so it runs them back to back and any more load makes measurements wait longer."
-      summary          = "A pipeline flow is close to falling behind"
-      runbook_url      = "${var.runbook_base_url}/docs/runbooks/flow-busy.md"
+      description      = "The slowest twentieth of a flow's batches took over 30 seconds in an hour. Its batches run back to back, so a measurement waits up to about two of them, and the wait grows with every batch that takes longer."
+      summary          = "A pipeline flow is falling behind"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/flow-batch-p95.md"
       __dashboardUid__ = local.heartbeat_daily_uid
-      __panelId__      = local.heartbeat_panel_ids["flow-busy"]
+      __panelId__      = local.heartbeat_panel_ids["flow-batch-p95"]
     }
     labels = {
       severity  = "warning"
       service   = "lakehouse"
-      metric_id = "flow-busy"
+      metric_id = "flow-batch-p95"
     }
   }
 
   # Catalog entry 128. A planned restart counts one, and one hour with more than two fires it, as
-  # entry 129's rule does, so a restart and a retry stay quiet. The window matches entry 127's.
+  # entry 129's rule does, so a restart and a retry stay quiet. The window matches entry 150's.
   rule {
     name      = "Pipeline Flow Restarting"
     condition = "C"
