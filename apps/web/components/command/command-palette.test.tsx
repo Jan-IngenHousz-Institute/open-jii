@@ -4,6 +4,7 @@ import {
 } from "@/components/shortcuts/shortcuts-root";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
+import { createSearchResult } from "@/test/factories";
 import { render, screen, userEvent, act, waitFor } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { env } from "~/env";
@@ -134,38 +135,29 @@ describe("CommandPalette", () => {
     mockSearch({
       enabled: true,
       results: [
-        {
+        createSearchResult({
           type: "organization",
           id: "44444444-4444-4444-4444-444444444444",
           title: "Photosynthesis Lab",
-          subtitle: null,
           meta: "research_institute",
-          parent: null,
-        },
-        {
+        }),
+        createSearchResult({
           type: "experiment",
           id: "11111111-1111-1111-1111-111111111111",
           title: "Photosynthesis trial",
           subtitle: "A leaf study",
-          meta: null,
-          parent: null,
-        },
-        {
+        }),
+        createSearchResult({
           type: "protocol",
           id: "22222222-2222-2222-2222-222222222222",
           title: "Photosynthesis protocol",
-          subtitle: null,
           meta: "multispeq",
-          parent: null,
-        },
-        {
+        }),
+        createSearchResult({
           type: "workbook",
           id: "33333333-3333-3333-3333-333333333333",
           title: "Photosynthesis workbook",
-          subtitle: null,
-          meta: null,
-          parent: null,
-        },
+        }),
       ],
     });
     const user = userEvent.setup();
@@ -202,7 +194,9 @@ describe("CommandPalette", () => {
     };
     const id = crypto.randomUUID();
     const title = `Search child ${crypto.randomUUID()}`;
-    mockSearch({ results: [{ type, id, title, subtitle: "A leaf study", meta: null, parent }] });
+    mockSearch({
+      results: [createSearchResult({ type, id, title, subtitle: "A leaf study", parent })],
+    });
     const user = userEvent.setup();
     const { router } = render(<CommandPalette locale="en-US" />);
     openPalette();
@@ -220,9 +214,7 @@ describe("CommandPalette", () => {
     async (type) => {
       const title = `Orphan ${crypto.randomUUID()}`;
       mockSearch({
-        results: [
-          { type, id: crypto.randomUUID(), title, subtitle: null, meta: null, parent: null },
-        ],
+        results: [createSearchResult({ type, id: crypto.randomUUID(), title, parent: null })],
       });
       const user = userEvent.setup();
       const { router } = render(<CommandPalette locale="en-US" />);
@@ -237,14 +229,13 @@ describe("CommandPalette", () => {
     mockSearch({
       enabled: true,
       results: [
-        {
+        createSearchResult({
           type: "organization",
           id: "44444444-4444-4444-4444-444444444444",
           title: "Photosynthesis Lab",
           subtitle: "A shared greenhouse",
           meta: "research_institute",
-          parent: null,
-        },
+        }),
       ],
     });
     const user = userEvent.setup();
@@ -265,14 +256,13 @@ describe("CommandPalette", () => {
   it("shows a device's family and serial number and navigates to its detail page", async () => {
     mockSearch({
       results: [
-        {
+        createSearchResult({
           type: "device",
           id: "55555555-5555-5555-5555-555555555555",
           title: "Canopy sensor",
           subtitle: "MSQ-20431",
           meta: "multispeq",
-          parent: null,
-        },
+        }),
       ],
     });
     const user = userEvent.setup();
@@ -293,14 +283,12 @@ describe("CommandPalette", () => {
     mockSearch({
       enabled: true,
       results: [
-        {
+        createSearchResult({
           type: "protocol",
           id: "22222222-2222-2222-2222-222222222222",
           title: "Photosynthesis protocol",
-          subtitle: null,
           meta: "prototype-x",
-          parent: null,
-        },
+        }),
       ],
     });
     const user = userEvent.setup();
