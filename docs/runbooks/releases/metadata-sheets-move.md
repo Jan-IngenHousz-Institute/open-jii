@@ -178,14 +178,62 @@ Run steps 1 to 5 again right before the second release goes out, with a fresh ex
 psql session, since step 3 creates its tables; a clean check is what lets it go.
 
 Once the second release is out, Postgres is the source, and the lakehouse only receives copies of
-what it holds. Never repair Postgres from the lakehouse then: never run step 4 again and never
-delete from Postgres. A sheet saved since then can be in Postgres before its copy reaches the
-lakehouse, and a sheet deleted since then can still be in the lakehouse, so a copy back from the
-lakehouse can delete a valid sheet or bring back a deleted one. The second release adds the steps
-that bring the lakehouse level instead.
+what it holds, through the `experiment_data_outbox` table. Never repair Postgres from the lakehouse
+then: never run step 4 again and never delete from Postgres. A sheet added since then can be in
+Postgres before its copy reaches the lakehouse, and one removed since then can still be in the
+lakehouse, so a copy back from the lakehouse can delete a valid sheet or bring back a removed one.
 
 When one release carries both, follow [annotations-and-sheets-cutover](annotations-and-sheets-cutover.md)
 instead of this page.
+
+To bring the lakehouse level, first wait until no copy is owed, in psql:
+
+```sql
+SELECT count(*), max(attempts), max(last_error)
+FROM experiment_data_outbox WHERE record_type = 'metadata_sheet';
+```
+
+The backend copies each change as it is written and looks again every 15 seconds, so the count
+falls to 0 soon after the last edit. A row whose attempts keep climbing names the lakehouse's
+refusal in `last_error`, and the backend logs it as an error from the fifth attempt.
+
+Then run steps 2 and 3 and step 5's checks once more, without step 4. A difference left is one of
+three things, and none is repaired in Postgres:
+
+- A sheet in Postgres that the lakehouse lacks or holds older is a copy that has not landed. Owe
+  it again, naming the ids, and the backend copies it within 15 seconds:
+
+  ```sql
+  INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
+  SELECT 'metadata_sheet', id, experiment_id, 'lakehouse' FROM experiment_metadata_sheets
+  WHERE id IN ('<id>', '<id>')
+  ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+  ```
+
+- A sheet in the lakehouse alone, created before the last clean check that let the second
+  release go, or after it finished rolling out, was in Postgres and was removed since; the
+  removal's copy has not landed. Owe the removal again by id, with the experiment step 5's list
+  shows for it; the backend deletes the copy of a record Postgres no longer holds:
+
+  ```sql
+  INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
+  VALUES ('metadata_sheet', '<id>', '<experiment id>', 'lakehouse')
+  ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+  ```
+
+- A sheet in the lakehouse alone, created between that check and the end of the rollout, may be
+  a write a first-release task took whose Postgres copy failed, or one a second-release task took
+  and someone removed since. Only its author can tell: ask, and copy only one that should exist,
+  with step 4's INSERT, `AND l.id = '<id>'` added and `ON CONFLICT (id) DO NOTHING` in place of
+  the update. Owe the removal of the rest, as above.
+
+Note every id in OJD-2153. A write that lands while you check only leaves a copy the outbox owes,
+which the next check shows; it never makes these steps unsafe.
+
+To roll the second release back, first wait until the outbox owes nothing, as above. The first
+release has no worker, so a copy still owed after the rollback waits in `experiment_data_outbox`
+until the second release returns, and pages read the lakehouse without it meanwhile. Note any such
+ids in OJD-2153.
 
 Delete `sheets.csv`, `sheets-2.csv` and any parts once the checks are clean. They hold
 researchers' data.

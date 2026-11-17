@@ -37,6 +37,10 @@ describe("ExperimentMetadataRepository", () => {
     return testApp.database.select().from(experimentMetadataSheets);
   }
 
+  async function insert(record: MetadataSheetRecord): Promise<void> {
+    assertSuccess(await repository.transaction((tx) => repository.insert(tx, record)));
+  }
+
   beforeAll(async () => {
     await testApp.setup();
   });
@@ -60,7 +64,7 @@ describe("ExperimentMetadataRepository", () => {
   it("keeps a sheet with the id and times it was given", async () => {
     const plots = sheet();
 
-    assertSuccess(await repository.insert(plots));
+    await insert(plots);
 
     expect(await stored()).toEqual([plots]);
   });
@@ -70,46 +74,99 @@ describe("ExperimentMetadataRepository", () => {
       metadata: { name: "[1,2]", rows: [{ _id: "r1", depth: 0.1, note: null }] },
     });
 
-    assertSuccess(await repository.insert(plots));
+    await insert(plots);
 
     expect(await stored()).toEqual([plots]);
   });
 
-  it("replaces a sheet's document and its updated time, and nothing else", async () => {
+  it("replaces a sheet's document and its updated time, and returns the sheet as it now reads", async () => {
     const plots = sheet();
     const later = new Date("2026-09-02T08:00:00.000Z");
     const edited = { ...plots.metadata, name: "Plots, corrected" };
-    await repository.insert(plots);
+    await insert(plots);
 
-    assertSuccess(await repository.update(experimentId, plots.id, edited, later));
+    const updated = await repository.transaction((tx) =>
+      repository.update(tx, experimentId, plots.id, edited, later),
+    );
 
+    assertSuccess(updated);
+    expect(updated.value).toEqual({ ...plots, metadata: edited, updatedAt: later });
     expect(await stored()).toEqual([{ ...plots, metadata: edited, updatedAt: later }]);
   });
 
   it("updates a sheet only in its experiment", async () => {
     const plots = sheet();
-    await repository.insert(plots);
+    await insert(plots);
 
-    assertSuccess(
-      await repository.update(faker.string.uuid(), plots.id, { name: "Other" }, created),
+    const updated = await repository.transaction((tx) =>
+      repository.update(tx, faker.string.uuid(), plots.id, { name: "Other" }, created),
     );
 
+    assertSuccess(updated);
+    expect(updated.value).toBeNull();
     expect(await stored()).toEqual([plots]);
   });
 
-  it("deletes one sheet by its id, only in its experiment", async () => {
+  it("deletes one sheet by its id, only in its experiment, and says whether it was there", async () => {
     const plots = sheet();
-    await repository.insert(plots);
+    await insert(plots);
 
-    assertSuccess(await repository.delete(faker.string.uuid(), plots.id));
+    const elsewhere = await repository.transaction((tx) =>
+      repository.delete(tx, faker.string.uuid(), plots.id),
+    );
+    assertSuccess(elsewhere);
+    expect(elsewhere.value).toBe(false);
     expect(await stored()).toHaveLength(1);
 
-    assertSuccess(await repository.delete(experimentId, plots.id));
+    const deleted = await repository.transaction((tx) =>
+      repository.delete(tx, experimentId, plots.id),
+    );
+    assertSuccess(deleted);
+    expect(deleted.value).toBe(true);
     expect(await stored()).toEqual([]);
   });
 
+  it("finds the sheets that still exist", async () => {
+    const plots = sheet();
+    await insert(plots);
+
+    const found = await repository.findByIds([plots.id, faker.string.uuid()]);
+
+    assertSuccess(found);
+    expect(found.value).toEqual([plots]);
+  });
+
+  it("lists an experiment's sheets, newest first, and no other experiment's", async () => {
+    const older = sheet();
+    const newer = sheet({ createdAt: new Date("2026-09-02T08:00:00.000Z") });
+    const { experiment: other } = await testApp.createExperiment({ name: "Other trial", userId });
+    await insert(older);
+    await insert(newer);
+    await insert(sheet({ experimentId: other.id }));
+
+    const listed = await repository.findByExperimentId(experimentId);
+
+    assertSuccess(listed);
+    expect(listed.value).toEqual([newer, older]);
+  });
+
+  it("sizes each sheet as text before its document is read", async () => {
+    const small = sheet({ metadata: { name: "a" } });
+    const large = sheet({ metadata: { notes: "x".repeat(10_000) } });
+    await insert(small);
+    await insert(large);
+
+    const sizes = await repository.findSizes([small.id, large.id, faker.string.uuid()]);
+
+    assertSuccess(sizes);
+    const byId = new Map(sizes.value.map(({ id, bytes }) => [id, bytes]));
+    expect(byId.size).toBe(2);
+    expect(byId.get(small.id)).toBeLessThan(20);
+    expect(byId.get(large.id)).toBeGreaterThan(10_000);
+  });
+
   it("goes with its experiment", async () => {
-    await repository.insert(sheet());
+    await insert(sheet());
 
     await testApp.database.delete(experiments).where(eq(experiments.id, experimentId));
 
@@ -117,8 +174,8 @@ describe("ExperimentMetadataRepository", () => {
   });
 
   it("is refused a NUL character anywhere in the sheet, which jsonb cannot hold", async () => {
-    const result = await repository.insert(
-      sheet({ metadata: { rows: [{ _id: "r1", plot: "A\u00001" }] } }),
+    const result = await repository.transaction((tx) =>
+      repository.insert(tx, sheet({ metadata: { rows: [{ _id: "r1", plot: "A\u00001" }] } })),
     );
 
     assertFailure(result);
@@ -129,8 +186,8 @@ describe("ExperimentMetadataRepository", () => {
   });
 
   it("is refused a NUL character in a key as well as in a value", async () => {
-    const result = await repository.insert(
-      sheet({ metadata: { rows: [{ _id: "r1", "plot\u0000": "A1" }] } }),
+    const result = await repository.transaction((tx) =>
+      repository.insert(tx, sheet({ metadata: { rows: [{ _id: "r1", "plot\u0000": "A1" }] } })),
     );
 
     assertFailure(result);
@@ -139,9 +196,9 @@ describe("ExperimentMetadataRepository", () => {
 
   it("reports a refused write by Postgres's code, without the sheet in it", async () => {
     const plots = sheet({ metadata: { name: "Field 12, trampled" } });
-    await repository.insert(plots);
+    await insert(plots);
 
-    const result = await repository.insert(plots);
+    const result = await repository.transaction((tx) => repository.insert(tx, plots));
 
     assertFailure(result);
     expect(result.error.message).toBe(
@@ -150,11 +207,11 @@ describe("ExperimentMetadataRepository", () => {
   });
 
   it("reports a driver failure as no answer, not as an SQLSTATE", async () => {
-    vi.spyOn(testApp.database, "insert").mockImplementation(() => {
-      throw new Error("write failed", { cause: { code: "CONNECT_TIMEOUT" } });
-    });
+    vi.spyOn(testApp.database, "transaction").mockRejectedValue(
+      new Error("write failed", { cause: { code: "CONNECT_TIMEOUT" } }),
+    );
 
-    const result = await repository.insert(sheet());
+    const result = await repository.transaction((tx) => repository.insert(tx, sheet()));
 
     assertFailure(result);
     expect(result.error.message).toBe("Postgres did not answer the metadata sheets query");
