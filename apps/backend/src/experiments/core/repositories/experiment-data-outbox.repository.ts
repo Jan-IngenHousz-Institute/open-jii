@@ -9,9 +9,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  lt,
-  ne,
-  or,
   sql,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
@@ -100,15 +97,17 @@ export class ExperimentDataOutboxRepository {
    *
    * At most one row of a record is ever claimed. Two tasks copying one record at once could land
    * an older state after a newer one, such as a delete the lakehouse ran before an insert, and
-   * nothing would owe the record again. Rows of a destination or kind this build does not know,
-   * written by a newer task during a deploy, are left for that task.
+   * nothing would owe the record again. So a waiting row waits while any row of its record is
+   * claimed, even an abandoned one, and the abandoned claim is taken back before it. A claim this
+   * read predates shows on the row it locks: a locked row is skipped, and a row changed since the
+   * read is checked again as it now stands. Rows of a destination or kind this build does not
+   * know, written by a newer task during a deploy, are left for that task.
    */
   async claimDue(leaseMs: number, limit: number): Promise<Result<ClaimedOutboxRow[]>> {
     const now = sql`(now() AT TIME ZONE 'UTC')`;
     const leaseStart = sql`${now} - make_interval(secs => ${leaseMs / 1000})`;
     const other = alias(experimentDataOutbox, "other");
-    const isClaimed = sql`${experimentDataOutbox.claimedAt} IS NOT NULL`;
-    const recordTakenElsewhere = exists(
+    const recordClaimed = exists(
       this.database
         .select({ id: other.id })
         .from(other)
@@ -117,15 +116,7 @@ export class ExperimentDataOutboxRepository {
             eq(other.recordType, experimentDataOutbox.recordType),
             eq(other.recordId, experimentDataOutbox.recordId),
             eq(other.destination, experimentDataOutbox.destination),
-            ne(other.id, experimentDataOutbox.id),
-            or(
-              // Another task holds the record.
-              sql`${other.claimedAt} > ${leaseStart}`,
-              // A waiting row goes before an abandoned claim of the same record.
-              and(isClaimed, isNull(other.claimedAt)),
-              // Of two abandoned claims, the older row goes first.
-              and(isClaimed, isNotNull(other.claimedAt), lt(other.id, experimentDataOutbox.id)),
-            ),
+            isNotNull(other.claimedAt),
           ),
         ),
     );
@@ -136,11 +127,11 @@ export class ExperimentDataOutboxRepository {
           SELECT ${experimentDataOutbox.id}
           FROM ${experimentDataOutbox}
           WHERE ((${experimentDataOutbox.claimedAt} IS NULL
-                  AND ${experimentDataOutbox.nextAttemptAt} <= ${now})
+                  AND ${experimentDataOutbox.nextAttemptAt} <= ${now}
+                  AND NOT ${recordClaimed})
                  OR ${experimentDataOutbox.claimedAt} <= ${leaseStart})
             AND ${inArray(experimentDataOutbox.destination, zExperimentDataDestination.options)}
             AND ${inArray(experimentDataOutbox.recordType, zExperimentDataRecordType.options)}
-            AND NOT ${recordTakenElsewhere}
           ORDER BY ${experimentDataOutbox.nextAttemptAt}
           LIMIT ${limit}
           FOR UPDATE SKIP LOCKED

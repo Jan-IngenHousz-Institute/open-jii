@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 
-import { eq, experimentDataOutbox, sql } from "@repo/database";
+import { createSecondaryDatabase, eq, experimentDataOutbox, sql } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -149,35 +149,70 @@ describe("ExperimentDataOutboxRepository", () => {
     ]);
   });
 
-  it("offers a record's waiting row before an abandoned claim of it", async () => {
+  it("takes back an abandoned claim of a record before offering its waiting row", async () => {
     const record = annotation();
     await owe(record);
     const [abandoned] = await claim();
     await owe(record);
     await age(abandoned.id, LEASE_MS / 1000 + 1);
 
-    const [waiting] = await claim();
-
-    expect(waiting.id).not.toBe(abandoned.id);
+    const [reclaimed] = await claim();
+    expect(reclaimed).toEqual(expect.objectContaining({ id: abandoned.id, attempts: 1 }));
     expect(await claim()).toEqual([]);
-    assertSuccess(await repository.markApplied([waiting]));
-    expect(await claim()).toEqual([expect.objectContaining({ id: abandoned.id })]);
+
+    assertSuccess(await repository.markApplied([reclaimed]));
+    const [waiting] = await claim();
+    expect(waiting).toEqual(expect.objectContaining({ recordId: record.recordId, attempts: 0 }));
+    expect(waiting.id).not.toBe(abandoned.id);
   });
 
-  it("takes one of two abandoned claims of a record at a time", async () => {
+  it("claims no row of a record another task is still taking back, though that task read before the record changed", async () => {
     const record = annotation();
     await owe(record);
-    await claim();
-    await owe(record);
-    await testApp.database.execute(sql`
-      UPDATE experiment_data_outbox
-      SET claimed_at = (now() AT TIME ZONE 'UTC') - interval '1 day'
-    `);
+    const [abandoned] = await claim();
+    await age(abandoned.id, LEASE_MS / 1000 + 1);
+    const writer = createSecondaryDatabase();
+    const reclaimer = createSecondaryDatabase();
 
-    const taken = await claim();
+    try {
+      let wrote: () => void = () => undefined;
+      let commit: () => void = () => undefined;
+      const written = new Promise<void>((resolve) => {
+        wrote = resolve;
+      });
+      const committing = new Promise<void>((resolve) => {
+        commit = resolve;
+      });
+      // A change to the record, uncommitted while the other task's claim reads.
+      const change = writer.database.transaction(async (tx) => {
+        await repository.owe(tx, [record]);
+        wrote();
+        await committing;
+      });
+      await written;
 
-    expect(taken).toHaveLength(1);
-    expect(taken[0].id).toBe((await rows()).map(({ id }) => id).sort()[0]);
+      // Each handle pools one connection, so this claim's statement runs inside the open
+      // transaction: it reads before the change commits, and its own claim commits last.
+      await reclaimer.database.execute(sql`BEGIN`);
+      const reclaimed = await new ExperimentDataOutboxRepository(reclaimer.database).claimDue(
+        LEASE_MS,
+        10,
+      );
+      commit();
+      await change;
+
+      // This claim reads the change, but not the other task's claim.
+      const taken = await claim();
+      await reclaimer.database.execute(sql`COMMIT`);
+
+      assertSuccess(reclaimed);
+      expect(reclaimed.value).toEqual([expect.objectContaining({ id: abandoned.id })]);
+      expect(taken).toEqual([]);
+      expect((await rows()).filter((row) => row.claimedAt !== null)).toHaveLength(1);
+    } finally {
+      await writer.close();
+      await reclaimer.close();
+    }
   });
 
   it("deletes applied rows, but not one another task has taken back since", async () => {
