@@ -493,15 +493,40 @@ describe("openJiiEmailOTP", () => {
       expect(user).toMatchObject({ email: NEW_EMAIL, emailVerified: true });
     });
 
-    it("lets an unregistered account with a confirmed address change it", async () => {
+    it.each(["/email-otp/request-email-change", "/email-otp/change-email"])(
+      "refuses %s for an unregistered account that has an address",
+      async (path) => {
+        const auth = createAuth(unconfigured);
+        const cookie = await auth.sessionCookie(OTHER_EMAIL);
+        const user = auth.tables.user[0] as Record<string, unknown>;
+        expect(user).toMatchObject({ emailVerified: true, registered: false });
+        auth.sendEmail.mockClear();
+
+        const response = await auth.request(path, {
+          cookie,
+          body: { newEmail: NEW_EMAIL, otp: "123456" },
+        });
+
+        expect(response.status).toBe(403);
+        expect(auth.sendEmail).not.toHaveBeenCalled();
+        expect(user.email).toBe(OTHER_EMAIL);
+      },
+    );
+
+    it("still refuses an account with an address that set itself unregistered", async () => {
       const auth = createAuth(unconfigured);
       const cookie = await auth.sessionCookie(OTHER_EMAIL);
       const user = auth.tables.user[0] as Record<string, unknown>;
-      expect(user).toMatchObject({ emailVerified: true, registered: false });
+      user.registered = true;
+
+      const updated = await auth.request("/update-user", { cookie, body: { registered: false } });
+      expect(updated.status).toBe(200);
+      expect(user.registered).toBe(false);
       auth.sendEmail.mockClear();
 
-      expect(await changeAddress(auth, cookie)).toEqual({ requested: 200, changed: 200 });
-      expect(user).toMatchObject({ email: NEW_EMAIL, emailVerified: true });
+      expect(await changeAddress(auth, cookie)).toEqual({ requested: 403, changed: undefined });
+      expect(auth.sendEmail).not.toHaveBeenCalled();
+      expect(user.email).toBe(OTHER_EMAIL);
     });
 
     it("does not let the core change-email route set an address without proof", async () => {

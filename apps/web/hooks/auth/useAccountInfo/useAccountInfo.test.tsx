@@ -1,3 +1,4 @@
+import { createAccountInfo, createLinkedAccount } from "@/test/factories";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
@@ -5,11 +6,10 @@ import { authClient } from "@repo/auth/client";
 
 import { profileLogin, useAccountInfo } from "./useAccountInfo";
 
-const INFO = {
-  user: { id: "583231", name: "Amara Mensah", email: null, emailVerified: true },
+const INFO = createAccountInfo({
+  account: createLinkedAccount({ id: "row-1", providerId: "github", accountId: "583231" }),
   data: { login: "amensah", id: 583231 },
-  account: { id: "row-1", providerId: "github", accountId: "583231" },
-};
+});
 
 describe("useAccountInfo", () => {
   it("asks for the row by its row id", async () => {
