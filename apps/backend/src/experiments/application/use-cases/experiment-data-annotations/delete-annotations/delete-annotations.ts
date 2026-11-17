@@ -30,6 +30,7 @@ export class DeleteAnnotationsUseCase {
       operation: "deleteAnnotations",
       experimentId,
       userId,
+      ...request,
     });
 
     // Validate that the user ID is provided

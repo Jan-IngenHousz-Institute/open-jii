@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
 
 import { experimentAnnotations, experimentDataOutbox } from "@repo/database";
 
@@ -113,6 +114,32 @@ describe("DeleteAnnotations", () => {
     expect(result.value).toEqual({ rowsAffected: 2 });
     expect(await annotationIds()).toEqual([flagOnRow1.id]);
     expect(await owed()).toEqual([onRow1.id, onRow2.id].sort());
+  });
+
+  it("logs the table, kind and rows a bulk delete names", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    await existing(experiment.id, { rowId: "1" });
+    const log = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+    await useCase.execute(
+      experiment.id,
+      { tableName: "raw_data", rowIds: ["1", "2"], type: "comment" },
+      testUserId,
+    );
+
+    expect(log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: "Deleting annotation(s) from experiment data",
+        experimentId: experiment.id,
+        userId: testUserId,
+        tableName: "raw_data",
+        type: "comment",
+        rowIds: ["1", "2"],
+      }),
+    );
   });
 
   it("answers not found, and owes no copy, for an annotation Postgres does not hold", async () => {
