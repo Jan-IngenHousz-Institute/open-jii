@@ -30,6 +30,9 @@ export interface PostHogServerClient {
     options?: { fresh?: boolean },
   ): T;
   getContext(): { distinctId?: string } | undefined;
+  // An evaluation PostHog could not make answers undefined, as a missing flag does; only this
+  // event tells the failed request apart.
+  on(event: "error", listener: (error: unknown) => void): () => void;
   shutdown(): Promise<void>;
 }
 

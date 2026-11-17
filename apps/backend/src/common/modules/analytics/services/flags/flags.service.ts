@@ -22,13 +22,17 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   // Every evaluation is an HTTP round trip and polling surfaces hit flagged
   // routes several times a minute; a minute of staleness is fine.
   private static readonly FLAG_CACHE_TTL_MS = 60_000;
-  // While PostHog times out, each evaluation waits out the client's timeout and its retry; a
-  // fallback held this long bounds that wait without keeping a flag dark after PostHog recovers.
+  // While PostHog times out, each evaluation waits out the client's timeout and its retry. A failed
+  // request pauses every evaluation this long, so one caller pays that wait rather than every user
+  // and flag, and a recovered PostHog takes over once it lapses.
   private static readonly FLAG_FALLBACK_TTL_MS = 10_000;
   // Keyed per (flag, user, person properties); insertion order makes the oldest the
   // eviction candidate.
   private static readonly FLAG_CACHE_MAX_ENTRIES = 5_000;
   private readonly flagCache = new Map<string, { value: boolean; expiresAt: number }>();
+  // A page load evaluates one flag for several requests at once; they share one round trip.
+  private readonly pendingEvaluations = new Map<string, Promise<boolean>>();
+  private pausedUntil = 0;
 
   constructor(private readonly configService: AnalyticsConfigService) {}
 
@@ -71,6 +75,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         this.configService.getPostHogServerConfig(),
       );
       if (this.initialized) {
+        this.getPostHogClient()?.on("error", () => this.pause());
         this.logger.log({
           msg: "PostHog initialized successfully",
           operation: "initialize",
@@ -122,6 +127,29 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
       return cached.value;
     }
 
+    const isPaused = Date.now() < this.pausedUntil;
+    if (isPaused) {
+      return FEATURE_FLAG_DEFAULTS[flagKey];
+    }
+
+    const pending = this.pendingEvaluations.get(cacheKey);
+    if (pending !== undefined) {
+      return pending;
+    }
+
+    const evaluation = this.evaluate(flagKey, distinctId, cacheKey, personProperties).finally(() =>
+      this.pendingEvaluations.delete(cacheKey),
+    );
+    this.pendingEvaluations.set(cacheKey, evaluation);
+    return evaluation;
+  }
+
+  private async evaluate(
+    flagKey: FeatureFlagKey,
+    distinctId: string,
+    cacheKey: string,
+    personProperties?: Record<string, string>,
+  ): Promise<boolean> {
     try {
       const client = this.getPostHogClient();
 
@@ -145,6 +173,8 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
 
+      // A flag that is off or missing answers empty as well, so an empty answer holds only its own
+      // key; a failed request also pauses every key, through the client's error event.
       const isRealEvaluation = typeof isEnabled === "boolean";
       this.remember(
         cacheKey,
@@ -162,13 +192,18 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         error,
       });
 
-      const fallback = FEATURE_FLAG_DEFAULTS[flagKey];
-      this.remember(cacheKey, fallback, FlagsService.FLAG_FALLBACK_TTL_MS);
-      return fallback;
+      this.pause();
+      return FEATURE_FLAG_DEFAULTS[flagKey];
     }
   }
 
+  private pause() {
+    this.pausedUntil = Date.now() + FlagsService.FLAG_FALLBACK_TTL_MS;
+  }
+
   private remember(cacheKey: string, value: boolean, ttlMs: number) {
+    // A Map keeps a re-set key in its old place, which would make the newest entry the next evicted.
+    this.flagCache.delete(cacheKey);
     if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
       const oldest = this.flagCache.keys().next();
       if (!oldest.done) {
