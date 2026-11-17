@@ -127,13 +127,14 @@ reload of `all`.
 needs no reload for it. Its `device_events` starts empty, so go in this order before the
 `store-device-reads` flag targets anyone:
 
-1. Once silver's lifecycle events have their change feed (step 2), set `device_events` in
-   `serving_store_feed_start_versions` (`store-feed-stalled`), which switches their sink on.
+1. Once the pipeline update above has given silver's lifecycle events their change feed, set
+   `device_events` in `serving_store_feed_start_versions` (`store-feed-stalled`), which switches
+   their sink on.
 2. Reload `device_events` for `all`.
 3. Target the flag.
 
-A device page read from the store before step 2 shows no connects, sessions or uptime and no error,
-while its counts beside them look right.
+A device page read from the store before that reload shows no connects, sessions or uptime and no
+error, while its counts beside them look right.
 
 ## After a full or large reload
 
