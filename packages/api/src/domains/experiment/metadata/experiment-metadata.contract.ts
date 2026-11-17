@@ -1,10 +1,10 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
-import { zExperimentIdPathParam } from "../experiment.schema";
 import {
   zCreateExperimentMetadataBody,
   zExperimentMetadata,
+  zExperimentMetadataExperimentPathParam,
   zExperimentMetadataPathParam,
   zUpdateExperimentMetadataBody,
 } from "./experiment-metadata.schema";
@@ -12,11 +12,11 @@ import {
 export const experimentMetadataContract = {
   listExperimentMetadata: oc
     .route({ method: "GET", path: "/api/v1/experiments/{id}/metadata", successStatus: 200 })
-    .input(zExperimentIdPathParam)
+    .input(zExperimentMetadataExperimentPathParam)
     .output(z.array(zExperimentMetadata)),
   createExperimentMetadata: oc
     .route({ method: "POST", path: "/api/v1/experiments/{id}/metadata", successStatus: 201 })
-    .input(zExperimentIdPathParam.merge(zCreateExperimentMetadataBody))
+    .input(zExperimentMetadataExperimentPathParam.merge(zCreateExperimentMetadataBody))
     .output(zExperimentMetadata),
   updateExperimentMetadata: oc
     .route({

@@ -1,0 +1,290 @@
+import { Injectable, Inject, Logger } from "@nestjs/common";
+import { z } from "zod";
+
+import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
+import { Result, failure, success, AppError } from "../../../common/utils/fp-utils";
+import type {
+  ExperimentMetadataDto,
+  CreateExperimentMetadataDto,
+  UpdateExperimentMetadataDto,
+} from "../models/experiment-metadata.model";
+import { DATABRICKS_PORT } from "../ports/databricks.port";
+import type { DatabricksPort } from "../ports/databricks.port";
+
+/**
+ * The lakehouse's metadata sheets, which pages read until Postgres holds every sheet.
+ * Values are bound as statement parameters, never written into the SQL text.
+ *
+ * Databricks table schema:
+ *   metadata_id   STRING   (PK, UUID)
+ *   experiment_id STRING
+ *   metadata      VARIANT  (arbitrary JSON blob)
+ *   created_by    STRING
+ *   created_at    TIMESTAMP
+ *   updated_at    TIMESTAMP
+ */
+@Injectable()
+export class ExperimentMetadataWarehouseRepository {
+  private readonly logger = new Logger(ExperimentMetadataWarehouseRepository.name);
+
+  constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
+
+  private get metadataTable(): string {
+    return `${this.databricksPort.CATALOG_NAME}.${this.databricksPort.CENTRUM_SCHEMA_NAME}.experiment_custom_metadata`;
+  }
+
+  // --- Validation ---
+
+  private readonly schemas = {
+    uuid: z.string().guid(),
+    jsonString: z.string().max(5_000_000), // 5 MB cap on serialized metadata
+  };
+
+  private validate = {
+    uuid: (value: string) => this.schemas.uuid.safeParse(value),
+  };
+
+  // --- Repository methods ---
+
+  async findAllByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto[]>> {
+    this.logger.log({
+      msg: "Finding all metadata by experiment ID",
+      operation: "findAllByExperimentId",
+      experimentId,
+    });
+
+    if (!this.validate.uuid(experimentId).success) {
+      return failure(AppError.validationError("Invalid experiment ID format"));
+    }
+
+    const query = `
+      SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
+      FROM ${this.metadataTable}
+      WHERE experiment_id = :experiment_id
+      ORDER BY created_at DESC
+    `;
+
+    const result = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+      [{ name: "experiment_id", value: experimentId }],
+    );
+
+    if (result.isFailure()) {
+      return failure(AppError.internal(`Failed to find metadata: ${result.error.message}`));
+    }
+
+    return success(result.value.rows.map((row) => this.mapRowToDto(result.value.columns, row)));
+  }
+
+  async create(
+    experimentId: string,
+    metadataId: string,
+    dto: CreateExperimentMetadataDto,
+    userId: string,
+    now: Date,
+  ): Promise<Result<ExperimentMetadataDto>> {
+    this.logger.log({
+      msg: "Creating metadata",
+      operation: "create",
+      experimentId,
+    });
+
+    if (!this.validate.uuid(experimentId).success || !this.validate.uuid(userId).success) {
+      return failure(AppError.validationError("Invalid experiment ID or user ID format"));
+    }
+
+    const isoNow = now.toISOString();
+    const metadataJson = JSON.stringify(dto.metadata);
+
+    if (!this.schemas.jsonString.safeParse(metadataJson).success) {
+      return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
+    }
+
+    const insertQuery = `
+      INSERT INTO ${this.metadataTable}
+        (metadata_id, experiment_id, metadata, created_by, created_at, updated_at)
+      VALUES (:metadata_id, :experiment_id, PARSE_JSON(:metadata), :created_by, :now, :now)
+    `;
+    const parameters: StatementParameter[] = [
+      { name: "metadata_id", value: metadataId },
+      { name: "experiment_id", value: experimentId },
+      { name: "metadata", value: metadataJson },
+      { name: "created_by", value: userId },
+      { name: "now", value: isoNow, type: "TIMESTAMP" },
+    ];
+
+    const insertResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      insertQuery,
+      parameters,
+    );
+
+    if (insertResult.isFailure()) {
+      return failure(AppError.internal(`Failed to create metadata: ${insertResult.error.message}`));
+    }
+
+    return success({
+      metadataId,
+      experimentId,
+      metadata: dto.metadata,
+      createdBy: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  async deleteByMetadataId(metadataId: string, experimentId: string): Promise<Result<boolean>> {
+    this.logger.log({
+      msg: "Deleting metadata by metadata ID",
+      operation: "deleteByMetadataId",
+      metadataId,
+      experimentId,
+    });
+
+    if (!this.validate.uuid(metadataId).success || !this.validate.uuid(experimentId).success) {
+      return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
+    }
+
+    const query = `
+      DELETE FROM ${this.metadataTable}
+      WHERE metadata_id = :metadata_id
+        AND experiment_id = :experiment_id
+    `;
+
+    const result = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+      [
+        { name: "metadata_id", value: metadataId },
+        { name: "experiment_id", value: experimentId },
+      ],
+    );
+
+    if (result.isFailure()) {
+      return failure(AppError.internal(`Failed to delete metadata: ${result.error.message}`));
+    }
+
+    return success(true);
+  }
+
+  async deleteAllByExperimentId(experimentId: string): Promise<Result<boolean>> {
+    this.logger.log({
+      msg: "Deleting all metadata by experiment ID",
+      operation: "deleteAllByExperimentId",
+      experimentId,
+    });
+
+    if (!this.validate.uuid(experimentId).success) {
+      return failure(AppError.validationError("Invalid experiment ID format"));
+    }
+
+    const query = `
+      DELETE FROM ${this.metadataTable}
+      WHERE experiment_id = :experiment_id
+    `;
+
+    const result = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      query,
+      [{ name: "experiment_id", value: experimentId }],
+    );
+
+    if (result.isFailure()) {
+      return failure(AppError.internal(`Failed to delete metadata: ${result.error.message}`));
+    }
+
+    return success(true);
+  }
+
+  async update(
+    metadataId: string,
+    dto: UpdateExperimentMetadataDto,
+    _userId: string,
+    experimentId: string,
+    now: Date,
+  ): Promise<Result<ExperimentMetadataDto>> {
+    this.logger.log({
+      msg: "Updating metadata",
+      operation: "update",
+      metadataId,
+      experimentId,
+    });
+
+    if (!this.validate.uuid(metadataId).success || !this.validate.uuid(experimentId).success) {
+      return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
+    }
+
+    const isoNow = now.toISOString();
+    const metadataJson = JSON.stringify(dto.metadata);
+
+    if (!this.schemas.jsonString.safeParse(metadataJson).success) {
+      return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
+    }
+
+    const updateQuery = `
+      UPDATE ${this.metadataTable}
+      SET metadata = PARSE_JSON(:metadata),
+          updated_at = :now
+      WHERE metadata_id = :metadata_id
+        AND experiment_id = :experiment_id
+    `;
+    const parameters: StatementParameter[] = [
+      { name: "metadata", value: metadataJson },
+      { name: "now", value: isoNow, type: "TIMESTAMP" },
+      { name: "metadata_id", value: metadataId },
+      { name: "experiment_id", value: experimentId },
+    ];
+
+    const updateResult = await this.databricksPort.executeSqlQuery(
+      this.databricksPort.CENTRUM_SCHEMA_NAME,
+      updateQuery,
+      parameters,
+    );
+
+    if (updateResult.isFailure()) {
+      return failure(AppError.internal(`Failed to update metadata: ${updateResult.error.message}`));
+    }
+
+    return success({
+      metadataId,
+      experimentId,
+      metadata: dto.metadata,
+      createdBy: _userId,
+      createdAt: now, // approximate; true value lives in DB
+      updatedAt: now,
+    });
+  }
+
+  /** Map a raw Databricks row to ExperimentMetadataDto */
+  private mapRowToDto(columns: { name: string }[], row: (string | null)[]): ExperimentMetadataDto {
+    const colIndex = (name: string) => columns.findIndex((c) => c.name === name);
+
+    const rawMetadata = row[colIndex("metadata")];
+    let metadata: Record<string, unknown> = {};
+    if (rawMetadata) {
+      try {
+        metadata = JSON.parse(rawMetadata) as Record<string, unknown>;
+      } catch {
+        // The sheet's contents stay out of the log, as every other sheet read keeps them.
+        this.logger.warn({
+          msg: "Failed to parse metadata JSON",
+          metadataId: row[colIndex("metadata_id")],
+          length: rawMetadata.length,
+        });
+      }
+    }
+
+    const createdAtRaw = row[colIndex("created_at")];
+    const updatedAtRaw = row[colIndex("updated_at")];
+
+    return {
+      metadataId: row[colIndex("metadata_id")] ?? "",
+      experimentId: row[colIndex("experiment_id")] ?? "",
+      metadata,
+      createdBy: row[colIndex("created_by")] ?? "",
+      createdAt: createdAtRaw ? new Date(createdAtRaw) : new Date(0),
+      updatedAt: updatedAtRaw ? new Date(updatedAtRaw) : new Date(0),
+    };
+  }
+}

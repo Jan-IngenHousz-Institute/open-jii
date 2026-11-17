@@ -504,6 +504,9 @@ export const zExperimentIdPathParam = z.object({
   id: z.string().guid().describe("ID of the experiment"),
 });
 
+// Lowercase, as Postgres prints a uuid, so the lakehouse and Postgres match an id alike.
+export const zLowercaseId = z.string().guid().toLowerCase();
+
 export const zCreateExperimentResponse = z.object({ id: z.string().guid() });
 
 // Infer request and response types

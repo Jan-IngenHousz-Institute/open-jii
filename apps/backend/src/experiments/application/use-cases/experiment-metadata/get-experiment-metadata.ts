@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentMetadataDto } from "../../../core/models/experiment-metadata.model";
-import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
+import { ExperimentMetadataWarehouseRepository } from "../../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 @Injectable()
@@ -12,7 +12,7 @@ export class GetExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMetadataRepository: ExperimentMetadataRepository,
+    private readonly metadataWarehouseRepository: ExperimentMetadataWarehouseRepository,
   ) {}
 
   async execute(experimentId: string, userId: string): Promise<Result<ExperimentMetadataDto[]>> {
@@ -38,7 +38,7 @@ export class GetExperimentMetadataUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    const result = await this.experimentMetadataRepository.findAllByExperimentId(experimentId);
+    const result = await this.metadataWarehouseRepository.findAllByExperimentId(experimentId);
 
     if (result.isFailure()) {
       this.logger.error({
