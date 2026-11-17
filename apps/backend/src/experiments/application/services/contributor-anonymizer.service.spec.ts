@@ -1,4 +1,5 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { Logger } from "@nestjs/common";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
@@ -139,6 +140,29 @@ describe("ContributorAnonymizerService", () => {
       ]);
     });
 
+    it("gives an annotations cell it cannot read no annotations, never the cell, and warns once", () => {
+      const annotationsColumn = {
+        name: "annotations",
+        type_text: WellKnownColumnTypes.ANNOTATIONS,
+      };
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+      const rows = [
+        { annotations: '[{"createdBy":"user-1"' },
+        { annotations: JSON.stringify({ createdBy: "user-1" }) },
+      ];
+
+      const out = service.anonymizeRows(rows, [annotationsColumn], {
+        id: "exp-1",
+        anonymizeContributors: true,
+      });
+
+      expect(out).toEqual([{ annotations: "[]" }, { annotations: "[]" }]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ experimentId: "exp-1", cells: 2 }),
+      );
+    });
+
     it("returns a fresh array — does not mutate the caller's row objects", () => {
       const original = JSON.stringify({ id: "u1", name: "Alice", avatar: "" });
       const rows = [{ contributor: original }];
@@ -211,6 +235,19 @@ describe("ContributorAnonymizerService", () => {
         phone,
         { ...platform, createdBy: pseudo, createdByName: pseudo },
       ]);
+    });
+
+    it("gives a distinct annotations cell it cannot read no annotations, and warns once", () => {
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      const out = service.anonymizeDistinctValues(
+        ['[{"createdBy":"user-1"', '{"createdBy":"user-1"}'],
+        WellKnownColumnTypes.ANNOTATIONS,
+        { id: "exp-1", anonymizeContributors: true },
+      );
+
+      expect(out).toEqual(["[]", "[]"]);
+      expect(warn).toHaveBeenCalledTimes(1);
     });
   });
 });

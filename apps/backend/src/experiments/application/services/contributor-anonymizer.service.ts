@@ -1,7 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "node:crypto";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
+const NO_ANNOTATIONS = "[]";
 
 /**
  * Per-experiment anonymization policy: rewrite CONTRIBUTOR struct values to
@@ -10,6 +12,8 @@ import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experime
  */
 @Injectable()
 export class ContributorAnonymizerService {
+  private readonly logger = new Logger(ContributorAnonymizerService.name);
+
   /**
    * Stable pseudonym per (experimentId, userId). 6 hex chars across a typical
    * cohort gives a vanishingly small collision probability. The SQL filter
@@ -49,7 +53,8 @@ export class ContributorAnonymizerService {
       return rows;
     }
 
-    return rows.map((row) => {
+    let unreadable = 0;
+    const anonymized = rows.map((row) => {
       const next = { ...row };
       for (const col of contributorColumns) {
         const v = row[col.name];
@@ -65,17 +70,32 @@ export class ContributorAnonymizerService {
         if (v == null) {
           continue;
         }
-        next[col.name] = this.anonymizeAuthors(v, experiment.id);
+        const authors = this.anonymizeAuthors(v, experiment.id);
+        if (authors === undefined) {
+          unreadable += 1;
+        }
+        next[col.name] = authors ?? NO_ANNOTATIONS;
       }
       return next;
     });
+
+    this.warnUnreadable(experiment.id, unreadable);
+    return anonymized;
   }
 
-  /** Annotations added after the measurement name their author; the phone's name none and stay as they are. */
-  private anonymizeAuthors(cell: string, experimentId: string): string {
-    const annotations: unknown = JSON.parse(cell);
+  /**
+   * Annotations added after the measurement name their author; the phone's name none and stay as
+   * they are. A cell that holds no list could hide an author anywhere, so none of it is kept.
+   */
+  private anonymizeAuthors(cell: string, experimentId: string): string | undefined {
+    let annotations: unknown;
+    try {
+      annotations = JSON.parse(cell);
+    } catch {
+      return undefined;
+    }
     if (!Array.isArray(annotations)) {
-      return cell;
+      return undefined;
     }
 
     return JSON.stringify(
@@ -116,9 +136,20 @@ export class ContributorAnonymizerService {
     }
     // A distinct annotations cell names its platform authors as a row's cell does.
     if (columnType === WellKnownColumnTypes.ANNOTATIONS) {
-      return values.map((v) =>
-        typeof v === "string" ? this.anonymizeAuthors(v, experiment.id) : v,
-      );
+      let unreadable = 0;
+      const anonymized = values.map((v) => {
+        if (typeof v !== "string") {
+          return v;
+        }
+        const authors = this.anonymizeAuthors(v, experiment.id);
+        if (authors === undefined) {
+          unreadable += 1;
+        }
+        return authors ?? NO_ANNOTATIONS;
+      });
+
+      this.warnUnreadable(experiment.id, unreadable);
+      return anonymized;
     }
     if (columnType !== WellKnownColumnTypes.CONTRIBUTOR) {
       return values;
@@ -131,6 +162,19 @@ export class ContributorAnonymizerService {
       const realId = (JSON.parse(v) as { id?: string }).id ?? "";
       const pseudo = this.pseudonymFor(experiment.id, realId);
       return JSON.stringify({ id: pseudo, name: pseudo, avatar: null });
+    });
+  }
+
+  private warnUnreadable(experimentId: string, cells: number): void {
+    if (cells === 0) {
+      return;
+    }
+
+    this.logger.warn({
+      msg: "Could not read the annotations in some cells of an anonymised experiment; they show none",
+      operation: "anonymizeContributors",
+      experimentId,
+      cells,
     });
   }
 }
