@@ -115,11 +115,12 @@ describe("DeleteAnnotations", () => {
     expect(await owed()).toEqual([onRow1.id, onRow2.id].sort());
   });
 
-  it("affects no row, and owes no copy, when there is nothing to delete", async () => {
+  it("answers not found, and owes no copy, for an annotation Postgres does not hold", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Drought trial",
       userId: testUserId,
     });
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
 
     const result = await useCase.execute(
       experiment.id,
@@ -127,8 +128,28 @@ describe("DeleteAnnotations", () => {
       testUserId,
     );
 
-    assertSuccess(result);
-    expect(result.value).toEqual({ rowsAffected: 0 });
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+    expect(await owed()).toEqual([]);
+    expect(nudge).not.toHaveBeenCalled();
+  });
+
+  it("answers not found, and owes no copy, when Postgres holds none of the type on the rows", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Drought trial",
+      userId: testUserId,
+    });
+    const [flag] = await existing(experiment.id, { type: "flag", flagType: "outlier" });
+
+    const result = await useCase.execute(
+      experiment.id,
+      { tableName: "raw_data", rowIds: ["1", "2"], type: "comment" },
+      testUserId,
+    );
+
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
+    expect(await annotationIds()).toEqual([flag.id]);
     expect(await owed()).toEqual([]);
   });
 

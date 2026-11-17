@@ -356,6 +356,19 @@ describe("ExperimentMetadataController", () => {
 
       await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
     });
+
+    it("should return 404 if the sheet does not exist", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Missing Sheet Delete Test",
+        userId: testUserId,
+      });
+      const path = testApp.resolveOrpcPath(contract.experiments.deleteExperimentMetadata, {
+        id: experiment.id,
+        metadataId: faker.string.uuid(),
+      });
+
+      await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+    });
   });
 
   describe("authorization", () => {

@@ -51,11 +51,13 @@ export class DeleteExperimentMetadataUseCase {
       }
 
       const written = await this.metadataRepository.transaction(async (tx) => {
-        if (await this.metadataRepository.delete(tx, experimentId, metadataId)) {
+        const deleted = await this.metadataRepository.delete(tx, experimentId, metadataId);
+        if (deleted) {
           await this.outboxRepository.owe(tx, [
             { recordType: "metadata_sheet", recordId: metadataId, experimentId },
           ]);
         }
+        return deleted;
       });
 
       if (written.isFailure()) {
@@ -69,6 +71,10 @@ export class DeleteExperimentMetadataUseCase {
           error: written.error.message,
         });
         return failure(AppError.internal("Failed to delete metadata"));
+      }
+
+      if (!written.value) {
+        return failure(AppError.notFound(`Metadata with ID ${metadataId} not found`));
       }
 
       this.logger.log({

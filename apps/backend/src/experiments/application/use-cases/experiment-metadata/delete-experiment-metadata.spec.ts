@@ -73,15 +73,19 @@ describe("DeleteExperimentMetadataUseCase", () => {
     expect(nudge).toHaveBeenCalledTimes(1);
   });
 
-  it("succeeds, and owes no copy, when the sheet is already gone", async () => {
+  it("answers not found, and owes no copy, for a sheet Postgres does not hold", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Drought trial",
       userId: testUserId,
     });
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
 
-    assertSuccess(await useCase.execute(experiment.id, sheetId, testUserId));
+    const result = await useCase.execute(experiment.id, sheetId, testUserId);
 
+    assertFailure(result);
+    expect(result.error.code).toBe("NOT_FOUND");
     expect(await outbox()).toEqual([]);
+    expect(nudge).not.toHaveBeenCalled();
   });
 
   it("refuses a delete on an archived experiment", async () => {

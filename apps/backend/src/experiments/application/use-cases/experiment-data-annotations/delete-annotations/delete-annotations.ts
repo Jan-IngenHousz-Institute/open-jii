@@ -79,6 +79,10 @@ export class DeleteAnnotationsUseCase {
       return failure(written.error);
     }
 
+    if (written.value === 0) {
+      return failure(AppError.notFound("No annotation to delete was found"));
+    }
+
     this.outboxWorker.nudge();
     return success({ rowsAffected: written.value });
   }
