@@ -7,8 +7,8 @@ locals {
     "backup_log", "s3queue_log",
   ]
 
-  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
-  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
+  # The views that name an experiment (packages/database/clickhouse/migrations), which the reader
+  # reads beside the three tables below, and the tables a reload replaces rows of or removes ids from.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
