@@ -180,8 +180,9 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
 
   /**
    * Copies one kind of record a statement's worth at a time, clearing each group's rows once it
-   * landed. A failed group sends what is left back to wait; a claim past its deadline, or a task
-   * shutting down, puts what is left back as it was.
+   * landed. A failed group sends its own rows back to wait, and the groups it kept from being tried
+   * go back as they were; a claim past its deadline, or a task shutting down, puts what is left back
+   * as it was.
    */
   private async apply(
     recordType: ExperimentDataRecordType,
@@ -206,13 +207,26 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
         }),
       );
       if (outcome === "stopped") {
+        this.logger.warn({
+          msg: "Stopped a copy of experiment data before it finished; the rest waits for the next drain",
+          operation: "experiment-data-outbox",
+          recordType,
+          rows: left.length,
+        });
         await this.release(recordType, left);
         counts.released = left.length;
         return counts;
       }
       if (outcome !== "copied") {
-        await this.retry(recordType, left, outcome.failed);
-        counts.retried = left.length;
+        const tried = new Set(ids);
+        const failed = left.filter((row) => tried.has(row.recordId));
+        const untried = left.filter((row) => !tried.has(row.recordId));
+        await this.retry(recordType, failed, outcome.failed);
+        counts.retried = failed.length;
+        if (untried.length > 0) {
+          await this.release(recordType, untried);
+          counts.released = untried.length;
+        }
         return counts;
       }
 
@@ -284,13 +298,6 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   }
 
   private async release(recordType: ExperimentDataRecordType, rows: ClaimedOutboxRow[]) {
-    this.logger.warn({
-      msg: "Stopped a copy of experiment data before it finished; the rest waits for the next drain",
-      operation: "experiment-data-outbox",
-      recordType,
-      rows: rows.length,
-    });
-
     const released = await this.outbox.release(rows);
     if (released.isFailure()) {
       this.logger.error({

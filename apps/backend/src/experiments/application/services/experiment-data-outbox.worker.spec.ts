@@ -337,7 +337,7 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(await outboxRows()).toHaveLength(2);
   });
 
-  it("sends what is left back to wait when a later statement fails", async () => {
+  it("sends a failed statement's rows back to wait, and tries the rest in a fresh claim", async () => {
     const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
     vi.spyOn(warehouse, "merge")
       .mockResolvedValueOnce(success("merged"))
@@ -346,11 +346,29 @@ describe("ExperimentDataOutboxWorker", () => {
       );
     await saveSheets(3, 3 * 1024 * 1024);
 
-    expect(await worker.drain()).toEqual({ applied: 1, retried: 2, released: 0 });
+    expect(await worker.drain()).toEqual({ applied: 1, retried: 2, released: 1 });
 
     expect(await outboxRows()).toEqual([
       expect.objectContaining({ attempts: 1, claimedAt: null }),
       expect.objectContaining({ attempts: 1, claimedAt: null }),
+    ]);
+  });
+
+  it("counts no attempt against the sheets a failed statement kept from being tried", async () => {
+    const merge = vi
+      .spyOn(testApp.module.get(ExperimentMetadataWarehouseRepository), "merge")
+      .mockResolvedValueOnce(success("merged"))
+      .mockResolvedValueOnce(
+        failure(AppError.internal("Failed to merge metadata sheets: Bad document")),
+      )
+      .mockResolvedValue(success("merged"));
+    await saveSheets(3, 3 * 1024 * 1024);
+
+    expect(await worker.drain()).toEqual({ applied: 2, retried: 1, released: 1 });
+
+    const [refused] = merge.mock.calls[1][0];
+    expect(await outboxRows()).toEqual([
+      expect.objectContaining({ recordId: refused.id, attempts: 1, claimedAt: null }),
     ]);
   });
 
