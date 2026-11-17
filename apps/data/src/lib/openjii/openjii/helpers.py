@@ -226,8 +226,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
         df = df.withColumn("_copy", row_number().over(newest_first)).filter(col("_copy") == 1).drop("_copy")
 
     parsed = []
-    # payload_annotations repeats the phone's share of annotations, which `annotations` already holds.
-    exclude_cols = ["experiment_id", "payload_annotations"]
+    exclude_cols = ["experiment_id"]
 
     if table_type == "macro":
         exclude_cols.extend(_MACRO_EXCLUDE_COLS)
@@ -259,15 +258,17 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
         parsed.append(("parsed_questions_data", _PAYLOAD_SUFFIXES["questions_data"]))
         exclude_cols.extend(["questions_data", "parsed_questions_data"])
 
-    flattened = flatten_parsed_payloads(df, parsed, exclude_cols)
+    # payload_annotations repeats the phone's share of annotations, which `annotations` already holds.
+    # The data table hides it but still holds its name, so a field named like it takes a suffix in both.
+    flattened = flatten_parsed_payloads(df, parsed, exclude_cols, reserved_cols=["payload_annotations"])
     order = [order_col, _TIEBREAK_COLUMN]
     if parts is None:
         return flattened.orderBy(*order)
     return flattened.repartitionByRange(parts, *[col(name) for name in order]).sortWithinPartitions(*order)
 
 
-def flatten_parsed_payloads(df, parsed, exclude_cols):
-    """Keep every column but ``exclude_cols`` and lift each parsed payload's fields to the top.
+def flatten_parsed_payloads(df, parsed, exclude_cols, reserved_cols=()):
+    """Keep every column but ``exclude_cols`` and ``reserved_cols``, lifting each payload's fields to the top.
 
     Fields are named by :func:`flattened_field_names`, so one named like a kept column, or like a
     field of an earlier payload, is exported under a suffixed name instead of clashing with it.
@@ -279,13 +280,16 @@ def flatten_parsed_payloads(df, parsed, exclude_cols):
         Parsed struct columns in order, each with the suffix its clashing fields take.
     exclude_cols : list[str]
         Columns left out of the result, the parsed structs and their raw sources among them.
+    reserved_cols : list[str]
+        Columns also left out of the result, whose names a field still cannot take where ``df`` has them.
     """
     from pyspark.sql.functions import col
 
-    kept = [name for name in df.columns if name not in exclude_cols]
+    kept = [name for name in df.columns if name not in exclude_cols and name not in reserved_cols]
+    held = kept + [name for name in reserved_cols if name in df.columns]
     sources = [(source, df.schema[source].dataType.fieldNames(), suffix) for source, suffix in parsed]
     fields = [
-        col(source).getField(field).alias(key) for source, field, key in flattened_field_names(kept, sources)
+        col(source).getField(field).alias(key) for source, field, key in flattened_field_names(held, sources)
     ]
     return df.select(*[col(name) for name in kept], *fields)
 
