@@ -66,10 +66,12 @@ interface AggregationRead {
 }
 
 /** One output of an aggregated read, or every column of its rows where nothing groups. */
-export type AggregationOutput =
+export type AggregationOutput = NamedOutput | { kind: "rows" };
+
+/** A group's or an aggregate's output, which a read may sort by. */
+export type NamedOutput =
   | { kind: "group"; name: string; item: GroupByExpression }
-  | { kind: "aggregate"; name: string; item: AggregateExpression }
-  | { kind: "rows" };
+  | { kind: "aggregate"; name: string; item: AggregateExpression };
 
 /** True when the spec has any grouping or aggregate functions to apply. */
 export function hasAggregationContent(spec: AggregationSpec | undefined): boolean {
@@ -211,9 +213,9 @@ export function buildAggregation(
   builder: BaseQueryBuilder = new SqlQueryBuilder(opts.columnNames),
 ): { sql: string; outputs: AggregationOutput[] } {
   const outputNames = new Set<string>();
-  const groupOutputs: AggregationOutput[] = [];
-  const rowOutputs: AggregationOutput[] = [];
-  const windowOutputs: AggregationOutput[] = [];
+  const groupOutputs: NamedOutput[] = [];
+  const rowOutputs: NamedOutput[] = [];
+  const windowOutputs: NamedOutput[] = [];
   const quoteAlias = (name: string) =>
     opts.columnNames === undefined ? builder.escapeIdentifier(name) : builder.quoteName(name);
   const selectClauses: string[] = [];
@@ -332,7 +334,10 @@ export function buildAggregation(
       opts.columnNames !== undefined && outputNames.has(opts.ordering.column)
         ? builder.quoteName(opts.ordering.column)
         : orderSql;
-    sql += ` ORDER BY ${builder.aggregateOrdering(outputOrder, opts.ordering)}`;
+    const sorted = [...groupOutputs, ...rowOutputs, ...windowOutputs].find(
+      (output) => output.name === opts.ordering?.column,
+    );
+    sql += ` ORDER BY ${builder.aggregateOrdering(outputOrder, opts.ordering, sorted)}`;
   }
 
   if (opts.limit !== undefined) {

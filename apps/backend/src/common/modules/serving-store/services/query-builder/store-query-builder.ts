@@ -3,6 +3,7 @@ import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/ex
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import type { StoreMetadataSheet } from "../../../../../experiments/core/ports/serving-store.port";
+import type { NamedOutput } from "../../../databricks/services/query-builder/expressions/aggregation";
 import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { numericStringOrdering } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import type { NumericStringKeys } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
@@ -130,7 +131,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private plotsValues = false;
   private rowNames = new Set<string>();
   private rowTypes = new Map<string, string>();
-  private doubleOutputs = new Set<string>();
+  private outputTypeOf?: (output: NamedOutput) => string | undefined;
   private rowIds = new Map<string, "contributor" | "device">();
   /** Kept until a payload, a reserved name or a sheet changes them. */
   private fields?: Map<string, FlattenedField>;
@@ -557,7 +558,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * Spark sorts a device's struct by its registry id, which only the ids in the order carry, and a
    * contributor by name in the order of its ids; nulls go first going up and last going down.
    */
-  aggregateOrdering(target: string, { column, direction = "ASC" }: QueryOrdering): string {
+  aggregateOrdering(
+    target: string,
+    { column, direction = "ASC" }: QueryOrdering,
+    output?: NamedOutput,
+  ): string {
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     const idOrder = this.idOrder;
     const [name, path] = this.structPath(column);
@@ -572,18 +577,21 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (isContributorName) {
       return `indexOf(${ORDER_IDS}, ${this.quoteName(name)}) ${direction} ${nulls}`;
     }
-    // Spark sorts NaN above every number; the store would put it beside the nulls.
-    const isDouble = this.doubleOutputs.has(column) || this.rowTypes.get(column) === "DOUBLE";
-    if (isDouble) {
-      return `isNaN(${target}) ${direction} ${nulls}, ${target} ${direction} ${nulls}`;
-    }
-    return `${target} ${direction} ${nulls}`;
+    const type = output === undefined ? this.rowTypes.get(column) : this.outputTypeOf?.(output);
+    return this.nanApart(target, type, `${direction} ${nulls}`);
   }
 
-  /** The outputs of a statement over these rows that hold doubles, whose sort puts NaN apart. */
-  sortsAsDoubles(names: string[]): this {
-    this.doubleOutputs = new Set(names);
+  /** The type each output of a statement over these rows takes, which its sort depends on. */
+  typesOutputs(typeOf: (output: NamedOutput) => string | undefined): this {
+    this.outputTypeOf = typeOf;
     return this;
+  }
+
+  /** Spark sorts NaN above every number; the store would put it beside the nulls. */
+  private nanApart(target: string, type: string | undefined, order: string): string {
+    return type === "DOUBLE"
+      ? `isNaN(${target}) ${order}, ${target} ${order}`
+      : `${target} ${order}`;
   }
 
   buildOver(statement: string): string {
@@ -1054,18 +1062,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
     }
     if (mode?.kind === "number") {
-      const nan = this.nanKey(target, column, direction, "NULLS LAST");
-      return `${nan}${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
+      const sorted = this.nanApart(target, this.outputColumn(column).type, `${direction} NULLS LAST`);
+      return `${sorted}${rowId ? `, ${rowId} ASC` : ""}`;
     }
-    const sorted =
-      mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}`;
-  }
-
-  /** Spark sorts NaN above every number, where the store sorts it beside null. */
-  private nanKey(sorted: string, column: string, direction: string, nulls: string): string {
-    const isDouble = this.typeOf(column) === "DOUBLE";
-    return isDouble ? `isNaN(${sorted}) ${direction} ${nulls}, ` : "";
+    if (mode?.kind === "pseudonym") {
+      return `${this.contributorPseudonym(target, mode.salt)} ${direction} ${nulls}`;
+    }
+    return this.nanApart(target, this.outputColumn(column).type, `${direction} ${nulls}`);
   }
 
   /** The warehouse's keys for text that holds a number, in the store's functions. */

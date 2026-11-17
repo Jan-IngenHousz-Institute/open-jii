@@ -5,6 +5,7 @@ import {
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import { buildAggregateExpression } from "./expressions/aggregation";
+import type { NamedOutput } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
 import { buildFilterCondition } from "./expressions/filter";
 import {
@@ -258,8 +259,15 @@ export abstract class BaseQueryBuilder {
         );
   }
 
-  /** The sort of an aggregated read by `target`, the SQL its ordering's column reads as. */
-  aggregateOrdering(target: string, { direction = "ASC" }: QueryOrdering): string {
+  /**
+   * The sort of an aggregated read by `target`, the SQL its ordering's column reads as, which is
+   * `_output` when the read sorts by one of its outputs.
+   */
+  aggregateOrdering(
+    target: string,
+    { direction = "ASC" }: QueryOrdering,
+    _output?: NamedOutput,
+  ): string {
     return `${target} ${direction}`;
   }
 

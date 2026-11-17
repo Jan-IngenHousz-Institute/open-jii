@@ -227,6 +227,14 @@
       "device_name": "D",
       "latitude": 1.0,
       "output": "{\"v\":null}"
+    },
+    {
+      "experiment": "nans",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
     }
   ],
   "matchSchema": "OBJECT<w: DOUBLE>",
@@ -1116,6 +1124,62 @@
         "column": "v_avg",
         "direction": "DESC"
       }
+    },
+    "fractionalNumberWidthZoom": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "n",
+            "widthBucket": {
+              "origin": 12.345678901234567,
+              "width": 0.020017160549382716,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "n_bucket",
+        "direction": "ASC"
+      }
+    },
+    "seriesNaNUp": {
+      "experiment": "nans",
+      "columns": ["id", "v"],
+      "filters": [
+        {
+          "column": "id",
+          "operator": "greater_than",
+          "value": 2
+        }
+      ],
+      "ordering": {
+        "column": "v",
+        "direction": "ASC"
+      },
+      "limit": 3
+    },
+    "seriesNaNDown": {
+      "experiment": "nans",
+      "columns": ["id", "v"],
+      "filters": [
+        {
+          "column": "id",
+          "operator": "greater_than",
+          "value": 2
+        }
+      ],
+      "ordering": {
+        "column": "v",
+        "direction": "DESC"
+      },
+      "limit": 3
     }
   }
 }

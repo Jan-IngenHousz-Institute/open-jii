@@ -295,6 +295,50 @@
       ]
     ]
   },
+  "fractionalNumberWidthZoom": {
+    "columns": [
+      "n_bucket",
+      "count_count"
+    ],
+    "types": [
+      "DECIMAL(33,0)",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        null,
+        1
+      ],
+      [
+        -567.0,
+        1
+      ],
+      [
+        -517.0,
+        2
+      ],
+      [
+        -467.0,
+        1
+      ],
+      [
+        -417.0,
+        1
+      ],
+      [
+        -367.0,
+        1
+      ],
+      [
+        -268.0,
+        1
+      ],
+      [
+        -118.0,
+        5
+      ]
+    ]
+  },
   "fractionalTimeWidth": {
     "columns": [
       "zoom_bucket",
@@ -1374,6 +1418,54 @@
         null,
         null,
         1
+      ]
+    ]
+  },
+  "seriesNaNDown": {
+    "columns": [
+      "id",
+      "v"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        6,
+        "NaN"
+      ],
+      [
+        4,
+        2.0
+      ],
+      [
+        3,
+        1.0
+      ]
+    ]
+  },
+  "seriesNaNUp": {
+    "columns": [
+      "id",
+      "v"
+    ],
+    "types": [
+      "BIGINT",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        5,
+        null
+      ],
+      [
+        3,
+        1.0
+      ],
+      [
+        4,
+        2.0
       ]
     ]
   },
