@@ -321,6 +321,21 @@ describe("ServingStoreAdapter", () => {
     expect(joinedCountCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
   });
 
+  it("sorts a payload read whole by its typed value, never its JSON", () => {
+    const query = adapter.buildExperimentQuery({
+      tableName: "mac3",
+      tableType: "macro",
+      experimentId: "e1",
+      variants: [{ columnName: "macro_output", schema: "DOUBLE", suffix: "output" }],
+      ordering: { column: "macro_output", direction: "ASC" },
+      limit: 10,
+    });
+
+    assertSuccess(query);
+    expect(query.value.sql).toContain("ORDER BY isNaN(");
+    expect(query.value.sql).not.toMatch(/isNaN\(macro_output\)|ORDER BY macro_output /);
+  });
+
   it("counts a read as text", () => {
     const count = adapter.countQuery({ sql: "SELECT 1", columns: [] });
 
@@ -838,6 +853,39 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.rows).toEqual([["1.5E-4", "1.2345678E7"]]);
+  });
+
+  it("sorts a page by a payload read whole as numbers", async () => {
+    const values = [2.5, 10, 1.5];
+    await admin.insert({
+      table: "macro_results",
+      values: values.map((value, index) => ({
+        experiment_id: "whole",
+        id: 40 + index,
+        raw_id: 40 + index,
+        timestamp: "2026-09-14 16:56:31.972123",
+        macro_id: "mac3",
+        macro_output: { _value: value },
+        macro_output_text: String(value),
+        questions_data: {},
+        annotations: [],
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-14 17:07:00",
+      })),
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      tableName: "mac3",
+      tableType: "macro",
+      experimentId: "whole",
+      variants: [{ columnName: "macro_output", schema: "DOUBLE", suffix: "output" }],
+      columns: ["id"],
+      ordering: { column: "macro_output", direction: "ASC" },
+      limit: 10,
+    });
+
+    expect(data.rows).toEqual([["42"], ["40"], ["41"]]);
   });
 
   it("reads a payload that is no object whole", async () => {

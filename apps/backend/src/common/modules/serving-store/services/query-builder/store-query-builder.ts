@@ -1052,7 +1052,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return `indexOf(${ORDER_IDS}, ${clientId}) ${direction} ${nulls}, ${label} ${direction} ${nulls}`;
     }
 
-    const target = this.columnExpression(column);
+    // A payload read whole sorts by its typed value, as the warehouse sorts its projected column.
+    const target = this.projectedExpression(column);
     const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
     const rowId =
       isRowOrdered && !this.isDistinct && mode.rowId
