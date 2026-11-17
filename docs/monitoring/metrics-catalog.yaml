@@ -2389,6 +2389,8 @@ metrics:
       the flow runs batches back to back, having caught up with its trigger interval, and more load
       means longer waits. An hour reaches the volume about an hour after it closes. In prod's busiest
       hour of 28 October 2026 the experiment table's flow spent 18.5% of it in batches, cleaning 16.7%.
+      A larger fleet since 13 November 2026 holds prod's quiet hours near 35%, and a device uploading
+      what it buffered fills an hour by itself, so the rule waits for three busy hours in a row.
 
   - num: 128
     id: flow-restarts

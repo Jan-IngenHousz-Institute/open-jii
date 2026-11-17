@@ -5211,7 +5211,8 @@ resource "grafana_rule_group" "lakehouse_freshness" {
 
   # Catalog entry 127. Published per pipeline and flow, once per hour the driver logged, and an
   # hour reaches the volume about an hour after it closes, so the window reaches back five hours.
-  # A reading stays the latest for about an hour, so one busy hour fires it once.
+  # A reading stays the latest for about an hour, so the three hours pending take about three busy
+  # hours in a row, and a burst of one or two stays quiet.
   rule {
     name      = "Pipeline Flow Busy"
     condition = "C"
@@ -5280,10 +5281,10 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "0m"
+    for            = "3h"
 
     annotations = {
-      description      = "A flow that streamed measurements wait on spent over 80% of an hour in batches, so it runs them back to back and any more load makes measurements wait longer."
+      description      = "For three hours in a row, a flow that streamed measurements wait on spent over 80% of each hour in batches, so it runs them back to back and any more load makes measurements wait longer."
       summary          = "A pipeline flow is close to falling behind"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/flow-busy.md"
       __dashboardUid__ = local.heartbeat_daily_uid
