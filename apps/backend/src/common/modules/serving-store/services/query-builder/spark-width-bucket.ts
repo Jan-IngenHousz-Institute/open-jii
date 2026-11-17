@@ -45,10 +45,11 @@ export class SparkWidthBucket {
     }
 
     // Spark rounds the exact quotient half up at its scale. The store's division cuts at the
-    // dividend's scale, so it divides at one digit more, which rounds the same.
+    // dividend's scale, so it divides at one digit more, which rounds the same, and refuses a
+    // divisor with more decimals than the dividend.
     const [, scale] = this.division.quotient;
     const [, widthScale] = this.division.width;
-    const cut = Math.max(scale + 1, this.division.difference[1]);
+    const cut = Math.max(scale + 1, this.division.difference[1], widthScale);
     const difference = `toDecimal256(${position}, ${cut}) - toDecimal256('${origin}', ${cut})`;
     const quotient = `divide(${difference}, toDecimal256('${width}', ${widthScale}))`;
     return `toInt64(floor(round(${quotient}, ${scale})))`;
