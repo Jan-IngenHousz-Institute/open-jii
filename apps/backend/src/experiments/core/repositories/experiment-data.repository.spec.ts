@@ -3392,6 +3392,38 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
+    it("reads distinct annotations without the phone's column, which nothing merges there", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success(["id", "annotations", "payload_annotations"]),
+      );
+      const build = vi
+        .spyOn(databricksPort, "buildExperimentQuery")
+        .mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [column("annotations", 0)],
+          rows: [["[]"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getDistinctColumnValues({
+        experimentId: experiment.id,
+        experiment,
+        tableName: "raw_data",
+        column: "annotations",
+        limit: 10,
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(build).toHaveBeenCalledWith(
+        expect.objectContaining({ columns: ["annotations"], distinct: true }),
+      );
+    });
+
     it("adds later ones from Postgres to a store page's", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));

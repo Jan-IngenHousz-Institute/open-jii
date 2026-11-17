@@ -949,7 +949,9 @@ export class ExperimentDataRepository {
   ): Promise<Result<TableQuery>> {
     const { filters, aggregation, distinct, ordering, limit, offset } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
-    const columns = this.withPhoneAnnotations(shape, options.columns);
+    // Only a read of rows is merged, so only it needs the phone's annotations beside the column.
+    const readsRows = !distinct && aggregation === undefined;
+    const columns = readsRows ? this.withPhoneAnnotations(shape, options.columns) : options.columns;
 
     let effectiveOrdering = ordering;
     const questionType =
