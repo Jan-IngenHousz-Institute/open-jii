@@ -91,6 +91,10 @@ DRIVER_OLD_GEN_METRIC = "DriverOldGenAfterFullGcPercent"
 # started in it, per Pipeline and Flow. Near 100 a flow runs its batches back to back.
 FLOW_BUSY_METRIC = "FlowBusyPercent"
 FLOW_RESTARTS_METRIC = "FlowRestarts"
+# The p95 of a flow's batch durations over that hour, in seconds, per Pipeline and Flow. Once batches
+# run back to back a measurement waits up to about two of them, so this grows when a flow falls behind
+# and stays flat when it only runs more often.
+FLOW_BATCH_P95_METRIC = "FlowBatchP95Seconds"
 # Clusters a pipeline created in the last closed hour, per Pipeline. A pipeline that keeps replacing
 # its cluster rotates no hourly log to read, so its cluster ids are all that show it.
 PIPELINE_CLUSTER_STARTS_METRIC = "PipelineClusterStarts"

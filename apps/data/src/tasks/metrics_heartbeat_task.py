@@ -38,6 +38,7 @@ from openjii.heartbeat import (
     DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
+    FLOW_BATCH_P95_METRIC,
     FLOW_BATCHES_DETAIL,
     FLOW_BUSY_METRIC,
     FLOW_RESTARTS_METRIC,
@@ -617,8 +618,9 @@ def collect_driver_heap(now: datetime) -> list[dict]:
 
 
 def collect_flow_batches(now: datetime) -> list[dict]:
-    """How much of its latest logged hour each watched flow spent in batches and how many of its runs
-    started, stamped at the hour's start, with each flow's batch count and p95 in the roster."""
+    """How much of its latest logged hour each watched flow spent in batches, their p95 and how many of its
+    runs started, stamped at the hour's start, with each flow's batch count in the roster. A flow that ran
+    no batch has no p95, so it publishes none."""
     since = (now - FLOW_HOUR_MAX_AGE).timestamp()
     records = []
     roster = []
@@ -642,6 +644,18 @@ def collect_flow_batches(now: datetime) -> list[dict]:
                     FLOW_RESTARTS_METRIC, flow.restarts, DATA_NAMESPACE, logged.hour, ENVIRONMENT, "Count", dimensions
                 )
             )
+            if flow.p95_seconds is not None:
+                records.append(
+                    observation(
+                        FLOW_BATCH_P95_METRIC,
+                        flow.p95_seconds,
+                        DATA_NAMESPACE,
+                        logged.hour,
+                        ENVIRONMENT,
+                        "Seconds",
+                        dimensions,
+                    )
+                )
             roster.append({"pipeline": pipeline, "hour": logged.hour.isoformat(), **asdict(flow)})
 
     records.append(detail(FLOW_BATCHES_DETAIL, roster))
