@@ -196,6 +196,27 @@ describe("zExperimentCustomMetadataPayload", () => {
     );
   });
 
+  it("measures the 5 MB in UTF-8 bytes, so three-byte characters reach it at a third the length", () => {
+    const encoder = new TextEncoder();
+    const withPlot = (plot: string) => ({
+      ...validBlob,
+      rows: [{ _id: "row_1", plot, treatment: "control" }],
+    });
+    const overhead = encoder.encode(
+      JSON.stringify(zExperimentCustomMetadataPayload.parse(withPlot(""))),
+    ).length;
+    const fill = 5_000_000 - overhead;
+    const atLimit = withPlot("界".repeat(Math.floor(fill / 3)) + "x".repeat(fill % 3));
+    const overLimit = withPlot(`${atLimit.rows[0].plot}x`);
+
+    expect(zExperimentCustomMetadataPayload.safeParse(atLimit).success).toBe(true);
+    const result = zExperimentCustomMetadataPayload.safeParse(overLimit);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({ path: ["rows"], message: "Metadata cannot be larger than 5 MB" }),
+    ]);
+  });
+
   it("accepts the text of an escape, which is no NUL character", () => {
     const blob = { ...validBlob, name: "Plot \\u0000 map" };
 
