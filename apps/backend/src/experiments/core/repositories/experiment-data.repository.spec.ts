@@ -3610,6 +3610,29 @@ describe("ExperimentDataRepository", () => {
       ]);
     });
 
+    it("leaves the annotations an aggregate groups by as the warehouse read them", async () => {
+      const uploadId = faker.string.uuid();
+      const uploadTable = { ...table, identifier: uploadId, tableType: "upload" as const };
+      await annotate(uploadId);
+      const grouped = JSON.stringify([{ id: "grouped" }]);
+      warehouseAnswers(["id", "annotations"], [["1", grouped]], [uploadTable]);
+      const log = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+      const result = await repository.getTableData({
+        experimentId: experiment.id,
+        experiment,
+        tableName: uploadId,
+        aggregation: { groupBy: [{ column: "id" }, { column: "annotations" }] },
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(result.value[0].data?.rows).toEqual([{ id: "1", annotations: grouped }]);
+      expect(log).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: "Experiment data read", mode: "aggregation" }),
+      );
+    });
+
     it("asks Postgres nothing for an aggregate", async () => {
       const lookup = vi.spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findOnRows");
       warehouseAnswers(["n"], [["1"]]);

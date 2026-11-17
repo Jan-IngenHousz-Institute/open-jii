@@ -1373,6 +1373,12 @@ export class ExperimentDataRepository {
     shape: TableShape,
     data: SchemaData,
   ): Promise<Result<SchemaData>> {
+    // An aggregate row stands for many rows, so annotations it groups by stay as they were read.
+    if (read.mode === "aggregation") {
+      this.logRead(read, data);
+      return success(data);
+    }
+
     const [filled, annotationsMs] = await this.measure(() =>
       this.annotationMerger.merge({
         experimentId: read.experimentId,
