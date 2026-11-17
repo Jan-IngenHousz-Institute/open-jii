@@ -698,7 +698,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
     );
   });
 
-  it("gives no correlation for a constant series, where Spark has none to give", async () => {
+  it("gives null for a constant series, where the warehouse fails the read", async () => {
     const row = {
       ...emptyMacroRow("constant"),
       timestamp: "2026-09-07 00:00:00",
