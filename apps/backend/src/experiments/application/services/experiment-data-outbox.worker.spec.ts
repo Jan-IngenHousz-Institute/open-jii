@@ -201,7 +201,7 @@ describe("ExperimentDataOutboxWorker", () => {
       const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
       vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
       vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
-      const write = vi.spyOn(store(), "writeSheets").mockResolvedValue(success(undefined));
+      const write = vi.spyOn(store(), "writeSheets").mockResolvedValue(success("written"));
       const remove = vi.spyOn(store(), "removeSheets").mockResolvedValue(success(undefined));
       const sheet: MetadataSheetRecord = {
         id: faker.string.uuid(),

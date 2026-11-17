@@ -77,10 +77,17 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
     );
   }
 
-  async writeSheets(sheets: MetadataSheetRecord[], claimedAt: Date): Promise<Result<void>> {
+  async writeSheets(
+    sheets: MetadataSheetRecord[],
+    claimedAt: Date,
+    canContinue: () => boolean,
+  ): Promise<Result<"written" | "stopped">> {
     const held = await this.heldIdentifiers(sheets);
     if (held.isFailure()) {
       return held;
+    }
+    if (!canContinue()) {
+      return success("stopped");
     }
 
     const rows = sheets.flatMap((sheet) => {
@@ -91,7 +98,8 @@ export class ServingStoreCopiesAdapter implements ServingStoreCopiesPort {
         .map((identifier) => this.tombstone(sheet, identifier, claimedAt));
       return [...current, ...removed];
     });
-    return this.client.insert("metadata_rows", rows);
+    const inserted = await this.client.insert("metadata_rows", rows);
+    return inserted.map((): "written" => "written");
   }
 
   async removeSheets(gone: CopyKey[], claimedAt: Date): Promise<Result<void>> {

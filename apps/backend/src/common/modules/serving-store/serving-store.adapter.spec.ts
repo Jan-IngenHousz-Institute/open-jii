@@ -1427,7 +1427,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     it("keeps a sheet's current rows, so the rows an edit dropped and a deleted sheet read no more", async () => {
-      assertSuccess(await copies.writeSheets([sheet], claim(1)));
+      assertSuccess(await copies.writeSheets([sheet], claim(1), () => true));
       assertSuccess(
         await copies.writeSheets(
           [
@@ -1437,6 +1437,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
             },
           ],
           claim(2),
+          () => true,
         ),
       );
 

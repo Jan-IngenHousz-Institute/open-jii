@@ -44,7 +44,7 @@ describe("ServingStoreCopiesAdapter", () => {
   it("writes each identifier's first row, its fields without the row id or the identifier", async () => {
     const { adapter, insert } = adapterHolding();
 
-    assertSuccess(await adapter.writeSheets([sheet(plots)], claimed));
+    assertSuccess(await adapter.writeSheets([sheet(plots)], claimed, () => true));
 
     expect(insert).toHaveBeenCalledWith("metadata_rows", [
       {
@@ -67,7 +67,7 @@ describe("ServingStoreCopiesAdapter", () => {
       { sheet_id: "s1", identifier: "B2" },
     ]);
 
-    assertSuccess(await adapter.writeSheets([sheet(plots)], claimed));
+    assertSuccess(await adapter.writeSheets([sheet(plots)], claimed, () => true));
 
     const [, written] = insert.mock.calls[0];
     expect(written).toContainEqual(
@@ -89,7 +89,7 @@ describe("ServingStoreCopiesAdapter", () => {
       rows: [{ _id: "r1", plot: "plot-0", soil: "clay" }],
     };
 
-    assertSuccess(await adapter.writeSheets([sheet(kept)], claimed));
+    assertSuccess(await adapter.writeSheets([sheet(kept)], claimed, () => true));
 
     const [, written] = insert.mock.calls[0];
     expect(written).toHaveLength(100_000);
@@ -101,7 +101,7 @@ describe("ServingStoreCopiesAdapter", () => {
   it("copies no rows of a sheet saved before its shape was checked", async () => {
     const { adapter, insert } = adapterHolding();
 
-    assertSuccess(await adapter.writeSheets([sheet({ name: "Plots" })], claimed));
+    assertSuccess(await adapter.writeSheets([sheet({ name: "Plots" })], claimed, () => true));
 
     expect(insert).toHaveBeenCalledWith("metadata_rows", []);
   });
@@ -170,11 +170,22 @@ describe("ServingStoreCopiesAdapter", () => {
     ]);
   });
 
+  it("starts no insert once the claim's deadline passed while the held rows were read", async () => {
+    const { adapter, insert, rows } = adapterHolding([{ sheet_id: "s1", identifier: "B2" }]);
+
+    const result = await adapter.writeSheets([sheet(plots)], claimed, () => false);
+
+    assertSuccess(result);
+    expect(result.value).toBe("stopped");
+    expect(rows).toHaveBeenCalledTimes(1);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
   it("writes nothing of a sheet when the store's held rows cannot be read", async () => {
     const { adapter, insert, rows } = adapterHolding();
     rows.mockResolvedValue(failure(AppError.internal("The serving store could not take the copy")));
 
-    const result = await adapter.writeSheets([sheet(plots)], claimed);
+    const result = await adapter.writeSheets([sheet(plots)], claimed, () => true);
 
     assertFailure(result);
     expect(insert).not.toHaveBeenCalled();

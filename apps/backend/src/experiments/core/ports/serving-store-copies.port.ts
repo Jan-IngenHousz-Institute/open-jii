@@ -18,8 +18,15 @@ export interface ServingStoreCopiesPort {
 
   removeAnnotations(gone: CopyKey[], claimedAt: Date): Promise<Result<void>>;
 
-  /** Writes each sheet's rows and removes the rows an edit took out of it. */
-  writeSheets(sheets: MetadataSheetRecord[], claimedAt: Date): Promise<Result<void>>;
+  /**
+   * Writes each sheet's rows and removes the rows an edit took out of it, starting no insert once
+   * `canContinue` says no.
+   */
+  writeSheets(
+    sheets: MetadataSheetRecord[],
+    claimedAt: Date,
+    canContinue: () => boolean,
+  ): Promise<Result<"written" | "stopped">>;
 
   removeSheets(gone: CopyKey[], claimedAt: Date): Promise<Result<void>>;
 }
