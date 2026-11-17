@@ -285,10 +285,10 @@ describe("ExperimentDataOutboxRepository", () => {
       // Each handle pools one connection, so this claim's statement runs inside the open
       // transaction: it reads before the change commits, and its own claim commits last.
       await reclaimer.database.execute(sql`BEGIN`);
-      const reclaimed = await new ExperimentDataOutboxRepository(reclaimer.database).claimDue(
-        LEASE_MS,
-        10,
-      );
+      const reclaimed = await new ExperimentDataOutboxRepository(
+        reclaimer.database,
+        testApp.module.get(SERVING_STORE_COPIES_PORT),
+      ).claimDue(LEASE_MS, 10);
       commit();
       await change;
 
