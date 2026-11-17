@@ -324,8 +324,11 @@ describe("FlagsService", () => {
         mockGetPostHogServerClient.mockReturnValue(mockClient);
 
         await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "empty-user");
-        await vi.advanceTimersByTimeAsync(10_001);
+        await vi.advanceTimersByTimeAsync(9_000);
+        await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "empty-user");
+        expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(1);
 
+        await vi.advanceTimersByTimeAsync(1_001);
         await expect(
           service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "empty-user"),
         ).resolves.toBe(true);
