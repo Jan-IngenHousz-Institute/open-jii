@@ -199,7 +199,7 @@ describe("ExperimentDataOutboxWorker", () => {
 
     it("copies a sheet to the store and removes the store's copy of a gone one", async () => {
       const warehouse = testApp.module.get(ExperimentMetadataWarehouseRepository);
-      vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+      vi.spyOn(warehouse, "merge").mockResolvedValue(success("merged"));
       vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
       const write = vi.spyOn(store(), "writeSheets").mockResolvedValue(success("written"));
       const remove = vi.spyOn(store(), "removeSheets").mockResolvedValue(success(undefined));
