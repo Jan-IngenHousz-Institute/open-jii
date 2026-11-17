@@ -947,8 +947,10 @@ module "centrum_pipeline" {
 
   node_type_id        = "r6id.large"
   driver_node_type_id = "r7i.xlarge"
-  num_workers         = 1
-  policy_id           = module.node_cluster_policy.policy_id
+  # Prod's minimum. On one worker, Kinesis buffering and gold's flows held both task slots and the
+  # serving store feed's batches waited for them from 50 messages a second.
+  num_workers = 2
+  policy_id   = module.node_cluster_policy.policy_id
 
   spark_conf = {
     # Streaming skips AQE, so shuffles run at one per worker core.
