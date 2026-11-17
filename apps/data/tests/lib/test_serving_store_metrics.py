@@ -129,7 +129,7 @@ _TABLES = {
     """,
 }
 
-# The registry the backend will read the families from, as experiment_devices holds it.
+# Each client's family in the device registry, as experiment_devices holds it.
 _REGISTRY = {"c1": "multispeq", "c2": "ambit"}
 
 _GOLD_MEASUREMENTS = """
