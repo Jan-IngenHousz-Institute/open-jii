@@ -80,5 +80,6 @@ databricks api get "/api/2.0/pipelines/<pipeline id>/events?max_results=250&orde
 ```
 
 Each line is one flow in one update and the refresh technique it chose, such as
-`MAINTENANCE_TYPE_NO_OP` or `MAINTENANCE_TYPE_COMPLETE_RECOMPUTE`. A page holds at most 250 events;
-pass the response's `next_page_token` as `page_token` for the next.
+`MAINTENANCE_TYPE_NO_OP` or `MAINTENANCE_TYPE_COMPLETE_RECOMPUTE`. A page holds at most 250 events.
+For the next, pass the response's `next_page_token` as `page_token` with `max_results` alone: the
+API refuses a page token beside `order_by` or `filter`.
