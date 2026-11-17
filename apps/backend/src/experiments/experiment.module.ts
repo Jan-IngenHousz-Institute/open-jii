@@ -365,6 +365,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentRepository,
     ExperimentDashboardRepository,
     ExperimentVisualizationRepository,
+    ExperimentAnnotationsRepository,
     ExperimentDataOutboxRepository,
     ExperimentDataOutboxWorker,
   ],

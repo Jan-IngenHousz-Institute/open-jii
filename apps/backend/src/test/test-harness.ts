@@ -17,6 +17,7 @@ import type { DatabaseInstance } from "@repo/database";
 import {
   calibrationDefinitions,
   calibrationRuns,
+  experimentAnnotations,
   experimentMembers,
   experimentLocations,
   experiments,
@@ -452,6 +453,23 @@ export class TestHarness {
     // creator owns the personal org above), and seeding one here would build a
     // state the create path cannot produce.
     return { experiment };
+  }
+
+  /** A comment by `createdBy` on a raw data row of the experiment. */
+  public async createAnnotation(data: { experimentId: string; createdBy: string }) {
+    const [annotation] = await this.database
+      .insert(experimentAnnotations)
+      .values({
+        id: faker.string.uuid(),
+        experimentId: data.experimentId,
+        tableName: "raw_data",
+        rowId: "1",
+        type: "comment",
+        contentText: "Leaf was wet",
+        createdBy: data.createdBy,
+      })
+      .returning();
+    return annotation;
   }
 
   /**

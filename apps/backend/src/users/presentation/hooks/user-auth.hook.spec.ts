@@ -6,6 +6,7 @@ import type { MockInstance } from "vitest";
 
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import { ExperimentDataOutboxWorker } from "../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentAnnotationsRepository } from "../../../experiments/core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../../experiments/core/repositories/experiment-data-outbox.repository";
 import type { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import type { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
@@ -55,6 +56,7 @@ describe("UserAuthHook", () => {
       providers: [
         ReactivateProfileUseCase,
         { provide: UserRepository, useValue: {} },
+        { provide: ExperimentAnnotationsRepository, useValue: {} },
         { provide: ExperimentDataOutboxRepository, useValue: {} },
         { provide: ExperimentDataOutboxWorker, useValue: {} },
       ],

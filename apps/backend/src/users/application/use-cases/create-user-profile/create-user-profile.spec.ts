@@ -139,6 +139,86 @@ describe("CreateUserProfileUseCase", () => {
       expect(nudge).toHaveBeenCalledTimes(1);
     });
 
+    async function annotatedByUserAndAnother(userId: string) {
+      const otherId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Shade trial",
+        userId: otherId,
+      });
+      const mine = await testApp.createAnnotation({
+        experimentId: experiment.id,
+        createdBy: userId,
+      });
+      await testApp.createAnnotation({ experimentId: experiment.id, createdBy: otherId });
+      return mine;
+    }
+
+    const owedAnnotations = async () =>
+      (await owed()).filter(({ recordType }) => recordType === "annotation");
+
+    it.each([
+      ["deactivates", true, false],
+      ["activates", false, true],
+    ])(
+      "owes the copy of every annotation the author made when an edit %s the profile, and no one else's",
+      async (_, before, after) => {
+        const userId = await testApp.createTestUser({ activated: before });
+        const mine = await annotatedByUserAndAnother(userId);
+
+        assertSuccess(
+          await useCase.execute(
+            { firstName: "Ada", lastName: "Lovelace", activated: after },
+            userId,
+          ),
+        );
+
+        expect(await owedAnnotations()).toEqual([
+          expect.objectContaining({
+            recordId: mine.id,
+            experimentId: mine.experimentId,
+            destination: "lakehouse",
+          }),
+        ]);
+      },
+    );
+
+    it.each([
+      ["names the same activation", { activated: true }],
+      ["leaves the activation out", {}],
+    ])("owes no annotation for an edit that %s", async (_, activation) => {
+      await annotatedByUserAndAnother(testUserId);
+
+      assertSuccess(
+        await useCase.execute(
+          { firstName: "Ada", lastName: "Lovelace", ...activation },
+          testUserId,
+        ),
+      );
+
+      expect(await owedAnnotations()).toEqual([]);
+    });
+
+    it("keeps the profile active when the copies its deactivation owes cannot be written", async () => {
+      await annotatedByUserAndAnother(testUserId);
+      // The rows land, and the failure after them takes them back with the edit.
+      const real = new ExperimentDataOutboxRepository(testApp.database);
+      const outbox = testApp.module.get(ExperimentDataOutboxRepository);
+      vi.spyOn(outbox, "owe").mockImplementation(async (tx, records) => {
+        await real.owe(tx, records);
+        throw new Error("outbox unavailable");
+      });
+
+      assertFailure(
+        await useCase.execute(
+          { firstName: "Ada", lastName: "Lovelace", activated: false },
+          testUserId,
+        ),
+      );
+
+      expect((await profileOf(testUserId)).activated).toBe(true);
+      expect(await owed()).toEqual([]);
+    });
+
     it("keeps the old name when the copy an edit owes cannot be written", async () => {
       const before = await profileOf(testUserId);
       vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(

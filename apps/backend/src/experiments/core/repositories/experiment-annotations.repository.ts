@@ -13,6 +13,7 @@ import type {
   AnnotationRecord,
   UpdateAnnotationDto,
 } from "../models/experiment-data-annotation.model";
+import type { OwedRecord } from "../models/experiment-data-outbox.model";
 
 // Ten columns a record, well inside the 65,535 parameters a Postgres statement takes.
 const INSERT_CHUNK = 1000;
@@ -108,6 +109,26 @@ export class ExperimentAnnotationsRepository {
     }
 
     return ids;
+  }
+
+  /**
+   * Every annotation one person made, as the copies it is owed, read in the caller's transaction.
+   * Each copy carries its author's name as it read when copied, so a change to how the name reads
+   * owes them all again.
+   */
+  async findOwedByAuthor(tx: DbOrTx, authorId: string): Promise<OwedRecord[]> {
+    const annotations = await tx
+      .select({ id: experimentAnnotations.id, experimentId: experimentAnnotations.experimentId })
+      .from(experimentAnnotations)
+      .where(eq(experimentAnnotations.createdBy, authorId));
+
+    return annotations.map(
+      ({ id, experimentId }): OwedRecord => ({
+        recordType: "annotation",
+        recordId: id,
+        experimentId,
+      }),
+    );
   }
 
   /** The annotations among `ids` that still exist, each with its author's name as it reads now. */

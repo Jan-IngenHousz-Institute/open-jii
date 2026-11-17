@@ -3,6 +3,7 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { failure, AppError, success } from "../../../../common/utils/fp-utils";
 import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentAnnotationsRepository } from "../../../../experiments/core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { UserDto, CreateUserProfileDto, UpdateUserDto } from "../../../core/models/user.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
@@ -16,6 +17,7 @@ export class CreateUserProfileUseCase {
   constructor(
     private readonly userRepository: UserRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly annotationsRepository: ExperimentAnnotationsRepository,
     private readonly outboxRepository: ExperimentDataOutboxRepository,
     private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
@@ -47,10 +49,20 @@ export class CreateUserProfileUseCase {
         return existingProfileResult;
       }
 
+      const existingProfile = existingProfileResult.value;
+      const changesActivation =
+        existingProfile !== null &&
+        data.activated !== undefined &&
+        data.activated !== existingProfile.activated;
+
       const userProfileResult = await this.userRepository.transaction(async (tx) => {
         const profile = await this.userRepository.createOrUpdateUserProfile(tx, userId, data);
+        const annotations = changesActivation
+          ? await this.annotationsRepository.findOwedByAuthor(tx, userId)
+          : [];
         await this.outboxRepository.owe(tx, [
           { recordType: "contributor", recordId: userId, experimentId: null },
+          ...annotations,
         ]);
         return profile;
       });
