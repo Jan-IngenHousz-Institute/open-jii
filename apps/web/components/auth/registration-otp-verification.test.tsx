@@ -53,11 +53,13 @@ function Wrapper({
   pendingEmail = "user@example.com",
   isPending = false,
   onEditEmail = vi.fn(),
+  canResendCode = true,
   onComplete = vi.fn(),
 }: {
   pendingEmail?: string;
   isPending?: boolean;
   onEditEmail?: () => void;
+  canResendCode?: boolean;
   onComplete?: () => void;
 }) {
   const form = useForm<Registration>({
@@ -73,6 +75,7 @@ function Wrapper({
           isPending={isPending}
           setIsPending={vi.fn()}
           onEditEmail={onEditEmail}
+          canResendCode={canResendCode}
           onComplete={onComplete}
           OTP_LENGTH={6}
         />
@@ -149,6 +152,12 @@ describe("RegistrationOtpVerification", () => {
     const resendBtn = screen.getByRole("button", { name: /resend code in \d+ seconds/i });
     expect(resendBtn).toBeInTheDocument();
     expect(resendBtn).toBeDisabled();
+  });
+
+  it("offers no resend once the address is confirmed", () => {
+    render(<Wrapper canResendCode={false} />);
+
+    expect(screen.queryByRole("button", { name: /resend code/i })).toBeNull();
   });
 
   describe("resending the code", () => {

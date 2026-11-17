@@ -227,7 +227,7 @@
     "promptSuccessDescription": "Kies de volgende keer \"Inloggen met een passkey\" of selecteer hem uit de suggesties bij het e-mailveld.",
     "promptDone": "Klaar",
     "added": "Toegevoegd",
-    "onlyWayIn": "Dit is je enige manier om in te loggen. Koppel eerst GitHub of ORCID."
+    "onlyWayIn": "Dit is je enige manier om in te loggen. Voeg eerst nog een passkey toe of koppel GitHub of ORCID."
   },
   "signInMethods": {
     "title": "Hoe je inlogt",

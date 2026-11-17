@@ -22,6 +22,7 @@ export function RegistrationOtpVerification({
   isPending,
   setIsPending,
   onEditEmail,
+  canResendCode,
   onComplete,
   OTP_LENGTH,
 }: {
@@ -31,6 +32,8 @@ export function RegistrationOtpVerification({
   setIsPending: React.Dispatch<React.SetStateAction<boolean>>;
   /** Left out once the account has taken the address, which can no longer be changed here. */
   onEditEmail?: () => void;
+  /** False once the account has taken the address: there is no code left to send. */
+  canResendCode: boolean;
   onComplete: () => void;
   OTP_LENGTH: number;
 }) {
@@ -112,19 +115,21 @@ export function RegistrationOtpVerification({
           </FormItem>
         )}
       />
-      <div className="pt-2">
-        <Button
-          type="button"
-          variant="link"
-          size="inline"
-          className="text-sm font-medium"
-          onClick={handleResendCode}
-          disabled={countdown > 0 || isPending}
-          aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
-        >
-          {countdown > 0 ? `${t("auth.resendCode")} (${countdown}s)` : t("auth.resendCode")}
-        </Button>
-      </div>
+      {canResendCode && (
+        <div className="pt-2">
+          <Button
+            type="button"
+            variant="link"
+            size="inline"
+            className="text-sm font-medium"
+            onClick={handleResendCode}
+            disabled={countdown > 0 || isPending}
+            aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
+          >
+            {countdown > 0 ? `${t("auth.resendCode")} (${countdown}s)` : t("auth.resendCode")}
+          </Button>
+        </div>
+      )}
     </>
   );
 }
