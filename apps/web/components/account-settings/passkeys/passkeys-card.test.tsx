@@ -1,3 +1,4 @@
+import { createPasskey, createSession, createUseSessionResult } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,9 +21,7 @@ describe("PasskeysCard", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
-      typeof useSession
-    >);
+    vi.mocked(useSession).mockReturnValue(createUseSessionResult());
   });
 
   it("shows the create action when WebAuthn is supported", async () => {
@@ -178,15 +177,12 @@ describe("PasskeysCard", () => {
   });
 
   describe("the last way in", () => {
-    const ONE_PASSKEY = [
-      { id: "p1", name: "Work laptop", backedUp: true, createdAt: "2026-07-01T00:00:00.000Z" },
-    ];
+    const ONE_PASSKEY = [createPasskey({ id: "p1", name: "Work laptop" })];
 
     function signedInAs(user: { email: string; emailVerified: boolean }) {
-      vi.mocked(useSession).mockReturnValue({
-        data: { user, session: {} },
-        isPending: false,
-      } as ReturnType<typeof useSession>);
+      vi.mocked(useSession).mockReturnValue(
+        createUseSessionResult({ data: createSession({ user }) }),
+      );
     }
 
     beforeEach(() => {

@@ -48,6 +48,9 @@ export function RegistrationForm({
   const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  // The account takes the address once the code is accepted, and the library refuses to
+  // confirm it a second time, so a retry after a later step fails must skip the confirm.
+  const [confirmedEmail, setConfirmedEmail] = useState<string | null>(null);
   const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
   const updateUser = useUpdateUser();
@@ -139,6 +142,7 @@ export function RegistrationForm({
 
   function handleEditEmail() {
     setShowOTPInput(false);
+    setConfirmedEmail(null);
     form.setValue("otp", "");
   }
 
@@ -166,17 +170,20 @@ export function RegistrationForm({
 
       // User has entered OTP, verify it.
       if (needsEmailVerification && showOTPInput && data.otp) {
-        const result = await confirmEmailChange.mutateAsync({
-          newEmail: pendingEmail,
-          otp: data.otp,
-        });
-
-        if (result.error) {
-          form.setError("otp", {
-            type: "manual",
-            message: result.error.message,
+        if (confirmedEmail !== pendingEmail) {
+          const result = await confirmEmailChange.mutateAsync({
+            newEmail: pendingEmail,
+            otp: data.otp,
           });
-          return;
+
+          if (result.error) {
+            form.setError("otp", {
+              type: "manual",
+              message: result.error.message,
+            });
+            return;
+          }
+          setConfirmedEmail(pendingEmail);
         }
 
         // Profile already exists, just re-mark as registered.

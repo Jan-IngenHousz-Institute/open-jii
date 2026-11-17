@@ -3,6 +3,7 @@ import { BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { BASE_ERROR_CODES } from "better-auth";
 import { APIError, getSessionFromCtx } from "better-auth/api";
+import { z } from "zod";
 
 import { canRemoveSignInMethod } from "@repo/auth/sign-in-methods";
 import type { SignInMethodRemoval } from "@repo/auth/sign-in-methods";
@@ -15,6 +16,20 @@ function bodyId(body: unknown, field: string): string | null {
   if (typeof body !== "object" || body === null) return null;
   const value = (body as Record<string, unknown>)[field];
   return typeof value === "string" ? value : null;
+}
+
+// Postgres reads a uuid in upper case, in braces or without hyphens as the same id, while the
+// guard compares the canonical text. A spelling the comparison cannot see would pass the guard
+// and still reach the row, so only the canonical form, lower-case 8-4-4-4-12, is let through.
+const canonicalId = z.guid().lowercase();
+
+function refuseNonCanonicalId(id: string) {
+  if (!canonicalId.safeParse(id).success) {
+    throw new APIError("BAD_REQUEST", {
+      code: "INVALID_ID",
+      message: "The id is not in its canonical form",
+    });
+  }
 }
 
 /**
@@ -32,6 +47,7 @@ export class SignInMethodsAuthHook {
   async guardUnlinkAccount(ctx: AuthHookContext) {
     const accountId = bodyId(ctx.body, "accountId");
     if (!accountId) return;
+    refuseNonCanonicalId(accountId);
 
     await this.refuseLastSignInMethod(ctx, (methods) =>
       methods.accountIds.includes(accountId) ? { kind: "account", accountId } : null,
@@ -42,6 +58,7 @@ export class SignInMethodsAuthHook {
   async guardDeletePasskey(ctx: AuthHookContext) {
     const passkeyId = bodyId(ctx.body, "id");
     if (!passkeyId) return;
+    refuseNonCanonicalId(passkeyId);
 
     await this.refuseLastSignInMethod(ctx, (methods) =>
       methods.passkeyIds.includes(passkeyId) ? { kind: "passkey" } : null,

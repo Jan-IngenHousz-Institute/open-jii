@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import { authClient } from "@repo/auth/client";
 
+export const ACCOUNT_INFO_KEY = ["auth", "account-info"] as const;
+
 /**
  * Hook to read a connected account's provider profile, for the GitHub username that
  * `accounts` does not store. Better Auth fetches it live with the token stored on the
@@ -13,7 +15,7 @@ import { authClient } from "@repo/auth/client";
  */
 export function useAccountInfo(accountId: string, enabled: boolean) {
   return useQuery({
-    queryKey: ["auth", "account-info", accountId],
+    queryKey: [...ACCOUNT_INFO_KEY, accountId],
     queryFn: async () => unwrapAuthResult(await authClient.accountInfo({ query: { accountId } })),
     enabled,
     retry: false,

@@ -3,6 +3,8 @@ import { ORPCError } from "@orpc/client";
 import { useRouter } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { authClient } from "@repo/auth/client";
+
 import { RegistrationForm } from "../auth/registration-form";
 
 // --- Mocks ---
@@ -29,15 +31,6 @@ vi.mock("~/hooks/auth/useUpdateUser/useUpdateUser", () => ({
   useUpdateUser: () => ({
     mutateAsync: mockUpdateUserMutate,
   }),
-}));
-
-const mockSendOtpMutate = vi.fn();
-const mockVerifyOtpMutate = vi.fn();
-vi.mock("~/hooks/auth/useRequestEmailChange/useRequestEmailChange", () => ({
-  useRequestEmailChange: () => ({ mutateAsync: mockSendOtpMutate }),
-}));
-vi.mock("~/hooks/auth/useConfirmEmailChange/useConfirmEmailChange", () => ({
-  useConfirmEmailChange: () => ({ mutateAsync: mockVerifyOtpMutate }),
 }));
 
 const createUserProfileMock = vi.fn();
@@ -72,8 +65,6 @@ describe("RegistrationForm", () => {
       typeof useRouter
     >);
     mockUpdateUserMutate.mockResolvedValue({});
-    mockSendOtpMutate.mockResolvedValue({});
-    mockVerifyOtpMutate.mockResolvedValue({});
     createUserProfileMock.mockResolvedValue(undefined);
     mockSubscribeNewsletter.mockResolvedValue({ status: "subscribed" });
   });
@@ -505,11 +496,16 @@ describe("RegistrationForm", () => {
       await waitFor(() => {
         expect(screen.getByText("auth.checkEmail")).toBeInTheDocument();
       });
-      expect(mockSendOtpMutate).toHaveBeenCalledWith("user@example.com");
+      expect(authClient.emailOtp.requestEmailChange).toHaveBeenCalledWith({
+        newEmail: "user@example.com",
+      });
     });
 
     it("sets email field error when sendOtp fails", async () => {
-      mockSendOtpMutate.mockResolvedValue({ error: { message: "Too many requests" } });
+      vi.mocked(authClient.emailOtp.requestEmailChange).mockResolvedValue({
+        data: null,
+        error: { message: "Too many requests", status: 429, statusText: "Too Many Requests" },
+      });
 
       const user = userEvent.setup();
       render(<RegistrationForm termsData={termsData} emailOnly />);
@@ -581,7 +577,7 @@ describe("RegistrationForm", () => {
       submitForm();
 
       await waitFor(() =>
-        expect(mockVerifyOtpMutate).toHaveBeenCalledWith({
+        expect(authClient.emailOtp.changeEmail).toHaveBeenCalledWith({
           newEmail: "carol@uni.edu",
           otp: "123456",
         }),
@@ -591,7 +587,15 @@ describe("RegistrationForm", () => {
     });
 
     it("shows the server's answer to a wrong code and stays on the code step", async () => {
-      mockVerifyOtpMutate.mockResolvedValue({ error: { message: "Invalid OTP" } });
+      vi.mocked(authClient.emailOtp.changeEmail).mockResolvedValue({
+        data: null,
+        error: {
+          code: "INVALID_OTP",
+          message: "Invalid OTP",
+          status: 400,
+          statusText: "Bad Request",
+        },
+      });
       const user = userEvent.setup();
       render(<RegistrationForm termsData={termsData} emailOnly />);
       await reachCodeStep(user);
@@ -603,9 +607,37 @@ describe("RegistrationForm", () => {
       expect(mockUpdateUserMutate).not.toHaveBeenCalled();
     });
 
+    it("does not confirm the address again when only the profile step is retried", async () => {
+      createUserProfileMock.mockRejectedValueOnce(new Error("Network error"));
+      const user = userEvent.setup();
+      render(<RegistrationForm termsData={termsData} callbackUrl="/platform" />);
+      await user.type(screen.getByLabelText("registration.firstName"), "Carol");
+      await user.type(screen.getByLabelText("registration.lastName"), "Ndlovu");
+      await user.click(screen.getByRole("checkbox", { name: "registration.acceptTerms" }));
+      await reachCodeStep(user);
+
+      // A complete code submits the form by itself.
+      enterCode("123456");
+      await waitFor(() => expect(createUserProfileMock).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(toastMock).toHaveBeenCalledWith({ description: "registration.errorMessage" }),
+      );
+
+      submitForm();
+
+      await waitFor(() => expect(createUserProfileMock).toHaveBeenCalledTimes(2));
+      expect(authClient.emailOtp.changeEmail).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/platform"));
+    });
+
     it("shows that the address belongs to another account and sends no code", async () => {
-      mockSendOtpMutate.mockResolvedValue({
-        error: { message: "This email is already associated with another account" },
+      vi.mocked(authClient.emailOtp.requestEmailChange).mockResolvedValue({
+        data: null,
+        error: {
+          message: "This email is already associated with another account",
+          status: 400,
+          statusText: "Bad Request",
+        },
       });
       const user = userEvent.setup();
       render(<RegistrationForm termsData={termsData} emailOnly />);

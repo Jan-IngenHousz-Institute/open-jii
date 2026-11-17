@@ -1,3 +1,10 @@
+import {
+  createAccountInfo,
+  createLinkedAccount,
+  createPasskey,
+  createSession,
+  createUseSessionResult,
+} from "@/test/factories";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,28 +15,30 @@ import { SignInMethodsCard } from "./sign-in-methods-card";
 const EMAIL = "researcher@example.com";
 const ORCID_ID = "0000-0002-1825-0097";
 
-const GITHUB_ROW = { id: "github-row", providerId: "github", accountId: "583231" };
-const ORCID_ROW = { id: "orcid-row", providerId: "orcid", accountId: ORCID_ID };
+const GITHUB_ROW = createLinkedAccount({
+  id: "github-row",
+  providerId: "github",
+  accountId: "583231",
+});
+const ORCID_ROW = createLinkedAccount({
+  id: "orcid-row",
+  providerId: "orcid",
+  accountId: ORCID_ID,
+});
 
 function signedInAs(user: { email: string; emailVerified: boolean } | null) {
-  vi.mocked(useSession).mockReturnValue({
-    data: user ? { user, session: {} } : null,
-    isPending: false,
-  } as ReturnType<typeof useSession>);
+  vi.mocked(useSession).mockReturnValue(
+    createUseSessionResult({ data: user ? createSession({ user }) : null }),
+  );
 }
 
-function withAccounts(rows: (typeof GITHUB_ROW)[]) {
+function withAccounts(rows: ReturnType<typeof createLinkedAccount>[]) {
   vi.mocked(authClient.listAccounts).mockResolvedValue({ data: rows, error: null });
 }
 
 function withPasskeys(count: number) {
   vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({
-    data: Array.from({ length: count }, (_, index) => ({
-      id: `pk-${index}`,
-      name: `Key ${index}`,
-      backedUp: true,
-      createdAt: "2026-07-01T00:00:00.000Z",
-    })),
+    data: Array.from({ length: count }, () => createPasskey()),
     error: null,
   });
 }
@@ -138,7 +147,7 @@ describe("SignInMethodsCard", () => {
     it("names the GitHub account it is connected as", async () => {
       withAccounts([GITHUB_ROW]);
       vi.mocked(authClient.accountInfo).mockResolvedValue({
-        data: { user: {}, data: { login: "amensah" }, account: GITHUB_ROW },
+        data: createAccountInfo({ account: GITHUB_ROW, data: { login: "amensah" } }),
         error: null,
       });
 

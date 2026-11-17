@@ -141,8 +141,10 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
   });
 
   // Changing the address with a code is how an account with none, an ORCID sign-up whose email
-  // is private, gets one during registration. The user is read from the database, because the
-  // session's cached copy can be a day old. No line names the address.
+  // is private, gets one during registration, so only an account whose email is not an address
+  // may. `registered` is not consulted: a signed-in client can set it through /update-user. The
+  // user is read from the database, because the session's cached copy can be a day old. No line
+  // names the address.
   const refuseEmailChangeUnlessNeeded = createAuthMiddleware(async (ctx) => {
     const session = await getSessionFromCtx(ctx);
     if (!session) {
@@ -154,8 +156,7 @@ export function openJiiEmailOTP({ playReview, sendEmail }: OpenJiiEmailOTPOption
       return;
     }
 
-    const registered = "registered" in user && user.registered === true;
-    if (registered && z.email().safeParse(user.email).success) {
+    if (z.email().safeParse(user.email).success) {
       throw new APIError("FORBIDDEN", { message: "This account already has an email address" });
     }
 

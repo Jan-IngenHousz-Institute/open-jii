@@ -11,11 +11,19 @@ import {
 } from "@/hooks/sharing/sharing-query-keys";
 import { invitationsQueryKey } from "@/hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { orpc } from "@/lib/orpc";
-import { createExperimentAccess } from "@/test/factories";
+import {
+  createAccountInfo,
+  createExperimentAccess,
+  createLinkedAccount,
+  createPasskey,
+} from "@/test/factories";
 import { render, fireEvent, screen, waitFor } from "@/test/test-utils";
 import { renderHook, createTestQueryClient } from "@/test/test-utils";
 import { useEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { ACCOUNT_INFO_KEY } from "~/hooks/auth/useAccountInfo/useAccountInfo";
+import { LINKED_ACCOUNTS_KEY } from "~/hooks/auth/useLinkedAccounts/useLinkedAccounts";
+import { PASSKEYS_KEY } from "~/hooks/auth/usePasskeys/usePasskeys";
 
 import { authClient } from "@repo/auth/client";
 
@@ -124,6 +132,22 @@ describe("useSignOut", () => {
     // which leaves their data in place; the organizations that invited this account
     // are removed outright.
     expect(queryClient.getQueryData(myInvitationsKey)).toBeUndefined();
+  });
+
+  it("drops the signed-out person's linked accounts, their profiles and their passkeys", async () => {
+    vi.mocked(authClient.signOut).mockResolvedValue({ data: { success: true }, error: null });
+    const queryClient = createTestQueryClient();
+    const accountInfoKey = [...ACCOUNT_INFO_KEY, "github-row"];
+    queryClient.setQueryData(LINKED_ACCOUNTS_KEY, [createLinkedAccount()]);
+    queryClient.setQueryData(accountInfoKey, createAccountInfo());
+    queryClient.setQueryData(PASSKEYS_KEY, [createPasskey()]);
+
+    const { result } = renderHook(() => useSignOut(), { queryClient });
+    await result.current.mutateAsync();
+
+    expect(queryClient.getQueryData(LINKED_ACCOUNTS_KEY)).toBeUndefined();
+    expect(queryClient.getQueryData(accountInfoKey)).toBeUndefined();
+    expect(queryClient.getQueryData(PASSKEYS_KEY)).toBeUndefined();
   });
 
   it("drops the resource detail and list caches, which carry no principal at all", async () => {

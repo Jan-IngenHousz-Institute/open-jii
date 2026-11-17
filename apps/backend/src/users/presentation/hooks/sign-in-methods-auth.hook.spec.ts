@@ -9,6 +9,11 @@ import { SignInMethodsAuthHook } from "./sign-in-methods-auth.hook";
 const USER_ID = "user-1";
 const ORCID_ID = "0000-0002-1825-0097";
 const DAY_SECONDS = 60 * 60 * 24;
+const ORCID_ROW = "6f1c2b3a-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+const OTHER_ROW = "0b8e7f6a-5c4d-4e3f-9a2b-1c0d9e8f7a6b";
+const PASSKEY_1 = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+const PASSKEY_2 = "b1ffcd88-8d1a-4ad7-8c5e-5aa8ac270b22";
+const OTHER_PASSKEY = "c2a0de77-7e2b-4bc6-9d4f-499797160c33";
 
 function methods(overrides: Partial<UserSignInMethods>): UserSignInMethods {
   const passkeyIds = overrides.passkeyIds ?? [];
@@ -55,55 +60,55 @@ async function refusal(action: Promise<unknown>) {
 describe("SignInMethodsAuthHook", () => {
   describe("guardUnlinkAccount", () => {
     it("lets an account with a usable email disconnect its only provider", async () => {
-      const { hook, findSignInMethods } = hookWith(methods({ accountIds: ["orcid-row"] }));
+      const { hook, findSignInMethods } = hookWith(methods({ accountIds: [ORCID_ROW] }));
       signedIn(hook);
 
       await expect(
-        hook.guardUnlinkAccount(withBody({ accountId: "orcid-row" })),
+        hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW })),
       ).resolves.toBeUndefined();
       expect(findSignInMethods).toHaveBeenCalledWith(USER_ID);
     });
 
     it("refuses to disconnect the only way in", async () => {
-      const { hook } = hookWith(placeholder({ accountIds: ["orcid-row"] }));
+      const { hook } = hookWith(placeholder({ accountIds: [ORCID_ROW] }));
       signedIn(hook);
 
-      const error = await refusal(hook.guardUnlinkAccount(withBody({ accountId: "orcid-row" })));
+      const error = await refusal(hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW })));
 
       expect(error.status).toBe("BAD_REQUEST");
       expect(error.body?.code).toBe("LAST_SIGN_IN_METHOD");
     });
 
     it("lets a placeholder account with a passkey disconnect its only provider", async () => {
-      const { hook } = hookWith(placeholder({ accountIds: ["orcid-row"], passkeyIds: ["pk-1"] }));
+      const { hook } = hookWith(placeholder({ accountIds: [ORCID_ROW], passkeyIds: [PASSKEY_1] }));
       signedIn(hook);
 
       await expect(
-        hook.guardUnlinkAccount(withBody({ accountId: "orcid-row" })),
+        hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW })),
       ).resolves.toBeUndefined();
     });
 
     it("leaves an account that is not the person's to the library", async () => {
-      const { hook } = hookWith(placeholder({ accountIds: ["orcid-row"] }));
+      const { hook } = hookWith(placeholder({ accountIds: [ORCID_ROW] }));
       signedIn(hook);
 
       await expect(
-        hook.guardUnlinkAccount(withBody({ accountId: "someone-elses-row" })),
+        hook.guardUnlinkAccount(withBody({ accountId: OTHER_ROW })),
       ).resolves.toBeUndefined();
     });
 
     it("leaves a request with no session to the library", async () => {
-      const { hook, findSignInMethods } = hookWith(placeholder({ accountIds: ["orcid-row"] }));
+      const { hook, findSignInMethods } = hookWith(placeholder({ accountIds: [ORCID_ROW] }));
       vi.spyOn(hook as any, "getSessionFromCtx").mockResolvedValue(null);
 
       await expect(
-        hook.guardUnlinkAccount(withBody({ accountId: "orcid-row" })),
+        hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW })),
       ).resolves.toBeUndefined();
       expect(findSignInMethods).not.toHaveBeenCalled();
     });
 
     it("leaves a body without a string account id to the library", async () => {
-      const { hook, findSignInMethods } = hookWith(placeholder({ accountIds: ["orcid-row"] }));
+      const { hook, findSignInMethods } = hookWith(placeholder({ accountIds: [ORCID_ROW] }));
       signedIn(hook);
 
       await expect(hook.guardUnlinkAccount(withBody({ accountId: 7 }))).resolves.toBeUndefined();
@@ -115,7 +120,7 @@ describe("SignInMethodsAuthHook", () => {
       const { hook } = hookWith("fails");
       signedIn(hook);
 
-      const error = await refusal(hook.guardUnlinkAccount(withBody({ accountId: "orcid-row" })));
+      const error = await refusal(hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW })));
 
       expect(error.status).toBe("INTERNAL_SERVER_ERROR");
     });
@@ -123,43 +128,71 @@ describe("SignInMethodsAuthHook", () => {
 
   describe("guardDeletePasskey", () => {
     it("refuses to delete the only way in", async () => {
-      const { hook } = hookWith(placeholder({ passkeyIds: ["pk-1"] }));
+      const { hook } = hookWith(placeholder({ passkeyIds: [PASSKEY_1] }));
       signedIn(hook);
 
-      const error = await refusal(hook.guardDeletePasskey(withBody({ id: "pk-1" })));
+      const error = await refusal(hook.guardDeletePasskey(withBody({ id: PASSKEY_1 })));
 
       expect(error.status).toBe("BAD_REQUEST");
       expect(error.body?.code).toBe("LAST_SIGN_IN_METHOD");
     });
 
     it("lets an account with a usable email delete its only passkey", async () => {
-      const { hook } = hookWith(methods({ passkeyIds: ["pk-1"] }));
+      const { hook } = hookWith(methods({ passkeyIds: [PASSKEY_1] }));
       signedIn(hook);
 
-      await expect(hook.guardDeletePasskey(withBody({ id: "pk-1" }))).resolves.toBeUndefined();
+      await expect(hook.guardDeletePasskey(withBody({ id: PASSKEY_1 }))).resolves.toBeUndefined();
     });
 
     it("lets a placeholder account delete one of two passkeys", async () => {
-      const { hook } = hookWith(placeholder({ passkeyIds: ["pk-1", "pk-2"] }));
+      const { hook } = hookWith(placeholder({ passkeyIds: [PASSKEY_1, PASSKEY_2] }));
       signedIn(hook);
 
-      await expect(hook.guardDeletePasskey(withBody({ id: "pk-1" }))).resolves.toBeUndefined();
+      await expect(hook.guardDeletePasskey(withBody({ id: PASSKEY_1 }))).resolves.toBeUndefined();
     });
 
     it("lets a placeholder account with a connected provider delete its last passkey", async () => {
-      const { hook } = hookWith(placeholder({ passkeyIds: ["pk-1"], accountIds: ["orcid-row"] }));
+      const { hook } = hookWith(placeholder({ passkeyIds: [PASSKEY_1], accountIds: [ORCID_ROW] }));
       signedIn(hook);
 
-      await expect(hook.guardDeletePasskey(withBody({ id: "pk-1" }))).resolves.toBeUndefined();
+      await expect(hook.guardDeletePasskey(withBody({ id: PASSKEY_1 }))).resolves.toBeUndefined();
     });
 
     it("leaves a passkey that is not the person's to the library", async () => {
-      const { hook } = hookWith(placeholder({ passkeyIds: ["pk-1"] }));
+      const { hook } = hookWith(placeholder({ passkeyIds: [PASSKEY_1] }));
       signedIn(hook);
 
       await expect(
-        hook.guardDeletePasskey(withBody({ id: "someone-elses-passkey" })),
+        hook.guardDeletePasskey(withBody({ id: OTHER_PASSKEY })),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("an id the database would read in another spelling", () => {
+    it.each([
+      ["upper case", PASSKEY_1.toUpperCase()],
+      ["braces", `{${PASSKEY_1}}`],
+      ["no hyphens", PASSKEY_1.replaceAll("-", "")],
+    ])("refuses the sole passkey's id in %s before the library sees it", async (_, id) => {
+      const { hook, findSignInMethods } = hookWith(placeholder({ passkeyIds: [PASSKEY_1] }));
+      signedIn(hook);
+
+      const error = await refusal(hook.guardDeletePasskey(withBody({ id })));
+
+      expect(error.status).toBe("BAD_REQUEST");
+      expect(error.body?.code).toBe("INVALID_ID");
+      expect(findSignInMethods).not.toHaveBeenCalled();
+    });
+
+    it("refuses an account row id in upper case the same way", async () => {
+      const { hook } = hookWith(placeholder({ accountIds: [ORCID_ROW] }));
+      signedIn(hook);
+
+      const error = await refusal(
+        hook.guardUnlinkAccount(withBody({ accountId: ORCID_ROW.toUpperCase() })),
+      );
+
+      expect(error.body?.code).toBe("INVALID_ID");
     });
   });
 
