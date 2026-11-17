@@ -816,8 +816,15 @@ export class ExperimentDataRepository {
       exceptColumns.splice(exceptColumns.indexOf("client_id"), 1);
     }
     const hidden = new Set<string>([...config.variantColumns, ...exceptColumns]);
+    // The store has no column of the phone's annotations, but holds its name as the warehouse view
+    // does, so a payload field named like it reads under the same name from either.
+    const named = new Set(viewColumnsResult.value);
+    const phoneColumn = config.phoneAnnotationsColumn;
+    if (source === "store" && phoneColumn !== undefined) {
+      named.add(phoneColumn);
+    }
     const reservedColumns =
-      variants.length > 0 ? viewColumnsResult.value.filter((column) => !hidden.has(column)) : [];
+      variants.length > 0 ? [...named].filter((column) => !hidden.has(column)) : [];
     return success({
       source,
       metadata,

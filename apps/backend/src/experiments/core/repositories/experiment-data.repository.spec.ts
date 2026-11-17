@@ -2904,6 +2904,53 @@ describe("ExperimentDataRepository", () => {
       expect(result.value[0].data?.rows).toEqual([{ id: "1", plot: "A1" }]);
     });
 
+    it("lists a macro field named like the warehouse's phone column under the warehouse's suffix", async () => {
+      const macroTable: ExperimentTableMetadata = {
+        identifier: "macro_1",
+        tableType: "macro",
+        displayName: null,
+        rowCount: 1,
+        latestRowAt: null,
+        schemaRevision: "r1",
+        macroSchema: "OBJECT<payload_annotations: STRING, phi2: DOUBLE>",
+      };
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([macroTable]));
+      const execute = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: [
+            { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+            {
+              name: "payload_annotations_output",
+              type_name: "STRING",
+              type_text: "STRING",
+              position: 1,
+            },
+            { name: "phi2", type_name: "DOUBLE", type_text: "DOUBLE", position: 2 },
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableColumns({
+        experimentId: faker.string.uuid(),
+        tableName: "macro_1",
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(execute.mock.calls.map(([query]) => query.sql).join("\n")).toContain(
+        "AS `payload_annotations_output`",
+      );
+      expect(result.value).toContainEqual(
+        expect.objectContaining({
+          name: "payload_annotations_output",
+          renamedFrom: { name: "payload_annotations", source: "macro_output" },
+        }),
+      );
+    });
+
     it("sorts a text answer by its numeric value in the store", async () => {
       const execute = vi
         .spyOn(servingStore, "executeQuery")
