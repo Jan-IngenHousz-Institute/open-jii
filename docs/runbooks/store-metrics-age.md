@@ -38,6 +38,7 @@ The first view with an exception is the cause. The ones after it show `WaitingFo
 
   The fix is a change to the view in a new migration, such as counting each value once before
   taking the median, not a higher cap.
+
 - **The store restarted** and the chain has not run since. It runs at the next seven minutes past
   the hour. To run it now, refresh the views in chain order, waiting for each:
   `SYSTEM REFRESH VIEW store.<view>` then `SYSTEM WAIT VIEW store.<view>`.
