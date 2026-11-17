@@ -1298,6 +1298,7 @@ module "lakehouse_backup_s3" {
       status                                 = "Enabled"
       transitions                            = []
       noncurrent_version_expiration_days     = 30
+      expired_object_delete_marker           = true
       abort_incomplete_multipart_upload_days = 7
     }
   ]
