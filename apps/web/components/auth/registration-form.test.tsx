@@ -550,22 +550,16 @@ describe("RegistrationForm", () => {
       await waitFor(() => expect(screen.getByText("auth.checkEmail")).toBeInTheDocument());
     }
 
-    function codeInput() {
-      const input = document.querySelector('input[autocomplete="one-time-code"]');
-      if (!input) throw new Error("code input not found");
-      return input;
-    }
-
-    function submitForm() {
-      const form = document.querySelector("form");
-      if (!form) throw new Error("form not found");
-      fireEvent.submit(form);
-    }
-
+    // The code field has no label; on the code step it is the only text field. Its value is set
+    // rather than typed: focusing it starts input-otp's timer, which calls a layout API jsdom lacks.
     function enterCode(code: string) {
-      fireEvent.change(codeInput(), {
-        target: { value: code },
-      });
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: code } });
+    }
+
+    async function submitCode(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(
+        await screen.findByRole("button", { name: "registration.verifyAndRegister" }),
+      );
     }
 
     it("proves the address with its code, then completes registration", async () => {
@@ -574,7 +568,7 @@ describe("RegistrationForm", () => {
       await reachCodeStep(user);
 
       enterCode("123456");
-      submitForm();
+      await submitCode(user);
 
       await waitFor(() =>
         expect(authClient.emailOtp.changeEmail).toHaveBeenCalledWith({
@@ -601,7 +595,7 @@ describe("RegistrationForm", () => {
       await reachCodeStep(user);
 
       enterCode("000000");
-      submitForm();
+      await submitCode(user);
 
       expect(await screen.findByText("Invalid OTP")).toBeInTheDocument();
       expect(mockUpdateUserMutate).not.toHaveBeenCalled();
@@ -622,8 +616,11 @@ describe("RegistrationForm", () => {
       await waitFor(() =>
         expect(toastMock).toHaveBeenCalledWith({ description: "registration.errorMessage" }),
       );
+      // The account has taken the address, so it can no longer be edited here.
+      expect(screen.getByText("carol@uni.edu")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Edit email address" })).toBeNull();
 
-      submitForm();
+      await submitCode(user);
 
       await waitFor(() => expect(createUserProfileMock).toHaveBeenCalledTimes(2));
       expect(authClient.emailOtp.changeEmail).toHaveBeenCalledTimes(1);

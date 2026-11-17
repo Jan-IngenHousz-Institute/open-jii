@@ -49,7 +49,8 @@ export function RegistrationForm({
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   // The account takes the address once the code is accepted, and the library refuses to
-  // confirm it a second time, so a retry after a later step fails must skip the confirm.
+  // confirm it a second time, so a retry after a later step fails must skip the confirm. The
+  // address can no longer be edited either: the server would refuse a code for another one.
   const [confirmedEmail, setConfirmedEmail] = useState<string | null>(null);
   const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
@@ -142,7 +143,6 @@ export function RegistrationForm({
 
   function handleEditEmail() {
     setShowOTPInput(false);
-    setConfirmedEmail(null);
     form.setValue("otp", "");
   }
 
@@ -227,7 +227,7 @@ export function RegistrationForm({
               pendingEmail={pendingEmail}
               isPending={isPending}
               setIsPending={setIsPending}
-              onEditEmail={handleEditEmail}
+              onEditEmail={confirmedEmail === pendingEmail ? undefined : handleEditEmail}
               onComplete={() => form.handleSubmit(onSubmit)()}
               OTP_LENGTH={OTP_LENGTH}
             />
