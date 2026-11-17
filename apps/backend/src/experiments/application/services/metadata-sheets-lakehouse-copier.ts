@@ -43,7 +43,9 @@ export class MetadataSheetsLakehouseCopier extends ExperimentDataCopier<Metadata
     canContinue: () => boolean,
   ): Promise<Result<"written" | "stopped">> {
     const merged = await this.warehouse.merge(records, canContinue);
-    return merged.map((outcome) => (outcome === "merged" ? "written" : outcome));
+    return merged.map((outcome: "merged" | "stopped"): "written" | "stopped" =>
+      outcome === "merged" ? "written" : outcome,
+    );
   }
 
   protected remove(gone: CopyKey[]): Promise<Result<void>> {
