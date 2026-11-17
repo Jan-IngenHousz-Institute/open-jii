@@ -592,7 +592,10 @@ describe("ExperimentDataOutboxWorker", () => {
     await annotate("1");
     const shared = testApp.module.get(ExperimentDataOutboxRepository);
     // The worker's own handle, so its calls can be watched while the shared one does the work.
-    const outbox = new ExperimentDataOutboxRepository(testApp.database);
+    const outbox = new ExperimentDataOutboxRepository(
+      testApp.database,
+      testApp.module.get(SERVING_STORE_COPIES_PORT),
+    );
     const stopping = realWorker(outbox);
     const order: string[] = [];
     let shutdown: Promise<void> = Promise.resolve();
