@@ -151,16 +151,16 @@ passes:
     range: [146, 147]
     note: exports that failed on our side and sign-in code emails that failed to send, since the status page now shows both
   - date: 2026-11-16
-    range: [148, 148]
-    note: >-
-      how long the oldest copy of an annotation or metadata sheet has waited to reach the lakehouse
-      or the serving store, so a copy failing on every retry reaches someone
-  - date: 2026-11-16
     range: [149, 149]
     note: cached Contentful reads behind the public pages that fail to refresh, since Next keeps serving the old value and only logs it
   - date: 2026-11-17
     range: [150, 150]
     note: the p95 of a flow's batches, which takes over 127's alert, since 127 follows how often messages arrive rather than whether a flow keeps up
+  - date: 2026-11-17
+    range: [151, 151]
+    note: >-
+      how long the oldest copy of an annotation or metadata sheet has waited to reach the lakehouse
+      or the serving store, so a copy failing on every retry reaches someone
 
 metrics:
   # Ingest path
@@ -2855,7 +2855,7 @@ metrics:
       publishes it every five minutes with the age of the oldest of them (141). A count for the
       Platform dashboard's Email chart, with no limit of its own: the age is what the rule watches.
 
-  - num: 148
+  - num: 151
     id: experiment-data-copies-waiting
     name: Oldest waiting annotation or sheet copy
     family: observability

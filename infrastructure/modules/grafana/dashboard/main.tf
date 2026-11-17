@@ -945,7 +945,7 @@ resource "grafana_rule_group" "experiment_data_copies" {
   folder_uid       = grafana_folder.folder.uid
   interval_seconds = 60
 
-  # Catalog entry 148. Every task publishes the same age, so the highest reads right however many
+  # Catalog entry 151. Every task publishes the same age, so the highest reads right however many
   # run. A copy unreachable for everyone holds every row; one record failing on every attempt
   # crosses it too.
   rule {
