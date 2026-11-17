@@ -161,6 +161,9 @@ passes:
     note: >-
       how long the oldest copy of an annotation or metadata sheet has waited to reach the lakehouse,
       so a copy failing on every retry reaches someone
+  - date: 2026-11-17
+    range: [152, 152]
+    note: how long since the serving store's platform metrics views last refreshed, since a failed refresh keeps the old figures without an error
 
 metrics:
   # Ingest path
@@ -2884,3 +2887,29 @@ metrics:
       views with a contributor's or device's previous name. Since a quiet outbox still reads 0, the
       rule treats no data as firing too: about twenty minutes after the last point, it says the job
       that reports the outbox has stopped.
+
+  - num: 152
+    id: store-metrics-age
+    name: Platform metrics age
+    family: observability
+    area: api
+    source: aws
+    phase: P2
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/ServingStore
+      metric: MetricsRefreshAgeMinutes
+      stat: Maximum
+      unit: minutes
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 120 }
+    runbook: docs/runbooks/store-metrics-age.md
+    notes: >-
+      Minutes since the stalest of the serving store's platform metrics views last refreshed, sent
+      once a minute by the timer on its instance from system.view_refreshes, counted from the
+      store's start for a view that has not refreshed since. The views refresh hourly in a chain,
+      so a healthy reading stays under about 70; a failed refresh keeps the view's old figures and
+      holds back every view after it. MetricsRefreshFailures, how many failed their last refresh,
+      goes out beside it. Nothing is sent before migration 0011 makes the views.
