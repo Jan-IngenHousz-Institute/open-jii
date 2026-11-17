@@ -102,6 +102,7 @@ describe("useSignOut", () => {
           title: "Private Lab",
           subtitle: null,
           meta: "research_institute",
+          parent: null,
         },
       ],
     });

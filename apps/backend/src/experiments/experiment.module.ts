@@ -342,6 +342,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
   ],
-  exports: [ExperimentRepository],
+  exports: [ExperimentRepository, ExperimentDashboardRepository, ExperimentVisualizationRepository],
 })
 export class ExperimentModule {}

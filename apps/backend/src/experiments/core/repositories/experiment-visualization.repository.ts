@@ -1,18 +1,32 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { eq, experimentVisualizations, desc, profiles } from "@repo/database";
+import {
+  and,
+  eq,
+  experimentVisualizations,
+  experiments,
+  desc,
+  profiles,
+  getTableColumns,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { ftsMatch, ftsRank, searchScore } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
+import { resourceTierExpression } from "../../../common/utils/resource-access-scope";
 import type {
   ExperimentVisualizationDto,
   CreateExperimentVisualizationDto,
   UpdateExperimentVisualizationDto,
 } from "../models/experiment-visualizations.model";
+import { searchableExperimentCondition } from "./experiment-search-scope";
+
+const { searchVector: _searchVector, ...visualizationColumns } =
+  getTableColumns(experimentVisualizations);
 
 @Injectable()
 export class ExperimentVisualizationRepository {
@@ -21,11 +35,47 @@ export class ExperimentVisualizationRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
+  async search(query: string, userId: string, limit: number) {
+    return tryCatch(async () => {
+      const scope = searchableExperimentCondition(this.database, userId);
+      const tier = resourceTierExpression({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        createdByColumn: experiments.createdBy,
+        userId,
+      });
+      const score = searchScore(
+        ftsRank(experimentVisualizations.searchVector, experimentVisualizations.name, query),
+        tier,
+      );
+      return this.database
+        .select({
+          id: experimentVisualizations.id,
+          name: experimentVisualizations.name,
+          description: experimentVisualizations.description,
+          score,
+          parent: { id: experiments.id, title: experiments.name },
+        })
+        .from(experimentVisualizations)
+        .innerJoin(experiments, eq(experiments.id, experimentVisualizations.experimentId))
+        .where(
+          and(
+            ftsMatch(experimentVisualizations.searchVector, experimentVisualizations.name, query),
+            scope,
+          ),
+        )
+        .orderBy(desc(score), experimentVisualizations.id)
+        .limit(limit);
+    });
+  }
+
   async listVisualizations(experimentId: string): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
       const results = await this.database
         .select({
-          experiment_visualizations: experimentVisualizations,
+          experiment_visualizations: visualizationColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
@@ -63,12 +113,12 @@ export class ExperimentVisualizationRepository {
           dataConfig: dto.dataConfig,
           createdBy,
         })
-        .returning();
+        .returning({ id: experimentVisualizations.id });
 
       // Fetch the created record with profile information
       const results = await this.database
         .select({
-          experiment_visualizations: experimentVisualizations,
+          experiment_visualizations: visualizationColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
@@ -91,7 +141,7 @@ export class ExperimentVisualizationRepository {
     return tryCatch(async () => {
       const result = await this.database
         .select({
-          experiment_visualizations: experimentVisualizations,
+          experiment_visualizations: visualizationColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
@@ -126,7 +176,7 @@ export class ExperimentVisualizationRepository {
       // Fetch the updated record with profile information
       const results = await this.database
         .select({
-          experiment_visualizations: experimentVisualizations,
+          experiment_visualizations: visualizationColumns,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })

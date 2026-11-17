@@ -3,7 +3,17 @@
 import { organizationTypeLabelKey } from "@/components/organizations/organization-labels";
 import { formatSensorFamily } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
-import { BookOpen, Building2, Code, FileSliders, Leaf, Microscope } from "lucide-react";
+import {
+  BookOpen,
+  Building2,
+  ChartNoAxesCombined,
+  Code,
+  Cpu,
+  FileSliders,
+  LayoutDashboard,
+  Leaf,
+  Microscope,
+} from "lucide-react";
 import * as React from "react";
 
 import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
@@ -19,6 +29,9 @@ const ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }
   workbook: BookOpen,
   calibration_definition: Microscope,
   organization: Building2,
+  device: Cpu,
+  dashboard: LayoutDashboard,
+  visualization: ChartNoAxesCombined,
 };
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -40,7 +53,7 @@ function metaLabel(type: SearchResultType, meta: string, t: (key: string) => str
     // An unrecognised spelling renders as stored rather than as a missing-key placeholder.
     return parsed.success ? t(organizationTypeLabelKey(parsed.data)) : meta;
   }
-  if (type === "protocol") return formatSensorFamily(meta);
+  if (type === "protocol" || type === "device") return formatSensorFamily(meta);
   // Any other label: capitalize the first letter.
   return meta.charAt(0).toUpperCase() + meta.slice(1);
 }
@@ -53,6 +66,7 @@ export function SearchResultItem({
   onSelect: (result: SearchResult) => void;
 }) {
   const { t } = useTranslation();
+  const { t: tNavigation } = useTranslation("navigation");
   const Icon = ICONS[result.type];
   // Descriptions can contain rich-text markup (experiments), so strip tags for a clean one-liner.
   const subtitle = result.subtitle ? stripHtml(result.subtitle) : "";
@@ -75,6 +89,11 @@ export function SearchResultItem({
             </Badge>
           )}
         </span>
+        {result.parent && (
+          <span className="text-muted-foreground truncate text-xs">
+            {tNavigation("commandPalette.result.inParent", { title: result.parent.title })}
+          </span>
+        )}
         {subtitle && <span className="text-muted-foreground truncate text-xs">{subtitle}</span>}
       </div>
     </CommandItem>

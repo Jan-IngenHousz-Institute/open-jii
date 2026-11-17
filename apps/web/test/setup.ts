@@ -139,18 +139,20 @@ vi.mock("@repo/i18n", () => ({
               key === "workbooks.versionPublished") &&
             typeof options?.version === "number"
           ? `${key}:${options.version}`
-          : key === "joinCode.redeemed" && typeof options?.joined === "number"
-            ? `${key}:${options.joined}`
-            : key === "common.filterChip" &&
-                typeof options?.filter === "string" &&
-                typeof options.value === "string"
-              ? `${key}:${options.filter}:${options.value}`
-              : key === "workbooks.duplicateName" && typeof options?.name === "string"
-                ? `Fork of ${options.name}`
-                : (key === "unsubscribe.done.body" || key === "unsubscribe.undone.body") &&
-                    typeof options?.category === "string"
-                  ? `${key}:${options.category}`
-                  : key,
+          : key === "commandPalette.result.inParent" && typeof options?.title === "string"
+            ? `in ${options.title}`
+            : key === "joinCode.redeemed" && typeof options?.joined === "number"
+              ? `${key}:${options.joined}`
+              : key === "common.filterChip" &&
+                  typeof options?.filter === "string" &&
+                  typeof options.value === "string"
+                ? `${key}:${options.filter}:${options.value}`
+                : key === "workbooks.duplicateName" && typeof options?.name === "string"
+                  ? `Fork of ${options.name}`
+                  : (key === "unsubscribe.done.body" || key === "unsubscribe.undone.body") &&
+                      typeof options?.category === "string"
+                    ? `${key}:${options.category}`
+                    : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",

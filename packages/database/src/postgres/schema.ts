@@ -1017,24 +1017,31 @@ export const chartTypeEnum = pgEnum("chart_type", [
 ]);
 
 // Experiment Visualizations Table - stores chart configurations for experiments
-export const experimentVisualizations = pgTable("experiment_visualizations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  experimentId: uuid("experiment_id")
-    .notNull()
-    .references(() => experiments.id, { onDelete: "cascade" }),
-  chartFamily: chartFamilyEnum("chart_family").notNull(),
-  chartType: chartTypeEnum("chart_type").notNull(),
-  // Configuration stored as JSONB for flexibility
-  config: jsonb("config").notNull(),
-  // Data source configuration - which tables and columns to use
-  dataConfig: jsonb("data_config").notNull(),
-  createdBy: uuid("created_by")
-    .references(() => users.id)
-    .notNull(),
-  ...timestamps,
-});
+export const experimentVisualizations = pgTable(
+  "experiment_visualizations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    experimentId: uuid("experiment_id")
+      .notNull()
+      .references(() => experiments.id, { onDelete: "cascade" }),
+    chartFamily: chartFamilyEnum("chart_family").notNull(),
+    chartType: chartTypeEnum("chart_type").notNull(),
+    // Configuration stored as JSONB for flexibility
+    config: jsonb("config").notNull(),
+    // Data source configuration - which tables and columns to use
+    dataConfig: jsonb("data_config").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    ...timestamps,
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL => sql`setweight(to_tsvector('english', ${experimentVisualizations.name}), 'A')`,
+    ),
+  },
+  (table) => [index("experiment_visualizations_experiment_id_idx").on(table.experimentId)],
+);
 
 export const workbooks = pgTable(
   "workbooks",
@@ -1056,11 +1063,12 @@ export const workbooks = pgTable(
     }),
     visibility: visibilityEnum("visibility").default("public").notNull(),
     ...timestamps,
-    // Weighted full-text search vector: name (A) + description (B). See migration for the
-    // GENERATED ALWAYS expression and the GIN index. Excluded from API responses.
+    // Name (A), description (B), markdown and question text (C). Excluded from API responses.
+    // Cap cell text before parsing so a large paste cannot exceed the 1 MB tsvector limit.
+    // See migration 0066 for the generated expression and GIN index.
     searchVector: tsvector("search_vector").generatedAlwaysAs(
       (): SQL =>
-        sql`setweight(to_tsvector('english', coalesce(${workbooks.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${workbooks.description}, '')), 'B')`,
+        sql`setweight(to_tsvector('english', coalesce(${workbooks.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${workbooks.description}, '')), 'B') || setweight(to_tsvector('english', left(regexp_replace((jsonb_path_query_array(${workbooks.cells}, '$[*] ? (@.type == "markdown").content') || jsonb_path_query_array(${workbooks.cells}, '$[*] ? (@.type == "question").question.text'))::text, '\\\\[nrtbf]', ' ', 'g'), 100000)), 'C')`,
     ),
   },
   (table) => [
@@ -1175,6 +1183,9 @@ export const experimentDashboards = pgTable(
       .references(() => users.id)
       .notNull(),
     ...timestamps,
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL => sql`setweight(to_tsvector('english', ${experimentDashboards.name}), 'A')`,
+    ),
   },
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );
@@ -1213,6 +1224,10 @@ export const iotDevices = pgTable(
       .references(() => users.id)
       .notNull(),
     ...timestamps,
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${iotDevices.name}, '')), 'A') || setweight(to_tsvector('english', ${iotDevices.serialNumber}), 'B')`,
+    ),
   },
   (t) => [
     index("iot_devices_created_by_idx").on(t.createdBy),

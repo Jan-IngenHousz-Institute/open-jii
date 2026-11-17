@@ -140,6 +140,7 @@ describe("CommandPalette", () => {
           title: "Photosynthesis Lab",
           subtitle: null,
           meta: "research_institute",
+          parent: null,
         },
         {
           type: "experiment",
@@ -147,6 +148,7 @@ describe("CommandPalette", () => {
           title: "Photosynthesis trial",
           subtitle: "A leaf study",
           meta: null,
+          parent: null,
         },
         {
           type: "protocol",
@@ -154,6 +156,7 @@ describe("CommandPalette", () => {
           title: "Photosynthesis protocol",
           subtitle: null,
           meta: "multispeq",
+          parent: null,
         },
         {
           type: "workbook",
@@ -161,6 +164,7 @@ describe("CommandPalette", () => {
           title: "Photosynthesis workbook",
           subtitle: null,
           meta: null,
+          parent: null,
         },
       ],
     });
@@ -187,6 +191,48 @@ describe("CommandPalette", () => {
     );
   });
 
+  it.each([
+    ["dashboard", "dashboards"],
+    ["visualization", "analysis/visualizations"],
+  ] as const)("shows the experiment and opens a %s inside it", async (type, segment) => {
+    const parent = {
+      type: "experiment" as const,
+      id: crypto.randomUUID(),
+      title: `Canopy ${crypto.randomUUID()}`,
+    };
+    const id = crypto.randomUUID();
+    const title = `Search child ${crypto.randomUUID()}`;
+    mockSearch({ results: [{ type, id, title, subtitle: "A leaf study", meta: null, parent }] });
+    const user = userEvent.setup();
+    const { router } = render(<CommandPalette locale="en-US" />);
+    openPalette();
+    await user.type(await screen.findByPlaceholderText("commandPalette.placeholder"), "canopy");
+    expect(await screen.findByText(`in ${parent.title}`)).toBeInTheDocument();
+    expect(screen.getByText("A leaf study")).toBeInTheDocument();
+    await user.click(screen.getByText(title));
+    expect(router.push).toHaveBeenCalledWith(
+      `/en-US/platform/experiments/${parent.id}/${segment}/${id}`,
+    );
+  });
+
+  it.each(["dashboard", "visualization"] as const)(
+    "does not navigate a %s with no experiment",
+    async (type) => {
+      const title = `Orphan ${crypto.randomUUID()}`;
+      mockSearch({
+        results: [
+          { type, id: crypto.randomUUID(), title, subtitle: null, meta: null, parent: null },
+        ],
+      });
+      const user = userEvent.setup();
+      const { router } = render(<CommandPalette locale="en-US" />);
+      openPalette();
+      await user.type(await screen.findByPlaceholderText("commandPalette.placeholder"), "orphan");
+      await user.click(await screen.findByText(title));
+      expect(router.push).not.toHaveBeenCalled();
+    },
+  );
+
   it("navigates to a selected organization result", async () => {
     mockSearch({
       enabled: true,
@@ -197,6 +243,7 @@ describe("CommandPalette", () => {
           title: "Photosynthesis Lab",
           subtitle: "A shared greenhouse",
           meta: "research_institute",
+          parent: null,
         },
       ],
     });
@@ -215,6 +262,33 @@ describe("CommandPalette", () => {
     );
   });
 
+  it("shows a device's family and serial number and navigates to its detail page", async () => {
+    mockSearch({
+      results: [
+        {
+          type: "device",
+          id: "55555555-5555-5555-5555-555555555555",
+          title: "Canopy sensor",
+          subtitle: "MSQ-20431",
+          meta: "multispeq",
+          parent: null,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    const { router } = render(<CommandPalette locale="de-DE" />);
+    openPalette();
+    const input = await screen.findByPlaceholderText("commandPalette.placeholder");
+    await user.type(input, "canopy");
+
+    expect(await screen.findByText("MultispeQ")).toBeInTheDocument();
+    expect(screen.getByText("MSQ-20431")).toBeInTheDocument();
+    await user.click(screen.getByText("Canopy sensor"));
+    expect(router.push).toHaveBeenCalledWith(
+      "/de-DE/platform/devices/55555555-5555-5555-5555-555555555555",
+    );
+  });
+
   it("shows an unrecognised protocol family as stored", async () => {
     mockSearch({
       enabled: true,
@@ -225,6 +299,7 @@ describe("CommandPalette", () => {
           title: "Photosynthesis protocol",
           subtitle: null,
           meta: "prototype-x",
+          parent: null,
         },
       ],
     });
