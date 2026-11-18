@@ -414,25 +414,23 @@ describe("ExperimentStoreReadsService", () => {
       edges: [],
     };
     assertSuccess(await testApp.module.get(FlowRepository).create(experiment.id, graph));
-    vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(
-      success([
-        {
-          identifier: "raw_data",
-          tableType: "static",
-          displayName: null,
-          rowCount: 3,
-          latestRowAt: null,
-          schemaRevision: "r1",
-          questionsSchema: "OBJECT<height: STRING, plot: STRING>",
-        },
-      ]),
-    );
+    const heights: ExperimentTableMetadata = {
+      identifier: "raw_data",
+      tableType: "static",
+      displayName: null,
+      rowCount: 3,
+      latestRowAt: null,
+      schemaRevision: "r1",
+      questionsSchema: "OBJECT<height: STRING, plot: STRING>",
+    };
+    vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success([heights]));
+    const listed = store.withCustomMetadata(heights, null).schemaRevision;
 
     const result = await reads.tablesMetadata(experiment.id);
 
     assertSuccess(result);
     expect(result.value[0].questionsSchema).toBe("OBJECT<height: DOUBLE, plot: STRING>");
-    expect(result.value[0].schemaRevision).toMatch(/^r1:[0-9a-f]{32}$/);
+    expect(result.value[0].schemaRevision).toMatch(new RegExp(`^${listed}:[0-9a-f]{32}$`));
   });
 
   it("lists tables without answers without reading the flow, so a failed flow read cannot fail it", async () => {
@@ -452,10 +450,10 @@ describe("ExperimentStoreReadsService", () => {
       .spyOn(testApp.module.get(FlowRepository), "getByExperimentId")
       .mockResolvedValue(failure(AppError.internal("Flow lookup failed")));
 
-    const result = await reads.tablesMetadata("e1");
+    const result = await reads.tablesMetadata(faker.string.uuid());
 
     assertSuccess(result);
-    expect(result.value).toEqual(uploads);
+    expect(result.value).toEqual(uploads.map((table) => store.withCustomMetadata(table, null)));
     expect(flow).not.toHaveBeenCalled();
   });
 
