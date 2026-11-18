@@ -42,7 +42,7 @@ import {
   resourceGrants,
   workbooks,
 } from "@repo/database";
-import type { DatabaseInstance, Transaction } from "@repo/database";
+import type { AnyColumn, DatabaseInstance, Transaction } from "@repo/database";
 
 import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import { escapeLike, trigramMatch } from "../../../common/utils/fts";
@@ -73,6 +73,7 @@ import {
   SoleAdminResource,
   SoleOwnedOrganization,
   PendingOrganizationInvitation,
+  UserSignInMethods,
 } from "../models/user.model";
 
 /**
@@ -84,6 +85,11 @@ export const SOLE_RESOURCE_ADMIN_MESSAGE =
 
 export const SOLE_ORGANIZATION_OWNER_MESSAGE =
   "Cannot delete account - you are the only owner of one or more organizations. Please make someone else an owner, or delete those organizations, before deleting your account.";
+
+/** Drizzle has no array aggregate; an empty set aggregates to null, hence the fallback. */
+function idList(column: AnyColumn) {
+  return sql<string[]>`coalesce(array_agg(${column}::text), '{}')`;
+}
 
 @Injectable()
 export class UserRepository {
@@ -130,6 +136,50 @@ export class UserRepository {
         .limit(1);
 
       return rows[0]?.id ?? null;
+    });
+  }
+
+  /**
+   * The person's ways to sign in, as `canRemoveSignInMethod` reads them, with the passkey
+   * ids alongside so a caller can tell whether a passkey is theirs. Read from the
+   * database rather than the session, whose cached copy of the user can be a day old.
+   */
+  async findSignInMethods(userId: string): Promise<Result<UserSignInMethods | null>> {
+    return tryCatch(async () => {
+      // An aggregate without GROUP BY always answers one row, so a person with no passkeys
+      // or no connections still gets one, with an empty list. Drizzle selects a CTE's
+      // fields by their bare alias, so the two aliases must differ.
+      const userPasskeys = this.database.$with("user_passkeys").as(
+        this.database
+          .select({ ids: idList(passkeys.id).as("passkey_ids") })
+          .from(passkeys)
+          .where(eq(passkeys.userId, userId)),
+      );
+      const userAccounts = this.database.$with("user_accounts").as(
+        this.database
+          .select({ ids: idList(accounts.id).as("account_ids") })
+          .from(accounts)
+          .where(eq(accounts.userId, userId)),
+      );
+
+      const rows = await this.database
+        .with(userPasskeys, userAccounts)
+        .select({
+          email: users.email,
+          emailVerified: users.emailVerified,
+          passkeyIds: userPasskeys.ids,
+          accountIds: userAccounts.ids,
+        })
+        .from(users)
+        .crossJoin(userPasskeys)
+        .crossJoin(userAccounts)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      const row = rows.at(0);
+      if (!row) return null;
+
+      return { ...row, passkeyCount: row.passkeyIds.length };
     });
   }
 

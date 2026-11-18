@@ -7,11 +7,12 @@ import { createAuthMiddleware } from "better-auth/api";
 import { genericOAuth, lastLoginMethod } from "better-auth/plugins";
 
 import { db, and, eq, profiles, ensurePersonalOrganization } from "@repo/database";
-import * as schema from "@repo/database/schema";
 
 import { getApiKeyForSessionCheck } from "./api-key-session";
 import { openJiiEmailOTP } from "./email-otp";
+import { sendConfirmEmailOtpEmail } from "./email/confirmEmailOtpEmail";
 import { sendOtpEmail } from "./email/otpEmail";
+import { authSchema, sharedAuthOptions } from "./options";
 import { openJiiOrganization } from "./organization/plugin";
 import { legacyOAuth2SignIn } from "./providers/legacy-oauth2-sign-in";
 import { orcidProvider } from "./providers/orcid";
@@ -35,34 +36,25 @@ if (process.env.AUTH_ORCID_ID && process.env.AUTH_ORCID_SECRET) {
       clientId: process.env.AUTH_ORCID_ID,
       clientSecret: process.env.AUTH_ORCID_SECRET,
       environment: process.env.AUTH_ORCID_ENVIRONMENT === "sandbox" ? "sandbox" : "production",
+      // For a registry that refuses the backend's own callback (the sandbox takes neither
+      // http nor localhost), the address registered there; unset everywhere else.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an empty value must fall back to the library's own callback, which `??` would not.
+      redirectURI: process.env.AUTH_ORCID_REDIRECT_URI || undefined,
     }),
   );
 }
 
 export const auth = betterAuth({
+  ...sharedAuthOptions,
   logger: {
     level: "info",
     disabled: false,
   },
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: {
-      user: schema.users,
-      session: schema.sessions,
-      account: schema.accounts,
-      verification: schema.verifications,
-      rateLimit: schema.rateLimits,
-      organization: schema.organizations,
-      member: schema.organizationMembers,
-      invitation: schema.organizationInvitations,
-      team: schema.teams,
-      teamMember: schema.teamMembers,
-      apikey: schema.apiKeys,
-      passkey: schema.passkeys,
-    },
+    schema: authSchema,
   }),
   secret: process.env.AUTH_SECRET,
-  basePath: "/api/v1/auth",
   baseURL: apiUrl, // Points to the backend where auth runs
   trustedOrigins: [
     clientUrl,
@@ -77,18 +69,6 @@ export const auth = betterAuth({
         ]
       : []),
   ],
-  session: {
-    // Sliding session: 30-day absolute lifetime with daily rolling renewal.
-    // While the user is active, every authenticated request inside
-    // `updateAge` extends the cookie expiry, so active users effectively
-    // never get logged out. After 30 days of inactivity the session ends.
-    expiresIn: 60 * 60 * 24 * 30, // 30 days
-    updateAge: 60 * 60 * 24, // 1 day (slide the session forward daily)
-    cookieCache: {
-      enabled: true,
-      maxAge: 60 * 60 * 24, // 1 day
-    },
-  },
   rateLimit: {
     window: 60, // 60 seconds
     max: 100, // 100 requests per window
@@ -111,20 +91,16 @@ export const auth = betterAuth({
         window: 60,
         max: 10, // Allow more verification attempts
       },
+      "/email-otp/request-email-change": {
+        window: 60,
+        max: 3,
+      },
+      "/email-otp/change-email": {
+        window: 60,
+        max: 10,
+      },
       // Less restrictive for session checks
       "/get-session": false, // Disable rate limiting for session checks
-    },
-  },
-  user: {
-    changeEmail: {
-      enabled: true,
-    },
-    additionalFields: {
-      registered: {
-        type: "boolean",
-        defaultValue: false,
-        required: false,
-      },
     },
   },
   advanced: {
@@ -137,12 +113,7 @@ export const auth = betterAuth({
           },
         }
       : {}),
-    database: {
-      generateId: false, // Let Postgres generate UUIDs via defaultRandom()
-    },
-  },
-  emailAndPassword: {
-    enabled: false,
+    database: sharedAuthOptions.advanced.database,
   },
   plugins: [
     expo(), // Add Expo plugin for mobile app support
@@ -151,12 +122,13 @@ export const auth = betterAuth({
         email: process.env.AUTH_PLAY_REVIEW_EMAIL,
         otp: process.env.AUTH_PLAY_REVIEW_OTP,
       },
-      async sendEmail({ email, otp }) {
+      async sendEmail({ email, otp, type }) {
         const emailServer = process.env.AUTH_EMAIL_SERVER;
         const emailFrom = process.env.AUTH_EMAIL_FROM;
 
         if (emailServer && emailFrom) {
-          await sendOtpEmail({
+          const send = type === "change-email" ? sendConfirmEmailOtpEmail : sendOtpEmail;
+          await send({
             to: email,
             otp,
             emailServer,

@@ -9,6 +9,10 @@
  * const exp = createExperiment({ name: "My test", status: "archived" });
  * ```
  */
+import type { useAccountInfo } from "~/hooks/auth/useAccountInfo/useAccountInfo";
+import type { useLinkedAccounts } from "~/hooks/auth/useLinkedAccounts/useLinkedAccounts";
+import type { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
+
 import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
 import type {
   ExperimentDashboardLayout,
@@ -249,6 +253,60 @@ export function createSession(
       userAgent: null,
       ...overrides.session,
     },
+  };
+}
+
+// ── Sign-in methods ─────────────────────────────────────────────
+
+type LinkedAccount = NonNullable<ReturnType<typeof useLinkedAccounts>["data"]>[number];
+type AccountInfo = NonNullable<ReturnType<typeof useAccountInfo>["data"]>;
+type Passkey = NonNullable<ReturnType<typeof usePasskeys>["data"]>[number];
+
+let linkedAccountSeq = 0;
+
+/** An `accounts` row as `listAccounts` answers it: `id` is the row id, `accountId` the provider's. */
+export function createLinkedAccount(overrides: Partial<LinkedAccount> = {}): LinkedAccount {
+  linkedAccountSeq++;
+  return {
+    id: `account-row-${linkedAccountSeq}`,
+    userId: "user-1",
+    providerId: "github",
+    accountId: `${100000 + linkedAccountSeq}`,
+    scopes: [],
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+/** What `accountInfo` answers for a GitHub row; `data` is the provider's own profile. */
+export function createAccountInfo(overrides: Partial<AccountInfo> = {}): AccountInfo {
+  const account = overrides.account ?? createLinkedAccount();
+  return {
+    account: { id: account.id, providerId: account.providerId, accountId: account.accountId },
+    user: { name: "Test User", email: null, emailVerified: true },
+    data: { login: "test-user" },
+    ...overrides,
+  };
+}
+
+let passkeySeq = 0;
+
+export function createPasskey(overrides: Partial<Passkey> = {}): Passkey {
+  passkeySeq++;
+  return {
+    id: `passkey-${passkeySeq}`,
+    name: `Passkey ${passkeySeq}`,
+    publicKey: "public-key",
+    userId: "user-1",
+    credentialID: `credential-${passkeySeq}`,
+    counter: 0,
+    deviceType: "multiDevice",
+    backedUp: true,
+    transports: "internal",
+    createdAt: new Date("2026-07-01T00:00:00.000Z"),
+    aaguid: undefined,
+    ...overrides,
   };
 }
 
