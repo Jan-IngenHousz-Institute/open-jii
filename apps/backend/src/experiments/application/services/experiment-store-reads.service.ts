@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { z } from "zod";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
@@ -9,6 +10,7 @@ import type {
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../core/models/experiment-data.model";
+import { PageBytes } from "../../core/models/page-bytes.model";
 import type {
   ExperimentTableReads,
   TableQuery,
@@ -16,6 +18,7 @@ import type {
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
+import { NumberAnswersService } from "./number-answers.service";
 
 type IdColumns = Map<string, "contributor" | "device">;
 
@@ -26,7 +29,7 @@ interface ContributorCell {
   avatar: string | null;
 }
 
-/** A device as the warehouse's views show one, all null when the registry does not know it. */
+/** A device as the registry knows it, all null when the registry does not know it. */
 interface DeviceCell {
   id: string | null;
   serial_number: string | null;
@@ -35,13 +38,15 @@ interface DeviceCell {
   device_type: string | null;
 }
 
-const DEVICE_FIELDS: (keyof DeviceCell)[] = [
-  "id",
-  "serial_number",
-  "owner",
-  "status",
-  "device_type",
-];
+const UNKNOWN_DEVICE: DeviceCell = {
+  id: null,
+  serial_number: null,
+  owner: null,
+  status: null,
+  device_type: null,
+};
+
+const zDevicePair = z.tuple([z.string().nullable(), z.string().nullable()]);
 
 /**
  * Reads through the serving store, which holds contributors and devices as their ids. Their
@@ -57,14 +62,19 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     @Inject(SERVING_STORE_PORT) private readonly store: ServingStorePort,
     private readonly userRepository: UserRepository,
     private readonly deviceRepository: ExperimentDeviceRegistryRepository,
+    private readonly numberAnswers: NumberAnswersService,
   ) {}
 
   readsTable(tableName: string): boolean {
     return this.store.holdsTable(tableName);
   }
 
-  tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
-    return this.store.getExperimentTableMetadata(experimentId);
+  async tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
+    const metadata = await this.store.getExperimentTableMetadata(experimentId);
+    if (metadata.isFailure()) {
+      return metadata;
+    }
+    return this.numberAnswers.typed(experimentId, metadata.value);
   }
 
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>> {
@@ -84,19 +94,24 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       columnsResult.value.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
     );
 
-    const [orderResult, serialsResult] = await Promise.all([
-      this.idOrder(params, idColumns),
-      this.serialNumbers(params, idColumns),
-    ]);
+    const devicesResult = this.readsLabels(params, idColumns)
+      ? await this.devicesOf(params.experimentId)
+      : success(undefined);
+    if (devicesResult.isFailure()) {
+      return devicesResult;
+    }
+    const devices = devicesResult.value;
+
+    const sortsByRegistry = devices !== undefined && this.sortsWholeDevice(params, idColumns);
+    const orderResult = sortsByRegistry
+      ? success(this.registryOrder(devices))
+      : await this.contributorOrder(params, idColumns);
     if (orderResult.isFailure()) {
       return orderResult;
     }
-    if (serialsResult.isFailure()) {
-      return serialsResult;
-    }
 
-    // Devices the registry does not know fill in alike, so a limit on their ids would stop short
-    // of the distinct devices behind them.
+    // Devices can fill in alike, such as a registered one under two names, so a limit on what the
+    // store returns would stop short of the distinct devices behind it.
     const isDistinctDevice =
       params.distinct === true &&
       (params.columns ?? []).some((column) => idColumns.get(column) === "device");
@@ -104,7 +119,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       ...params,
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
-      deviceSerials: serialsResult.value,
+      deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
     });
     if (built.isFailure()) {
       return built;
@@ -120,6 +135,14 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return { ...this.store.countQuery(query), distinct: false };
   }
 
+  deviceLabelsQuery(query: TableQuery, limit: number, offset: number): TableQuery {
+    return { ...this.store.deviceLabelsQuery(query, limit, offset), distinct: false };
+  }
+
+  /**
+   * The rows in the warehouse's cells, marked truncated, as the warehouse marks a result it cuts,
+   * when those cells pass the limit one read may return, so the same pages are refused.
+   */
   async runQuery(query: TableQuery): Promise<Result<SchemaData>> {
     const result = await this.store.executeQuery(query);
     if (result.isFailure()) {
@@ -127,81 +150,89 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     }
 
     const filled = await this.fillDetails(result.value, query.columns);
-    if (filled.isFailure() || !query.distinct) {
+    if (filled.isFailure()) {
       return filled;
     }
 
-    const distinct = this.withoutRepeats(filled.value);
-    const rows = distinct.rows.slice(0, query.limitAfterDetails);
-    return success({ ...distinct, rows, totalRows: rows.length });
+    const data = query.distinct
+      ? this.withoutRepeats(filled.value, query.limitAfterDetails)
+      : filled.value;
+    const rows = PageBytes.fitting(data.rows);
+    const isTruncated = data.truncated || rows.length < data.rows.length;
+    return success({ ...data, rows, totalRows: rows.length, truncated: isTruncated });
   }
 
   /**
-   * The ids a sort needs in order: contributors by name, as Spark compares text, or devices by
-   * the whole struct, as Spark compares structs. A sort the store can do itself needs none.
+   * The contributors in the order of their names, as Spark compares text, for a sort by name the
+   * store cannot do itself; names never enter a query.
    */
-  private async idOrder(
+  private async contributorOrder(
     params: ExperimentQueryParams,
     idColumns: IdColumns,
   ): Promise<Result<string[] | undefined>> {
     if (params.ordering === undefined || params.ordering.mode !== undefined) {
       return success(undefined);
     }
-
     const [column, field] = this.structPath(params.ordering.column);
-    const idOf = idColumns.get(column);
-    const isContributorName = idOf === "contributor" && field === "name";
-    const isWholeDevice = idOf === "device" && field === undefined;
-
-    if (isContributorName) {
-      const contributors = await this.contributorsOf(params.experimentId);
-      if (contributors.isFailure()) {
-        return contributors;
-      }
-      const byName = [...contributors.value.values()].sort(
-        (a, b) => this.compareText(a.name, b.name) || this.compareText(a.id, b.id),
-      );
-      return success(byName.map(({ id }) => id));
-    }
-    if (isWholeDevice) {
-      const devices = await this.devicesOf(params.experimentId);
-      if (devices.isFailure()) {
-        return devices;
-      }
-      const byStruct = [...devices.value.entries()].sort(
-        ([aId, a], [bId, b]) => this.compareDevices(a, b) || this.compareText(aId, bId),
-      );
-      return success(byStruct.map(([clientId]) => clientId));
-    }
-    return success(undefined);
-  }
-
-  private async serialNumbers(
-    params: ExperimentQueryParams,
-    idColumns: IdColumns,
-  ): Promise<Result<[string, string | null][] | undefined>> {
-    const columns = [
-      ...(params.filters ?? []).map(({ column }) => column),
-      params.ordering?.column ?? "",
-    ];
-    const namesSerialNumber = columns.some((column) => {
-      const [name, field] = this.structPath(column);
-      return idColumns.get(name) === "device" && field === "serial_number";
-    });
-    if (!namesSerialNumber) {
+    const isContributorName = idColumns.get(column) === "contributor" && field === "name";
+    if (!isContributorName) {
       return success(undefined);
     }
 
-    const devices = await this.devicesOf(params.experimentId);
-    if (devices.isFailure()) {
-      return devices;
+    const contributors = await this.contributorsOf(params.experimentId);
+    if (contributors.isFailure()) {
+      return contributors;
     }
-    return success(
-      [...devices.value.entries()].map(([clientId, device]): [string, string | null] => [
-        clientId,
-        device.serial_number,
-      ]),
+    const byName = [...contributors.value.values()].sort(
+      (a, b) => this.compareText(a.name, b.name) || this.compareText(a.id, b.id),
     );
+    return success(byName.map(({ id }) => id));
+  }
+
+  /**
+   * Registered devices by their registry id, the first field of the struct Spark compares; the
+   * store breaks the rest by label.
+   */
+  private registryOrder(devices: Map<string, DeviceCell>): string[] {
+    const registered = [...devices.entries()].flatMap(([clientId, { id }]) =>
+      id === null ? [] : [{ clientId, id }],
+    );
+    registered.sort((a, b) => this.compareText(a.id, b.id));
+    return registered.map(({ clientId }) => clientId);
+  }
+
+  /** Whether the read filters, sorts or lists by a device's label, which needs its serial. */
+  private readsLabels(params: ExperimentQueryParams, idColumns: IdColumns): boolean {
+    const columns = [
+      ...(params.filters ?? []).map(({ column }) => column),
+      ...(params.columns ?? []),
+      params.ordering?.column ?? "",
+    ];
+    const namesLabel = columns.some((column) => {
+      const [name, field] = this.structPath(column);
+      return idColumns.get(name) === "device" && field === "serial_number";
+    });
+    return namesLabel || this.sortsWholeDevice(params, idColumns);
+  }
+
+  /** Only a serial a label shows enters the query; any other device reads none from the list. */
+  private serialsShown(devices: Map<string, DeviceCell>): [string, string][] {
+    return [...devices.entries()].flatMap(([clientId, { serial_number }]) =>
+      this.showsSerial(serial_number) ? [[clientId, serial_number]] : [],
+    );
+  }
+
+  /** The label's own rule, which Spark trims by spaces only: a serial of spaces shows the label. */
+  private showsSerial(serial: string | null): serial is string {
+    return serial !== null && /[^ ]/.test(serial);
+  }
+
+  private sortsWholeDevice({ ordering }: ExperimentQueryParams, idColumns: IdColumns): boolean {
+    if (ordering === undefined || ordering.mode !== undefined) {
+      return false;
+    }
+    const [column, field] = this.structPath(ordering.column);
+    return idColumns.get(column) === "device" && field === undefined;
   }
 
   private async contributorsOf(
@@ -262,20 +293,25 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     data: SchemaData,
     columns: StoreQueryColumn[],
   ): Promise<Result<SchemaData>> {
+    const idOfColumn = new Map(columns.map(({ name, idOf }) => [name, idOf]));
     const indexesOf = (idOf: "contributor" | "device") =>
-      columns.flatMap((column, index) => (column.idOf === idOf ? [index] : []));
+      data.columns.flatMap(({ name }, index) => (idOfColumn.get(name) === idOf ? [index] : []));
     const contributorIndexes = indexesOf("contributor");
     const deviceIndexes = indexesOf("device");
     if (contributorIndexes.length === 0 && deviceIndexes.length === 0) {
       return success(data);
     }
 
-    const idsAt = (indexes: number[]) => [
-      ...new Set(data.rows.flatMap((row) => indexes.flatMap((index) => row[index] ?? []))),
-    ];
+    const pairs = data.rows.map((row) =>
+      deviceIndexes.map((index) => zDevicePair.parse(JSON.parse(String(row[index])))),
+    );
+    const contributorIds = new Set(
+      data.rows.flatMap((row) => contributorIndexes.flatMap((index) => row[index] ?? [])),
+    );
+    const clientIds = new Set(pairs.flat().flatMap(([clientId]) => clientId ?? []));
     const [contributors, devices] = await Promise.all([
-      this.contributors(idsAt(contributorIndexes)),
-      this.devices(idsAt(deviceIndexes)),
+      this.contributors([...contributorIds]),
+      this.devices([...clientIds]),
     ]);
     if (contributors.isFailure()) {
       return contributors;
@@ -284,53 +320,40 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return devices;
     }
 
-    const cellOf = (index: number, id: string | null): string | null => {
-      if (id === null) {
-        return null;
-      }
-      const detail = contributorIndexes.includes(index)
-        ? contributors.value.get(id)
-        : devices.value.get(id);
-      return JSON.stringify(detail);
+    const contributorCell = (id: string | null) =>
+      id === null ? null : JSON.stringify(contributors.value.get(id));
+    const deviceCell = ([clientId, label]: [string | null, string | null]) => {
+      const known = clientId === null ? undefined : devices.value.get(clientId);
+      const registered = known ?? UNKNOWN_DEVICE;
+      const serial = registered.serial_number;
+      return JSON.stringify({
+        ...registered,
+        serial_number: this.showsSerial(serial) ? serial : label,
+      });
     };
-    const rows = data.rows.map((row) =>
-      row.map((cell, index) =>
-        contributorIndexes.includes(index) || deviceIndexes.includes(index)
-          ? cellOf(index, cell)
-          : cell,
-      ),
+    const rows = data.rows.map((row, rowIndex) =>
+      row.map((cell, index) => {
+        if (contributorIndexes.includes(index)) {
+          return contributorCell(cell);
+        }
+        const deviceAt = deviceIndexes.indexOf(index);
+        return deviceAt === -1 ? cell : deviceCell(pairs[rowIndex][deviceAt]);
+      }),
     );
     return success({ ...data, rows });
   }
 
-  /** Two devices the registry does not know read alike, as one row does on the warehouse. */
-  private withoutRepeats(data: SchemaData): SchemaData {
+  /** Rows that fill in alike read as one, as the warehouse's DISTINCT reads them. */
+  private withoutRepeats(data: SchemaData, limit?: number): SchemaData {
     const seen = new Set<string>();
-    const rows = data.rows.filter((row) => {
+    const distinct = data.rows.filter((row) => {
       const key = JSON.stringify(row);
       const isRepeat = seen.has(key);
       seen.add(key);
       return !isRepeat;
     });
+    const rows = distinct.slice(0, limit);
     return { ...data, rows, totalRows: rows.length };
-  }
-
-  /** Spark orders structs field by field, nulls first. */
-  private compareDevices(a: DeviceCell, b: DeviceCell): number {
-    for (const field of DEVICE_FIELDS) {
-      const order = this.compareNullable(a[field], b[field]);
-      if (order !== 0) {
-        return order;
-      }
-    }
-    return 0;
-  }
-
-  private compareNullable(a: string | null, b: string | null): number {
-    if (a === null || b === null) {
-      return a === b ? 0 : a === null ? -1 : 1;
-    }
-    return this.compareText(a, b);
   }
 
   /** Spark compares text by its UTF-8 bytes. */

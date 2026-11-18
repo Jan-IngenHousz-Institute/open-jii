@@ -15,6 +15,7 @@ const client = {
   captureExceptionImmediate: vi.fn(),
   withContext: vi.fn(),
   getContext: vi.fn<PostHogServerClient["getContext"]>(),
+  on: vi.fn(),
   shutdown: vi.fn(),
 } satisfies PostHogServerClient;
 

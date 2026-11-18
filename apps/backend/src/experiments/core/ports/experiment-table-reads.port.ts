@@ -37,5 +37,11 @@ export interface ExperimentTableReads {
   /** A read of how many rows another would return, in a column named `total`. */
   countQuery(query: TableQuery): TableQuery;
 
+  /**
+   * The distinct device labels a read of `device.serial_number` holds, blank ones left out, case
+   * folded for the order with the label itself breaking ties, one page at a time.
+   */
+  deviceLabelsQuery(query: TableQuery, limit: number, offset: number): TableQuery;
+
   runQuery(query: TableQuery): Promise<Result<SchemaData>>;
 }

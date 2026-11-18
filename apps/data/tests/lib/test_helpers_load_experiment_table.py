@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from openjii.helpers import load_experiment_table
+from openjii.helpers import TableMetadataNotFound, load_experiment_table
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StringType
 
@@ -207,3 +207,8 @@ def test_an_upload_field_named_like_the_phone_column_keeps_its_name_without_one(
 def test_static_identifier_without_a_source_is_refused(schema: str) -> None:
     with pytest.raises(ValueError, match="Unknown table type"):
         _load("mystery", schema)
+
+
+def test_a_table_without_a_metadata_row_is_reported_as_such(schema: str) -> None:
+    with pytest.raises(TableMetadataNotFound, match="identifier macro-3"):
+        _load("macro-3", schema)

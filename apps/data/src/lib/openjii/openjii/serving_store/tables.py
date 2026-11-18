@@ -56,6 +56,12 @@ def json_object(column: str) -> Column:
     ).alias(column)
 
 
+def json_text(column: str) -> Column:
+    """A VARIANT as Spark writes it out, which is what the warehouse shows. The store's JSON type
+    reprints numbers and drops keys whose value is null, so pages take their cells from this."""
+    return F.to_json(column).alias(f"{column}_text")
+
+
 def or_empty(column: str) -> Column:
     """A nullable key column as the store keys it, where null and empty are one value."""
     return F.coalesce(F.col(column), F.lit("")).alias(column)
@@ -225,6 +231,7 @@ class MacroResults(StoreTable):
             "workbook_run_id",
             "workbook_version_id",
             json_object("macro_output"),
+            json_text("macro_output"),
             "macro_error",
             "processed_timestamp",
             "questions_data",
@@ -256,6 +263,7 @@ class Uploads(StoreTable):
             "created_by",
             clamped("uploaded_at"),
             json_object("uploaded_data"),
+            json_text("uploaded_data"),
         ]
 
 

@@ -155,10 +155,34 @@ def test_macro_output_is_an_object_or_missing(spark: SparkSession) -> None:
     assert rows[11]["raw_id"] == 1
 
 
+def test_macro_output_also_goes_as_the_text_spark_writes(spark: SparkSession) -> None:
+    rows = _rows(MACRO_RESULTS.lines(spark.sql(_MACRO_DATA_CHANGES)))
+
+    assert rows[11]["macro_output_text"] == '{"Plot no.":"A1","phi2":0.7}'
+    assert rows[12]["macro_output_text"] == "[0.7,0.71]"
+    assert rows[13]["macro_output_text"] == "0.7"
+    assert rows[14]["macro_output_text"] == "null"
+    assert "macro_output_text" not in rows[15]
+
+
+def test_a_payloads_text_keeps_how_gold_holds_each_number_and_its_null_keys(spark: SparkSession) -> None:
+    changes = _MACRO_DATA_CHANGES.replace(
+        '\'{"phi2": 0.7, "Plot no.": "A1"}\'',
+        '\'{"vH+": -2.89e-06, "ECSt": null, "plain": 0.00000289, "n": 123456789012345678901234567890}\'',
+    )
+
+    row = _rows(MACRO_RESULTS.lines(spark.sql(changes)))[11]
+
+    assert row["macro_output_text"] == (
+        '{"ECSt":null,"n":123456789012345678901234567890,"plain":0.00000289,"vH+":-2.89E-6}'
+    )
+
+
 def test_an_upload_row_wraps_its_data(spark: SparkSession) -> None:
     row = _rows(UPLOADS.lines(spark.sql(_UPLOADED_DATA_CHANGES)))[21]
 
     assert row["uploaded_data"] == {"_items": [{"ph": 6.5}]}
+    assert row["uploaded_data_text"] == '[{"ph":6.5}]'
     assert "upload_table_id" not in row
     assert row["uploaded_at"] == "2026-10-19 09:00:00.000000"
 
@@ -330,6 +354,14 @@ def test_macro_output_lands_with_dotted_keys_whole_and_wide_integers_as_floats(
     assert outputs[14] is None
     assert outputs[15] is None
     assert outputs[16] == {"w": 18446744073709552000, "n": [1, -100000000000000000000]}
+
+    # The text keeps every number as gold holds it, the integers too wide for the JSON column too.
+    texts = {
+        row["id"]: row["macro_output_text"]
+        for row in store.rows(f"SELECT id, macro_output_text FROM {_DATABASE}.macro_results FINAL")
+    }
+    assert texts == {row_id: row.get("macro_output_text") for row_id, row in _rows(lines).items()}
+    assert texts[16] == '{"n":[1,-99999999999999999999],"w":18446744073709551616}'
 
 
 @pytest.mark.clickhouse

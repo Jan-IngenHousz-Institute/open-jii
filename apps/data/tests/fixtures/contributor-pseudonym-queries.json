@@ -1,0 +1,4 @@
+{
+  "pseudonyms": "SELECT `row`, concat('Contributor-', upper(substr(sha2(concat('5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61:', `contributor`.`id`), 256), 1, 6))) AS `pseudonym` FROM pseudonym_contributors ORDER BY `row` ASC",
+  "filtered": "SELECT `row` FROM pseudonym_contributors WHERE concat('Contributor-', upper(substr(sha2(concat('5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61:', `contributor`.`id`), 256), 1, 6))) = 'Contributor-AC2F1B'"
+}
