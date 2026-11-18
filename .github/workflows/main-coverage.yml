@@ -91,7 +91,7 @@ jobs:
       # PySpark 4.0 runs on Java 17 or 21, not on the runner's newer default JDK.
       - name: Setup Java (only if regenerating coverage)
         if: steps.download.outcome != 'success'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "21"

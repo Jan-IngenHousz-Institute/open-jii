@@ -22,14 +22,19 @@ import { ProtocolRepository } from "../protocols/core/repositories/protocol.repo
 import { SharingModule } from "../sharing/sharing.module";
 import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
+import { AnnotationMergerService } from "./application/services/annotation-merger.service";
 // Services
+import { AnnotationsLakehouseCopier } from "./application/services/annotations-lakehouse-copier";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
 import { ExperimentDataSourceService } from "./application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
+import { MetadataSheetsLakehouseCopier } from "./application/services/metadata-sheets-lakehouse-copier";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
+import { NumberAnswersService } from "./application/services/number-answers.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
 import { AttachWorkbookUseCase } from "./application/use-cases/attach-workbook/attach-workbook";
 // Use Cases
@@ -103,6 +108,7 @@ import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/ex
 import { ExperimentAnnotationsRepository } from "./core/repositories/experiment-annotations.repository";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 import { ExperimentDataExportsRepository } from "./core/repositories/experiment-data-exports.repository";
+import { ExperimentDataOutboxRepository } from "./core/repositories/experiment-data-outbox.repository";
 import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-data-uploads.repository";
 // Repositories
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
@@ -110,6 +116,7 @@ import { ExperimentDeviceRegistryRepository } from "./core/repositories/experime
 import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
+import { ExperimentMetadataWarehouseRepository } from "./core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "./core/repositories/experiment.repository";
@@ -213,7 +220,9 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentRepository,
     ExperimentJoinRequestRepository,
     ExperimentJoinCodeRepository,
+    ExperimentMetadataWarehouseRepository,
     ExperimentMetadataRepository,
+    ExperimentDataOutboxRepository,
     ExperimentAnnotationsWarehouseRepository,
     ExperimentAnnotationsRepository,
     ExperimentVisualizationRepository,
@@ -235,9 +244,14 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
     // Services
     EmbargoProcessorService,
+    ExperimentDataOutboxWorker,
+    AnnotationsLakehouseCopier,
+    MetadataSheetsLakehouseCopier,
+    AnnotationMergerService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
     ExperimentDataSourceService,
+    NumberAnswersService,
     ExperimentWarehouseReadsService,
     ExperimentStoreReadsService,
     MultipartUploadService,

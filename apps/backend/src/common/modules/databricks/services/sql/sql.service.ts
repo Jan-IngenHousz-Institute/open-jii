@@ -8,6 +8,7 @@ import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
 import {
+  INLINE_RESULT_BYTE_LIMIT,
   ExecuteStatementRequest,
   ResultChunk,
   SchemaData,
@@ -29,10 +30,10 @@ export class DatabricksSqlService {
   private static readonly WAIT_TIMEOUT = "50s";
 
   /**
-   * The most an INLINE result may hold. Without a byte limit a larger result fails the statement
-   * as a BAD_REQUEST; with one the warehouse returns what fits and marks it truncated.
+   * Without a byte limit a result past the inline limit fails the statement as a BAD_REQUEST;
+   * with one the warehouse returns what fits and marks it truncated.
    */
-  private static readonly INLINE_BYTE_LIMIT = 26_214_400;
+  private static readonly INLINE_BYTE_LIMIT = INLINE_RESULT_BYTE_LIMIT;
 
   /**
    * The edge drops the client 60 s after its request started, a little before this statement did,

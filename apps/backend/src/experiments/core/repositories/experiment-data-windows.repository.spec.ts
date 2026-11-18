@@ -12,12 +12,15 @@ import {
   failure,
   success,
 } from "../../../common/utils/fp-utils";
+import { AnnotationMergerService } from "../../application/services/annotation-merger.service";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
+import { NumberAnswersService } from "../../application/services/number-answers.service";
 import type { ExperimentDto } from "../models/experiment.model";
 import type { CachePort } from "../ports/cache.port";
 import type { DatabricksPort } from "../ports/databricks.port";
+import type { ExperimentAnnotationsRepository } from "./experiment-annotations.repository";
 import { ExperimentDataRepository } from "./experiment-data.repository";
 import type { FlowRepository } from "./flow.repository";
 
@@ -67,11 +70,18 @@ function setup(
     cache,
     cache,
     new ContributorAnonymizerService(),
+    new AnnotationMergerService(
+      fromPartial<ExperimentAnnotationsRepository>({
+        findOnRows: () => Promise.resolve(success([])),
+      }),
+    ),
     new ExperimentWarehouseReadsService(
       port,
-      fromPartial<FlowRepository>({
-        getByExperimentId: vi.fn().mockResolvedValue(success(null)),
-      }),
+      new NumberAnswersService(
+        fromPartial<FlowRepository>({
+          getByExperimentId: vi.fn().mockResolvedValue(success(null)),
+        }),
+      ),
     ),
     fromPartial<ExperimentStoreReadsService>({}),
   );
