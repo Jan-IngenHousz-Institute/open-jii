@@ -16,6 +16,7 @@ import { AnnotationMergerService } from "../../application/services/annotation-m
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
+import { NumberAnswersService } from "../../application/services/number-answers.service";
 import type { ExperimentDto } from "../models/experiment.model";
 import type { CachePort } from "../ports/cache.port";
 import type { DatabricksPort } from "../ports/databricks.port";
@@ -76,9 +77,11 @@ function setup(
     ),
     new ExperimentWarehouseReadsService(
       port,
-      fromPartial<FlowRepository>({
-        getByExperimentId: vi.fn().mockResolvedValue(success(null)),
-      }),
+      new NumberAnswersService(
+        fromPartial<FlowRepository>({
+          getByExperimentId: vi.fn().mockResolvedValue(success(null)),
+        }),
+      ),
     ),
     fromPartial<ExperimentStoreReadsService>({}),
   );
