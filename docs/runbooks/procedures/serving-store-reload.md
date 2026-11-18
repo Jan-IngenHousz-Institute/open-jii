@@ -59,10 +59,12 @@ least gold's newest commit that added rows. As the admin, `SELECT max(_commit_ve
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
 (`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
 it carries in parallel, so the store's newest version can reach gold's while that batch still
-writes older ones. So once it has, wait for the pipeline's driver log to show a
-`[serving store] <table> batch <n>: ... inserted` line written after your check: batches run one at
-a time, so the batch that carried gold's newest commit has then finished. While gold is quiet and no
-line comes, wait until `SELECT count() FROM store.<table>` holds still for a few minutes instead.
+writes older ones. So also check that batch has finished. `SELECT max(inserted_at) FROM
+store.<table> WHERE _commit_version = <gold's newest version>` gives when the feed landed that
+commit's rows, and the pipeline's driver log must show a `[serving store] <table> batch <n>: ...
+inserted` line written after that time. A batch logs it only once all its rows are in, and batches
+run one at a time, so a line after that time cannot be an earlier batch's. A `writing the batch
+again` line instead means the batch is still writing, so wait for the `inserted` one.
 Then the feed has sent every commit before the reload's, and a feed that stopped cannot later send
 rows from before it, such as an experiment the reload removes. For a new store, as on prod's first
 rollout, switch the feed on first and reload `all` once it has caught up.
