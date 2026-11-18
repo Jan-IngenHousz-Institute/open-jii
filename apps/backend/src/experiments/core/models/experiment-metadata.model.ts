@@ -1,16 +1,16 @@
-/**
- * Internal DTO for experiment metadata.
- *
- * Maps 1-to-1 to the Databricks table:
- *   metadata_id   STRING   (PK)
- *   experiment_id STRING
- *   metadata      VARIANT  (arbitrary JSON)
- *   created_by    STRING
- *   created_at    TIMESTAMP
- *   updated_at    TIMESTAMP
- */
+/** A metadata sheet as the API answers with it: the record, its id named `metadataId`. */
 export interface ExperimentMetadataDto {
   metadataId: string;
+  experimentId: string;
+  metadata: Record<string, unknown>;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** A metadata sheet with the id and times it gets in every place that keeps it. */
+export interface MetadataSheetRecord {
+  id: string;
   experimentId: string;
   metadata: Record<string, unknown>;
   createdBy: string;

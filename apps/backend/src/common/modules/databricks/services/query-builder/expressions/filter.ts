@@ -7,8 +7,9 @@ import type { FilterCondition } from "../query-builder.types";
  * defensive checks here only cover what would still generate invalid SQL.
  */
 export function buildFilterCondition(filter: FilterCondition, builder: BaseQueryBuilder): string {
-  const col = contributorPseudonymColumn(filter, builder);
+  const columnSql = contributorPseudonymColumn(filter, builder);
   const { operator, value } = filter;
+  const col = builder.comparedColumn(columnSql, filter.column, value);
 
   switch (operator) {
     case "equals":
@@ -45,7 +46,7 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
       }
 
       // % and _ in user input are intentionally treated as wildcards.
-      return `${builder.textOf(col)} LIKE ${builder.escapeValue(`%${value}%`)}`;
+      return `${builder.textOf(columnSql)} LIKE ${builder.escapeValue(`%${value}%`)}`;
     }
     case "in": {
       if (!Array.isArray(value) || value.length === 0) {

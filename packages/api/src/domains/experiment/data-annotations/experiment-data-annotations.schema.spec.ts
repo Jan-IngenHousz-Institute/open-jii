@@ -273,6 +273,49 @@ describe("Annotations", () => {
     expect(bulk.success).toBe(false);
   });
 
+  it("takes a table name of letters, digits and underscores, or an id, and nothing else", () => {
+    const body = (tableName: string) => ({
+      tableName,
+      rowId: "1",
+      annotation: { type: "comment" as const, content: { type: "comment" as const, text: "Wet" } },
+    });
+
+    expect(zExperimentAddAnnotationBody.safeParse(body("raw_data")).success).toBe(true);
+    expect(zExperimentAddAnnotationBody.safeParse(body(uuidA)).success).toBe(true);
+    expect(zExperimentAddAnnotationBody.safeParse(body("raw data")).success).toBe(false);
+    expect(zExperimentAddAnnotationBody.safeParse(body("raw_data'; --")).success).toBe(false);
+  });
+
+  it("refuses more rows in one request than a data page holds", () => {
+    const comment = {
+      type: "comment" as const,
+      content: { type: "comment" as const, text: "Wet" },
+    };
+    const rowIds = (count: number) => Array.from({ length: count }, (_, index) => String(index));
+
+    expect(
+      zExperimentAddAnnotationsBulkBody.safeParse({
+        tableName: "raw_data",
+        rowIds: rowIds(1000),
+        annotation: comment,
+      }).success,
+    ).toBe(true);
+    expect(
+      zExperimentAddAnnotationsBulkBody.safeParse({
+        tableName: "raw_data",
+        rowIds: rowIds(1001),
+        annotation: comment,
+      }).success,
+    ).toBe(false);
+    expect(
+      zExperimentAnnotationDeleteBulkBody.safeParse({
+        tableName: "raw_data",
+        rowIds: rowIds(1001),
+        type: "comment",
+      }).success,
+    ).toBe(false);
+  });
+
   it("refuses a row id or table name longer than Postgres keeps", () => {
     const comment = {
       type: "comment" as const,

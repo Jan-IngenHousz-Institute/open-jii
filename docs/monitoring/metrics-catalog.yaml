@@ -153,6 +153,9 @@ passes:
   - date: 2026-11-16
     range: [149, 149]
     note: cached Contentful reads behind the public pages that fail to refresh, since Next keeps serving the old value and only logs it
+  - date: 2026-11-17
+    range: [150, 150]
+    note: the p95 of a flow's batches, which takes over 127's alert, since 127 follows how often messages arrive rather than whether a flow keeps up
 
 metrics:
   # Ingest path
@@ -2373,22 +2376,22 @@ metrics:
     source: dbx
     phase: P3
     active: true
-    slots: [alert]
-    severity: warning
+    slots: [exception]
     signal:
       namespace: OpenJII/Data
       search: SEARCH('{OpenJII/Data,Environment,Flow,Pipeline} MetricName="FlowBusyPercent" AND Environment="${ENVIRONMENT}"', 'Maximum')
       stat: Maximum
       unit: percent
       cadence: 3600
-    baseline: { method: threshold, max: 80 }
     runbook: docs/runbooks/flow-busy.md
     notes: >-
       How much of an hour each flow a streamed measurement waits on spent in batches, per Pipeline and
-      Flow, read from its driver's streaming progress records in the pipeline-logs volume. Near 100%
-      the flow runs batches back to back, having caught up with its trigger interval, and more load
-      means longer waits. An hour reaches the volume about an hour after it closes. In prod's busiest
-      hour of 28 October 2026 the experiment table's flow spent 18.5% of it in batches, cleaning 16.7%.
+      Flow, read from its driver's streaming progress records in the pipeline-logs volume. An hour
+      reaches the volume about an hour after it closes. It follows how often messages arrive more than
+      how much work they take: raw_data and clean_data trigger every 2 seconds, so a fleet reporting
+      once a second holds them near 35% and a device uploading what it buffered fills an hour, while
+      neither waits longer. It alerted until 17 November 2026, when entry 150, the batches' p95, took
+      over, and stays on the report as the flow's load.
 
   - num: 128
     id: flow-restarts
@@ -2414,6 +2417,33 @@ metrics:
       waits for more than two, as entry 129's does. A gold pipeline once failed about 760 times in
       eight days, four an hour, with no one told. A pipeline that keeps replacing its cluster rotates no hourly log,
       which entry 129 covers.
+
+  - num: 150
+    id: flow-batch-p95
+    name: Slowest batches of a flow's hour
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P3
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      search: SEARCH('{OpenJII/Data,Environment,Flow,Pipeline} MetricName="FlowBatchP95Seconds" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: seconds
+      cadence: 3600
+    baseline: { method: threshold, max: 30 }
+    runbook: docs/runbooks/flow-batch-p95.md
+    notes: >-
+      The p95 of each watched flow's batch durations over an hour, per Pipeline and Flow, from the same
+      progress records as 127. Once batches run back to back a measurement waits up to about two of
+      them, so this grows when a flow falls behind and stays flat when messages only arrive more
+      often. From 3 to 17 November 2026 no prod flow's hourly p95 passed 22 seconds, the macro
+      flow's being the highest. A load test on dev on 17 November held raw_data at 20 seconds with
+      300 messages a second on one worker and one shard, about sixty times prod's busiest hour,
+      each batch taking about 2.7 ms a row on top of 2 seconds. One hour over 30 fires the rule.
 
   - num: 129
     id: pipeline-cluster-starts

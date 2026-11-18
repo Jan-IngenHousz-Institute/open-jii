@@ -1,14 +1,16 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
-import { Result, failure, AppError } from "../../../../common/utils/fp-utils";
+import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type {
   ExperimentMetadataDto,
   UpdateExperimentMetadataDto,
 } from "../../../core/models/experiment-metadata.model";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class UpdateExperimentMetadataUseCase {
@@ -16,7 +18,9 @@ export class UpdateExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMetadataRepository: ExperimentMetadataRepository,
+    private readonly metadataRepository: ExperimentMetadataRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -55,23 +59,24 @@ export class UpdateExperimentMetadataUseCase {
         return failure(AppError.forbidden("Cannot modify an archived experiment"));
       }
 
-      const result = await this.experimentMetadataRepository.update(
-        metadataId,
-        data,
-        userId,
-        experimentId,
-      );
-
-      if (result.isSuccess()) {
-        this.logger.log({
-          msg: "Experiment metadata updated successfully",
-          operation: "updateExperimentMetadata",
+      const now = new Date();
+      const written = await this.metadataRepository.transaction(async (tx) => {
+        const updated = await this.metadataRepository.update(
+          tx,
           experimentId,
           metadataId,
-          userId,
-          status: "success",
-        });
-      } else {
+          data.metadata,
+          now,
+        );
+        if (updated) {
+          await this.outboxRepository.owe(tx, [
+            { recordType: "metadata_sheet", recordId: metadataId, experimentId },
+          ]);
+        }
+        return updated;
+      });
+
+      if (written.isFailure()) {
         this.logger.error({
           msg: "Failed to update experiment metadata",
           errorCode: ErrorCodes.EXPERIMENT_METADATA_UPDATE_FAILED,
@@ -79,11 +84,27 @@ export class UpdateExperimentMetadataUseCase {
           experimentId,
           metadataId,
           userId,
-          error: result.error.message,
+          error: written.error.message,
         });
+        return failure(written.error);
       }
 
-      return result;
+      if (written.value === null) {
+        return failure(AppError.notFound(`Metadata with ID ${metadataId} not found`));
+      }
+
+      this.logger.log({
+        msg: "Experiment metadata updated successfully",
+        operation: "updateExperimentMetadata",
+        experimentId,
+        metadataId,
+        userId,
+        status: "success",
+      });
+      this.outboxWorker.nudge();
+
+      const { id, ...updated } = written.value;
+      return success({ ...updated, metadataId: id });
     });
   }
 }

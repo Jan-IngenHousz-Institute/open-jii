@@ -7,7 +7,10 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 - gold removed rows, as when an experiment is deleted or a repair drops rows;
 - the feed missed rows: while it was off for longer than its start versions reach, after a
   checkpoint reset, after a gold refresh that changed a key column (`store-feed-stalled`), or for
-  refused rows once the feed's code can send them (`store-feed-rejects`).
+  refused rows once the feed's code can send them (`store-feed-rejects`);
+- a store migration adds a column the feed fills, such as 0009's payload texts: rows written
+  before it carry none, and the feed never sends them again (see "After a migration the feed
+  fills").
 
 ## What it does
 
@@ -54,10 +57,17 @@ Run it once the feed is on and has caught up. A quiet `store-feed-latency` does 
 a stopped feed sends nothing to measure. Check it instead: the store's newest version must be at
 least gold's newest commit that added rows. As the admin, `SELECT max(_commit_version) FROM
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
-(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. Then the feed has sent
-every commit before the reload's, and a feed that stopped cannot later send rows from before it,
-such as an experiment the reload removes. For a new store, as on prod's first rollout, switch the
-feed on first and reload `all` once it has caught up.
+(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
+it carries in parallel, so the store's newest version can reach gold's while that batch still
+writes older ones. So also check that batch has finished. `SELECT max(inserted_at) FROM
+store.<table> WHERE _commit_version = <gold's newest version>` gives when the feed landed that
+commit's rows, and the pipeline's driver log must show a `[serving store] <table> batch <n>: ...
+inserted` line written after that time. A batch logs it only once all its rows are in, and batches
+run one at a time, so a line after that time cannot be an earlier batch's. A `writing the batch
+again` line instead means the batch is still writing, so wait for the `inserted` one.
+Then the feed has sent every commit before the reload's, and a feed that stopped cannot later send
+rows from before it, such as an experiment the reload removes. For a new store, as on prod's first
+rollout, switch the feed on first and reload `all` once it has caught up.
 
 Never run it while gold's table is being refreshed. A full refresh rewrites the table over many
 commits, so at any one of them gold holds part of it, and a reload then deletes the rest from the
@@ -85,6 +95,25 @@ only when those rows should go, as for an experiment gold has dropped, and only 
 The cluster takes a few minutes to start. Each table's result is one line of the task's output:
 
 `[serving store] Reloaded <table> at gold version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in gold and <n> in the store over <n> experiments, <n> of them written by the feed since`
+
+## After a migration the feed fills
+
+A migration that adds a column the feed fills leaves the column empty on every row the store
+already holds, and on every row the feed writes until its pipelines run the new code. Reads that
+depend on it show those rows wrong without an error: after 0009, a macro or upload row without its
+payload text shows every payload cell empty, while filters and sorts on those fields still run. Go
+in this order, and compare the read paths or widen a store flag only at the end:
+
+1. Apply the store migrations with the backend deploy.
+2. Deploy the data bundle, and update `Centrum-DLT-Pipeline-<ENV>` and
+   `Macro-Execution-DLT-Pipeline-<ENV>`, which runs the `macro_results` sink, so every store sink
+   runs the new code.
+3. Check that the feed has caught up, as "Running it" describes.
+4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`.
+5. Merge them once, as "After a full or large reload" describes.
+
+An environment whose feed is off, as prod's is before its first rollout, needs only its first
+reload of `all`.
 
 ## After a full or large reload
 
