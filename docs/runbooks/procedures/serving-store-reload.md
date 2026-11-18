@@ -57,10 +57,15 @@ Run it once the feed is on and has caught up. A quiet `store-feed-latency` does 
 a stopped feed sends nothing to measure. Check it instead: the store's newest version must be at
 least gold's newest commit that added rows. As the admin, `SELECT max(_commit_version) FROM
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
-(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. Then the feed has sent
-every commit before the reload's, and a feed that stopped cannot later send rows from before it,
-such as an experiment the reload removes. For a new store, as on prod's first rollout, switch the
-feed on first and reload `all` once it has caught up.
+(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
+it carries in parallel, so the store's newest version can reach gold's while that batch still
+writes older ones. So once it has, wait for the pipeline's driver log to show a
+`[serving store] <table> batch <n>: ... inserted` line written after your check: batches run one at
+a time, so the batch that carried gold's newest commit has then finished. While gold is quiet and no
+line comes, wait until `SELECT count() FROM store.<table>` holds still for a few minutes instead.
+Then the feed has sent every commit before the reload's, and a feed that stopped cannot later send
+rows from before it, such as an experiment the reload removes. For a new store, as on prod's first
+rollout, switch the feed on first and reload `all` once it has caught up.
 
 Never run it while gold's table is being refreshed. A full refresh rewrites the table over many
 commits, so at any one of them gold holds part of it, and a reload then deletes the rest from the
@@ -98,7 +103,9 @@ payload text shows every payload cell empty, while filters and sorts on those fi
 in this order, and compare the read paths or widen a store flag only at the end:
 
 1. Apply the store migrations with the backend deploy.
-2. Deploy the data bundle, and update the centrum pipelines so their store sinks run the new code.
+2. Deploy the data bundle, and update `Centrum-DLT-Pipeline-<ENV>` and
+   `Macro-Execution-DLT-Pipeline-<ENV>`, which runs the `macro_results` sink, so every store sink
+   runs the new code.
 3. Check that the feed has caught up, as "Running it" describes.
 4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`.
 5. Merge them once, as "After a full or large reload" describes.
