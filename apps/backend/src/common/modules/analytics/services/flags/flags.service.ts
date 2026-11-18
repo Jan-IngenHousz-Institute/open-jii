@@ -22,9 +22,10 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   // Every evaluation is an HTTP round trip and polling surfaces hit flagged
   // routes several times a minute; a minute of staleness is fine.
   private static readonly FLAG_CACHE_TTL_MS = 60_000;
-  // While PostHog times out, each evaluation waits out the client's timeout and its retry. A failed
-  // request pauses every evaluation this long, so one caller pays that wait rather than every user
-  // and flag, and a recovered PostHog takes over once it lapses.
+  // While PostHog times out, each evaluation waits out the client's timeout and its retry. After a
+  // failed request, an evaluation the cache cannot answer takes the default without asking for
+  // this long, so the wait is not paid per user and flag, and a recovered PostHog takes over once
+  // it lapses.
   private static readonly FLAG_FALLBACK_TTL_MS = 10_000;
   // Keyed per (flag, user, person properties); insertion order makes the oldest the
   // eviction candidate.
@@ -202,7 +203,8 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   }
 
   private remember(cacheKey: string, value: boolean, ttlMs: number) {
-    // A Map keeps a re-set key in its old place, which would make the newest entry the next evicted.
+    // A Map keeps a re-set key in its old place, which would make the newest entry the next
+    // evicted.
     this.flagCache.delete(cacheKey);
     if (this.flagCache.size >= FlagsService.FLAG_CACHE_MAX_ENTRIES) {
       const oldest = this.flagCache.keys().next();

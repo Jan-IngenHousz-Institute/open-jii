@@ -29,7 +29,8 @@ describe("FlagsService", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     configService = testApp.module.get(AnalyticsConfigService);
-    // The module's instance lives as long as the file, and a failure pauses it for every test after.
+    // The module's instance lives as long as the file, and a failure would pause it for every
+    // test after.
     service = new FlagsService(configService);
 
     // Create fresh spies on the protected wrapper methods
@@ -288,10 +289,29 @@ describe("FlagsService", () => {
       const evaluations = [1, 2, 3].map(() =>
         service.isFeatureFlagEnabled(FEATURE_FLAGS.STORE_EXPERIMENT_READS, "page-load-user"),
       );
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(1);
       answer(true);
 
       await expect(Promise.all(evaluations)).resolves.toEqual([true, true, true]);
-      expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps answering from the cache while a failure pauses evaluations", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi
+          .fn()
+          .mockResolvedValueOnce(true)
+          .mockRejectedValueOnce(new Error("timeout")),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+      await service.isFeatureFlagEnabled(FEATURE_FLAGS.STORE_EXPERIMENT_READS, "cached-user");
+      await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "failing-user");
+
+      await expect(
+        service.isFeatureFlagEnabled(FEATURE_FLAGS.STORE_EXPERIMENT_READS, "cached-user"),
+      ).resolves.toBe(true);
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(2);
     });
 
     describe("while PostHog fails", () => {
