@@ -18,7 +18,7 @@ function incident(id: string, overrides: Partial<Incident> = {}): Incident {
     kind: "incident",
     title: id,
     impact: "outage",
-    components: ["website"],
+    components: ["data-delivery"],
     startsAt: at(-10 * MINUTE_MS),
     updates: [],
     ...overrides,
@@ -181,21 +181,23 @@ describe("isInProgress", () => {
 });
 
 describe("maintenanceEndsAt", () => {
-  const soon = maintenance("soon", { components: ["website"], endsAt: at(30 * MINUTE_MS) });
+  const soon = maintenance("soon", { components: ["data-delivery"], endsAt: at(30 * MINUTE_MS) });
   const later = maintenance("later", { components: ["platform"], endsAt: at(90 * MINUTE_MS) });
 
   it("gives the latest end of the windows naming the components", () => {
-    expect(maintenanceEndsAt([soon, later], ["website", "platform"])).toBe(at(90 * MINUTE_MS));
+    expect(maintenanceEndsAt([soon, later], ["data-delivery", "platform"])).toBe(
+      at(90 * MINUTE_MS),
+    );
   });
 
   it("leaves out windows that name none of the components", () => {
-    expect(maintenanceEndsAt([soon, later], ["website"])).toBe(at(30 * MINUTE_MS));
+    expect(maintenanceEndsAt([soon, later], ["data-delivery"])).toBe(at(30 * MINUTE_MS));
   });
 
   it("gives no end when a window naming them has none", () => {
     const openEnded = maintenance("open-ended", { components: ["platform"] });
 
-    expect(maintenanceEndsAt([soon, openEnded], ["website", "platform"])).toBeUndefined();
+    expect(maintenanceEndsAt([soon, openEnded], ["data-delivery", "platform"])).toBeUndefined();
   });
 
   it("gives no end when no window names them", () => {

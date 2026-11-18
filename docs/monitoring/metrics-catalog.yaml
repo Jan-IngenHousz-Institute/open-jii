@@ -2687,8 +2687,8 @@ metrics:
     notes: >-
       Exports the backend recorded as failed with the error code unknown, its own failure rather than
       the data's or the request's. The backend task that finishes an export counts it once, with
-      Cause user for the other codes. The status page shows Exports degraded while any failed this way
-      in the last hour.
+      Cause user for the other codes. The status page shows Platform degraded while three or more failed
+      this way in the last hour.
 
   - num: 147
     id: sign-in-emails-failed
@@ -2709,8 +2709,8 @@ metrics:
     notes: >-
       Emails with a sign-in or verification code that the email server did not take, counted by a
       metric filter on the backend's log group from the auth server's "Sign-in code email failed"
-      line. Each one is someone who asked for a code and got none. The status page shows Sign-in
-      degraded while any failed in the last 15 minutes.
+      line. Each one is someone who asked for a code and got none. The status page shows Platform
+      degraded while three or more failed in the last 15 minutes.
   - num: 139
     id: emails-sent
     name: Emails sent

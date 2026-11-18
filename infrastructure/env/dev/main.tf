@@ -3091,7 +3091,7 @@ module "backend_ecs" {
 }
 
 # The auth server logs each code email the email server did not take. Catalog entry 147; the status
-# page's Sign-in row reads the same count.
+# page's Platform row reads the same count.
 resource "aws_cloudwatch_log_metric_filter" "sign_in_emails_failed" {
   name           = "sign-in-emails-failed-${var.environment}"
   log_group_name = module.backend_ecs.cloudwatch_log_group_name
