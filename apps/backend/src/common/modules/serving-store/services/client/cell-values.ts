@@ -7,6 +7,15 @@ class JsonNumber {
 
 const TIMESTAMP = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?/;
 
+/** How the store writes a double JSON has no number for, once asked to quote it. */
+const NON_FINITE: Partial<Record<string, number>> = {
+  nan: Number.NaN,
+  "-nan": Number.NaN,
+  inf: Number.POSITIVE_INFINITY,
+  "+inf": Number.POSITIVE_INFINITY,
+  "-inf": Number.NEGATIVE_INFINITY,
+};
+
 /**
  * Writes the store's values as the warehouse writes its cells, which pages show as they come:
  * times in UTC to the millisecond, doubles as Java prints them, and arrays and structs as JSON
@@ -17,16 +26,35 @@ export class CellValues {
     if (value === null || value === undefined) {
       return null;
     }
-    if (type === "VARIANT") {
-      return CellValues.variantJson(typeof value === "string" ? CellValues.parse(value) : value);
-    }
+    const isJson = type === "VARIANT" || type.startsWith("ARRAY<") || type.startsWith("STRUCT<");
+    return CellValues.written(
+      isJson && typeof value === "string" ? CellValues.parse(value) : value,
+      type,
+    );
+  }
 
-    const isComplex = type.startsWith("ARRAY<") || type.startsWith("STRUCT<");
-    if (isComplex) {
-      const parsed = typeof value === "string" ? CellValues.parse(value) : value;
-      return JSON.stringify(CellValues.leaves(parsed, type));
+  /** A payload's JSON text, parsed once for every cell read from it; nothing for a row without. */
+  static payload(text: unknown): unknown {
+    return typeof text === "string" ? CellValues.parse(text) : undefined;
+  }
+
+  /**
+   * A cell of a payload as the warehouse reads it with `try_variant_get`: the field `key`, or the
+   * whole payload without one. A missing field is no value; a null one is the text null where the
+   * warehouse reads a VARIANT, and no value where it casts to a type.
+   */
+  static payloadCell(payload: unknown, key: string | undefined, type: string): string | null {
+    const value = key === undefined ? payload : CellValues.field(payload, key);
+    if (value === undefined) {
+      return null;
     }
-    return CellValues.scalar(value, type);
+    if (value === null) {
+      return type === "VARIANT" ? "null" : null;
+    }
+    // The text is Spark's own JSON, so a VARIANT keeps its numbers as Spark printed them.
+    return type === "VARIANT"
+      ? CellValues.variantJson(value, true)
+      : CellValues.written(value, type);
   }
 
   /** Java's `Double.toString`: plain from 10^-3 up to 10^7, otherwise `d.dddE±n`. */
@@ -50,6 +78,21 @@ export class CellValues {
     const [mantissa, exponent] = value.toExponential().split("e");
     const digits = mantissa.includes(".") ? mantissa : `${mantissa}.0`;
     return `${digits}E${Number(exponent)}`;
+  }
+
+  private static written(value: unknown, type: string): string | null {
+    if (type === "VARIANT") {
+      return CellValues.variantJson(value);
+    }
+    const isComplex = type.startsWith("ARRAY<") || type.startsWith("STRUCT<");
+    if (isComplex) {
+      return JSON.stringify(CellValues.leaves(value, type));
+    }
+    return CellValues.scalar(value, type);
+  }
+
+  private static field(payload: unknown, key: string): unknown {
+    return CellValues.isRecord(payload) && Object.hasOwn(payload, key) ? payload[key] : undefined;
   }
 
   private static parse(text: string): unknown {
@@ -81,7 +124,7 @@ export class CellValues {
       return Object.fromEntries(
         fields.map(({ name, type: fieldType }) => [
           name,
-          CellValues.leaves(value[name], fieldType),
+          CellValues.leaves(CellValues.field(value, name), fieldType),
         ]),
       );
     }
@@ -95,6 +138,10 @@ export class CellValues {
     const number = CellValues.numberText(value);
 
     if (type === "DOUBLE" || type === "FLOAT") {
+      const nonFinite = typeof value === "string" ? NON_FINITE[value] : undefined;
+      if (nonFinite !== undefined) {
+        return CellValues.javaDouble(nonFinite);
+      }
       return number === null ? CellValues.loose(value) : CellValues.javaDouble(Number(number));
     }
     if (type === "BIGINT" || type === "INT") {
@@ -133,10 +180,11 @@ export class CellValues {
   }
 
   /** Spark keeps a number written plainly as a decimal and one with an exponent as a double. */
-  private static variantJson(value: unknown): string {
+  private static variantJson(value: unknown, isSparkText = false): string {
     const number = CellValues.numberText(value);
     if (number !== null) {
-      return /[eE]/.test(number) ? CellValues.javaDouble(Number(number)) : number;
+      const isJavaDouble = isSparkText || !/[eE]/.test(number);
+      return isJavaDouble ? number : CellValues.javaDouble(Number(number));
     }
     if (value === null || value === undefined) {
       return "null";
@@ -145,7 +193,7 @@ export class CellValues {
       return JSON.stringify(value);
     }
     if (Array.isArray(value)) {
-      return `[${value.map((item: unknown) => CellValues.variantJson(item)).join(",")}]`;
+      return `[${value.map((item: unknown) => CellValues.variantJson(item, isSparkText)).join(",")}]`;
     }
     if (!CellValues.isRecord(value)) {
       return "null";
@@ -156,7 +204,7 @@ export class CellValues {
       Buffer.compare(Buffer.from(a), Buffer.from(b)),
     );
     const members = entries.map(
-      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item)}`,
+      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item, isSparkText)}`,
     );
     return `{${members.join(",")}}`;
   }

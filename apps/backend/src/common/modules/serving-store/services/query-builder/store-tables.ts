@@ -21,6 +21,8 @@ export interface StoreTable {
   /** The table's ORDER BY columns after experiment_id, exactly as its migration writes them. */
   key: string[];
   columns: StoreColumn[];
+  /** The column holding each JSON payload's text as Spark writes it, from which pages show it. */
+  payloadTexts?: Record<string, string>;
 }
 
 const MACROS = "ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>";
@@ -130,6 +132,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
     { name: "annotations", type: WellKnownColumnTypes.ANNOTATIONS, expression: "annotations" },
     CUSTOM_METADATA,
   ],
+  payloadTexts: { macro_output: "macro_output_text" },
 };
 
 export const UPLOADS_TABLE: StoreTable = {
@@ -148,6 +151,7 @@ export const UPLOADS_TABLE: StoreTable = {
     { name: "annotations", type: WellKnownColumnTypes.ANNOTATIONS, expression: "[]" },
     CUSTOM_METADATA,
   ],
+  payloadTexts: { uploaded_data: "uploaded_data_text" },
 };
 
 export class StoreTables {

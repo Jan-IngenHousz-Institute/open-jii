@@ -5,6 +5,7 @@ import type {
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../experiments/core/models/experiment-data.model";
+import { PageBytes } from "../../../experiments/core/models/page-bytes.model";
 import type {
   ServingStorePort,
   StoreQuery,
@@ -164,11 +165,43 @@ export class ServingStoreAdapter implements ServingStorePort {
     };
   }
 
-  /** The rows as the warehouse writes its cells, with contributors and devices as their ids. */
+  deviceLabelsQuery(query: StoreQuery, limit: number, offset: number): StoreQuery {
+    const label = new StoreQueryBuilder().quoteName("device.serial_number");
+    return {
+      sql: [
+        `SELECT DISTINCT ${label} AS serial_number`,
+        `FROM (${query.sql}) AS device_names`,
+        `WHERE ${label} IS NOT NULL AND trim(${label}) != ''`,
+        // Spark lowers text by Unicode, as lowerUTF8 does and lower does not.
+        `ORDER BY lowerUTF8(${label}) ASC, ${label} ASC`,
+        `LIMIT ${limit}`,
+        `OFFSET ${offset}`,
+      ].join("\n"),
+      columns: [{ name: "serial_number", type: "STRING" }],
+    };
+  }
+
+  /**
+   * The rows as the warehouse writes its cells, with contributors and devices as their ids. A read
+   * whose cells pass the page limit stops before the row that passes it, keeps the rows that fit
+   * and is marked truncated, so the rest is never held. Filling a contributor or a device in only
+   * lengthens its cell, so a device counts as nothing until then, and a read stopped here would
+   * also be refused once filled.
+   */
   async executeQuery(query: StoreQuery): Promise<Result<SchemaData>> {
-    const result = await this.client.query(query.sql);
-    if (result.isFailure()) {
-      return result;
+    const rows: (string | null)[][] = [];
+    const size = new PageBytes();
+    const read = await this.client.stream(query.sql, (row) => {
+      const cells = this.cells(query.columns, row);
+      size.add(cells.map((cell, index) => (query.columns[index].idOf === "device" ? null : cell)));
+      if (size.exceedsLimit) {
+        return false;
+      }
+      rows.push(cells);
+      return true;
+    });
+    if (read.isFailure()) {
+      return read;
     }
 
     const columns = query.columns.map(({ name, type }, position) => ({
@@ -177,16 +210,35 @@ export class ServingStoreAdapter implements ServingStorePort {
       type_text: type,
       position,
     }));
-    const rows = result.value.rows.map((row) =>
-      query.columns.map(({ type, idOf }, index) => {
-        const value = row[index];
-        if (idOf !== undefined) {
-          return typeof value === "string" ? value : null;
-        }
-        return CellValues.text(value, type);
-      }),
-    );
-    return success({ columns, rows, totalRows: rows.length, truncated: false });
+    return success({ columns, rows, totalRows: rows.length, truncated: !read.value.complete });
+  }
+
+  private cells(columns: StoreQueryColumn[], row: unknown[]): (string | null)[] {
+    const payloads = this.payloads(columns, row);
+    return columns.map(({ type, idOf, text }, index) => {
+      const value = row[index];
+      if (text !== undefined) {
+        return CellValues.payloadCell(payloads.get(text.column), text.key, type);
+      }
+      if (idOf === "device") {
+        return JSON.stringify(value);
+      }
+      if (idOf === "contributor") {
+        return typeof value === "string" ? value : null;
+      }
+      return CellValues.text(value, type);
+    });
+  }
+
+  /** The row's payloads, each parsed once from the first column that carries its text. */
+  private payloads(columns: StoreQueryColumn[], row: unknown[]): Map<string, unknown> {
+    const payloads = new Map<string, unknown>();
+    columns.forEach(({ text }, index) => {
+      if (text !== undefined && !payloads.has(text.column)) {
+        payloads.set(text.column, CellValues.payload(row[index]));
+      }
+    });
+    return payloads;
   }
 
   async getExperimentIds(

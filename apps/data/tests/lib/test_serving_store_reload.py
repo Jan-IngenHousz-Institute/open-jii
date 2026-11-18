@@ -431,6 +431,12 @@ def test_reloading_an_experiment_leaves_its_rows_as_gold_holds_them(
     assert store.rows(f"SELECT count() AS older FROM {_DATABASE}.uploads WHERE _commit_version < 7")[0] == {
         "older": 1
     }
+    # A reload writes each row's text as Spark writes gold's payload, which pages show: 7.0 parsed
+    # as a decimal and written whole.
+    assert store.rows(
+        f"SELECT id, uploaded_data_text AS text FROM {_DATABASE}.uploads FINAL "
+        "WHERE experiment_id = 'e1' ORDER BY id"
+    ) == [{"id": 21, "text": '{"ph":7}'}, {"id": 22, "text": '{"ph":6.1}'}, {"id": 24, "text": '{"ph":5.9}'}]
 
 
 class _FeedCatchingUp(_GoldAt):

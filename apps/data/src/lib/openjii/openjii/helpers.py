@@ -187,90 +187,112 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     partitions, each sorted, so writing them gives that many files whose order is
     the rows' order. Without it the rows are sorted as one.
     """
-    from pyspark.sql import SparkSession, Window
-    from pyspark.sql.functions import col, from_json, row_number
+    table = ExperimentTable(experiment_id, table_name, catalog_name, schema_name=schema_name)
+    return table.shape(table.rows(), parts)
 
-    spark = SparkSession.builder.getOrCreate()
-    metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
 
-    # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT, VOID → STRING).
-    # Match VOID only after ": " so we hit the type position, not a field identifier
-    # that happens to contain the substring (e.g. "avoid"). DDL identifiers can't
-    # contain ":" or spaces, so ": VOID" is unambiguous.
-    def normalize_schema(schema):
-        if not schema:
-            return None
-        return schema.replace("OBJECT<", "STRUCT<").replace(": VOID", ": STRING")
+class ExperimentTable:
+    """One experiment table, read from its source by :meth:`rows` and ordered and flattened by
+    :meth:`shape`, so the rows can be held between the two."""
 
-    macro_schema = normalize_schema(metadata["macro_schema"])
-    questions_schema = normalize_schema(metadata["questions_schema"])
-    upload_schema = normalize_schema(metadata["upload_schema"])
+    def __init__(self, experiment_id, table_name, catalog_name, schema_name="centrum"):
+        metadata = get_table_metadata(experiment_id, table_name, catalog_name, schema_name=schema_name)
 
-    # Static tables are named by their identifier; macro and upload tables share one source each.
-    table_type = table_name if metadata["table_type"] == "static" else metadata["table_type"]
-    if table_type not in _TABLE_CONFIG:
-        raise ValueError(f"Unknown table type for experiment {experiment_id}, identifier {table_name}")
-    source_name, order_col = _TABLE_CONFIG[table_type]
+        # Static tables are named by their identifier; macro and upload tables share one source each.
+        table_type = table_name if metadata["table_type"] == "static" else metadata["table_type"]
+        if table_type not in _TABLE_CONFIG:
+            raise ValueError(f"Unknown table type for experiment {experiment_id}, identifier {table_name}")
+        source_name, order_col = _TABLE_CONFIG[table_type]
 
-    source_table = f"{catalog_name}.{schema_name}.{source_name}"
-    df = spark.table(source_table).filter(col("experiment_id") == experiment_id)
+        self.experiment_id = experiment_id
+        self.table_name = table_name
+        self.table_type = table_type
+        self.source_table = f"{catalog_name}.{schema_name}.{source_name}"
+        self.order = [order_col, _TIEBREAK_COLUMN]
+        self.payloads = self._payloads(table_type, metadata)
 
-    if table_type == "macro":
-        df = df.filter(col("macro_id") == table_name)
+    @staticmethod
+    def _payloads(table_type, metadata):
+        """Each VARIANT payload the table parses: its column, its normalised schema, its suffix."""
 
-    if table_type == "upload":
-        df = df.filter(col("upload_table_id") == table_name)
+        # Normalize variant schemas for from_json compatibility (OBJECT → STRUCT, VOID → STRING).
+        # Match VOID only after ": " so we hit the type position, not a field identifier
+        # that happens to contain the substring (e.g. "avoid"). DDL identifiers can't
+        # contain ":" or spaces, so ": VOID" is unambiguous.
+        def normalize_schema(schema: str) -> str:
+            return schema.replace("OBJECT<", "STRUCT<").replace(": VOID", ": STRING")
 
-    # A capture that arrived more than once is stored once per arrival under one id, so an export
-    # keeps the copy processed last, as the serving store keeps the newest, and with it an edit the
-    # phone sent again. Copies silver processed in one micro-batch share a processing time, and which
-    # of those an export keeps is arbitrary. Rows from before the 64-bit ids can share an id with a
-    # different capture, so a copy must also share its timestamp and device, as in the serving store's key.
-    copy_key = _COPY_KEYS.get(table_type)
-    if copy_key is not None:
-        newest_first = Window.partitionBy(*copy_key).orderBy(col("processed_timestamp").desc())
-        df = df.withColumn("_copy", row_number().over(newest_first)).filter(col("_copy") == 1).drop("_copy")
+        candidates = [
+            ("uploaded_data", metadata["upload_schema"], table_type == "upload"),
+            ("macro_output", metadata["macro_schema"], table_type == "macro"),
+            ("questions_data", metadata["questions_schema"], table_type in ("macro", "raw_data")),
+        ]
+        return [
+            (column, normalize_schema(schema), _PAYLOAD_SUFFIXES[column])
+            for column, schema, applies in candidates
+            if applies and schema
+        ]
 
-    parsed = []
-    exclude_cols = ["experiment_id"]
+    def rows(self):
+        """The table's rows as its source holds them, one per capture, unordered and unparsed."""
+        from pyspark.sql import SparkSession, Window
+        from pyspark.sql.functions import col, row_number
 
-    if table_type == "macro":
-        exclude_cols.extend(_MACRO_EXCLUDE_COLS)
+        spark = SparkSession.builder.getOrCreate()
+        df = spark.table(self.source_table).filter(col("experiment_id") == self.experiment_id)
 
-    if table_type == "upload":
-        exclude_cols.extend(_UPLOAD_EXCLUDE_COLS)
+        if self.table_type == "macro":
+            df = df.filter(col("macro_id") == self.table_name)
 
-    if table_type == "upload" and upload_schema:
-        df = df.withColumn(
-            "parsed_uploaded_data",
-            from_json(col("uploaded_data").cast("string"), upload_schema),
-        )
-        parsed.append(("parsed_uploaded_data", _PAYLOAD_SUFFIXES["uploaded_data"]))
-        exclude_cols.extend(["uploaded_data", "parsed_uploaded_data"])
+        if self.table_type == "upload":
+            df = df.filter(col("upload_table_id") == self.table_name)
 
-    if table_type == "macro" and macro_schema:
-        df = df.withColumn(
-            "parsed_macro_output",
-            from_json(col("macro_output").cast("string"), macro_schema),
-        )
-        parsed.append(("parsed_macro_output", _PAYLOAD_SUFFIXES["macro_output"]))
-        exclude_cols.extend(["macro_output", "parsed_macro_output"])
+        # A capture that arrived more than once is stored once per arrival under one id, so an export
+        # keeps the copy processed last, as the serving store keeps the newest, and with it an edit the
+        # phone sent again. Copies silver processed in one micro-batch share a processing time, and which
+        # of those an export keeps is arbitrary. Rows from before the 64-bit ids can share an id with a
+        # different capture, so a copy must also share its timestamp and device, as in the serving store's key.
+        copy_key = _COPY_KEYS.get(self.table_type)
+        if copy_key is not None:
+            newest_first = Window.partitionBy(*copy_key).orderBy(col("processed_timestamp").desc())
+            df = (
+                df.withColumn("_copy", row_number().over(newest_first))
+                .filter(col("_copy") == 1)
+                .drop("_copy")
+            )
 
-    if table_type in ("macro", "raw_data") and questions_schema:
-        df = df.withColumn(
-            "parsed_questions_data",
-            from_json(col("questions_data").cast("string"), questions_schema),
-        )
-        parsed.append(("parsed_questions_data", _PAYLOAD_SUFFIXES["questions_data"]))
-        exclude_cols.extend(["questions_data", "parsed_questions_data"])
+        return df
 
-    # payload_annotations repeats the phone's share of annotations, which `annotations` already holds.
-    # The data table hides it but still holds its name, so a field named like it takes a suffix in both.
-    flattened = flatten_parsed_payloads(df, parsed, exclude_cols, reserved_cols=["payload_annotations"])
-    order = [order_col, _TIEBREAK_COLUMN]
-    if parts is None:
-        return flattened.orderBy(*order)
-    return flattened.repartitionByRange(parts, *[col(name) for name in order]).sortWithinPartitions(*order)
+    def shape(self, rows, parts=None):
+        """``rows`` ordered as :func:`load_experiment_table` orders them, with the bookkeeping
+        columns dropped and each payload's fields lifted to columns."""
+        from pyspark.sql.functions import col, from_json
+
+        if parts is None:
+            df = rows.orderBy(*self.order)
+        else:
+            df = rows.repartitionByRange(parts, *[col(name) for name in self.order]).sortWithinPartitions(
+                *self.order
+            )
+
+        parsed = []
+        exclude_cols = ["experiment_id"]
+
+        if self.table_type == "macro":
+            exclude_cols.extend(_MACRO_EXCLUDE_COLS)
+
+        if self.table_type == "upload":
+            exclude_cols.extend(_UPLOAD_EXCLUDE_COLS)
+
+        for column, schema, suffix in self.payloads:
+            df = df.withColumn(f"parsed_{column}", from_json(col(column).cast("string"), schema))
+            parsed.append((f"parsed_{column}", suffix))
+            exclude_cols.extend([column, f"parsed_{column}"])
+
+        # payload_annotations repeats the phone's share of annotations, which `annotations` already
+        # holds. The data table hides it but still holds its name, so a field named like it takes a
+        # suffix in both.
+        return flatten_parsed_payloads(df, parsed, exclude_cols, reserved_cols=["payload_annotations"])
 
 
 def flatten_parsed_payloads(df, parsed, exclude_cols, reserved_cols=()):

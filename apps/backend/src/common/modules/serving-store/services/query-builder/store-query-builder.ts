@@ -1,5 +1,6 @@
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
+import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { numericStringOrdering } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import type { NumericStringKeys } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import { BaseQueryBuilder } from "../../../databricks/services/query-builder/query-builder.base";
@@ -17,11 +18,18 @@ import { VariantSchema } from "../../../databricks/services/query-builder/schema
 import type { VariantField } from "../../../databricks/services/query-builder/schema/variant-schema";
 import type { StoreColumn, StoreTable } from "./store-tables";
 
-export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf">;
+export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf"> & {
+  text?: { column: string; key?: string };
+};
 
 interface StoreOrdering extends QueryOrdering {
   idOrder?: string[];
 }
+
+/** The names of the id lists a statement's WITH clause holds, which no payload field may take. */
+const ORDER_IDS = "__order_ids";
+const DEVICE_CLIENT_IDS = "__device_client_ids";
+const DEVICE_SERIALS = "__device_serials";
 
 const STORE_SCALARS: Record<string, string> = {
   STRING: "String",
@@ -42,12 +50,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   private columns: StoreColumn[] = [];
   private key: string[] = [];
+  private payloadTexts: Partial<Record<string, string>> = {};
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
   private exceptColumns: string[] = [];
   private whereConditions: string[] = [];
-  private deviceSerials: [string, string | null][] = [];
+  private deviceSerials: [string, string][] = [];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
@@ -55,6 +64,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   read(table: StoreTable, experimentId: string, identifier?: string): this {
     this.columns = table.columns;
     this.key = table.key;
+    this.payloadTexts = table.payloadTexts ?? {};
+    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS);
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -89,7 +100,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  serialNumbers(serials: [string, string | null][]): this {
+  /** The registered devices' serial numbers by client id; any other device reads none. */
+  serialNumbers(serials: [string, string][]): this {
     this.deviceSerials = serials;
     return this;
   }
@@ -100,8 +112,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * `idOrder` sorts a contributor's field the store does not hold, such as the name, by the place
-   * of each row's contributor in it; names never enter a query, whose text the store logs.
+   * `idOrder` sorts by what the store does not hold, a contributor's name or a device's registry
+   * id, by the place of each row's id in it; names never enter a query, whose text the store logs.
    */
   orderBy(ordering: QueryOrdering, idOrder?: string[]): this {
     this.ordering = { ...ordering, idOrder };
@@ -136,21 +148,26 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
     const isSerialNumber = base.idOf === "device" && path === "serial_number";
     if (isSerialNumber) {
-      return this.serialNumberOf(base.expression);
+      return this.deviceLabelOf(base.expression);
     }
     throw new QueryBuilderInputError(`The store cannot read '${column}'`);
   }
 
   /** A literal of the column's own type: the store compares no text with a number, and reads a
-   *  time only in its own format. */
+   *  time only in its own format. Text compared with a payload's number reads as Spark casts it,
+   *  so text that holds no number matches no row, as on the warehouse. */
   filterLiteral(column: string, value: Exclude<FilterValue, (string | number)[]>): string {
     const type = this.typeOf(column);
     const isTime = type === "TIMESTAMP" || type === "DATE";
     if (isTime && typeof value !== "string") {
       throw new QueryBuilderInputError(`'${column}' is compared with a time given as text`);
     }
-    const isNumber = isNumericType(type);
-    if (isNumber && typeof value === "string" && !this.readsAsNumber(value, type)) {
+    const isTextAgainstNumber = isNumericType(type) && typeof value === "string";
+    const isField = this.flattenedFields().some(({ key }) => key === column);
+    if (isTextAgainstNumber && isField) {
+      return this.textAsDouble(this.escapeValue(value));
+    }
+    if (isTextAgainstNumber && !this.readsAsNumber(value, type)) {
       throw new QueryBuilderInputError(`'${column}' is compared with a number`);
     }
     if (typeof value === "string" && type === "TIMESTAMP") {
@@ -163,6 +180,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return this.escapeValue(String(value));
     }
     return this.escapeScalarValue(value);
+  }
+
+  /** Spark compares a payload's integer with text as two doubles, so text past 2^53 matches every
+   *  integer that rounds to its double; the store compares them the same way. */
+  comparedColumn(columnSql: string, column: string, value: FilterValue): string {
+    const field = this.flattenedFields().find(({ key }) => key === column);
+    const isBigintField =
+      field !== undefined && this.variantCastType(field.field.type) === "BIGINT";
+    const isText = (Array.isArray(value) ? value : [value]).some(
+      (item) => typeof item === "string",
+    );
+    return isBigintField && isText ? `toFloat64(${columnSql})` : columnSql;
   }
 
   /** The store reads text as a number column's value only as plain digits, with a fraction where
@@ -198,8 +227,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       VariantSchema.isObject(variant.schema)
         ? flattened
             .filter(({ column }) => column === variant.column)
-            .map(({ key, field }) => ({ name: key, type: this.variantCastType(field.type) }))
-        : [{ name: variant.column, type: this.variantCastType(variant.schema) }],
+            .map(({ key, field }) => ({
+              name: key,
+              type: this.variantCastType(field.type),
+              ...this.textSource(variant.column, field.name),
+            }))
+        : [
+            {
+              name: variant.column,
+              type: this.variantCastType(variant.schema),
+              ...this.textSource(variant.column),
+            },
+          ],
     );
     return [...base, ...fields];
   }
@@ -210,9 +249,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
 
     const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
-    const projection = this.outputColumns()
-      .map(({ name, type }) => `${this.projectedValue(name, type)} AS ${this.quoteName(name)}`)
-      .join(", ");
+    const projection = this.projection();
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const order = this.ordering === undefined ? "" : `ORDER BY ${this.sortClause(this.ordering)}`;
@@ -237,6 +274,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         offsetClause,
       ]);
       return this.joinClauses([
+        this.withClause(),
         `SELECT ${projection}`,
         `FROM ${this.fromClause}`,
         `WHERE (${key}) IN (${page})`,
@@ -245,6 +283,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
 
     return this.joinClauses([
+      this.withClause(),
       `${selectKeyword} ${projection}`,
       `FROM ${this.fromClause}`,
       where,
@@ -254,24 +293,60 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     ]);
   }
 
+  /** Each column under its name; of the columns read from one payload's text, the first carries
+   *  the text and the rest carry nothing, so a row holds each text once. */
+  private projection(): string {
+    const carried = new Set<string>();
+    return this.outputColumns()
+      .map((column) => {
+        const text = column.text?.column;
+        if (text === undefined) {
+          return `${this.projectedValue(column)} AS ${this.quoteName(column.name)}`;
+        }
+        const carries = !carried.has(text);
+        carried.add(text);
+        return `${carries ? text : "NULL"} AS ${this.quoteName(column.name)}`;
+      })
+      .join(", ");
+  }
+
   private outputColumn(name: string): StoreOutputColumn {
     const field = this.flattenedFields().find(({ key }) => key === name);
     if (field !== undefined) {
-      return { name, type: this.variantCastType(field.field.type) };
+      return {
+        name,
+        type: this.variantCastType(field.field.type),
+        ...this.textSource(field.column, field.field.name),
+      };
     }
     const whole = this.variantColumns.find(
       ({ column, schema }) => column === name && !VariantSchema.isObject(schema),
     );
     if (whole !== undefined) {
-      return { name, type: this.variantCastType(whole.schema) };
+      return {
+        name,
+        type: this.variantCastType(whole.schema),
+        ...this.textSource(whole.column),
+      };
     }
-    const { type, idOf } = this.baseColumn(name);
+    const [base, path] = this.structPath(name);
+    if (path !== undefined) {
+      return { name, type: this.typeOf(name) };
+    }
+    const { type, idOf } = this.baseColumn(base);
     return { name, type, idOf };
   }
 
-  /** Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. */
-  private projectedValue(name: string, type: string): string {
+  /**
+   * Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. A device
+   * comes back as its client id and the label its row's own names give, which the backend
+   * finishes with the registry's serial number.
+   */
+  private projectedValue({ name, type, idOf }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
+    if (idOf === "device") {
+      return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
+    }
     const isInteger = type === "BIGINT" || type === "INT";
     return isInteger ? `toString(${expression})` : expression;
   }
@@ -284,7 +359,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const whole = this.variantColumns.find(
       ({ column, schema }) => column === name && !VariantSchema.isObject(schema),
     );
-    return whole === undefined ? this.baseColumn(name).expression : this.wholeColumn(whole);
+    return whole === undefined ? this.columnExpression(name) : this.wholeColumn(whole);
   }
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
@@ -292,18 +367,36 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
-      const ids = idOrder.map((id) => this.escapeValue(id)).join(", ");
-      return `indexOf([${ids}], ${this.baseColumn(name).expression}) ${direction} ${nulls}`;
+      const { expression, idOf } = this.baseColumn(name);
+      const place = `indexOf(${ORDER_IDS}, ${expression}) ${direction} ${nulls}`;
+      // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
+      // in the order carry, then by its label.
+      const isDevice = idOf === "device";
+      return isDevice ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}` : place;
     }
 
     const target = this.columnExpression(column);
+    const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
+    const rowId =
+      isRowOrdered && !this.isDistinct && mode.rowId
+        ? this.columnExpression(mode.rowId)
+        : undefined;
     if (mode?.kind === "numericString") {
-      const rowId = !this.isDistinct && mode.rowId ? this.columnExpression(mode.rowId) : undefined;
       return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
+    }
+    if (mode?.kind === "number") {
+      const nan = this.nanKey(target, column, direction, "NULLS LAST");
+      return `${nan}${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
     }
     const sorted =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${sorted} ${direction} ${nulls}`;
+    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}`;
+  }
+
+  /** Spark sorts NaN above every number, where the store sorts it beside null. */
+  private nanKey(sorted: string, column: string, direction: string, nulls: string): string {
+    const isDouble = this.typeOf(column) === "DOUBLE";
+    return isDouble ? `isNaN(${sorted}) ${direction} ${nulls}, ` : "";
   }
 
   /** The warehouse's keys for text that holds a number, in the store's functions. */
@@ -315,12 +408,44 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return { group, decimal, value, rowId };
   }
 
+  /**
+   * The label the warehouse shows for a device, from the serial numbers the store is handed. A
+   * read handed none labels devices by their rows' names alone.
+   */
+  private deviceLabelOf(clientIdSql: string): string {
+    const hasSerials = this.deviceSerials.length > 0;
+    return deviceLabel({
+      serialNumber: hasSerials
+        ? this.serialNumberOf(clientIdSql)
+        : "CAST(NULL AS Nullable(String))",
+      deviceName: this.baseColumn("device_name").expression,
+      deviceId: this.baseColumn("device_id").expression,
+      clientId: clientIdSql,
+    });
+  }
+
+  /** A client id missing from the list reads 0 from indexOf, and the Nullable array's NULL there. */
   private serialNumberOf(clientIdSql: string): string {
-    const ids = this.deviceSerials.map(([clientId]) => this.escapeValue(clientId));
-    const serials = this.deviceSerials.map(([, serial]) =>
-      serial === null ? "NULL" : this.escapeValue(serial),
-    );
-    return `arrayElement(CAST([${serials.join(", ")}] AS Array(Nullable(String))), indexOf([${ids.join(", ")}], ${clientIdSql}))`;
+    return `arrayElement(${DEVICE_SERIALS}, indexOf(${DEVICE_CLIENT_IDS}, ${clientIdSql}))`;
+  }
+
+  /**
+   * The id lists a statement reads, each written once under a name: a sorted page reads them in
+   * its inner and outer statements, and a label reads its serial twice.
+   */
+  private withClause(): string {
+    const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
+    const idOrder = this.ordering?.idOrder;
+    const lists = [
+      ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS ${ORDER_IDS}`]),
+      ...(this.deviceSerials.length === 0
+        ? []
+        : [
+            `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS ${DEVICE_CLIENT_IDS}`,
+            `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS ${DEVICE_SERIALS}`,
+          ]),
+    ];
+    return lists.length === 0 ? "" : `WITH ${lists.join(", ")}`;
   }
 
   private structPath(column: string): [string, string | undefined] {
@@ -362,12 +487,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /**
    * A scalar reads as its type and is null when the value holds another, as `try_variant_get`
    * reads it. Anything else reads as JSON, which the adapter writes out as the warehouse does.
-   * Answers are a map of text, so every answer reads by key.
+   * Answers are a map of text, so every answer reads by key, a Number question's as Spark casts
+   * its text.
    */
   private fieldExpression(column: string, field: VariantField): string {
     const type = this.variantCastType(field.type);
     if (column === "questions_data") {
       const answer = `${column}[${this.escapeValue(field.name)}]`;
+      if (type === "DOUBLE") {
+        return this.textAsDouble(answer);
+      }
       return type === "STRING" ? answer : this.typedScalar(answer, type);
     }
 
@@ -375,6 +504,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const path = `${column}.${this.subcolumn(field.name)}`;
     const object = `${column}.^${this.subcolumn(field.name)}`;
     return this.typedValue(path, object, type);
+  }
+
+  /**
+   * A page shows a JSON payload's cells from its text, since the JSON column reprints numbers and
+   * keeps no null key; filters and sorts read the JSON column. A distinct read keeps to the JSON
+   * column too, as distinct texts are not distinct values.
+   */
+  private textSource(column: string, key?: string): Pick<StoreOutputColumn, "text"> {
+    const text = this.payloadTexts[column];
+    return text === undefined || this.isDistinct ? {} : { text: { column: text, key } };
   }
 
   /** The feed stores a payload that is no object as `{"_items": [...]}` or `{"_value": x}`. */
@@ -406,6 +545,17 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return `if(dynamicType(${path}) != 'None', toJSONString(${path}), ${objectJson})`;
     }
     return this.typedScalar(path, type);
+  }
+
+  /**
+   * Text as Spark casts it to a double, through Java's parser: blanks and control characters
+   * trimmed, a trailing d or f read, and null for text that holds no number.
+   */
+  private textAsDouble(textSql: string): string {
+    const trimmed = `replaceRegexpAll(${textSql}, ${this.escapeValue("^[\\x00-\\x20]+|[\\x00-\\x20]+$")}, '')`;
+    const number = "^([+-]?(?:[0-9]+[.]?[0-9]*|[.][0-9]+)(?:[eE][+-]?[0-9]+)?)[dDfF]$";
+    const unsuffixed = `replaceRegexpOne(${trimmed}, ${this.escapeValue(number)}, ${this.escapeValue("\\1")})`;
+    return `toFloat64OrNull(${unsuffixed})`;
   }
 
   private typedScalar(sql: string, type: string): string {
