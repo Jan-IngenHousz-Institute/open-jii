@@ -13,10 +13,10 @@ import math
 import tempfile
 from datetime import datetime, timezone
 
-from openjii.helpers import load_experiment_table
+from openjii.helpers import ExperimentTable
 from pyspark.dbutils import DBUtils
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, expr, lit, struct, to_json, when
+from pyspark.sql.functions import col, concat, lit, sha2, struct, substring, to_json, upper, when
 from pyspark.sql.types import ArrayType, MapType, StringType, StructType, VariantType
 
 
@@ -42,8 +42,9 @@ except Exception:
 spark = SparkSession.builder.getOrCreate()
 dbutils = DBUtils(spark)
 
-# A retry of this run reuses the export id, so it overwrites the same folder.
+# A retry of this run reuses the export id, so it overwrites the same folders.
 OUTPUT_PATH = f"/Volumes/{CATALOG_NAME}/centrum/exports/{EXPERIMENT_ID}/{TABLE_NAME}/{FORMAT}/{EXPORT_ID}"
+SNAPSHOT_PATH = f"{OUTPUT_PATH}-snapshot"
 MANIFEST_NAME = "manifest.json"
 SNAPSHOT_AT = datetime.now(timezone.utc).isoformat()
 
@@ -84,7 +85,7 @@ def check_driver_format_limits(export_format: str, row_count: int, column_count:
     if row_count > DRIVER_FORMAT_MAX_ROWS:
         raise ExportError(
             "too_many_rows_for_format",
-            f"{row_count} rows exceed the {DRIVER_FORMAT_MAX_ROWS}-row limit of {export_format}",
+            f"more than {DRIVER_FORMAT_MAX_ROWS} rows, the limit of {export_format}",
         )
 
     if export_format == "xlsx" and column_count > EXCEL_MAX_COLUMNS:
@@ -95,8 +96,8 @@ def check_driver_format_limits(export_format: str, row_count: int, column_count:
 
 
 def build_manifest(export_id: str, export_format: str, row_count: int, snapshot_at: str, parts: list) -> dict:
-    """``rowCount`` is the count taken when the export started; rows that arrive while it runs
-    may or may not be in the files."""
+    """``rowCount`` is the number of rows in the parts, which all come from one read of the table
+    taken just after ``snapshotAt``."""
     return {
         "exportId": export_id,
         "format": export_format,
@@ -147,17 +148,15 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
         return df
     for field in contributor_fields:
         col_name = field.name
-        # `concat('Contributor-', upper(substring(sha2(<experimentId>:<userId>, 256), 1, 6)))`
-        pseudonym_expr = (
-            f"concat('Contributor-', upper(substring(sha2(concat('{experiment_id}', ':', `{col_name}`.id), 256), 1, 6)))"
-        )
+        digest = sha2(concat(lit(experiment_id), lit(":"), col(col_name).getField("id")), 256)
+        pseudonym = concat(lit("Contributor-"), upper(substring(digest, 1, 6)))
         df = df.withColumn(
             col_name,
             when(
                 col(col_name).isNotNull(),
                 struct(
-                    expr(pseudonym_expr).alias("id"),
-                    expr(pseudonym_expr).alias("name"),
+                    pseudonym.alias("id"),
+                    pseudonym.alias("name"),
                     lit(None).cast(StringType()).alias("avatar"),
                 ),
             ).otherwise(col(col_name)),
@@ -260,34 +259,58 @@ def write_manifest(manifest):
 # COMMAND ----------
 
 # DBTITLE 1,Main Execution
-def load(parts=None):
-    return load_experiment_table(
-        experiment_id=EXPERIMENT_ID,
-        table_name=TABLE_NAME,
-        catalog_name=CATALOG_NAME,
-        schema_name="centrum",
-        parts=parts,
-    )
+def take_snapshot(table):
+    """Read the table's source once, into files the count, the limits and the parts all read.
+
+    Files rather than ``cache()``: serverless caches a DataFrame only from environment version 5
+    (docs.databricks.com/aws/en/compute/serverless/dataframe-cache). The payloads stay VARIANT in
+    the files, because a parsed payload can hold an empty struct or ARRAY<VOID>, which parquet
+    cannot. The files are read with the rows' own schema, so a VARIANT reads back as one whatever
+    their footers say. An anonymised export's files hold only pseudonyms.
+    """
+    rows = table.rows()
+    if ANONYMIZE_CONTRIBUTORS:
+        rows = anonymize_contributors(rows, EXPERIMENT_ID)
+
+    # One row past the limit is enough to refuse, so a refused export never copies the whole table.
+    if not WRITES_IN_PARTS:
+        rows = rows.limit(DRIVER_FORMAT_MAX_ROWS + 1)
+
+    rows.write.mode("overwrite").parquet(SNAPSHOT_PATH)
+    return spark.read.schema(rows.schema).parquet(SNAPSHOT_PATH)
+
+
+def remove_snapshot():
+    """The bucket's expiry rule collects a snapshot left behind, so a failed delete does not fail
+    an export whose parts and manifest are written."""
+    try:
+        dbutils.fs.rm(SNAPSHOT_PATH, True)
+    except Exception as error:
+        log(f"Could not remove the snapshot at {SNAPSHOT_PATH}: {error}", "WARN")
 
 
 def main():
-    row_count = load().count()
-    log(f"Loaded {row_count} rows")
+    table = ExperimentTable(EXPERIMENT_ID, TABLE_NAME, CATALOG_NAME, schema_name="centrum")
 
-    parts = []
-    if row_count > 0:
-        parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
-        log(f"Writing {row_count} rows as {parts_planned} part(s)")
-        df = load(parts_planned if WRITES_IN_PARTS else None)
-        check_driver_format_limits(FORMAT, row_count, len(df.columns))
-        if ANONYMIZE_CONTRIBUTORS:
-            df = anonymize_contributors(df, EXPERIMENT_ID)
-        write_parts(df)
-        parts = list_parts(OUTPUT_PATH)
+    try:
+        snapshot = take_snapshot(table)
+        row_count = snapshot.count()
+        log(f"Loaded {row_count} rows")
 
-    manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
-    write_manifest(manifest)
-    log(f"Wrote {len(parts)} part(s) and the manifest")
+        parts = []
+        if row_count > 0:
+            parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
+            log(f"Writing {row_count} rows as {parts_planned} part(s)")
+            df = table.shape(snapshot, parts_planned if WRITES_IN_PARTS else None)
+            check_driver_format_limits(FORMAT, row_count, len(df.columns))
+            write_parts(df)
+            parts = list_parts(OUTPUT_PATH)
+
+        manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
+        write_manifest(manifest)
+        log(f"Wrote {len(parts)} part(s) and the manifest")
+    finally:
+        remove_snapshot()
 
     dbutils.notebook.exit(json.dumps(manifest))
 

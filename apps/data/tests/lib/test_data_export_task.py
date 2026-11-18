@@ -1,12 +1,13 @@
 import ast
-import math
 from pathlib import Path
 from typing import Any
 
 import pytest
+from pyspark.sql import SparkSession
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/data_export_task.py"
 _NAMES = {
+    "log",
     "ROWS_PER_PART",
     "DRIVER_FORMAT_MAX_ROWS",
     "EXCEL_MAX_COLUMNS",
@@ -16,7 +17,17 @@ _NAMES = {
     "check_driver_format_limits",
     "build_manifest",
     "is_part_file",
+    "CONTRIBUTOR_STRUCT_FIELDS",
+    "_is_contributor_field",
+    "anonymize_contributors",
 }
+
+# Pinned in the backend's specs too, so every implementation of the pseudonym answers this pair alike.
+_EXPERIMENT_ID = "5f3c1b9e-2a47-4d6b-9e1f-7a8c0d2b4e61"
+_USER_ID = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01"
+_PSEUDONYM = "Contributor-AC2F1B"
+
+_CONTRIBUTOR = "STRUCT<id: STRING, name: STRING, avatar: STRING>"
 
 
 def _defined_name(node: ast.stmt) -> str | None:
@@ -27,13 +38,42 @@ def _defined_name(node: ast.stmt) -> str | None:
     return None
 
 
+def _is_local_import(node: ast.stmt) -> bool:
+    """An import that resolves off Databricks too."""
+    if isinstance(node, ast.ImportFrom):
+        return node.module != "pyspark.dbutils"
+    return isinstance(node, ast.Import)
+
+
 @pytest.fixture(scope="module")
 def task() -> dict[str, Any]:
     module = ast.parse(_TASK_PATH.read_text())
-    body = [node for node in module.body if _defined_name(node) in _NAMES]
-    namespace: dict[str, Any] = {"math": math}
+    body = [node for node in module.body if _is_local_import(node) or _defined_name(node) in _NAMES]
+    namespace: dict[str, Any] = {}
     exec(compile(ast.Module(body=body, type_ignores=[]), _TASK_PATH, "exec"), namespace)
     return namespace
+
+
+def _contributors(spark: SparkSession):
+    return spark.createDataFrame(
+        [(1, (_USER_ID, "Ada", "ada.png")), (2, None)],
+        f"row INT, contributor {_CONTRIBUTOR}",
+    )
+
+
+def test_an_export_names_a_contributor_by_the_pseudonym_the_platform_shows(task, spark: SparkSession) -> None:
+    rows = task["anonymize_contributors"](_contributors(spark), _EXPERIMENT_ID).collect()
+
+    assert [row.contributor.asDict() if row.contributor else None for row in rows] == [
+        {"id": _PSEUDONYM, "name": _PSEUDONYM, "avatar": None},
+        None,
+    ]
+
+
+def test_an_experiment_id_reaches_the_pseudonym_as_a_value_not_as_sql(task, spark: SparkSession) -> None:
+    [row, _] = task["anonymize_contributors"](_contributors(spark), "e'1").collect()
+
+    assert row.contributor.id == "Contributor-57AC94"
 
 
 @pytest.mark.parametrize(
