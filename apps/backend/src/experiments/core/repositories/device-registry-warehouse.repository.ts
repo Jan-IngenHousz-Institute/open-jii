@@ -19,10 +19,9 @@ export class DeviceRegistryWarehouseRepository {
   ) {}
 
   /**
-   * Writes each device as Postgres holds it. Matched by thing name, the key the pipelines join on,
-   * so a serial registered again after its device was deleted replaces the row that device left.
-   * A row only takes a registration as recent as its own, so a late copy of the deleted device
-   * cannot overwrite the new one's row, and that device's removal then matches nothing.
+   * Writes each device by thing name, the key the pipelines join on, so a serial registered again
+   * replaces its deleted device's row. A row takes only a registration as recent as its own, so a
+   * late copy of the deleted device cannot overwrite the new one.
    */
   async merge(devices: RegisteredDevice[]): Promise<Result<void>> {
     if (devices.length === 0) {

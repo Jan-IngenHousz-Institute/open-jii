@@ -263,13 +263,21 @@ describe("UserAuthHook", () => {
   });
 
   describe("reactivateProfile (via handlers)", () => {
-    it.each([
-      ["handleEmailSignIn"],
-      ["handleEmailOtpSignIn"],
-      ["handleSocialSignIn"],
-      ["handleOAuthCallback"],
-      ["handlePasskeySignIn"],
-    ] as const)("reactivates the signed-in profile on %s", async (handler) => {
+    const signIns: (
+      | "handleEmailSignIn"
+      | "handleEmailOtpSignIn"
+      | "handleSocialSignIn"
+      | "handleOAuthCallback"
+      | "handlePasskeySignIn"
+    )[] = [
+      "handleEmailSignIn",
+      "handleEmailOtpSignIn",
+      "handleSocialSignIn",
+      "handleOAuthCallback",
+      "handlePasskeySignIn",
+    ];
+
+    it.each(signIns)("reactivates the signed-in profile on %s", async (handler) => {
       await hook[handler](createMockContext());
 
       expect(reactivateProfile).toHaveBeenCalledExactlyOnceWith("user-123");

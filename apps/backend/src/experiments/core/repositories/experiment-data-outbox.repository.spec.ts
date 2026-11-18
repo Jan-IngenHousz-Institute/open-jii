@@ -4,7 +4,7 @@ import { createSecondaryDatabase, eq, experimentDataOutbox, sql } from "@repo/da
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { OwedRecord } from "../models/experiment-data-outbox.model";
+import type { ExperimentDataRecordType, OwedRecord } from "../models/experiment-data-outbox.model";
 import { ExperimentDataOutboxRepository } from "./experiment-data-outbox.repository";
 
 describe("ExperimentDataOutboxRepository", () => {
@@ -129,7 +129,8 @@ describe("ExperimentDataOutboxRepository", () => {
   });
 
   it("refuses an annotation or a sheet owed without its experiment", async () => {
-    for (const recordType of ["annotation", "metadata_sheet"] as const) {
+    const ofExperiments: ExperimentDataRecordType[] = ["annotation", "metadata_sheet"];
+    for (const recordType of ofExperiments) {
       await expect(
         testApp.database.insert(experimentDataOutbox).values({
           recordType,
@@ -144,7 +145,8 @@ describe("ExperimentDataOutboxRepository", () => {
   });
 
   it("refuses a contributor or a device owed under an experiment", async () => {
-    for (const recordType of ["contributor", "device"] as const) {
+    const ofNoExperiment: ExperimentDataRecordType[] = ["contributor", "device"];
+    for (const recordType of ofNoExperiment) {
       await expect(
         testApp.database.insert(experimentDataOutbox).values({
           recordType,
