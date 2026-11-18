@@ -13,7 +13,7 @@ import math
 import tempfile
 from datetime import datetime, timezone
 
-from openjii.helpers import ExperimentTable
+from openjii.helpers import ExperimentTable, TableMetadataNotFound
 from pyspark.dbutils import DBUtils
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, concat, lit, sha2, struct, substring, to_json, upper, when
@@ -25,6 +25,7 @@ from pyspark.sql.types import ArrayType, MapType, StringType, StructType, Varian
 # swallowed (especially when running as a Databricks task/workflow).
 def log(msg: str, level: str = "INFO"):
     print(f"[{level}] {msg}", flush=True)
+
 
 # COMMAND ----------
 
@@ -110,6 +111,7 @@ def build_manifest(export_id: str, export_format: str, row_count: int, snapshot_
 def is_part_file(name: str) -> bool:
     return not name.startswith(("_", ".")) and name != MANIFEST_NAME
 
+
 # COMMAND ----------
 
 # DBTITLE 1,Anonymise Contributors
@@ -164,7 +166,9 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
         log(f"Anonymised contributor column: {col_name}")
     return df
 
+
 # COMMAND ----------
+
 
 # DBTITLE 1,Write Parts
 def flatten_complex_columns(df):
@@ -256,7 +260,9 @@ def write_manifest(manifest):
         overwrite=True,
     )
 
+
 # COMMAND ----------
+
 
 # DBTITLE 1,Main Execution
 def take_snapshot(table):
@@ -289,28 +295,42 @@ def remove_snapshot():
         log(f"Could not remove the snapshot at {SNAPSHOT_PATH}: {error}", "WARN")
 
 
-def main():
-    table = ExperimentTable(EXPERIMENT_ID, TABLE_NAME, CATALOG_NAME, schema_name="centrum")
-
+def open_table():
+    """The table to export, or None for one that never held a row: gold writes a table's metadata
+    only once its first row arrives, so such an export is empty rather than failed."""
     try:
-        snapshot = take_snapshot(table)
-        row_count = snapshot.count()
-        log(f"Loaded {row_count} rows")
+        return ExperimentTable(EXPERIMENT_ID, TABLE_NAME, CATALOG_NAME, schema_name="centrum")
+    except TableMetadataNotFound:
+        return None
 
-        parts = []
-        if row_count > 0:
-            parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
-            log(f"Writing {row_count} rows as {parts_planned} part(s)")
-            df = table.shape(snapshot, parts_planned if WRITES_IN_PARTS else None)
-            check_driver_format_limits(FORMAT, row_count, len(df.columns))
-            write_parts(df)
-            parts = list_parts(OUTPUT_PATH)
 
-        manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
+def main():
+    table = open_table()
+
+    if table is None:
+        log("Loaded 0 rows: the table has never held one")
+        manifest = build_manifest(EXPORT_ID, FORMAT, 0, SNAPSHOT_AT, [])
         write_manifest(manifest)
-        log(f"Wrote {len(parts)} part(s) and the manifest")
-    finally:
-        remove_snapshot()
+    else:
+        try:
+            snapshot = take_snapshot(table)
+            row_count = snapshot.count()
+            log(f"Loaded {row_count} rows")
+
+            parts = []
+            if row_count > 0:
+                parts_planned = part_count(row_count) if WRITES_IN_PARTS else 1
+                log(f"Writing {row_count} rows as {parts_planned} part(s)")
+                df = table.shape(snapshot, parts_planned if WRITES_IN_PARTS else None)
+                check_driver_format_limits(FORMAT, row_count, len(df.columns))
+                write_parts(df)
+                parts = list_parts(OUTPUT_PATH)
+
+            manifest = build_manifest(EXPORT_ID, FORMAT, row_count, SNAPSHOT_AT, parts)
+            write_manifest(manifest)
+            log(f"Wrote {len(parts)} part(s) and the manifest")
+        finally:
+            remove_snapshot()
 
     dbutils.notebook.exit(json.dumps(manifest))
 

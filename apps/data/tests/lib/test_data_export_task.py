@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from openjii.helpers import TableMetadataNotFound
 from pyspark.sql import SparkSession
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/data_export_task.py"
@@ -20,6 +21,7 @@ _NAMES = {
     "CONTRIBUTOR_STRUCT_FIELDS",
     "_is_contributor_field",
     "anonymize_contributors",
+    "open_table",
 }
 
 # Pinned in the backend's specs too, so every implementation of the pseudonym answers this pair alike.
@@ -131,3 +133,18 @@ def test_manifest_names_the_parts_in_the_shape_the_backend_reads(task) -> None:
 )
 def test_only_data_files_count_as_parts(task, name: str, is_part: bool) -> None:
     assert task["is_part_file"](name) is is_part
+
+
+def test_a_table_that_never_held_a_row_opens_as_none(task, monkeypatch: pytest.MonkeyPatch) -> None:
+    def no_metadata(*_args: object, **_kwargs: object) -> None:
+        raise TableMetadataNotFound("No metadata found for experiment e1, identifier raw_data")
+
+    monkeypatch.setitem(task, "ExperimentTable", no_metadata)
+    for name, value in {
+        "EXPERIMENT_ID": "e1",
+        "TABLE_NAME": "raw_data",
+        "CATALOG_NAME": "open_jii_dev",
+    }.items():
+        monkeypatch.setitem(task, name, value)
+
+    assert task["open_table"]() is None
