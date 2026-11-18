@@ -5,7 +5,10 @@ import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
+import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
+import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
+import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
@@ -24,6 +27,20 @@ describe("ServingStoreAdapter", () => {
     client = new ServingStoreClientService(new ServingStoreConfigService(new ConfigService({})));
     adapter = new ServingStoreAdapter(client);
   });
+
+  /** The store sends these rows, one at a time, for as long as the reader takes them; `handed`
+   *  counts the rows it handed over. */
+  function storeSends(rows: unknown[][]) {
+    const sent = { handed: 0 };
+    vi.spyOn(client, "stream").mockImplementation((_sql, take) => {
+      const isComplete = rows.every((row) => {
+        sent.handed += 1;
+        return take(row);
+      });
+      return Promise.resolve(success({ complete: isComplete }));
+    });
+    return sent;
+  }
 
   it("is not configured without a store", () => {
     expect(adapter.isConfigured()).toBe(false);
@@ -116,7 +133,7 @@ describe("ServingStoreAdapter", () => {
     const columns = adapter.getExperimentTableColumns("macro", "m1");
     assertSuccess(columns);
     const id = columns.value.filter(({ name }) => name === "id");
-    vi.spyOn(client, "query").mockResolvedValue(success({ rows: [["12"]] }));
+    storeSends([["12"]]);
 
     const result = await adapter.executeQuery({ sql: "SELECT id", columns: id });
 
@@ -153,14 +170,10 @@ describe("ServingStoreAdapter", () => {
   });
 
   it("writes rows as the warehouse writes its cells and leaves ids for the backend to fill", async () => {
-    vi.spyOn(client, "query").mockResolvedValue(
-      success({
-        rows: [
-          ["1", "2026-09-14 16:56:31.972123", 3, "u1", '{"x":1}'],
-          ["2", null, null, null, null],
-        ],
-      }),
-    );
+    storeSends([
+      ["1", "2026-09-14 16:56:31.972123", 3, "u1", '{"x":1}'],
+      ["2", null, null, null, null],
+    ]);
 
     const result = await adapter.executeQuery({
       sql: "SELECT …",
@@ -190,6 +203,35 @@ describe("ServingStoreAdapter", () => {
       ["2", null, null, null, null],
     ]);
     expect(result.value).toMatchObject({ totalRows: 2, truncated: false });
+  });
+
+  it("writes each payload field's cell from the text the first of its columns carries", async () => {
+    storeSends([['{"PAR":1.0E-7,"vH+":null}', null]]);
+
+    const result = await adapter.executeQuery({
+      sql: "SELECT …",
+      columns: [
+        { name: "vH+", type: "VARIANT", text: { column: "macro_output_text", key: "vH+" } },
+        { name: "PAR", type: "DOUBLE", text: { column: "macro_output_text", key: "PAR" } },
+      ],
+    });
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["null", "1.0E-7"]]);
+  });
+
+  it("stops before the row that takes a read past the page limit and marks it truncated", async () => {
+    const sent = storeSends([["a"], ["x".repeat(PAGE_BYTE_LIMIT)], ["c"]]);
+
+    const result = await adapter.executeQuery({
+      sql: "SELECT …",
+      columns: [{ name: "device_name", type: "STRING" }],
+    });
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["a"]]);
+    expect(result.value.truncated).toBe(true);
+    expect(sent.handed).toBe(2);
   });
 
   it("counts a read as text", () => {
@@ -300,6 +342,8 @@ const MACRO_RESULTS = [
       user_id: "a field, not the column",
       "Plot no.": "P1",
     },
+    macro_output_text:
+      '{"PAR":1,"Plot no.":"P1","nested":{"x":1.5,"y":"s"},"order":["red","blue"],"user_id":"a field, not the column"}',
     questions_data: { plot: "A1" },
     annotations: [],
     _commit_version: 1,
@@ -313,6 +357,7 @@ const MACRO_RESULTS = [
     user_id: BEN,
     macro_id: "mac1",
     macro_output: { PAR: 0.0000001, order: [] },
+    macro_output_text: '{"PAR":1.0E-7,"order":[]}',
     questions_data: {},
     annotations: [],
     _commit_version: 1,
@@ -325,6 +370,7 @@ const MACRO_RESULTS = [
     timestamp: "2026-09-14 16:56:31.972123",
     macro_id: "mac2",
     macro_output: { _items: [{ k: 1 }, { k: 2.5, j: "x" }] },
+    macro_output_text: '[{"k":1},{"j":"x","k":2.5}]',
     questions_data: {},
     annotations: [],
     _commit_version: 1,
@@ -341,6 +387,7 @@ const UPLOADS = [
     created_by: ADA,
     uploaded_at: "2026-09-01 10:00:00",
     uploaded_data: { "Plot no.": 7, h: 0.1 },
+    uploaded_data_text: '{"Plot no.":7,"h":0.1}',
     _commit_version: 1,
     _commit_timestamp: "2026-09-01 10:00:01",
   },
@@ -352,6 +399,7 @@ const UPLOADS = [
     created_by: ADA,
     uploaded_at: "2026-09-02 10:00:00",
     uploaded_data: { "Plot no.": 8, h: 1000 },
+    uploaded_data_text: '{"Plot no.":8,"h":1000}',
     _commit_version: 1,
     _commit_timestamp: "2026-09-02 10:00:01",
   },
@@ -513,7 +561,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       date: "2026-09-14",
       macros: '[{"id":"mac1","name":"Phi2","filename":"phi2.js"}]',
       contributor: ADA,
-      device: "thing-1",
+      device: '["thing-1","thing-1 (d1)"]',
       latitude: "52.1",
       data: '{"a":1}',
       measurement_time_local: "2026-09-14 09:56:31",
@@ -625,6 +673,88 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     ]);
   });
 
+  it("shows a macro's fields from its text as Spark wrote it, a null one apart from a missing one", async () => {
+    // Each output as the feed sends it: the JSON column's value, which the store reprints and
+    // drops null keys from, and Spark's text of gold's VARIANT. Then the cell the warehouse shows.
+    const outputs: [Record<string, unknown>, string, string | null][] = [
+      [{ "vH+": -0.00000289 }, '{"vH+":-2.89E-6}', "-2.89E-6"],
+      [{ "vH+": 0.00000289 }, '{"vH+":0.00000289}', "0.00000289"],
+      [{ "vH+": null }, '{"vH+":null}', "null"],
+      [{}, "{}", null],
+      [
+        { "vH+": 1.2345678901234568e29 },
+        '{"vH+":123456789012345678901234567890}',
+        "123456789012345678901234567890",
+      ],
+      [{ "vH+": "NA" }, '{"vH+":"NA"}', '"NA"'],
+    ];
+    await admin.insert({
+      table: "macro_results",
+      values: outputs.map(([output, text], index) => ({
+        experiment_id: "macro-numbers",
+        id: 300 + index,
+        raw_id: 300 + index,
+        timestamp: "2026-09-13 01:00:00",
+        macro_id: "mac3",
+        macro_output: output,
+        macro_output_text: text,
+        questions_data: {},
+        annotations: [],
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-13 01:11:00",
+      })),
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      tableName: "mac3",
+      tableType: "macro",
+      experimentId: "macro-numbers",
+      variants: [
+        { columnName: "macro_output", schema: "OBJECT<`vH+`: VARIANT>", suffix: "output" },
+      ],
+      columns: ["id", "vH+"],
+      ordering: { column: "id" },
+    });
+
+    expect(data.rows.map(([, cell]) => cell)).toEqual(outputs.map(([, , cell]) => cell));
+  });
+
+  it("shows an upload's doubles as Spark wrote them, which a parquet upload writes in Java's form", async () => {
+    await admin.insert({
+      table: "uploads",
+      values: [
+        {
+          experiment_id: "parquet",
+          id: 1,
+          upload_table_id: "t3",
+          uploaded_at: "2026-09-01 10:00:00",
+          uploaded_data: { ph: 0.00015, n: 12345678 },
+          uploaded_data_text: '{"n":1.2345678E7,"ph":1.5E-4}',
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-01 10:00:01",
+        },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      tableName: "t3",
+      tableType: "upload",
+      experimentId: "parquet",
+      variants: [
+        {
+          columnName: "uploaded_data",
+          schema: "OBJECT<n: VARIANT, ph: VARIANT>",
+          suffix: "upload",
+        },
+      ],
+      columns: ["ph", "n"],
+    });
+
+    expect(data.rows).toEqual([["1.5E-4", "1.2345678E7"]]);
+  });
+
   it("reads a payload that is no object whole", async () => {
     const data = await rowsOf({
       tableName: "mac2",
@@ -721,6 +851,155 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(data.rows).toEqual([["+1"], [" 2.5 "], ["9"], ["10"], ["abc"], [""]]);
   });
 
+  describe("Number question answers", () => {
+    // Each answer with the double Spark's cast reads it as on the warehouse.
+    const answers: [string, string | null][] = [
+      ["20", "20.0"],
+      ["10", "10.0"],
+      ["abc", null],
+      ["", null],
+      [" 10 ", "10.0"],
+      ["10d", "10.0"],
+      ["1e3", "1000.0"],
+      ["51.986383", "51.986383"],
+    ];
+    const read = {
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "number-answers",
+      variants: [
+        {
+          columnName: "questions_data",
+          schema: "OBJECT<height: DOUBLE, plot: STRING>",
+          suffix: "answer",
+        },
+      ],
+    } satisfies Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0];
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: answers.map(([height], index) => ({
+          experiment_id: "number-answers",
+          id: 200 + index,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: { height, plot: "007" },
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+    });
+
+    it("reads each answer as Spark casts its text, and one that holds no number as null", async () => {
+      const data = await rowsOf({ ...read, columns: ["id", "height"], ordering: { column: "id" } });
+
+      expect(data.columns[1].type_text).toBe("DOUBLE");
+      expect(data.rows.map(([, height]) => height)).toEqual(answers.map(([, cell]) => cell));
+    });
+
+    it("sorts answers by value, empty ones last both ways and the row id breaking ties", async () => {
+      const sorted = async (direction: "ASC" | "DESC") =>
+        (
+          await rowsOf({
+            ...read,
+            columns: ["id"],
+            ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+            limit: 8,
+          })
+        ).rows.map(([id]) => id);
+
+      expect(await sorted("ASC")).toEqual(["201", "204", "205", "200", "207", "206", "202", "203"]);
+      expect(await sorted("DESC")).toEqual([
+        "206",
+        "207",
+        "200",
+        "201",
+        "204",
+        "205",
+        "202",
+        "203",
+      ]);
+    });
+
+    it("matches no row for text that holds no number, and compares text that does", async () => {
+      const ids = async (filters: FilterCondition[]) =>
+        (await rowsOf({ ...read, columns: ["id"], filters, ordering: { column: "id" } })).rows;
+
+      expect(await ids([{ column: "height", operator: "equals", value: "n/a" }])).toEqual([]);
+      expect(await ids([{ column: "height", operator: "in", value: ["10", ""] }])).toEqual([
+        ["201"],
+        ["204"],
+        ["205"],
+      ]);
+      expect(await ids([{ column: "height", operator: "greater_than", value: 50 }])).toEqual([
+        ["206"],
+        ["207"],
+      ]);
+      expect(await ids([{ column: "plot", operator: "equals", value: "007" }])).toHaveLength(8);
+    });
+
+    it("reads an answer of no finite number as Spark does, not as no value", async () => {
+      const unbounded: [string, string][] = [
+        ["NaN", "NaN"],
+        ["Infinity", "Infinity"],
+        ["-inf", "-Infinity"],
+        ["1e400", "Infinity"],
+      ];
+      await admin.insert({
+        table: "measurements",
+        values: unbounded.map(([height], index) => ({
+          experiment_id: "unbounded-answers",
+          id: 220 + index,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: { height },
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+
+      const data = await rowsOf({
+        ...read,
+        experimentId: "unbounded-answers",
+        columns: ["height"],
+        ordering: { column: "id" },
+      });
+
+      expect(data.rows).toEqual(unbounded.map(([, cell]) => [cell]));
+    });
+
+    it("sorts an answer of NaN above every number both ways, as Spark does", async () => {
+      await admin.insert({
+        table: "measurements",
+        values: ["1", "NaN", "", "5"].map((height, index) => ({
+          experiment_id: "nan-answers",
+          id: 230 + index,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: { height },
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+      const sorted = async (direction: "ASC" | "DESC") =>
+        (
+          await rowsOf({
+            ...read,
+            experimentId: "nan-answers",
+            columns: ["id"],
+            ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+          })
+        ).rows.map(([id]) => id);
+
+      expect(await sorted("ASC")).toEqual(["230", "233", "231", "232"]);
+      expect(await sorted("DESC")).toEqual(["231", "233", "230", "232"]);
+    });
+  });
+
   it("filters and sorts devices by the serial numbers it is given", async () => {
     const data = await rowsOf({
       tableName: "raw_data",
@@ -736,6 +1015,150 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.rows).toEqual([["2"], ["1"]]);
+  });
+
+  describe("device labels", () => {
+    // The rows the warehouse's device-label Spark test reads, with the same registry serials.
+    const devices: [number, string | null, string | null, string | null][] = [
+      [1, "c1", "d1", "MultispeQ"],
+      [2, "c9", "d2", "Ambit"],
+      [3, "c9", "d3", "Ambit"],
+      [4, "phone-1", "d4", " "],
+      [5, null, "imported-1", null],
+      [6, "phone-1", null, "Probe"],
+      [7, " ", " ", " "],
+      [8, null, null, " Bench "],
+      [9, "blank-phone", "blank", "Probe"],
+      [10, "phone-only", null, null],
+      [11, "c1", "other-sensor", "MultispeQ"],
+    ];
+    const serials: [string, string][] = [
+      ["c1", " SN1 "],
+      ["blank-phone", " "],
+    ];
+    const read: Pick<StoreQueryParams, "tableName" | "tableType" | "experimentId"> = {
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "devices",
+    };
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: devices.map(([id, client_id, device_id, device_name]) => ({
+          experiment_id: "devices",
+          id,
+          client_id,
+          device_id,
+          device_name,
+          timestamp: "2026-09-13 01:00:00",
+          questions_data: {},
+          annotations: [],
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-13 01:11:00",
+        })),
+        format: "JSONEachRow",
+      });
+    });
+
+    it("labels each device as the warehouse does", async () => {
+      const data = await rowsOf({
+        ...read,
+        columns: ["id", "device.serial_number", "device"],
+        deviceSerials: serials,
+        ordering: { column: "id" },
+      });
+
+      expect(data.rows.map(([, label]) => label)).toEqual([
+        " SN1 ",
+        "Ambit (d2)",
+        "Ambit (d3)",
+        "phone-1 (d4)",
+        "imported-1",
+        "Probe (phone-1)",
+        null,
+        "Bench",
+        "Probe (blank)",
+        "phone-only",
+        " SN1 ",
+      ]);
+      // The device itself comes back as its client id and its label, for the backend to finish.
+      expect(data.rows[1][2]).toBe('["c9","Ambit (d2)"]');
+      expect(data.rows[4][2]).toBe('[null,"imported-1"]');
+    });
+
+    it("filters and sorts by the label", async () => {
+      const filtered = await rowsOf({
+        ...read,
+        columns: ["id"],
+        filters: [{ column: "device.serial_number", operator: "equals", value: "Ambit (d2)" }],
+        deviceSerials: serials,
+      });
+      expect(filtered.rows).toEqual([["2"]]);
+
+      // A page, so the serials are read inside the statement that picks its keys too.
+      const sorted = await rowsOf({
+        ...read,
+        columns: ["id"],
+        ordering: { column: "device.serial_number" },
+        deviceSerials: serials,
+        limit: 3,
+      });
+      // No label sorts first, then the two rows of the registered device.
+      expect(sorted.rows[0]).toEqual(["7"]);
+      expect(sorted.rows.slice(1, 3).sort()).toEqual([["1"], ["11"]]);
+    });
+
+    // Rows 1 and 11 are one registered device, so either may come first.
+    const wholeDeviceSorts: { direction: "ASC" | "DESC"; order: string[] }[] = [
+      { direction: "ASC", order: ["7", "2", "3", "8", "6", "5", "4", "10", "1", "1", "9"] },
+      { direction: "DESC", order: ["9", "1", "1", "10", "4", "5", "6", "8", "3", "2", "7"] },
+    ];
+
+    it.each(wholeDeviceSorts)(
+      "sorts whole devices $direction by registry order, the unregistered by their labels",
+      async ({ direction, order }) => {
+        const sorted = await rowsOf({
+          ...read,
+          columns: ["id"],
+          ordering: { column: "device", direction },
+          orderByIds: ["c1", "blank-phone"],
+          deviceSerials: serials,
+          limit: 11,
+        });
+
+        expect(sorted.rows.map(([id]) => (id === "11" ? "1" : id))).toEqual(order);
+      },
+    );
+
+    it("lists the labels as the device picker pages them", async () => {
+      const labels = async (limit: number, offset: number) => {
+        const projected = adapter.buildExperimentQuery({
+          ...read,
+          columns: ["device.serial_number"],
+          deviceSerials: serials,
+        });
+        assertSuccess(projected);
+        const data = await adapter.executeQuery(
+          adapter.deviceLabelsQuery(projected.value, limit, offset),
+        );
+        assertSuccess(data);
+        return data.value.rows.map(([label]) => label);
+      };
+
+      expect(await labels(1001, 0)).toEqual([
+        " SN1 ",
+        "Ambit (d2)",
+        "Ambit (d3)",
+        "Bench",
+        "imported-1",
+        "phone-1 (d4)",
+        "phone-only",
+        "Probe (blank)",
+        "Probe (phone-1)",
+      ]);
+      expect(await labels(3, 3)).toEqual(["Bench", "imported-1", "phone-1 (d4)"]);
+    });
   });
 
   it("keeps ids past 2^53 and names a table by its newest upload", async () => {
@@ -760,6 +1183,74 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     ]);
   });
 
+  it("compares a payload's integer past 2^53 with text as two doubles, as Spark does", async () => {
+    // Raw text, since a JavaScript number cannot hold 2^53 + 1.
+    const row = (id: number, plot: string) =>
+      `{"experiment_id":"big-plots","id":${id},"upload_table_id":"t3","uploaded_at":"2026-09-03 10:00:00",` +
+      `"uploaded_data":{"plot":${plot}},"uploaded_data_text":${JSON.stringify(`{"plot":${plot}}`)},` +
+      `"_commit_version":1,"_commit_timestamp":"2026-09-03 10:00:01"}`;
+    await admin.command({
+      query: `INSERT INTO uploads FORMAT JSONEachRow ${row(1, "9007199254740992")} ${row(2, "9007199254740993")}`,
+    });
+    const ids = async (filters: FilterCondition[]) =>
+      (
+        await rowsOf({
+          tableName: "t3",
+          tableType: "upload",
+          experimentId: "big-plots",
+          variants: [
+            { columnName: "uploaded_data", schema: "OBJECT<plot: BIGINT>", suffix: "upload" },
+          ],
+          columns: ["id"],
+          filters,
+          ordering: { column: "id" },
+        })
+      ).rows;
+
+    const text = "9007199254740993";
+    expect(await ids([{ column: "plot", operator: "equals", value: text }])).toEqual([
+      ["1"],
+      ["2"],
+    ]);
+    expect(await ids([{ column: "plot", operator: "in", value: [text] }])).toEqual([["1"], ["2"]]);
+  });
+
+  it("sorts a double field with NaN above every number, its distinct values too", async () => {
+    const values: (number | string | undefined)[] = [1.5, "NaN", undefined, 3];
+    await admin.insert({
+      table: "uploads",
+      values: values.map((h, index) => ({
+        experiment_id: "nan-uploads",
+        id: index + 1,
+        upload_table_id: "t4",
+        uploaded_at: "2026-09-04 10:00:00",
+        uploaded_data: h === undefined ? {} : { h },
+        uploaded_data_text: JSON.stringify(h === undefined ? {} : { h }),
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-04 10:00:01",
+      })),
+      format: "JSONEachRow",
+    });
+    const read = {
+      tableName: "t4",
+      tableType: "upload",
+      experimentId: "nan-uploads",
+      variants: [{ columnName: "uploaded_data", schema: "OBJECT<h: DOUBLE>", suffix: "upload" }],
+    } satisfies Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0];
+    const sorted = async (direction: "ASC" | "DESC") =>
+      (await rowsOf({ ...read, columns: ["id"], ordering: { column: "h", direction } })).rows;
+
+    expect(await sorted("ASC")).toEqual([["3"], ["1"], ["4"], ["2"]]);
+    expect(await sorted("DESC")).toEqual([["2"], ["4"], ["1"], ["3"]]);
+    const distinct = await rowsOf({
+      ...read,
+      columns: ["h"],
+      distinct: true,
+      ordering: { column: "h", direction: "DESC" },
+    });
+    expect(distinct.rows).toEqual([["NaN"], ["3.0"], ["1.5"], [null]]);
+  });
+
   it("reads a key that ends in a backslash, and a missing array as null", async () => {
     await admin.insert({
       table: "uploads",
@@ -770,6 +1261,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           upload_table_id: "t2",
           uploaded_at: "2026-09-01 10:00:00",
           uploaded_data: { "Temp\\": 1, order: ["a"] },
+          uploaded_data_text: JSON.stringify({ "Temp\\": 1, order: ["a"] }),
           _commit_version: 1,
           _commit_timestamp: "2026-09-01 10:00:01",
         },
@@ -779,6 +1271,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           upload_table_id: "t2",
           uploaded_at: "2026-09-02 10:00:00",
           uploaded_data: { "Temp\\": 2 },
+          uploaded_data_text: JSON.stringify({ "Temp\\": 2 }),
           _commit_version: 1,
           _commit_timestamp: "2026-09-02 10:00:01",
         },
@@ -805,6 +1298,46 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ["1", '["a"]'],
       ["2", null],
     ]);
+  });
+
+  it("serves a read the store holds in more than 25 MiB when its cells, as text, hold less", async () => {
+    // Four null text cells take 36 bytes a row in the store's memory and 22 as JSON text.
+    await admin.command({
+      query: `INSERT INTO measurements (experiment_id, id, timestamp, questions_data, annotations, _commit_version, _commit_timestamp)
+        SELECT 'big-page', number, toDateTime64('2026-09-13 01:00:00', 6, 'UTC'), map(), [], 1, toDateTime64('2026-09-13 01:11:00', 6, 'UTC')
+        FROM numbers(800000)`,
+    });
+
+    const data = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "big-page",
+      columns: ["device_id", "device_name", "protocol_id", "workbook_run_id"],
+    });
+
+    expect(data.rows).toHaveLength(800_000);
+    expect(data.truncated).toBe(false);
+    expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
+  });
+
+  it("stops reading a page before the row that takes its cells past the read limit", async () => {
+    // Rows of a million bytes each, 40 MB in all and well under the store's own guard.
+    await admin.command({
+      query: `INSERT INTO measurements (experiment_id, id, timestamp, device_name, questions_data, annotations, _commit_version, _commit_timestamp)
+        SELECT 'wide-page', number, toDateTime64('2026-09-13 01:00:00', 6, 'UTC'), repeat('x', 1000000), map(), [], 1, toDateTime64('2026-09-13 01:11:00', 6, 'UTC')
+        FROM numbers(40)`,
+    });
+
+    const data = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "wide-page",
+      columns: ["device_name"],
+    });
+
+    // 26 rows of 1,000,004 bytes and their separators fit 25 MiB; the 27th passes it.
+    expect(data.truncated).toBe(true);
+    expect(data.rows).toHaveLength(26);
   });
 
   it("counts a read and lists the experiment's ids", async () => {
@@ -847,6 +1380,19 @@ describe("StoreTables against the migrations", () => {
       expect(table.key).toContain(partitionTime);
     },
   );
+
+  it.each([
+    ["macro_results", MACRO_RESULTS_TABLE],
+    ["uploads", UPLOADS_TABLE],
+  ])("%s holds the text each payload is shown from", (name, table) => {
+    const texts = Object.values(table.payloadTexts ?? {});
+
+    expect(texts).toHaveLength(1);
+    for (const text of texts) {
+      const added = `ALTER TABLE ${name} ADD COLUMN IF NOT EXISTS ${text} Nullable(String)`;
+      expect(migrationStatements().some((statement) => statement.includes(added))).toBe(true);
+    }
+  });
 });
 
 /** The migrations as their runner applies them, one statement at a time. */

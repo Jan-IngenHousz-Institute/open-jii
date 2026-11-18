@@ -130,6 +130,22 @@ def test_distinct_options_and_sorting_resolve_against_the_display_struct(
     assert sorted_labels[1:3] == [" SN1 ", " SN1 "]
 
 
+@pytest.mark.parametrize(
+    ("query", "order"),
+    [
+        ("sortedWhole", [7, 2, 3, 8, 6, 5, 4, 10, 1, 1, 9]),
+        ("sortedWholeDescending", [9, 1, 1, 10, 4, 5, 6, 8, 3, 2, 7]),
+    ],
+)
+def test_whole_devices_sort_by_registry_id_then_label_as_the_store_sorts_them(
+    spark: SparkSession, display_measurements: None, query: str, order: list[int]
+) -> None:
+    # Rows 1 and 11 are one registered device, so either may come first; the store's spec expects
+    # the same order of the same rows.
+    ids = [row.id for row in spark.sql(_QUERIES[query]).collect()]
+    assert [1 if row_id == 11 else row_id for row_id in ids] == order
+
+
 def test_star_and_variant_reads_keep_user_device_fields_separate(
     spark: SparkSession, display_measurements: None
 ) -> None:

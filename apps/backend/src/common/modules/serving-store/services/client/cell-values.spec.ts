@@ -20,12 +20,65 @@ describe("CellValues.javaDouble", () => {
   });
 });
 
+describe("CellValues.payloadCell", () => {
+  // A payload's text as Spark writes gold's VARIANT, which is what the warehouse shows.
+  const payload = CellValues.payload(
+    '{"ECSt":null,"big":123456789012345678901234567890,"empty":{},"plain":0.00000289,"s":"NA","vH+":-2.89E-6,"x":1.5E-4,"y":1.2345678E7}',
+  );
+
+  it("reads a field holding null as the warehouse shows it, and a missing field as no value", () => {
+    expect(CellValues.payloadCell(payload, "ECSt", "VARIANT")).toBe("null");
+    expect(CellValues.payloadCell(payload, "ECSt", "DOUBLE")).toBeNull();
+    expect(CellValues.payloadCell(payload, "missing", "VARIANT")).toBeNull();
+  });
+
+  it("writes each number as Spark wrote it, a double, a decimal or an integer past 64 bits", () => {
+    expect(CellValues.payloadCell(payload, "vH+", "VARIANT")).toBe("-2.89E-6");
+    expect(CellValues.payloadCell(payload, "plain", "VARIANT")).toBe("0.00000289");
+    expect(CellValues.payloadCell(payload, "big", "VARIANT")).toBe(
+      "123456789012345678901234567890",
+    );
+    expect(CellValues.payloadCell(payload, "x", "DOUBLE")).toBe("1.5E-4");
+    expect(CellValues.payloadCell(payload, "y", "VARIANT")).toBe("1.2345678E7");
+    expect(CellValues.payloadCell(payload, "s", "VARIANT")).toBe('"NA"');
+  });
+
+  it("keeps a variant's numbers as Spark printed them, where JavaScript would print others", () => {
+    const tiny = CellValues.payload('{"v":4.9E-324,"w":{"z":[4.9E-324,1.0E-7]}}');
+
+    expect(CellValues.payloadCell(tiny, "v", "VARIANT")).toBe("4.9E-324");
+    expect(CellValues.payloadCell(tiny, "w", "VARIANT")).toBe('{"z":[4.9E-324,1.0E-7]}');
+  });
+
+  it("reads an empty object as the warehouse does, as a variant or a struct", () => {
+    expect(CellValues.payloadCell(payload, "empty", "VARIANT")).toBe("{}");
+    expect(CellValues.payloadCell(payload, "empty", "STRUCT<a: DOUBLE>")).toBe('{"a":null}');
+    expect(CellValues.payloadCell(payload, "empty", "STRUCT<constructor: STRING>")).toBe(
+      '{"constructor":null}',
+    );
+  });
+
+  it("reads a whole payload, and nothing for a row without text", () => {
+    expect(CellValues.payloadCell(CellValues.payload("[0.7,1]"), undefined, "ARRAY<DOUBLE>")).toBe(
+      '["0.7","1.0"]',
+    );
+    expect(CellValues.payloadCell(CellValues.payload("null"), undefined, "VARIANT")).toBe("null");
+    expect(CellValues.payloadCell(CellValues.payload(null), "vH+", "VARIANT")).toBeNull();
+  });
+});
+
 describe("CellValues.text", () => {
   it("writes a time in UTC to the millisecond, cut rather than rounded", () => {
     expect(CellValues.text("2026-09-14 16:56:31.999600", "TIMESTAMP")).toBe(
       "2026-09-14T16:56:31.999Z",
     );
     expect(CellValues.text("2026-09-14 16:56:31", "TIMESTAMP")).toBe("2026-09-14T16:56:31.000Z");
+  });
+
+  it("writes a double JSON has no number for as Java does, from the store's quoted text", () => {
+    expect(CellValues.text("nan", "DOUBLE")).toBe("NaN");
+    expect(CellValues.text("inf", "DOUBLE")).toBe("Infinity");
+    expect(CellValues.text("-inf", "DOUBLE")).toBe("-Infinity");
   });
 
   it("writes scalars as text", () => {

@@ -145,6 +145,11 @@ export abstract class BaseQueryBuilder {
     return this.escapeScalarValue(value);
   }
 
+  /** The column side of a filter comparing `column` with `value`. Spark coerces it itself. */
+  comparedColumn(columnSql: string, _column: string, _value: FilterValue): string {
+    return columnSql;
+  }
+
   /** A column's value as text, for `LIKE`. Databricks casts to text itself. */
   textOf(columnSql: string): string {
     return columnSql;
