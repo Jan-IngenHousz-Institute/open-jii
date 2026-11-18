@@ -411,9 +411,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * A matched sheet row's fields as their JSON text by key. The copier writes an integer outside
-   * Int64 and UInt64 with a fraction, which the extraction drops again; the JSON type refuses it
-   * without one, and as a double it reads, its decimal cast from its text exact.
+   * A matched sheet row's fields as JSON text by key. The extraction drops the fraction the copier
+   * gave an integer outside Int64 and UInt64, which the JSON type refuses without one, so it goes
+   * back on.
    */
   private sheetFields(alias: string): string {
     const pairs = `JSONExtractKeysAndValuesRaw(if(${alias}.matched = 1, ${alias}.fields, '{}'))`;
@@ -460,10 +460,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * Integers come back as text: ids pass 2^53, which a JavaScript number cannot hold. A decimal
-   * comes back as text at its scale, as Spark writes 1.5 at scale 2 as 1.50. A device comes back
-   * as its client id and the label its row's own names give, which the backend finishes with the
-   * registry's serial number.
+   * Integers come back as text, since ids pass 2^53, and decimals as text at their scale, as Spark
+   * writes 1.5 at scale 2 as 1.50. A device comes back as its client id and the label its row's own
+   * names give, which the backend finishes with the registry's serial number.
    */
   private projectedValue({ name, type, idOf }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);

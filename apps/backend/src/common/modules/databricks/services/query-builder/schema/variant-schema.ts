@@ -78,10 +78,9 @@ export class VariantSchema {
   }
 
   /**
-   * The schema gold gives metadata sheet rows: `schema_of_variant_agg` over each row's JSON after
-   * one more pass through `to_json` and `parse_json`, with decimals kept as `DECIMAL(p,s)`. Null
-   * when there is none. The cases in `apps/data/tests/fixtures/custom_metadata_schemas.json`,
-   * worked out by gold's notebook, pin it.
+   * The schema gold gives metadata sheet rows, or null: `schema_of_variant_agg` over each row's
+   * JSON after one more `to_json` and `parse_json`, decimals kept. The cases in
+   * `apps/data/tests/fixtures/custom_metadata_schemas.json`, worked out by gold's notebook, pin it.
    */
   static ofJson(texts: readonly string[]): string | null {
     const merged = texts

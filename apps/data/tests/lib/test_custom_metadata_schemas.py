@@ -1,11 +1,7 @@
 """The cases the backend's custom metadata schema is tested against, worked out by gold's own
-table metadata notebook, so both sides read one set.
-
-Gold types every row of an experiment's metadata sheets, without its _id and identifier, and keeps
-decimals as DECIMAL(p,s); the serving store's reads work the same schema out in the backend. Each
-case is one sheet's rows as JSON text, written without the _id and identifier this test adds, and
-the schema gold gives them. To add a case, add its rows to the file and run this test with
-``CUSTOM_METADATA_SCHEMAS_WRITE=1``, which writes gold's answers into it.
+table metadata notebook so both sides read one set. Each case is one sheet's rows as JSON text,
+without the _id and identifier this test adds. To add one, add its rows to the file and run this
+test with ``CUSTOM_METADATA_SCHEMAS_WRITE=1``, which writes gold's answers into it.
 """
 
 from __future__ import annotations

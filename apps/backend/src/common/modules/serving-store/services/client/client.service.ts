@@ -62,7 +62,8 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // A NaN or infinite double, such as a Number answer of "Infinity", would come back
               // as null; quoted, it reaches the page as Spark writes it.
               output_format_json_quote_denormals: 1,
-              json_type_escape_dots_in_keys: 1, // A read's own JSON keeps "Plot no." one key.
+              // A read's own JSON keeps a dotted key such as "Plot no." whole.
+              json_type_escape_dots_in_keys: 1,
               // A payload field is projected under its own name, which may be a column's, such as
               // user_id; the column must still read as the column everywhere else in the query.
               prefer_column_name_to_alias: 1,
