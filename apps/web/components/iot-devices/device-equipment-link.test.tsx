@@ -2,7 +2,7 @@ import { createIotDeviceDetail, createMyOrganization } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
@@ -43,6 +43,13 @@ describe("DeviceEquipmentLink", () => {
       isPending: false,
     } as ReturnType<typeof useSession>);
   });
+
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
   it.each([
     {
       deviceType: "ambyte" as const,
