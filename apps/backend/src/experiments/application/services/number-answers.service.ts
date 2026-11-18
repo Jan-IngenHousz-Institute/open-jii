@@ -22,6 +22,11 @@ export class NumberAnswersService {
     experimentId: string,
     tables: ExperimentTableMetadata[],
   ): Promise<Result<ExperimentTableMetadata[]>> {
+    const hasAnswers = tables.some((table) => table.questionsSchema);
+    if (!hasAnswers) {
+      return success(tables);
+    }
+
     const flow = await this.flowRepository.getByExperimentId(experimentId);
     if (flow.isFailure()) {
       return flow;

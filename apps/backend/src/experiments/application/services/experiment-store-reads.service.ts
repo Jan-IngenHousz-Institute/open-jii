@@ -157,8 +157,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     const data = query.distinct
       ? this.withoutRepeats(filled.value, query.limitAfterDetails)
       : filled.value;
-    const isTruncated = data.truncated || PageBytes.of(data.rows).exceedsLimit;
-    return success({ ...data, truncated: isTruncated });
+    const rows = PageBytes.fitting(data.rows);
+    const isTruncated = data.truncated || rows.length < data.rows.length;
+    return success({ ...data, rows, totalRows: rows.length, truncated: isTruncated });
   }
 
   /**

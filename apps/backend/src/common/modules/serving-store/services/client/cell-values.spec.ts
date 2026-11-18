@@ -43,9 +43,19 @@ describe("CellValues.payloadCell", () => {
     expect(CellValues.payloadCell(payload, "s", "VARIANT")).toBe('"NA"');
   });
 
+  it("keeps a variant's numbers as Spark printed them, where JavaScript would print others", () => {
+    const tiny = CellValues.payload('{"v":4.9E-324,"w":{"z":[4.9E-324,1.0E-7]}}');
+
+    expect(CellValues.payloadCell(tiny, "v", "VARIANT")).toBe("4.9E-324");
+    expect(CellValues.payloadCell(tiny, "w", "VARIANT")).toBe('{"z":[4.9E-324,1.0E-7]}');
+  });
+
   it("reads an empty object as the warehouse does, as a variant or a struct", () => {
     expect(CellValues.payloadCell(payload, "empty", "VARIANT")).toBe("{}");
     expect(CellValues.payloadCell(payload, "empty", "STRUCT<a: DOUBLE>")).toBe('{"a":null}');
+    expect(CellValues.payloadCell(payload, "empty", "STRUCT<constructor: STRING>")).toBe(
+      '{"constructor":null}',
+    );
   });
 
   it("reads a whole payload, and nothing for a row without text", () => {

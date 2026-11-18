@@ -122,13 +122,22 @@ describe("ServingStoreClientService", () => {
     expect(sent).toBeLessThan(40 * line.length);
   });
 
-  it("reads every row of a result the reader takes whole", async () => {
-    answer = { status: 200, body: "", lines: { line: '["1","A1"]\n', count: 3 } };
+  it("reads every row of a result the reader takes whole, in order", async () => {
+    answer = { status: 200, body: '["1","A1"]\n["2","B2"]\n["3",null]\n' };
+    const rows: unknown[][] = [];
 
-    const result = await client.stream(STATEMENT, () => true);
+    const result = await client.stream(STATEMENT, (row) => {
+      rows.push(row);
+      return true;
+    });
 
     assertSuccess(result);
     expect(result.value).toEqual({ complete: true });
+    expect(rows).toEqual([
+      ["1", "A1"],
+      ["2", "B2"],
+      ["3", null],
+    ]);
   });
 
   it("asks the store to refuse a result past 100 MiB, 4 times the page limit, before it sends any of it", async () => {

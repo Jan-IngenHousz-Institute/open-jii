@@ -51,7 +51,10 @@ export class CellValues {
     if (value === null) {
       return type === "VARIANT" ? "null" : null;
     }
-    return CellValues.written(value, type);
+    // The text is Spark's own JSON, so a VARIANT keeps its numbers as Spark printed them.
+    return type === "VARIANT"
+      ? CellValues.variantJson(value, true)
+      : CellValues.written(value, type);
   }
 
   /** Java's `Double.toString`: plain from 10^-3 up to 10^7, otherwise `d.dddE±n`. */
@@ -121,7 +124,7 @@ export class CellValues {
       return Object.fromEntries(
         fields.map(({ name, type: fieldType }) => [
           name,
-          CellValues.leaves(value[name], fieldType),
+          CellValues.leaves(CellValues.field(value, name), fieldType),
         ]),
       );
     }
@@ -177,10 +180,11 @@ export class CellValues {
   }
 
   /** Spark keeps a number written plainly as a decimal and one with an exponent as a double. */
-  private static variantJson(value: unknown): string {
+  private static variantJson(value: unknown, isSparkText = false): string {
     const number = CellValues.numberText(value);
     if (number !== null) {
-      return /[eE]/.test(number) ? CellValues.javaDouble(Number(number)) : number;
+      const isJavaDouble = isSparkText || !/[eE]/.test(number);
+      return isJavaDouble ? number : CellValues.javaDouble(Number(number));
     }
     if (value === null || value === undefined) {
       return "null";
@@ -189,7 +193,7 @@ export class CellValues {
       return JSON.stringify(value);
     }
     if (Array.isArray(value)) {
-      return `[${value.map((item: unknown) => CellValues.variantJson(item)).join(",")}]`;
+      return `[${value.map((item: unknown) => CellValues.variantJson(item, isSparkText)).join(",")}]`;
     }
     if (!CellValues.isRecord(value)) {
       return "null";
@@ -200,7 +204,7 @@ export class CellValues {
       Buffer.compare(Buffer.from(a), Buffer.from(b)),
     );
     const members = entries.map(
-      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item)}`,
+      ([key, item]) => `${JSON.stringify(key)}:${CellValues.variantJson(item, isSparkText)}`,
     );
     return `{${members.join(",")}}`;
   }

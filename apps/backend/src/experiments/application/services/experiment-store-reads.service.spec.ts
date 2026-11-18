@@ -1,10 +1,13 @@
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
-import { assertSuccess, success } from "../../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { PAGE_BYTE_LIMIT } from "../../core/models/experiment-data.model";
-import type { ExperimentQueryParams } from "../../core/models/experiment-data.model";
+import type {
+  ExperimentQueryParams,
+  ExperimentTableMetadata,
+} from "../../core/models/experiment-data.model";
 import type { FlowGraphDto } from "../../core/models/flow.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
@@ -324,6 +327,21 @@ describe("ExperimentStoreReadsService", () => {
     expect(await truncatedWith(`${atLimit}x`)).toBe(true);
   });
 
+  it("returns only the distinct values that fit the read limit, as the warehouse cuts a read", async () => {
+    const name = { name: "device_name", type_name: "STRING", type_text: "STRING", position: 0 };
+    const half = "x".repeat(PAGE_BYTE_LIMIT / 2);
+    storeRows([name], [["a"], ["b"], [half], [`${half}y`]]);
+    const query = await reads.buildQuery({ ...page, columns: ["device_name"], distinct: true });
+    assertSuccess(query);
+
+    const result = await reads.runQuery(query.value);
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["a"], ["b"], [half]]);
+    expect(result.value.totalRows).toBe(3);
+    expect(result.value.truncated).toBe(true);
+  });
+
   it("measures a read's contributors filled in, as the warehouse sends them", async () => {
     const ada = await testApp.createTestUser({ name: "Ada Lovelace" });
     storeRows(
@@ -383,6 +401,30 @@ describe("ExperimentStoreReadsService", () => {
     assertSuccess(result);
     expect(result.value[0].questionsSchema).toBe("OBJECT<height: DOUBLE, plot: STRING>");
     expect(result.value[0].schemaRevision).toMatch(/^r1:[0-9a-f]{32}$/);
+  });
+
+  it("lists tables without answers without reading the flow, so a failed flow read cannot fail it", async () => {
+    const uploads: ExperimentTableMetadata[] = [
+      {
+        identifier: "t1",
+        tableType: "upload",
+        displayName: "Weather",
+        rowCount: 3,
+        latestRowAt: null,
+        schemaRevision: "r1",
+        questionsSchema: null,
+      },
+    ];
+    vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(success(uploads));
+    const flow = vi
+      .spyOn(testApp.module.get(FlowRepository), "getByExperimentId")
+      .mockResolvedValue(failure(AppError.internal("Flow lookup failed")));
+
+    const result = await reads.tablesMetadata("e1");
+
+    assertSuccess(result);
+    expect(result.value).toEqual(uploads);
+    expect(flow).not.toHaveBeenCalled();
   });
 
   it("holds every table but the device table", () => {

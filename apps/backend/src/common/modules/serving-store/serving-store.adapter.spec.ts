@@ -220,7 +220,7 @@ describe("ServingStoreAdapter", () => {
     expect(result.value.rows).toEqual([["null", "1.0E-7"]]);
   });
 
-  it("stops at the row that takes a read past the page limit and marks it truncated", async () => {
+  it("stops before the row that takes a read past the page limit and marks it truncated", async () => {
     const sent = storeSends([["a"], ["x".repeat(PAGE_BYTE_LIMIT)], ["c"]]);
 
     const result = await adapter.executeQuery({
@@ -229,7 +229,7 @@ describe("ServingStoreAdapter", () => {
     });
 
     assertSuccess(result);
-    expect(result.value.rows).toHaveLength(2);
+    expect(result.value.rows).toEqual([["a"]]);
     expect(result.value.truncated).toBe(true);
     expect(sent.handed).toBe(2);
   });
@@ -1320,7 +1320,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
   });
 
-  it("stops reading a page at the row that takes its cells past the read limit", async () => {
+  it("stops reading a page before the row that takes its cells past the read limit", async () => {
     // Rows of a million bytes each, 40 MB in all and well under the store's own guard.
     await admin.command({
       query: `INSERT INTO measurements (experiment_id, id, timestamp, device_name, questions_data, annotations, _commit_version, _commit_timestamp)
@@ -1335,9 +1335,9 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       columns: ["device_name"],
     });
 
-    // 27 rows of 1,000,004 bytes and their separators pass 25 MiB.
+    // 26 rows of 1,000,004 bytes and their separators fit 25 MiB; the 27th passes it.
     expect(data.truncated).toBe(true);
-    expect(data.rows).toHaveLength(27);
+    expect(data.rows).toHaveLength(26);
   });
 
   it("counts a read and lists the experiment's ids", async () => {

@@ -8,10 +8,14 @@ export class PageBytes {
   private bytes = 2;
   private rows = 0;
 
-  static of(rows: (string | null)[][]): PageBytes {
+  /** The leading rows that fit the limit, as the warehouse returns a read it cut short. */
+  static fitting(rows: (string | null)[][]): (string | null)[][] {
     const size = new PageBytes();
-    rows.forEach((row) => size.add(row));
-    return size;
+    const firstOver = rows.findIndex((row) => {
+      size.add(row);
+      return size.exceedsLimit;
+    });
+    return firstOver === -1 ? rows : rows.slice(0, firstOver);
   }
 
   add(row: (string | null)[]): void {

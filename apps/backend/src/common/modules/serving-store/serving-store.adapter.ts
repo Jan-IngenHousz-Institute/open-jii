@@ -183,18 +183,22 @@ export class ServingStoreAdapter implements ServingStorePort {
 
   /**
    * The rows as the warehouse writes its cells, with contributors and devices as their ids. A read
-   * whose cells pass the page limit stops there and is marked truncated, so the rest is never held.
-   * Filling a contributor or a device in only lengthens its cell, so a device counts as nothing
-   * until then, and a read stopped here would also be refused once filled.
+   * whose cells pass the page limit stops before the row that passes it, keeps the rows that fit
+   * and is marked truncated, so the rest is never held. Filling a contributor or a device in only
+   * lengthens its cell, so a device counts as nothing until then, and a read stopped here would
+   * also be refused once filled.
    */
   async executeQuery(query: StoreQuery): Promise<Result<SchemaData>> {
     const rows: (string | null)[][] = [];
     const size = new PageBytes();
     const read = await this.client.stream(query.sql, (row) => {
       const cells = this.cells(query.columns, row);
-      rows.push(cells);
       size.add(cells.map((cell, index) => (query.columns[index].idOf === "device" ? null : cell)));
-      return !size.exceedsLimit;
+      if (size.exceedsLimit) {
+        return false;
+      }
+      rows.push(cells);
+      return true;
     });
     if (read.isFailure()) {
       return read;
