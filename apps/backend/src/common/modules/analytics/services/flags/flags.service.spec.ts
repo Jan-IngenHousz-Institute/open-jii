@@ -1,3 +1,4 @@
+import { PostHog } from "posthog-node";
 import type { MockInstance } from "vitest";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
@@ -39,7 +40,7 @@ describe("FlagsService", () => {
     );
     mockGetPostHogServerClient = spyOnProtected(service, "getPostHogClient").mockReturnValue({
       isFeatureEnabled: vi.fn().mockResolvedValue(true),
-      on: vi.fn(),
+      on: vi.fn(() => () => undefined),
       shutdown: vi.fn().mockResolvedValue(undefined),
     });
     mockShutdownPostHog = spyOnProtected(service, "shutdownPostHogClient").mockResolvedValue(
@@ -158,6 +159,7 @@ describe("FlagsService", () => {
     it("should return PostHog result when client is available", async () => {
       const mockClient = {
         isFeatureEnabled: vi.fn().mockResolvedValue(true),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -187,6 +189,7 @@ describe("FlagsService", () => {
     it("should use custom distinctId when provided", async () => {
       const mockClient = {
         isFeatureEnabled: vi.fn().mockResolvedValue(false),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -207,6 +210,7 @@ describe("FlagsService", () => {
     it("should pass person properties to PostHog", async () => {
       const mockClient = {
         isFeatureEnabled: vi.fn().mockResolvedValue(true),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -225,6 +229,7 @@ describe("FlagsService", () => {
     it("should cache each set of person properties separately", async () => {
       const mockClient = {
         isFeatureEnabled: vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -248,6 +253,7 @@ describe("FlagsService", () => {
     it("should return default when PostHog returns null", async () => {
       const mockClient = {
         isFeatureEnabled: vi.fn().mockResolvedValue(null),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -262,6 +268,7 @@ describe("FlagsService", () => {
     it("should handle errors and return default value", async () => {
       const mockClient = {
         isFeatureEnabled: vi.fn().mockRejectedValue(new Error("PostHog error")),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -282,6 +289,7 @@ describe("FlagsService", () => {
               answer = resolve;
             }),
         ),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -301,6 +309,7 @@ describe("FlagsService", () => {
           .fn()
           .mockResolvedValueOnce(true)
           .mockRejectedValueOnce(new Error("timeout")),
+        on: vi.fn(() => () => undefined),
         shutdown: vi.fn().mockResolvedValue(undefined),
       };
       mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -326,6 +335,7 @@ describe("FlagsService", () => {
       it("asks PostHog once for a failing key within the fallback's seconds", async () => {
         const mockClient = {
           isFeatureEnabled: vi.fn().mockRejectedValue(new Error("timeout")),
+          on: vi.fn(() => () => undefined),
           shutdown: vi.fn().mockResolvedValue(undefined),
         };
         mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -347,6 +357,7 @@ describe("FlagsService", () => {
             .fn()
             .mockRejectedValueOnce(new Error("timeout"))
             .mockResolvedValueOnce(true),
+          on: vi.fn(() => () => undefined),
           shutdown: vi.fn().mockResolvedValue(undefined),
         };
         mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -363,6 +374,7 @@ describe("FlagsService", () => {
       it("holds an empty answer for seconds, not a minute", async () => {
         const mockClient = {
           isFeatureEnabled: vi.fn().mockResolvedValueOnce(undefined).mockResolvedValueOnce(true),
+          on: vi.fn(() => () => undefined),
           shutdown: vi.fn().mockResolvedValue(undefined),
         };
         mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -384,6 +396,7 @@ describe("FlagsService", () => {
             .fn()
             .mockRejectedValueOnce(new Error("timeout"))
             .mockResolvedValue(true),
+          on: vi.fn(() => () => undefined),
           shutdown: vi.fn().mockResolvedValue(undefined),
         };
         mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -402,39 +415,13 @@ describe("FlagsService", () => {
         ).resolves.toBe(true);
       });
 
-      it("pauses evaluations when the client reports a failed request", async () => {
-        vi.spyOn(configService, "isConfigured").mockReturnValue(true);
-        vi.spyOn(configService, "posthogKey", "get").mockReturnValue("test-key");
-        let reportFailure: (error: unknown) => void = () => undefined;
-        const on = vi.fn((_event: string, listener: (error: unknown) => void) => {
-          reportFailure = listener;
-          return () => undefined;
-        });
-        const mockClient = {
-          isFeatureEnabled: vi.fn().mockResolvedValue(true),
-          on,
-          shutdown: vi.fn().mockResolvedValue(undefined),
-        };
-        mockGetPostHogServerClient.mockReturnValue(mockClient);
-        await service.onModuleInit();
-
-        reportFailure(new Error("timeout"));
-        const paused = await service.isFeatureFlagEnabled(
-          FEATURE_FLAGS.STORE_EXPERIMENT_READS,
-          "paused-user",
-        );
-
-        expect(on).toHaveBeenCalledWith("error", expect.any(Function));
-        expect(paused).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.STORE_EXPERIMENT_READS]);
-        expect(mockClient.isFeatureEnabled).not.toHaveBeenCalled();
-      });
-
       it("evicts the oldest entry at capacity, counting a refreshed key as the newest", async () => {
         const mockClient = {
           isFeatureEnabled: vi
             .fn<(flagKey: string, distinctId: string) => Promise<boolean | undefined>>()
             .mockResolvedValueOnce(undefined)
             .mockResolvedValue(true),
+          on: vi.fn(() => () => undefined),
           shutdown: vi.fn().mockResolvedValue(undefined),
         };
         mockGetPostHogServerClient.mockReturnValue(mockClient);
@@ -456,6 +443,79 @@ describe("FlagsService", () => {
 
         const asked = mockClient.isFeatureEnabled.mock.calls.map(([, distinctId]) => distinctId);
         expect(asked).toEqual(["user-1"]);
+      });
+    });
+
+    describe("on posthog-node's own client", () => {
+      const clients: PostHog[] = [];
+
+      /** posthog-node as the backend runs it, with every request it makes answered by `answer`. */
+      function postHog(answer: (path: string) => Promise<Response>): PostHog {
+        const client = new PostHog("phc_test", {
+          host: "https://posthog.test",
+          fetch: (url) => answer(new URL(url).pathname),
+          flushAt: 1,
+          fetchRetryCount: 0,
+          featureFlagsRequestMaxRetries: 0,
+        });
+        clients.push(client);
+        mockGetPostHogServerClient.mockReturnValue(client);
+        return client;
+      }
+
+      function storeReadsOn(): Response {
+        const key = FEATURE_FLAGS.STORE_EXPERIMENT_READS;
+        return Response.json({ flags: { [key]: { key, enabled: true, variant: null } } });
+      }
+
+      afterEach(async () => {
+        await Promise.all(clients.splice(0).map((client) => client.shutdown(100)));
+      });
+
+      it("pauses every uncached flag once a flag request fails", async () => {
+        const paths: string[] = [];
+        postHog((path) => {
+          paths.push(path);
+          return Promise.reject(new Error("connect ETIMEDOUT"));
+        });
+
+        await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "first-user");
+        const other = await service.isFeatureFlagEnabled(
+          FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+          "second-user",
+        );
+
+        expect(other).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.STORE_EXPERIMENT_READS]);
+        expect(paths).toEqual(["/flags/"]);
+      });
+
+      it("keeps asking after an exception upload fails mid-request, and after a missing flag", async () => {
+        const paths: string[] = [];
+        let uploadsMidRequest = true;
+        const client = postHog(async (path) => {
+          paths.push(path);
+          if (path === "/batch/") {
+            throw new Error("connect ECONNRESET");
+          }
+          if (uploadsMidRequest) {
+            uploadsMidRequest = false;
+            await client.captureExceptionImmediate(new Error("boom"), "uploading-user");
+          }
+          return storeReadsOn();
+        });
+
+        const uploading = await service.isFeatureFlagEnabled(
+          FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+          "uploading-user",
+        );
+        await service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "missing-flag-user");
+        const later = await service.isFeatureFlagEnabled(
+          FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+          "later-user",
+        );
+
+        expect([uploading, later]).toEqual([true, true]);
+        expect(paths).toEqual(["/flags/", "/batch/", "/flags/", "/flags/"]);
       });
     });
   });

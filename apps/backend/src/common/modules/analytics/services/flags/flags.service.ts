@@ -76,7 +76,6 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         this.configService.getPostHogServerConfig(),
       );
       if (this.initialized) {
-        this.getPostHogClient()?.on("error", () => this.pause());
         this.logger.log({
           msg: "PostHog initialized successfully",
           operation: "initialize",
@@ -162,21 +161,27 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         return FEATURE_FLAG_DEFAULTS[flagKey];
       }
 
+      // posthog-node reports a failed request only as an error event, the same for every request
+      // it makes, and answers a flag it could not ask for as it answers a missing one.
+      const failures: unknown[] = [];
+      const stopListening = client.on("error", (error) => failures.push(error));
       // Unless told otherwise, posthog-node records a $feature_flag_called event under the
       // distinct id, which creates the person before the user has consented.
-      const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, {
-        personProperties,
-        sendFeatureFlagEvents: false,
-      });
+      const isEnabled = await client
+        .isFeatureEnabled(flagKey, distinctId, { personProperties, sendFeatureFlagEvents: false })
+        .finally(stopListening);
       const result = isEnabled ?? FEATURE_FLAG_DEFAULTS[flagKey];
 
       this.logger.debug(
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
 
-      // A flag that is off or missing answers empty as well, so an empty answer holds only its own
-      // key; a failed request also pauses every key, through the client's error event.
+      // A flag that is off or missing answers empty without a failure, and holds only its own key.
       const isRealEvaluation = typeof isEnabled === "boolean";
+      const hasFailedRequest = !isRealEvaluation && failures.length > 0;
+      if (hasFailedRequest) {
+        this.pause();
+      }
       this.remember(
         cacheKey,
         result,
