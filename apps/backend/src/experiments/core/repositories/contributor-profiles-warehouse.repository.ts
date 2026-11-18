@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
-import type { ContributorProfile } from "../models/contributor-profile.model";
+import type { UserProfileMetadata } from "../../../users/core/models/user.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
@@ -19,7 +19,7 @@ export class ContributorProfilesWarehouseRepository {
   ) {}
 
   /** Writes each profile as Postgres holds it, inserting the ones the copy lacks. */
-  async merge(profiles: ContributorProfile[]): Promise<Result<void>> {
+  async merge(profiles: UserProfileMetadata[]): Promise<Result<void>> {
     if (profiles.length === 0) {
       return success(undefined);
     }
@@ -27,7 +27,7 @@ export class ContributorProfilesWarehouseRepository {
     const parameters: StatementParameter[] = [];
     const rows = profiles.map((profile, i) => {
       parameters.push(
-        { name: `user_id_${i}`, value: profile.id },
+        { name: `user_id_${i}`, value: profile.userId },
         { name: `first_name_${i}`, value: profile.firstName },
         { name: `last_name_${i}`, value: profile.lastName },
         { name: `avatar_url_${i}`, value: profile.avatarUrl ?? undefined },

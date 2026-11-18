@@ -191,8 +191,14 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(written).toHaveLength(2);
     expect(written).toEqual(
       expect.arrayContaining([
-        { id: userId, firstName: "Ada", lastName: "Lovelace", avatarUrl: null },
-        { id: deactivated, firstName: "Unknown", lastName: "User", avatarUrl: null },
+        { id: userId, userId, firstName: "Ada", lastName: "Lovelace", avatarUrl: null },
+        {
+          id: deactivated,
+          userId: deactivated,
+          firstName: "Unknown",
+          lastName: "User",
+          avatarUrl: null,
+        },
       ]),
     );
     expect(remove).toHaveBeenCalledWith([gone]);

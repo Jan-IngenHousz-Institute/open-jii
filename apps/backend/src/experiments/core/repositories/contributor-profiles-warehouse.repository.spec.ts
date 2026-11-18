@@ -9,7 +9,7 @@ import {
   success,
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { ContributorProfile } from "../models/contributor-profile.model";
+import type { UserProfileMetadata } from "../../../users/core/models/user.model";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import { ContributorProfilesWarehouseRepository } from "./contributor-profiles-warehouse.repository";
@@ -21,9 +21,9 @@ describe("ContributorProfilesWarehouseRepository", () => {
 
   const nothing: SchemaData = { columns: [], rows: [], totalRows: 0, truncated: false };
 
-  function profile(overrides: Partial<ContributorProfile> = {}): ContributorProfile {
+  function profile(overrides: Partial<UserProfileMetadata> = {}): UserProfileMetadata {
     return {
-      id: faker.string.uuid(),
+      userId: faker.string.uuid(),
       firstName: "Ada",
       lastName: "Lovelace",
       avatarUrl: "https://example.com/ada.png",
@@ -67,11 +67,11 @@ describe("ContributorProfilesWarehouseRepository", () => {
       expect(statement).toContain("WHEN MATCHED THEN UPDATE SET");
       expect(statement).toContain("WHEN NOT MATCHED THEN INSERT");
       expect(parameters).toEqual([
-        { name: "user_id_0", value: ada.id },
+        { name: "user_id_0", value: ada.userId },
         { name: "first_name_0", value: "Ada" },
         { name: "last_name_0", value: "Lovelace" },
         { name: "avatar_url_0", value: "https://example.com/ada.png" },
-        { name: "user_id_1", value: masked.id },
+        { name: "user_id_1", value: masked.userId },
         { name: "first_name_1", value: "Unknown" },
         { name: "last_name_1", value: "User" },
         { name: "avatar_url_1", value: undefined },
