@@ -4,8 +4,8 @@
 pipeline update did.** Use it for a monthly figure, a before and after of a change, or a baseline.
 The Cost dashboard shows days, weeks and the month so far; this is the month on record.
 
-Every figure is list price. The rate actually paid may be lower, so treat Databricks' numbers as an
-upper bound.
+Databricks' figures are list price. The rate actually paid may be lower, so treat them as an upper
+bound. AWS's figures are what AWS billed for usage, at its unblended rates.
 
 ## Databricks, per pipeline and warehouse
 
@@ -70,20 +70,22 @@ databricks pipelines list-updates <pipeline id> -p <profile> --max-results 5 --o
   | jq -r '.updates[] | [.update_id, (.creation_time / 1000 | todate), .state, .cause] | @tsv'
 ```
 
-Then read one update's events forward from its start, where each flow plans its refresh:
+Then read one update's events forward from its start, where each flow plans its refresh. Later
+updates' events pass the same time filter, so keep only the update's own:
 
 ```bash
 databricks api get "/api/2.0/pipelines/<pipeline id>/events?max_results=250&order_by=timestamp%20asc&filter=timestamp%20%3E%3D%20%27<update start>%27" -p <profile> \
   > events.json
-jq -r '.events[]
-    | select(.event_type == "planning_information")
-    | [.timestamp, .origin.update_id, .origin.flow_name,
-       (.details.planning_information.technique_information[]? | select(.is_chosen) | .maintenance_type)]
+jq -r --arg update '<update id>' '.events[]
+    | select(.event_type == "planning_information" and .origin.update_id == $update)
+    | [.timestamp, .origin.flow_name,
+       ((.details.planning_information.technique_information[]? | select(.is_chosen) | .maintenance_type) // "none")]
     | @tsv' events.json
 jq -r '.next_page_token // "last page"' events.json
 ```
 
-Each line is one flow in one update and the refresh technique it chose, such as
-`MAINTENANCE_TYPE_NO_OP` or `MAINTENANCE_TYPE_COMPLETE_RECOMPUTE`; a flow that planned no technique
-shows none. A page holds at most 250 events, and the last line is the token for the next. Pass it as
-`page_token` with `max_results` alone: the API refuses a page token beside `order_by` or `filter`.
+Each line is one flow and the refresh technique it chose, such as `MAINTENANCE_TYPE_NO_OP` or
+`MAINTENANCE_TYPE_COMPLETE_RECOMPUTE`, or `none` for a flow that planned without choosing one. A page
+holds at most 250 events, and the last line is the token for the next. Pass it as `page_token` with
+`max_results` alone: the API refuses a page token beside `order_by` or `filter`, so run the same `jq`
+on every page.

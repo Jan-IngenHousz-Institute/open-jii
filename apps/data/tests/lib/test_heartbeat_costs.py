@@ -80,6 +80,17 @@ def billing(spark: SparkSession) -> Iterator[tuple[str, str]]:
 
 _RUNBOOK = Path(__file__).parents[4] / "docs/runbooks/procedures/monthly-cost.md"
 
+# Centrum on the days either side of October, so a month's query that strays past its edges counts them.
+_MONTH_EDGES = f"""
+    SELECT 'w1' AS workspace_id, 'SKU' AS sku_name, 'AWS' AS cloud, 'DBU' AS usage_unit,
+           CAST(usage_date AS TIMESTAMP) + INTERVAL 1 HOUR AS usage_end_time,
+           usage_date, 1000.0D AS usage_quantity,
+           named_struct('dlt_pipeline_id', '{CENTRUM}', 'warehouse_id', CAST(NULL AS STRING),
+                        'job_id', CAST(NULL AS STRING)) AS usage_metadata,
+           'DLT' AS billing_origin_product
+    FROM VALUES (DATE'2026-09-30'), (DATE'2026-11-01') AS t(usage_date)
+"""
+
 
 def _runbook_month_sql(first_day: str, workspace_id: str, usage: str, prices: str) -> str:
     """The runbook's monthly query as an operator runs it, on the fixture tables."""
@@ -98,20 +109,27 @@ def test_the_runbooks_monthly_query_prices_a_month_as_the_heartbeat_does(
     spark: SparkSession, billing: tuple[str, str]
 ):
     usage, prices = billing
+    spark.sql(f"SELECT * FROM {usage} UNION ALL {_MONTH_EDGES}").createOrReplaceTempView("usage_with_edges")
     # Early November, so the heartbeat's whole month before is October.
     november = cost_windows(datetime(2026, 11, 2, 6, 0, tzinfo=timezone.utc))
 
-    heartbeat = {
-        row["component"]: row["previous_month_usd"]
-        for row in spark.sql(cost_windows_sql(NAMED, "w1", november, usage, prices)).collect()
-    }
-    runbook = {
-        row["billed_under"]: row["usd"]
-        for row in spark.sql(_runbook_month_sql("2026-10-01", "w1", usage, prices)).collect()
-    }
+    try:
+        heartbeat = {
+            row["component"]: row["previous_month_usd"]
+            for row in spark.sql(
+                cost_windows_sql(NAMED, "w1", november, "usage_with_edges", prices)
+            ).collect()
+        }
+        runbook = spark.sql(_runbook_month_sql("2026-10-01", "w1", "usage_with_edges", prices)).collect()
+    finally:
+        spark.catalog.dropTempView("usage_with_edges")
 
-    assert runbook[CENTRUM] == heartbeat["centrum"] == 57.0
-    assert runbook[WAREHOUSE] == heartbeat["warehouse"] == 1.0
+    # Only this workspace's October, so a query that loses its workspace or month bounds fails here.
+    assert {(row["product"], row["billed_under"], row["usd"]) for row in runbook} == {
+        ("DLT", CENTRUM, 57.0),
+        ("SQL", WAREHOUSE, 1.0),
+    }
+    assert (heartbeat["centrum"], heartbeat["warehouse"]) == (57.0, 1.0)
 
 
 @pytest.mark.spark
