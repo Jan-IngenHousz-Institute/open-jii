@@ -5,9 +5,11 @@ foundation root imports the role but cannot create it, because the role is what 
 Dev has both. Prod needs them before `#2384` merges, or the prod foundation plan fails on the
 import and every prod release stops at the foundation step.
 
-An account admin runs this once per account. Afterwards the foundation root manages the role, its
-trust and its inline policy. No root manages the boundary, so a change to it repeats the
-`create-policy-version` step below and updates this page.
+An administrator of the AWS account runs this once per account. In prod that is a production AWS
+account administrator, before the merge, and the pull request records who ran it and the plan that
+shows the import. Afterwards the foundation root manages the role, its trust and its inline policy.
+No root manages the boundary, so an admin changes it with
+`aws iam create-policy-version --set-as-default` and updates this page in the same change.
 
 ## What gets created
 
@@ -19,7 +21,7 @@ trust and its inline policy. No root manages the boundary, so a change to it rep
 
 ## The boundary
 
-<!-- Paste dev's boundary here, with the account id replaced by <ACCOUNT_ID> and -dev by -<ENV>. -->
+<!-- TODO: dev's boundary, read with `aws iam get-policy-version`, with the account id replaced by <ACCOUNT_ID> and -dev by -<ENV>. -->
 
 ```json
 
@@ -58,9 +60,130 @@ In dev the ref list is `["refs/heads/main"]`.
 
 ## The inline policy
 
-Take it from `aws_iam_role_policy.foundation_role` in `modules/iam-oidc/main.tf`, with the
-account id, region and environment filled in. The first apply rewrites it from the code, so it
-only has to let that apply run.
+`aws_iam_role_policy.foundation_role` in `modules/iam-oidc/main.tf`, rendered. Replace
+`<ACCOUNT_ID>`, `<REGION>` (`eu-central-1` in dev and prod) and `<ENV>`. The first apply rewrites it
+from the code, so it only has to let that apply run; if the code has changed since this page, use
+the code.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageCiRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:UpdateRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:ListInstanceProfilesForRole",
+        "iam:GetRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:GetPolicy",
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:TagPolicy",
+        "iam:UntagPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:CreatePolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:SetDefaultPolicyVersion"
+      ],
+      "Resource": [
+        "arn:aws:iam::<ACCOUNT_ID>:role/GithubActions*",
+        "arn:aws:iam::<ACCOUNT_ID>:policy/GithubActions*"
+      ]
+    },
+    {
+      "Sid": "ManageGithubTrust",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetOpenIDConnectProvider",
+        "iam:CreateOpenIDConnectProvider",
+        "iam:DeleteOpenIDConnectProvider",
+        "iam:UpdateOpenIDConnectProviderThumbprint",
+        "iam:AddClientIDToOpenIDConnectProvider",
+        "iam:RemoveClientIDFromOpenIDConnectProvider",
+        "iam:TagOpenIDConnectProvider",
+        "iam:UntagOpenIDConnectProvider"
+      ],
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+    },
+    {
+      "Sid": "ManageStateBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:ListBucket",
+        "s3:GetBucketLocation",
+        "s3:GetBucketPolicy",
+        "s3:PutBucketPolicy",
+        "s3:DeleteBucketPolicy",
+        "s3:GetBucketAcl",
+        "s3:PutBucketAcl",
+        "s3:GetBucketCORS",
+        "s3:GetBucketWebsite",
+        "s3:GetBucketVersioning",
+        "s3:PutBucketVersioning",
+        "s3:GetAccelerateConfiguration",
+        "s3:GetBucketRequestPayment",
+        "s3:GetBucketLogging",
+        "s3:GetLifecycleConfiguration",
+        "s3:PutLifecycleConfiguration",
+        "s3:GetReplicationConfiguration",
+        "s3:GetEncryptionConfiguration",
+        "s3:PutEncryptionConfiguration",
+        "s3:GetBucketObjectLockConfiguration",
+        "s3:GetBucketTagging",
+        "s3:PutBucketTagging",
+        "s3:GetBucketOwnershipControls",
+        "s3:PutBucketOwnershipControls",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:PutBucketPublicAccessBlock"
+      ],
+      "Resource": "arn:aws:s3:::open-jii-terraform-state-<ENV>"
+    },
+    {
+      "Sid": "FoundationStateAndPlans",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::open-jii-terraform-state-<ENV>/foundation/*",
+        "arn:aws:s3:::open-jii-terraform-state-<ENV>/plans/foundation-*"
+      ]
+    },
+    {
+      "Sid": "ManageStateLock",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:UpdateTable",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:ListTagsOfResource",
+        "dynamodb:TagResource",
+        "dynamodb:UntagResource",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:DeleteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:<REGION>:<ACCOUNT_ID>:table/terraform-state-lock"
+    }
+  ]
+}
+```
 
 ## Steps
 
@@ -76,7 +199,12 @@ only has to let that apply run.
      --policy-name GithubActionsFoundationAccessPolicy --policy-document file://policy.json
    ```
 
-3. Set `AWS_ROLE_ARN` in the `foundation-<ENV>` GitHub environment to
-   `arn:aws:iam::<ACCOUNT_ID>:role/GithubActionsFoundationAccess`.
-4. Re-run the foundation plan for that environment. It imports the role and shows no change to
+3. Set up the `foundation-<ENV>` GitHub environment, and check each setting saved before going on:
+   - deployment branches limited to the refs in the trust: `main` in dev, `main` and `release/*`
+     in prod;
+   - in prod, required reviewers with prevent self-review on, and admin bypass off. Dev has no
+     reviewers, because a dev foundation change was reviewed in its pull request.
+4. Set the secrets `AWS_ROLE_ARN`, to `arn:aws:iam::<ACCOUNT_ID>:role/GithubActionsFoundationAccess`,
+   and `AWS_REGION` in that environment.
+5. Re-run the foundation plan for that environment. It imports the role and shows no change to
    its trust.
