@@ -489,6 +489,39 @@ describe("ExperimentVisualizationRepository", () => {
   });
 
   describe("update", () => {
+    it("returns the updated visualization when its creator has no profile", async () => {
+      const [visualization] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: testExperimentId,
+          name: "Profile-less chart",
+          createdBy: testUserId,
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig: {},
+        })
+        .returning({ id: experimentVisualizations.id });
+      await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
+
+      const updateDto: UpdateExperimentVisualizationDto = {
+        name: "Renamed chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "renamed_table", dataSources: [] },
+      };
+      const updated = await repository.update(visualization.id, updateDto);
+      assertSuccess(updated);
+      expect(updated.value).toEqual([
+        expect.objectContaining({
+          id: visualization.id,
+          name: "Renamed chart",
+          createdByName: undefined,
+        }),
+      ]);
+    });
+
     it("should update an existing visualization", async () => {
       // Arrange
       const createDto: CreateExperimentVisualizationDto = {
