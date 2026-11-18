@@ -176,12 +176,15 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         `Feature flag ${flagKey} for ${distinctId}: ${result} (PostHog returned: ${isEnabled})`,
       );
 
-      // A flag that is off or missing answers empty without a failure, and holds only its own key.
       const isRealEvaluation = typeof isEnabled === "boolean";
       const hasFailedRequest = !isRealEvaluation && failures.length > 0;
       if (hasFailedRequest) {
+        // The pause answers every uncached key; caching this default could only evict a live answer.
         this.pause();
+        return result;
       }
+
+      // A flag that is off or missing answers empty without a failure, and holds only its own key.
       this.remember(
         cacheKey,
         result,

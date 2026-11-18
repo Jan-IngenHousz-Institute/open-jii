@@ -415,6 +415,36 @@ describe("FlagsService", () => {
         ).resolves.toBe(true);
       });
 
+      it("caches nothing for a failed flag request, so a full cache keeps its live answers", async () => {
+        let reportFailure: ((error: unknown) => void) | undefined;
+        const mockClient = {
+          isFeatureEnabled: vi.fn((_flagKey: string, distinctId: string) => {
+            if (distinctId === "failing-user") {
+              reportFailure?.(new Error("timeout"));
+              return Promise.resolve(undefined);
+            }
+            return Promise.resolve(true);
+          }),
+          on: vi.fn((_event: string, listener: (error: unknown) => void) => {
+            reportFailure = listener;
+            return () => {
+              reportFailure = undefined;
+            };
+          }),
+          shutdown: vi.fn().mockResolvedValue(undefined),
+        };
+        mockGetPostHogServerClient.mockReturnValue(mockClient);
+        const evaluate = (user: string) =>
+          service.isFeatureFlagEnabled(FEATURE_FLAGS.STORE_EXPERIMENT_READS, user);
+
+        for (let user = 0; user < 5_000; user++) {
+          await evaluate(`user-${user}`);
+        }
+        await evaluate("failing-user");
+
+        await expect(evaluate("user-0")).resolves.toBe(true);
+      });
+
       it("evicts the oldest entry at capacity, counting a refreshed key as the newest", async () => {
         const mockClient = {
           isFeatureEnabled: vi
