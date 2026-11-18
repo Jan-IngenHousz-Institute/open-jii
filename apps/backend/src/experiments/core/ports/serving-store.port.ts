@@ -1,3 +1,5 @@
+import type { z } from "zod";
+
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type {
@@ -65,4 +67,16 @@ export interface ServingStorePort {
 
   /** The contributors' or devices' ids among an experiment's rows, a device's as its client id. */
   getExperimentIds(experimentId: string, of: "contributor" | "device"): Promise<Result<string[]>>;
+
+  /** False where the store has no copier, so the outbox owes it no copy. */
+  hasCopier(): boolean;
+
+  insertRows(table: string, rows: readonly object[]): Promise<Result<void>>;
+
+  /** A read as the copier, which reads only the copies it writes. */
+  selectRows<T>(
+    sql: string,
+    params: Record<string, unknown>,
+    schema: z.ZodType<T>,
+  ): Promise<Result<T[]>>;
 }

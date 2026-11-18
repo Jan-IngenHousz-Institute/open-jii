@@ -14,12 +14,6 @@ export const OWED_COPIES: Record<ExperimentDataRecordType, ExperimentDataDestina
   metadata_sheet: ["lakehouse", "serving_store"],
 };
 
-/** Seconds before each retry of a copy. The last repeats: a copy that keeps failing is never dropped. */
-export const COPY_RETRY_WAITS_S = [10, 60, 5 * 60, 15 * 60, 60 * 60];
-
-/** A copy that has failed this many times has outlasted every short wait, and counts as failed. */
-export const COPY_FAILED_AFTER_ATTEMPTS = COPY_RETRY_WAITS_S.length;
-
 /** A record a copy is owed, by the keys every copy finds it under. */
 export interface CopyKey {
   id: string;

@@ -9,11 +9,12 @@ import type { AnnotationCopy } from "../../../experiments/core/models/experiment
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { MetadataSheetRecord } from "../../../experiments/core/models/experiment-metadata.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
+import { ExperimentAnnotationsStoreRepository } from "../../../experiments/core/repositories/experiment-annotations-store.repository";
+import { ExperimentMetadataStoreRepository } from "../../../experiments/core/repositories/experiment-metadata-store.repository";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
-import { ServingStoreCopierClientService } from "./services/client/copier-client.service";
 import { ServingStoreConfigService } from "./services/config/config.service";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
 import {
@@ -21,7 +22,6 @@ import {
   MEASUREMENTS_TABLE,
   UPLOADS_TABLE,
 } from "./services/query-builder/store-tables";
-import { ServingStoreCopiesAdapter } from "./serving-store-copies.adapter";
 import { ServingStoreAdapter } from "./serving-store.adapter";
 
 describe("ServingStoreAdapter", () => {
@@ -471,7 +471,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
   });
 
   afterAll(async () => {
-    await client.onModuleDestroy();
+    await client.onApplicationShutdown();
     await admin.close();
   });
 
@@ -1378,8 +1378,9 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
   });
 
   describe("the outbox's copies", () => {
-    let copier: ServingStoreCopierClientService;
-    let copies: ServingStoreCopiesAdapter;
+    let copier: ServingStoreClientService;
+    let annotations: ExperimentAnnotationsStoreRepository;
+    let sheets: ExperimentMetadataStoreRepository;
 
     const sheet: MetadataSheetRecord = {
       id: "s1",
@@ -1418,8 +1419,10 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           copierPassword: STORE_PASSWORD,
         },
       });
-      copier = new ServingStoreCopierClientService(new ServingStoreConfigService(config));
-      copies = new ServingStoreCopiesAdapter(copier);
+      copier = new ServingStoreClientService(new ServingStoreConfigService(config));
+      const store = new ServingStoreAdapter(copier);
+      annotations = new ExperimentAnnotationsStoreRepository(store);
+      sheets = new ExperimentMetadataStoreRepository(store);
     });
 
     afterAll(async () => {
@@ -1427,17 +1430,17 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     it("keeps a sheet's current rows, so the rows an edit dropped and a deleted sheet read no more", async () => {
-      assertSuccess(await copies.writeSheets([sheet], claim(1), () => true));
+      assertSuccess(await sheets.merge([sheet], () => true, claim(1)));
       assertSuccess(
-        await copies.writeSheets(
+        await sheets.merge(
           [
             {
               ...sheet,
               metadata: { ...sheet.metadata, rows: [{ _id: "r1", plot: "A1", soil: "loam" }] },
             },
           ],
-          claim(2),
           () => true,
+          claim(2),
         ),
       );
 
@@ -1451,9 +1454,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         },
       ]);
 
-      assertSuccess(
-        await copies.removeSheets([{ id: sheet.id, experimentId: EXPERIMENT }], claim(3)),
-      );
+      assertSuccess(await sheets.delete([{ id: sheet.id, experimentId: EXPERIMENT }], claim(3)));
       expect(await viewRows("experiment_metadata_rows", "identifier")).toEqual([]);
     });
 
@@ -1472,18 +1473,16 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         userName: "Ada Lovelace",
       };
       assertSuccess(
-        await copies.writeAnnotations([{ ...annotation, flagType: "needs_review" }], claim(2)),
+        await annotations.merge([{ ...annotation, flagType: "needs_review" }], claim(2)),
       );
       // A claim taken back after its lease lands its older state last.
-      assertSuccess(await copies.writeAnnotations([annotation], claim(1)));
+      assertSuccess(await annotations.merge([annotation], claim(1)));
 
       expect(await viewRows("experiment_annotations", "id, row_id, flag_type")).toEqual([
         { id: "a1", row_id: "1", flag_type: "needs_review" },
       ]);
 
-      assertSuccess(
-        await copies.removeAnnotations([{ id: "a1", experimentId: EXPERIMENT }], claim(3)),
-      );
+      assertSuccess(await annotations.delete([{ id: "a1", experimentId: EXPERIMENT }], claim(3)));
       expect(await viewRows("experiment_annotations", "id")).toEqual([]);
     });
 
@@ -1514,7 +1513,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         format: "JSONEachRow",
       });
       assertSuccess(
-        await copies.writeAnnotations(
+        await annotations.merge(
           [
             {
               id: "a23",
@@ -1559,9 +1558,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(await count("only")).toEqual([["2"]]);
 
       // Once the flag added afterwards is removed, only the phone's flag keeps its row.
-      assertSuccess(
-        await copies.removeAnnotations([{ id: "a23", experimentId: experiment }], claim(2)),
-      );
+      assertSuccess(await annotations.delete([{ id: "a23", experimentId: experiment }], claim(2)));
       expect(await sortedPage("only")).toEqual([["21"]]);
       expect(await unsortedIds("only")).toEqual(["21"]);
       expect(await count("only")).toEqual([["1"]]);

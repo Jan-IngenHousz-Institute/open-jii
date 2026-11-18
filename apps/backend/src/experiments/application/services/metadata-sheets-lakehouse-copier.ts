@@ -38,14 +38,11 @@ export class MetadataSheetsLakehouseCopier extends ExperimentDataCopier<Metadata
     return this.sheets.findByIds(ids);
   }
 
-  protected async write(
+  protected merge(
     records: MetadataSheetRecord[],
     canContinue: () => boolean,
-  ): Promise<Result<"written" | "stopped">> {
-    const merged = await this.warehouse.merge(records, canContinue);
-    return merged.map((outcome: "merged" | "stopped"): "written" | "stopped" =>
-      outcome === "merged" ? "written" : outcome,
-    );
+  ): Promise<Result<"merged" | "stopped">> {
+    return this.warehouse.merge(records, canContinue);
   }
 
   protected remove(gone: CopyKey[]): Promise<Result<void>> {

@@ -7,7 +7,7 @@ export type CopyOutcome = "copied" | "stopped" | { failed: string };
 
 /**
  * Copies one kind of record from Postgres to one of its copies. A copy takes each record's state at
- * the time of the copy: it writes the records that still exist and removes the copies of the rest,
+ * the time of the copy: it writes the records that still exist and deletes the copies of the rest,
  * so several edits arrive as one and copying a record twice does no harm.
  */
 export abstract class ExperimentDataCopier<T extends { id: string }> {
@@ -16,7 +16,7 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
     return Promise.resolve(success([owed]));
   }
 
-  /** `claimedAt` is when the outbox claim was taken, which a copy that keeps versions stamps. */
+  /** `claimedAt` versions the serving store's copy, so a later claim wins however late it lands. */
   async copy(owed: CopyKey[], canContinue: () => boolean, claimedAt: Date): Promise<CopyOutcome> {
     if (!canContinue()) {
       return "stopped";
@@ -31,11 +31,11 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
     }
 
     if (found.value.length > 0) {
-      const written = await this.write(found.value, canContinue, claimedAt);
-      if (written.isFailure()) {
-        return { failed: written.error.message };
+      const merged = await this.merge(found.value, canContinue, claimedAt);
+      if (merged.isFailure()) {
+        return { failed: merged.error.message };
       }
-      if (written.value === "stopped") {
+      if (merged.value === "stopped") {
         return "stopped";
       }
     }
@@ -48,18 +48,18 @@ export abstract class ExperimentDataCopier<T extends { id: string }> {
       return "stopped";
     }
 
-    const removed = await this.remove(gone, claimedAt);
-    return removed.isFailure() ? { failed: removed.error.message } : "copied";
+    const deleted = await this.remove(gone, claimedAt);
+    return deleted.isFailure() ? { failed: deleted.error.message } : "copied";
   }
 
   protected abstract find(ids: string[]): Promise<Result<T[]>>;
 
-  /** Writes in one statement or several, starting none once `canContinue` says no. */
-  protected abstract write(
+  /** Merges in one statement or several, starting none once `canContinue` says no. */
+  protected abstract merge(
     records: T[],
     canContinue: () => boolean,
     claimedAt: Date,
-  ): Promise<Result<"written" | "stopped">>;
+  ): Promise<Result<"merged" | "stopped">>;
 
   protected abstract remove(gone: CopyKey[], claimedAt: Date): Promise<Result<void>>;
 

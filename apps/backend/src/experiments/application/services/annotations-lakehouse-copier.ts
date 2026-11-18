@@ -21,9 +21,9 @@ export class AnnotationsLakehouseCopier extends ExperimentDataCopier<AnnotationC
     return this.annotations.findCopies(ids);
   }
 
-  protected async write(records: AnnotationCopy[]): Promise<Result<"written" | "stopped">> {
+  protected async merge(records: AnnotationCopy[]): Promise<Result<"merged" | "stopped">> {
     const merged = await this.warehouse.merge(records);
-    return merged.map((): "written" => "written");
+    return merged.map((): "merged" => "merged");
   }
 
   protected remove(gone: CopyKey[]): Promise<Result<void>> {

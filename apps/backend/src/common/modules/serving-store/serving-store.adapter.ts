@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
+import type { z } from "zod";
 
 import type {
   ExperimentTableMetadata,
@@ -260,6 +261,22 @@ export class ServingStoreAdapter implements ServingStorePort {
       return result;
     }
     return success(result.value.rows.flatMap(([id]) => (typeof id === "string" ? [id] : [])));
+  }
+
+  hasCopier(): boolean {
+    return this.client.hasCopier();
+  }
+
+  insertRows(table: string, rows: readonly object[]): Promise<Result<void>> {
+    return this.client.insert(table, rows);
+  }
+
+  selectRows<T>(
+    sql: string,
+    params: Record<string, unknown>,
+    schema: z.ZodType<T>,
+  ): Promise<Result<T[]>> {
+    return this.client.select(sql, params, schema);
   }
 
   private experimentArgument(experimentId: string): string {

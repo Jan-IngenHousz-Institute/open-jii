@@ -6021,22 +6021,6 @@
                       "updatedAt": {
                         "type": "string",
                         "format": "date-time"
-                      },
-                      "storeCopy": {
-                        "anyOf": [
-                          {
-                            "enum": [
-                              "loaded",
-                              "pending",
-                              "failed"
-                            ],
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "description": "Whether the serving store has taken the sheet's rows; failed after its retries ran out. Null where there is no serving store"
                       }
                     },
                     "required": [
@@ -6190,22 +6174,6 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
-                    },
-                    "storeCopy": {
-                      "anyOf": [
-                        {
-                          "enum": [
-                            "loaded",
-                            "pending",
-                            "failed"
-                          ],
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Whether the serving store has taken the sheet's rows; failed after its retries ran out. Null where there is no serving store"
                     }
                   },
                   "required": [
@@ -6370,22 +6338,6 @@
                     "updatedAt": {
                       "type": "string",
                       "format": "date-time"
-                    },
-                    "storeCopy": {
-                      "anyOf": [
-                        {
-                          "enum": [
-                            "loaded",
-                            "pending",
-                            "failed"
-                          ],
-                          "type": "string"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Whether the serving store has taken the sheet's rows; failed after its retries ran out. Null where there is no serving store"
                     }
                   },
                   "required": [
@@ -6428,53 +6380,6 @@
         ],
         "responses": {
           "204": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "not": {}
-                    },
-                    {
-                      "not": {}
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/experiments/{id}/metadata/{metadataId}/store-copy": {
-      "post": {
-        "operationId": "experiments.copyExperimentMetadataToStore",
-        "description": "Copies the sheet's rows to the serving store again, at once",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the experiment"
-            }
-          },
-          {
-            "name": "metadataId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the metadata record"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
             "description": "OK",
             "content": {
               "application/json": {

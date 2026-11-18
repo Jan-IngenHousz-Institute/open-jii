@@ -1,5 +1,4 @@
 import { useExperimentMetadataDelete } from "@/hooks/experiment/useExperimentMetadataDelete/useExperimentMetadataDelete";
-import { useExperimentMetadataStoreCopy } from "@/hooks/experiment/useExperimentMetadataStoreCopy/useExperimentMetadataStoreCopy";
 import { ArrowLeft, FileSpreadsheet, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
@@ -31,12 +30,6 @@ export function MetadataListView({
 }: MetadataListViewProps) {
   const { t } = useTranslation("experiments");
   const deleteMutation = useExperimentMetadataDelete();
-  const storeCopyMutation = useExperimentMetadataStoreCopy();
-
-  const retryStoreCopy = (metadataId: string) =>
-    storeCopyMutation.mutate({ id: experimentId, metadataId });
-  const isRetryingStoreCopy = (metadataId: string) =>
-    storeCopyMutation.isPending && storeCopyMutation.variables.metadataId === metadataId;
   const [isDeleting, setIsDeleting] = useState<Record<string, DeleteStatus>>({});
   // Snapshot deleted records so the card stays mounted during the exit animation.
   const [exitingRecords, setExitingRecords] = useState<Record<string, ExperimentMetadata>>({});
@@ -107,11 +100,8 @@ export function MetadataListView({
                       rowCount={meta.rows?.length ?? 0}
                       columnNames={(meta.columns ?? []).map((c) => c.name).filter(Boolean)}
                       updatedAt={record.updatedAt}
-                      storeCopy={record.storeCopy}
-                      isRetryingStoreCopy={isRetryingStoreCopy(record.metadataId)}
                       onEdit={() => onEdit(record.metadataId)}
                       onDelete={() => handleDelete(record.metadataId)}
-                      onRetryStoreCopy={() => retryStoreCopy(record.metadataId)}
                       deleteStatus={isDeleting[record.metadataId] ?? "idle"}
                     />
                   );

@@ -5,8 +5,8 @@ import { createSecondaryDatabase, eq, experimentDataOutbox, sql } from "@repo/da
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { OwedRecord } from "../models/experiment-data-outbox.model";
-import { SERVING_STORE_COPIES_PORT } from "../ports/serving-store-copies.port";
-import type { ServingStoreCopiesPort } from "../ports/serving-store-copies.port";
+import { SERVING_STORE_PORT } from "../ports/serving-store.port";
+import type { ServingStorePort } from "../ports/serving-store.port";
 import { ExperimentDataOutboxRepository } from "./experiment-data-outbox.repository";
 
 describe("ExperimentDataOutboxRepository", () => {
@@ -102,9 +102,10 @@ describe("ExperimentDataOutboxRepository", () => {
   });
 
   describe("the serving store's copies", () => {
-    const store = () => testApp.module.get<ServingStoreCopiesPort>(SERVING_STORE_COPIES_PORT);
-    const hasCopier = (isConfigured: boolean) =>
-      vi.spyOn(store(), "isConfigured").mockReturnValue(isConfigured);
+    const hasCopier = (has: boolean) =>
+      vi
+        .spyOn(testApp.module.get<ServingStorePort>(SERVING_STORE_PORT), "hasCopier")
+        .mockReturnValue(has);
 
     it("leaves a store copy unclaimed on a task without the copier", async () => {
       hasCopier(false);
@@ -130,43 +131,6 @@ describe("ExperimentDataOutboxRepository", () => {
       await owe(record);
 
       expect((await claim()).map(({ destination }) => destination)).toEqual(["serving_store"]);
-    });
-
-    it("owes a held copy again beside its claim, which it leaves as it was", async () => {
-      hasCopier(true);
-      const record = annotation();
-      await owe(record);
-      const [held] = (await claim()).filter(({ destination }) => destination === "serving_store");
-
-      assertSuccess(await repository.oweAgain(record, "serving_store"));
-
-      const storeRows = (await rows()).filter(({ destination }) => destination === "serving_store");
-      expect(storeRows).toHaveLength(2);
-      expect(storeRows).toContainEqual(
-        expect.objectContaining({ id: held.id, claimedAt: held.claimedAt, attempts: 0 }),
-      );
-      expect(storeRows).toContainEqual(expect.objectContaining({ claimedAt: null, attempts: 0 }));
-    });
-
-    it("counts the failed attempts of a held copy over its waiting twin's", async () => {
-      hasCopier(true);
-      const record = annotation();
-      await owe(record);
-      await claim();
-      await testApp.database
-        .update(experimentDataOutbox)
-        .set({ attempts: 5 })
-        .where(eq(experimentDataOutbox.destination, "serving_store"));
-      assertSuccess(await repository.oweAgain(record, "serving_store"));
-
-      const attempts = await repository.findAttempts(
-        record.experimentId,
-        "annotation",
-        "serving_store",
-      );
-
-      assertSuccess(attempts);
-      expect(attempts.value.get(record.recordId)).toBe(5);
     });
   });
 
@@ -287,7 +251,7 @@ describe("ExperimentDataOutboxRepository", () => {
       await reclaimer.database.execute(sql`BEGIN`);
       const reclaimed = await new ExperimentDataOutboxRepository(
         reclaimer.database,
-        testApp.module.get(SERVING_STORE_COPIES_PORT),
+        testApp.module.get(SERVING_STORE_PORT),
       ).claimDue(LEASE_MS, 10);
       commit();
       await change;

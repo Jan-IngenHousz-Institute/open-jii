@@ -9,6 +9,6 @@ export interface ExperimentMetric {
   dimensions: Record<string, string>;
 }
 
-export interface ExperimentMetricsPort {
+export interface MetricsPort {
   publishMetrics(namespace: string, metrics: ExperimentMetric[]): Promise<Result<void>>;
 }

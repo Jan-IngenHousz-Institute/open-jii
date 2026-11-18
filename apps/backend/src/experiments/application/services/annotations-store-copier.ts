@@ -1,10 +1,9 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { Result } from "../../../common/utils/fp-utils";
 import type { AnnotationCopy } from "../../core/models/experiment-data-annotation.model";
 import type { CopyKey } from "../../core/models/experiment-data-outbox.model";
-import { SERVING_STORE_COPIES_PORT } from "../../core/ports/serving-store-copies.port";
-import type { ServingStoreCopiesPort } from "../../core/ports/serving-store-copies.port";
+import { ExperimentAnnotationsStoreRepository } from "../../core/repositories/experiment-annotations-store.repository";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDataCopier } from "./experiment-data-copier";
 
@@ -13,7 +12,7 @@ import { ExperimentDataCopier } from "./experiment-data-copier";
 export class AnnotationsStoreCopier extends ExperimentDataCopier<AnnotationCopy> {
   constructor(
     private readonly annotations: ExperimentAnnotationsRepository,
-    @Inject(SERVING_STORE_COPIES_PORT) private readonly store: ServingStoreCopiesPort,
+    private readonly store: ExperimentAnnotationsStoreRepository,
   ) {
     super();
   }
@@ -22,16 +21,16 @@ export class AnnotationsStoreCopier extends ExperimentDataCopier<AnnotationCopy>
     return this.annotations.findCopies(ids);
   }
 
-  protected async write(
+  protected async merge(
     records: AnnotationCopy[],
     _canContinue: () => boolean,
     claimedAt: Date,
-  ): Promise<Result<"written" | "stopped">> {
-    const written = await this.store.writeAnnotations(records, claimedAt);
-    return written.map((): "written" => "written");
+  ): Promise<Result<"merged" | "stopped">> {
+    const merged = await this.store.merge(records, claimedAt);
+    return merged.map((): "merged" => "merged");
   }
 
   protected remove(gone: CopyKey[], claimedAt: Date): Promise<Result<void>> {
-    return this.store.removeAnnotations(gone, claimedAt);
+    return this.store.delete(gone, claimedAt);
   }
 }

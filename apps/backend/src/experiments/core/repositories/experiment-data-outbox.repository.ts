@@ -22,13 +22,12 @@ import {
 import type {
   ClaimedOutboxRow,
   ExperimentDataDestination,
-  ExperimentDataRecordType,
   OutboxClaim,
   OwedRecord,
   WaitingCopies,
 } from "../models/experiment-data-outbox.model";
-import { SERVING_STORE_COPIES_PORT } from "../ports/serving-store-copies.port";
-import type { ServingStoreCopiesPort } from "../ports/serving-store-copies.port";
+import { SERVING_STORE_PORT } from "../ports/serving-store.port";
+import type { ServingStorePort } from "../ports/serving-store.port";
 
 /**
  * A raw statement is not read through drizzle's column mappers, so the enums come back as text
@@ -65,7 +64,7 @@ interface RetryChanges {
 export class ExperimentDataOutboxRepository {
   constructor(
     @Inject("DATABASE") private readonly database: DatabaseInstance,
-    @Inject(SERVING_STORE_COPIES_PORT) private readonly storeCopies: ServingStoreCopiesPort,
+    @Inject(SERVING_STORE_PORT) private readonly servingStore: ServingStorePort,
   ) {}
 
   /**
@@ -172,67 +171,6 @@ export class ExperimentDataOutboxRepository {
         destination: zExperimentDataDestination.parse(row.destination),
         claimedAt: new Date(row.claimedAt),
       }));
-    });
-  }
-
-  /**
-   * How many times each of an experiment's records still owed to one copy has failed to reach it,
-   * the highest where a record is owed twice, while one copy of it runs.
-   */
-  async findAttempts(
-    experimentId: string,
-    recordType: ExperimentDataRecordType,
-    destination: ExperimentDataDestination,
-  ): Promise<Result<Map<string, number>>> {
-    return tryCatch(async () => {
-      const rows = await this.database
-        .select({
-          recordId: experimentDataOutbox.recordId,
-          attempts: sql<number>`max(${experimentDataOutbox.attempts})::int`,
-        })
-        .from(experimentDataOutbox)
-        .where(
-          and(
-            eq(experimentDataOutbox.experimentId, experimentId),
-            eq(experimentDataOutbox.recordType, recordType),
-            eq(experimentDataOutbox.destination, destination),
-          ),
-        )
-        .groupBy(experimentDataOutbox.recordId);
-
-      return new Map(rows.map(({ recordId, attempts }) => [recordId, attempts]));
-    });
-  }
-
-  /**
-   * Owes a record's copy again, due now, with its failed attempts forgotten. A copy running now
-   * keeps running; the new row waits beside it, as any change made meanwhile does.
-   */
-  async oweAgain(
-    record: OwedRecord,
-    destination: ExperimentDataDestination,
-  ): Promise<Result<void>> {
-    return tryCatch(async () => {
-      await this.database.transaction(async (tx) => {
-        const reset = await tx
-          .update(experimentDataOutbox)
-          .set({ attempts: 0, nextAttemptAt: sql`(now() AT TIME ZONE 'UTC')`, lastError: null })
-          .where(
-            and(
-              eq(experimentDataOutbox.recordType, record.recordType),
-              eq(experimentDataOutbox.recordId, record.recordId),
-              eq(experimentDataOutbox.destination, destination),
-              isNull(experimentDataOutbox.claimedAt),
-            ),
-          )
-          .returning({ id: experimentDataOutbox.id });
-        if (reset.length === 0) {
-          await tx
-            .insert(experimentDataOutbox)
-            .values({ ...record, destination })
-            .onConflictDoNothing();
-        }
-      });
     });
   }
 
@@ -361,7 +299,7 @@ export class ExperimentDataOutboxRepository {
 
   /** The lakehouse always; the store only where this environment has its copier. */
   private keeps(destination: ExperimentDataDestination): boolean {
-    return destination !== "serving_store" || this.storeCopies.isConfigured();
+    return destination !== "serving_store" || this.servingStore.hasCopier();
   }
 
   /** Postgres's SQLSTATE 23505, which drizzle passes on as the error's cause. */

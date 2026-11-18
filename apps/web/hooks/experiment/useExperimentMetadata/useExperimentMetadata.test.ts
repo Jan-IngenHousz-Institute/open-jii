@@ -1,10 +1,10 @@
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
-import { PENDING_STORE_COPY_REFETCH_MS, useExperimentMetadata } from "./useExperimentMetadata";
+import { useExperimentMetadata } from "./useExperimentMetadata";
 
 const metadataPayload = {
   name: "Plates",
@@ -36,34 +36,6 @@ describe("useExperimentMetadata", () => {
       expect(result.current.data?.[0].metadataId).toBe("00000000-0000-0000-0000-000000000001");
       expect(result.current.data?.[0].metadata).toEqual(metadataPayload);
     });
-  });
-
-  it("looks again while a sheet's store copy is pending, and stops once none is", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    const sheet = (storeCopy: "pending" | "loaded") => ({
-      metadataId: "00000000-0000-0000-0000-000000000001",
-      experimentId: "00000000-0000-0000-0000-0000000000aa",
-      metadata: metadataPayload,
-      createdBy: "00000000-0000-0000-0000-0000000000bb",
-      createdAt: "2025-01-01T00:00:00.000Z",
-      updatedAt: "2025-01-02T00:00:00.000Z",
-      storeCopy,
-    });
-    server.mount(contract.experiments.listExperimentMetadata, { body: [sheet("pending")] });
-
-    const { result } = renderHook(() => useExperimentMetadata("exp-123"));
-    await waitFor(() => expect(result.current.data?.[0].storeCopy).toBe("pending"));
-
-    const landed = server.mount(contract.experiments.listExperimentMetadata, {
-      body: [sheet("loaded")],
-    });
-    await vi.advanceTimersByTimeAsync(PENDING_STORE_COPY_REFETCH_MS);
-    await waitFor(() => expect(result.current.data?.[0].storeCopy).toBe("loaded"));
-
-    const looked = landed.callCount;
-    await vi.advanceTimersByTimeAsync(PENDING_STORE_COPY_REFETCH_MS * 3);
-    expect(landed.callCount).toBe(looked);
-    vi.useRealTimers();
   });
 
   it("returns empty array when no metadata exists", async () => {

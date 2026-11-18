@@ -1,6 +1,7 @@
 import { ClickHouseError, createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
-import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
+import type { OnApplicationShutdown } from "@nestjs/common";
 import { z } from "zod";
 
 import {
@@ -19,11 +20,14 @@ export interface StoreResult {
 const zRow = z.array(z.unknown());
 
 @Injectable()
-export class ServingStoreClientService implements OnModuleDestroy {
+export class ServingStoreClientService implements OnApplicationShutdown {
   private readonly logger = new Logger(ServingStoreClientService.name);
 
   /** The reader may run for 30 s, so the store's own refusal ends a slow read, not the socket. */
   private static readonly REQUEST_TIMEOUT_MS = 35_000;
+
+  // A copy runs inside the outbox's two-minute claim, and its statements are small.
+  private static readonly COPY_TIMEOUT_MS = 30_000;
 
   /**
    * The backend refuses a page by its cells as the warehouse writes them, as the rows arrive; this
@@ -34,9 +38,24 @@ export class ServingStoreClientService implements OnModuleDestroy {
   private static readonly RESULT_BYTES_GUARD = 4 * PAGE_BYTE_LIMIT;
 
   private readonly client: ClickHouseClient | null;
+  // The copier may only insert into the copies of annotations and metadata sheet rows.
+  private readonly copier: ClickHouseClient | null;
 
   constructor(configService: ServingStoreConfigService) {
     const config = configService.getConfig();
+    const copier = config?.copier ?? null;
+    this.copier =
+      config === null || copier === null
+        ? null
+        : createClient({
+            url: config.url,
+            username: copier.username,
+            password: copier.password,
+            database: "store",
+            request_timeout: ServingStoreClientService.COPY_TIMEOUT_MS,
+            // Times arrive as ISO text with a zone, which the default format refuses.
+            clickhouse_settings: { date_time_input_format: "best_effort" },
+          });
     this.client =
       config === null
         ? null
@@ -81,6 +100,52 @@ export class ServingStoreClientService implements OnModuleDestroy {
     return this.client !== null;
   }
 
+  hasCopier(): boolean {
+    return this.copier !== null;
+  }
+
+  async insert(table: string, rows: readonly object[]): Promise<Result<void>> {
+    const copier = this.copier;
+    if (copier === null) {
+      return this.noCopier();
+    }
+    if (rows.length === 0) {
+      return success(undefined);
+    }
+
+    return tryCatch(
+      async () => {
+        await copier.insert({ table, values: rows, format: "JSONEachRow" });
+      },
+      (error) => this.copyError("insert", error),
+    );
+  }
+
+  /** A read as the copier, which reads only the copies it writes. */
+  async select<T>(
+    sql: string,
+    params: Record<string, unknown>,
+    schema: z.ZodType<T>,
+  ): Promise<Result<T[]>> {
+    const copier = this.copier;
+    if (copier === null) {
+      return this.noCopier();
+    }
+
+    return tryCatch(
+      async () => {
+        const resultSet = await copier.query({
+          query: sql,
+          query_params: params,
+          format: "JSONEachRow",
+        });
+        const rows: unknown[] = await resultSet.json();
+        return rows.map((row) => schema.parse(row));
+      },
+      (error) => this.copyError("select", error),
+    );
+  }
+
   async query(sql: string): Promise<Result<StoreResult>> {
     const rows: unknown[][] = [];
     const read = await this.stream(sql, (row) => {
@@ -120,8 +185,28 @@ export class ServingStoreClientService implements OnModuleDestroy {
     );
   }
 
-  async onModuleDestroy(): Promise<void> {
-    await this.client?.close();
+  /** After the outbox worker's own shutdown hook, so a copy in flight keeps its connection. */
+  async onApplicationShutdown(): Promise<void> {
+    await Promise.all([this.client?.close(), this.copier?.close()]);
+  }
+
+  private noCopier<T>(): Result<T> {
+    return failure(
+      AppError.internal("No serving store copier is configured", "STORE_NOT_CONFIGURED"),
+    );
+  }
+
+  private copyError(operation: string, error: unknown): AppError {
+    this.logger.error({
+      msg: "Serving store copy failed",
+      errorCode: ErrorCodes.SERVING_STORE_QUERY_FAILED,
+      operation,
+      error,
+    });
+    return AppError.internal(
+      "The serving store could not take the copy",
+      ErrorCodes.SERVING_STORE_QUERY_FAILED,
+    );
   }
 
   private storeError(error: unknown): AppError {

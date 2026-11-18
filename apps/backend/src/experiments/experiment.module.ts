@@ -11,7 +11,6 @@ import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
-import { ServingStoreCopiesAdapter } from "../common/modules/serving-store/serving-store-copies.adapter";
 import { ServingStoreAdapter } from "../common/modules/serving-store/serving-store.adapter";
 import { ServingStoreModule } from "../common/modules/serving-store/serving-store.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
@@ -78,7 +77,6 @@ import { GeocodeLocationUseCase } from "./application/use-cases/experiment-locat
 import { GetExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/get-experiment-locations";
 import { SearchPlacesUseCase } from "./application/use-cases/experiment-locations/search-places";
 import { UpdateExperimentLocationsUseCase } from "./application/use-cases/experiment-locations/update-experiment-locations";
-import { CopyExperimentMetadataToStoreUseCase } from "./application/use-cases/experiment-metadata/copy-experiment-metadata-to-store";
 import { CreateExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/create-experiment-metadata";
 import { DeleteExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/delete-experiment-metadata";
 import { GetExperimentMetadataUseCase } from "./application/use-cases/experiment-metadata/get-experiment-metadata";
@@ -108,9 +106,9 @@ import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EXPERIMENT_METRICS_PORT } from "./core/ports/metrics.port";
-import { SERVING_STORE_COPIES_PORT } from "./core/ports/serving-store-copies.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 // Repositories
+import { ExperimentAnnotationsStoreRepository } from "./core/repositories/experiment-annotations-store.repository";
 import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "./core/repositories/experiment-annotations.repository";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
@@ -123,6 +121,7 @@ import { ExperimentDeviceRegistryRepository } from "./core/repositories/experime
 import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
+import { ExperimentMetadataStoreRepository } from "./core/repositories/experiment-metadata-store.repository";
 import { ExperimentMetadataWarehouseRepository } from "./core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
@@ -193,10 +192,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
       useExisting: ServingStoreAdapter,
     },
     {
-      provide: SERVING_STORE_COPIES_PORT,
-      useExisting: ServingStoreCopiesAdapter,
-    },
-    {
       provide: AWS_PORT,
       useExisting: AwsAdapter,
     },
@@ -236,9 +231,11 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentJoinRequestRepository,
     ExperimentJoinCodeRepository,
     ExperimentMetadataWarehouseRepository,
+    ExperimentMetadataStoreRepository,
     ExperimentMetadataRepository,
     ExperimentDataOutboxRepository,
     ExperimentAnnotationsWarehouseRepository,
+    ExperimentAnnotationsStoreRepository,
     ExperimentAnnotationsRepository,
     ExperimentVisualizationRepository,
     ExperimentDashboardRepository,
@@ -361,7 +358,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     CreateExperimentMetadataUseCase,
     UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
-    CopyExperimentMetadataToStoreUseCase,
   ],
   exports: [ExperimentRepository, ExperimentDashboardRepository, ExperimentVisualizationRepository],
 })
