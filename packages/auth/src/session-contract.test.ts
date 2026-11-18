@@ -7,9 +7,9 @@ import type * as Database from "@repo/database";
 
 const ADR = "apps/docs/content/developers/design-decisions/first-party-session-contract-adr.mdx";
 
-// This test is the contract sibling apps such as Equipment sign in against, so each failure says what they rely on.
+// This test is the contract sibling apps such as openJII Lab sign in against, so each failure says what they rely on.
 function relied(reason: string) {
-  return `${reason} Equipment's server relies on this; coordinate an Equipment release before changing it. See ${ADR}.`;
+  return `${reason} openJII Lab's server relies on this; coordinate an openJII Lab release before changing it. See ${ADR}.`;
 }
 
 const AUTH_URL = "https://api.openjii.org/api/v1/auth";
@@ -125,7 +125,7 @@ async function signIn(auth: Server) {
   if (!token) {
     throw new Error(
       relied(
-        "Production sign-in must set __Secure-better-auth.prod.session_token. Equipment reads the token by that exact name.",
+        "Production sign-in must set __Secure-better-auth.prod.session_token. openJII Lab reads the token by that exact name.",
       ),
     );
   }
@@ -180,7 +180,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
     expect(
       authCookies.sessionToken,
       relied(
-        `The ${environment} token cookie name and attributes changed. Equipment reads the token by this exact name, and the domain decides which hosts receive it.`,
+        `The ${environment} token cookie name and attributes changed. openJII Lab reads the token by this exact name, and the domain decides which hosts receive it.`,
       ),
     ).toEqual({
       name,
@@ -220,7 +220,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
     for (const cookie of [undefined, "__Secure-better-auth.prod.session_token=invalid"]) {
       const response = await request(auth, SESSION_QUERY, cookie);
       const signedOut = relied(
-        "An absent or invalid session must answer HTTP 200 with JSON null, which Equipment reads as signed out.",
+        "An absent or invalid session must answer HTTP 200 with JSON null, which openJII Lab reads as signed out.",
       );
       expect(response.status, signedOut).toBe(200);
       expect(await response.json(), signedOut).toBeNull();
@@ -243,7 +243,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
     expect(
       response.headers.getSetCookie(),
       relied(
-        "A valid session check must set no cookies; Equipment never passes openJII cookies back to the browser.",
+        "A valid session check must set no cookies; openJII Lab never passes openJII cookies back to the browser.",
       ),
     ).toEqual([]);
   });
@@ -262,7 +262,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
     const auth = await configuredServer();
     const { allCookies } = await signIn(auth);
     const bypass = relied(
-      "disableCookieCache=true must check the server session, so a revoked openJII session ends in Equipment even while the session_data cache cookie is still valid.",
+      "disableCookieCache=true must check the server session, so a revoked openJII session ends in openJII Lab even while the session_data cache cookie is still valid.",
     );
     expect(allCookies, "The cookie cache this test bypasses is no longer issued.").toContain(
       "__Secure-better-auth.prod.session_data=",
@@ -287,7 +287,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
     const before = structuredClone(session);
     const response = await request(auth, SESSION_QUERY, token);
     const readOnly = relied(
-      "disableRefresh=true must leave the session row and cookies untouched, so Equipment's checks never extend an openJII session.",
+      "disableRefresh=true must leave the session row and cookies untouched, so openJII Lab's checks never extend an openJII session.",
     );
     expect(response.status, readOnly).toBe(200);
     expect(await response.json(), readOnly).not.toBeNull();
@@ -313,7 +313,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
         token,
       );
       const member = relied(
-        "get-active-member-role must answer HTTP 200 with the role for the organizationId asked for, since Equipment checks JII membership by the organization's stable id.",
+        "get-active-member-role must answer HTTP 200 with the role for the organizationId asked for, since openJII Lab checks JII membership by the organization's stable id.",
       );
       expect(response.status, member).toBe(200);
       expect(await response.json(), member).toEqual({ role });
@@ -333,7 +333,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
     const path = "/organization/get-active-member-role?organizationId=jii-contract-org";
     const nonMember = await request(auth, path, token);
     const refusal = relied(
-      "A signed-in non-member must get HTTP 403 YOU_ARE_NOT_A_MEMBER_OF_THIS_ORGANIZATION and an anonymous request HTTP 401. Equipment reads only that 403 as non-membership and treats any other status, 429 and 5xx included, as no answer.",
+      "A signed-in non-member must get HTTP 403 YOU_ARE_NOT_A_MEMBER_OF_THIS_ORGANIZATION and an anonymous request HTTP 401. openJII Lab reads only that 403 as non-membership and treats any other status, 429 and 5xx included, as no answer.",
     );
     expect(nonMember.status, refusal).toBe(403);
     expect(await nonMember.json(), refusal).toEqual(
