@@ -21,10 +21,13 @@ No root manages the boundary, so an admin changes it with
 
 ## The boundary
 
-<!-- TODO: dev's boundary, read with `aws iam get-policy-version`, with the account id replaced by <ACCOUNT_ID> and -dev by -<ENV>. -->
+> **Incomplete. Do not run this procedure yet.** The boundary below is still missing. Someone has
+> to read dev's `CiFoundationBoundary` with `aws iam get-policy` and `aws iam get-policy-version`,
+> replace the account id with `<ACCOUNT_ID>` and `-dev` with `-<ENV>`, and get it reviewed in a pull
+> request. Until then the prod bootstrap cannot run, and `#2384` cannot merge.
 
 ```json
-
+<BOUNDARY JSON NOT YET COPIED FROM DEV>
 ```
 
 ## The trust
