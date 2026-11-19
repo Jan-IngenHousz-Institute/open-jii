@@ -414,6 +414,33 @@ describe("GlobalSearchUseCase", () => {
       expect(titles).not.toContain("Hidden photosynthesis workbook");
     });
 
+    it("hides a private workbook matched only by markdown cell text from an outsider", async () => {
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, otherUserId, "owner");
+      const workbook = await testApp.createWorkbook({
+        name: "Field notebook",
+        description: "Observations from the trial",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+        cells: [{ id: "m1", type: "markdown", content: "Quorblentine observations" }],
+      });
+
+      const toOwner = await useCase.execute(otherUserId, "quorblentine", 20, true);
+
+      assertSuccess(toOwner);
+      expect(toOwner.value.results).toContainEqual(
+        expect.objectContaining({ type: "workbook", id: workbook.id }),
+      );
+
+      const toOutsider = await useCase.execute(userId, "quorblentine", 20, true);
+
+      assertSuccess(toOutsider);
+      expect(toOutsider.value.results).not.toContainEqual(
+        expect.objectContaining({ type: "workbook", id: workbook.id }),
+      );
+    });
+
     it("shows a private macro/protocol/workbook to a grantee", async () => {
       const orgId = await testApp.createOrganization();
       await testApp.addOrganizationMember(orgId, otherUserId, "owner");
