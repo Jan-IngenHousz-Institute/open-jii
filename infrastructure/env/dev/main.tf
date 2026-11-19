@@ -3268,12 +3268,12 @@ module "backend_waf" {
 module "backend_cloudfront" {
   source = "../../modules/backend-cloudfront"
 
-  service_name    = "backend"
-  environment     = var.environment
-  alb_domain_name = module.backend_alb.alb_dns_name
+  service_name = "backend"
+  environment  = var.environment
 
-  # Custom header for ALB protection
-  custom_header_value = var.api_cloudfront_header_value
+
+  alb_domain_name = module.backend_alb_private.alb_dns_name
+  vpc_origin_id   = module.backend_alb_private.vpc_origin_id
 
   # CloudFront settings
   price_class = "PriceClass_200" # Adds edges in Africa, the Middle East and Asia, where many of our users are
@@ -3595,8 +3595,8 @@ module "grafana_dashboard" {
   server_function_name           = module.opennext.server_function_name
   ecs_service_name               = module.backend_ecs.ecs_service_name
   cloudfront_distribution_id     = module.opennext.cloudfront_distribution_id
-  target_group_arn               = module.backend_alb.target_group_arn
-  load_balancer_arn              = module.backend_alb.alb_arn
+  target_group_arn               = module.backend_alb_private.target_group_arn
+  load_balancer_arn              = module.backend_alb_private.alb_arn
   ecs_cluster_name               = module.backend_ecs.ecs_cluster_name
   slack_webhook_url              = var.slack_webhook_url
   posthog_project_id             = "80726"
@@ -3729,7 +3729,7 @@ module "status_publisher" {
   # uncached, and the home page's public metrics go through the SQL warehouse.
   web_url             = "https://${module.route53.environment_domain}/en-US/verify-request?provider=email"
   api_health_url      = "https://${module.route53.api_domain}/health"
-  load_balancer_arn   = module.backend_alb.alb_arn
+  load_balancer_arn   = module.backend_alb_private.alb_arn
   web_distribution_id = module.opennext.cloudfront_distribution_id
   kinesis_stream_name = module.kinesis.kinesis_stream_name
 
