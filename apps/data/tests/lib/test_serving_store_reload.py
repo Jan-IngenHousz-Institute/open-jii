@@ -73,12 +73,12 @@ _FED = """
 """
 
 
-class _GoldAt(StoreReload):
-    """A reload whose gold is a fixture at one version."""
+class _SourceAt(StoreReload):
+    """A reload whose source table is a fixture at one version."""
 
-    def __init__(self, spark: SparkSession, writer: StoreWriter, gold: str, version: int = 7):
+    def __init__(self, spark: SparkSession, writer: StoreWriter, source: str, version: int = 7):
         super().__init__(spark, writer, "gold")
-        self.source = gold
+        self.source = source
         self.version = version
 
     def latest_version(self, table: StoreTable) -> tuple[int, datetime]:
@@ -133,7 +133,7 @@ def utc(spark: SparkSession) -> Iterator[None]:
 def test_gold_rows_go_in_as_inserts_at_golds_latest_version(spark: SparkSession) -> None:
     writer = _Writer()
 
-    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     [sent] = writer.lines
     assert sorted(line["id"] for line in sent) == [21, 22, 24]
@@ -152,7 +152,7 @@ def test_a_key_gold_holds_twice_goes_in_as_the_copy_gold_processed_last(
     writer = _Writer()
     gold = _GOLD_RAW_DATA.replace("{copies}", ", ".join(copies))
 
-    _GoldAt(spark, writer, gold).reload(MEASUREMENTS, "e1")
+    _SourceAt(spark, writer, gold).reload(MEASUREMENTS, "e1")
 
     [sent] = writer.lines
     assert [(line["id"], line["output_data"]) for line in sent] == [(1, '{"phi2":0.8}')]
@@ -167,7 +167,7 @@ def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the
 ) -> None:
     writer = _Writer()
 
-    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     deletes = [(sql, params) for sql, params in writer.statements if sql.startswith(_ROW_DELETES)]
     assert deletes == [
@@ -186,7 +186,7 @@ def test_the_delete_takes_the_experiments_rows_from_before_the_version_after_the
 def test_after_the_delete_ids_no_table_names_are_pruned_for_the_experiment(spark: SparkSession) -> None:
     writer = _Writer()
 
-    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     prunes = [(sql, params) for sql, params in writer.statements if sql.startswith("DELETE FROM store.c")]
     scope = " AND experiment_id = {experiment:String}"
@@ -215,7 +215,7 @@ def test_after_the_delete_ids_no_table_names_are_pruned_for_the_experiment(spark
 def test_the_loads_payload_schemas_go_in_at_the_version(spark: SparkSession) -> None:
     writer = _Writer()
 
-    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert writer.inserts == [
         (
@@ -237,7 +237,7 @@ def test_the_loads_payload_schemas_go_in_at_the_version(spark: SparkSession) -> 
 def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSession) -> None:
     writer = _Writer()
 
-    _GoldAt(spark, writer, _GOLD).reload(UPLOADS)
+    _SourceAt(spark, writer, _GOLD).reload(UPLOADS)
 
     deletes = [(sql, params) for sql, params in writer.statements if sql.startswith(_ROW_DELETES)]
     assert deletes == [
@@ -254,7 +254,7 @@ def test_a_store_ahead_of_gold_is_refused_before_anything_is_written(spark: Spar
     writer = _Writer(newest=9)
 
     with pytest.raises(StoreAheadOfSource, match="hold version 9"):
-        _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+        _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert writer.lines == []
     assert [sql for sql, _ in writer.statements if "AS newest" not in sql] == []
@@ -263,7 +263,7 @@ def test_a_store_ahead_of_gold_is_refused_before_anything_is_written(spark: Spar
 def test_a_load_the_store_could_not_take_is_written_again(spark: SparkSession) -> None:
     writer = _Writer(written=[Written(inserted=2, unfinished=2), Written(inserted=4)])
 
-    reloaded = _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    reloaded = _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert len(writer.lines) == 2
     assert reloaded.written == Written(inserted=4)
@@ -273,7 +273,7 @@ def test_a_load_still_unfinished_after_the_last_attempt_fails_before_deleting(sp
     writer = _Writer(written=[Written(unfinished=4)] * 3)
 
     with pytest.raises(StoreUnavailable, match="4 rows of uploads not sent after 3 attempts"):
-        _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+        _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert [sql for sql, _ in writer.statements if sql.startswith("DELETE")] == []
 
@@ -294,7 +294,7 @@ class _SchemasOnSecondTry(_Writer):
 def test_schemas_the_store_could_not_take_are_sent_again_before_the_delete(spark: SparkSession) -> None:
     writer = _SchemasOnSecondTry()
 
-    _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert writer.schema_attempts == 2
     assert [table for table, _ in writer.inserts] == ["payload_schemas"]
@@ -304,7 +304,7 @@ def test_schemas_the_store_could_not_take_are_sent_again_before_the_delete(spark
 def test_a_load_the_store_refused_rows_of_deletes_nothing(spark: SparkSession) -> None:
     writer = _Writer(written=[Written(inserted=3, rejected=1)])
 
-    reloaded = _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    reloaded = _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert reloaded.written.rejected == 1
     assert [sql for sql, _ in writer.statements if sql.startswith("DELETE")] == []
@@ -322,7 +322,7 @@ class _SchemasRefused(_Writer):
 def test_a_load_whose_schemas_the_store_refused_keeps_the_older_schemas(spark: SparkSession) -> None:
     writer = _SchemasRefused()
 
-    reloaded = _GoldAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
+    reloaded = _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert reloaded.schemas.rejected == 1
     deletes = [sql for sql, _ in writer.statements if sql.startswith(_ROW_DELETES)]
@@ -420,7 +420,7 @@ def test_reloading_an_experiment_leaves_its_rows_as_gold_holds_them(
 ) -> None:
     reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
 
-    reloaded = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
+    reloaded = _SourceAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
 
     assert _uploads(store) == [
         ("e1", 21, 7.0, 7),
@@ -442,11 +442,11 @@ def test_reloading_an_experiment_leaves_its_rows_as_gold_holds_them(
     ) == [{"id": 21, "text": '{"ph":7}'}, {"id": 22, "text": '{"ph":6.1}'}, {"id": 24, "text": '{"ph":5.9}'}]
 
 
-class _FeedCatchingUp(_GoldAt):
+class _FeedCatchingUp(_SourceAt):
     """A reload during which the feed, still behind, sends a commit from before the version."""
 
-    def __init__(self, spark: SparkSession, writer: StoreWriter, gold: str, late: str):
-        super().__init__(spark, writer, gold)
+    def __init__(self, spark: SparkSession, writer: StoreWriter, source: str, late: str):
+        super().__init__(spark, writer, source)
         self.late = late
 
     def _delete_older(
@@ -493,7 +493,7 @@ def test_reloading_an_experiment_gold_no_longer_holds_removes_it(
     reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
     gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
 
-    reloaded = _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
+    reloaded = _SourceAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
 
     assert [row for row in _uploads(store) if row[0] == "e2"] == []
     assert [row[1] for row in _uploads(store)] == [21, 22, 23]
@@ -510,7 +510,7 @@ def test_a_delete_past_the_removal_limit_stops_before_deleting(
     gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
 
     with pytest.raises(RemovalOverLimit, match=r"e2 \(\d+\)"):
-        _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
+        _SourceAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
 
     assert before
     assert [row for row in _uploads(store) if row[0] == "e2"] == before
@@ -524,7 +524,7 @@ def test_a_delete_past_the_removal_limit_goes_ahead_when_allowed(
     reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
     gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
 
-    _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2", allow_removal=True)
+    _SourceAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2", allow_removal=True)
 
     assert [row for row in _uploads(store) if row[0] == "e2"] == []
 
@@ -536,7 +536,7 @@ def test_rows_gold_sends_again_do_not_count_against_the_removal_limit(
     monkeypatch.setattr(reload_module, "REMOVAL_LIMIT", 0)
     reloader.write(UPLOADS.lines(spark.sql(_FED)), "uploads")
 
-    reloaded = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e2")
+    reloaded = _SourceAt(spark, reloader, _GOLD).reload(UPLOADS, "e2")
 
     assert reloaded.store == reloaded.source
 
@@ -552,7 +552,7 @@ def test_a_reload_removes_the_ids_no_row_names_any_longer(
     assert [row["experiment_id"] for row in store.rows(contributors)] == ["e1", "e2"]
     gold_without_e2 = f"SELECT * FROM ({_GOLD}) WHERE experiment_id != 'e2'"
 
-    _GoldAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
+    _SourceAt(spark, reloader, gold_without_e2).reload(UPLOADS, "e2")
 
     assert store.rows(contributors) == [{"experiment_id": "e1", "user_id": "u1"}]
 
@@ -561,8 +561,8 @@ def test_a_reload_removes_the_ids_no_row_names_any_longer(
 def test_a_new_store_takes_every_experiment_and_a_second_run_changes_nothing(
     spark: SparkSession, store: _Admin, reloader: StoreWriter
 ) -> None:
-    first = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS)
-    second = _GoldAt(spark, reloader, _GOLD).reload(UPLOADS)
+    first = _SourceAt(spark, reloader, _GOLD).reload(UPLOADS)
+    second = _SourceAt(spark, reloader, _GOLD).reload(UPLOADS)
 
     assert first.source == first.store == second.store == {"e1": 3, "e2": 1}
     assert store.rows(f"SELECT count() AS rows FROM {_DATABASE}.uploads") == [{"rows": 4}]
@@ -573,7 +573,7 @@ def test_a_new_store_takes_every_experiment_and_a_second_run_changes_nothing(
 def test_reloaded_rows_stay_out_of_the_feeds_delivery_window(
     spark: SparkSession, store: _Admin, reloader: StoreWriter
 ) -> None:
-    _GoldAt(spark, reloader, _GOLD).reload(UPLOADS)
+    _SourceAt(spark, reloader, _GOLD).reload(UPLOADS)
 
     assert store.rows(
         f"SELECT countIf(inserted_at > now64(6) - INTERVAL 5 MINUTE) AS recent, "
@@ -607,7 +607,7 @@ def test_schemas_from_a_recreated_gold_table_stop_the_reload(
     )
 
     with pytest.raises(StoreAheadOfSource, match="hold version 99"):
-        _GoldAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
+        _SourceAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
 
 
 # Silver's lifecycle events at version 7: c1's two events and c2's one.
@@ -625,7 +625,7 @@ _SILVER_EVENTS = """
 def test_device_events_reload_whole_without_schemas_or_ids_and_count_by_device(spark: SparkSession) -> None:
     writer = _Writer()
 
-    reloaded = _GoldAt(spark, writer, _SILVER_EVENTS).reload(DEVICE_EVENTS)
+    reloaded = _SourceAt(spark, writer, _SILVER_EVENTS).reload(DEVICE_EVENTS)
 
     [sent] = writer.lines
     assert sorted((line["client_id"], line["event_type"]) for line in sent) == [
@@ -647,7 +647,7 @@ def test_device_events_reload_whole_without_schemas_or_ids_and_count_by_device(s
 def test_a_measurements_reload_deletes_the_older_rows_of_its_copy_by_device_too(spark: SparkSession) -> None:
     writer = _Writer()
 
-    _GoldAt(spark, writer, _GOLD_RAW_DATA.replace("{copies}", _FIRST_COPY)).reload(MEASUREMENTS, "e1")
+    _SourceAt(spark, writer, _GOLD_RAW_DATA.replace("{copies}", _FIRST_COPY)).reload(MEASUREMENTS, "e1")
 
     [newest] = [sql for sql, _ in writer.statements if "AS newest" in sql]
     assert "FROM store.measurements_by_device)" in newest
@@ -677,7 +677,7 @@ def test_reloading_device_events_leaves_them_as_silver_holds_them(
     )
     reloader.write(DEVICE_EVENTS.lines(fed), DEVICE_EVENTS.name)
 
-    reloaded = _GoldAt(spark, reloader, _SILVER_EVENTS).reload(DEVICE_EVENTS)
+    reloaded = _SourceAt(spark, reloader, _SILVER_EVENTS).reload(DEVICE_EVENTS)
 
     assert store.rows(
         f"SELECT client_id, event_type, _commit_version FROM {_DATABASE}.device_events "
@@ -704,7 +704,9 @@ def test_reloading_measurements_leaves_their_copy_by_device_as_gold_holds_them(
     gone = fed.withColumn("id", F.lit(2).cast("long"))
     reloader.write(MEASUREMENTS.lines(fed.unionByName(gone)), MEASUREMENTS.name)
 
-    _GoldAt(spark, reloader, _GOLD_RAW_DATA.replace("{copies}", _RECOMPUTED_COPY)).reload(MEASUREMENTS, "e1")
+    _SourceAt(spark, reloader, _GOLD_RAW_DATA.replace("{copies}", _RECOMPUTED_COPY)).reload(
+        MEASUREMENTS, "e1"
+    )
 
     # Without FINAL, so the older copies show unless the delete took them.
     assert store.rows(f"SELECT client_id, id, _commit_version FROM {_DATABASE}.measurements_by_device") == [
