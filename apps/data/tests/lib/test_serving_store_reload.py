@@ -253,7 +253,9 @@ def test_a_reload_of_every_experiment_deletes_across_the_table(spark: SparkSessi
 def test_a_store_ahead_of_gold_is_refused_before_anything_is_written(spark: SparkSession) -> None:
     writer = _Writer(newest=9)
 
-    with pytest.raises(StoreAheadOfSource, match="hold version 9"):
+    with pytest.raises(
+        StoreAheadOfSource, match=r"holds version 9 .*: empty store\.uploads, store\.payload_schemas first"
+    ):
         _SourceAt(spark, writer, _GOLD).reload(UPLOADS, "e1")
 
     assert writer.lines == []
@@ -606,7 +608,7 @@ def test_schemas_from_a_recreated_gold_table_stop_the_reload(
         "VALUES ('e1', 'upload', 't1', 'uploaded_data', 'OBJECT<ph: DOUBLE>', 99)"
     )
 
-    with pytest.raises(StoreAheadOfSource, match="hold version 99"):
+    with pytest.raises(StoreAheadOfSource, match="holds version 99"):
         _SourceAt(spark, reloader, _GOLD).reload(UPLOADS, "e1")
 
 
@@ -642,6 +644,16 @@ def test_device_events_reload_whole_without_schemas_or_ids_and_count_by_device(s
         ("DELETE FROM store.device_events WHERE _commit_version < {version:Int64}", {"version": 7})
     ]
     assert reloaded.source == {"c1": 2, "c2": 1}
+
+
+def test_device_events_ahead_of_silver_name_only_their_own_table_to_empty(spark: SparkSession) -> None:
+    writer = _Writer(newest=9)
+
+    with pytest.raises(StoreAheadOfSource) as refused:
+        _SourceAt(spark, writer, _SILVER_EVENTS).reload(DEVICE_EVENTS)
+
+    assert "empty store.device_events first" in str(refused.value)
+    assert "payload" not in str(refused.value)
 
 
 def test_a_measurements_reload_deletes_the_older_rows_of_its_copy_by_device_too(spark: SparkSession) -> None:

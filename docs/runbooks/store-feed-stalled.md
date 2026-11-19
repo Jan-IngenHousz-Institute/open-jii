@@ -104,7 +104,9 @@ still holds the dedup tokens of the deleted rows' inserts, and drops those rows 
 them again. `payload_schemas` holds every table's schemas, so once the feed has caught up,
 [reload](procedures/serving-store-reload.md) every table for `all`; that also brings back the rows
 gold gained before the new start version. This clears neither of the sheets' tables, so reset
-`metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead.
+`metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead. For
+`device_events`, which has no payload schemas, empty only `store.device_events`, set its start
+version to silver's latest, and once the feed has caught up, reload `device_events` for `all`.
 
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.

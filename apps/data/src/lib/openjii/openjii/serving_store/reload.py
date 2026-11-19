@@ -101,9 +101,13 @@ class StoreReload:
         newest = self._newest_stored_version(table)
         version, committed_at = self.latest_version(table)
         if newest > version:
+            held_in = [table.name, *table.derived_tables]
+            if table.payloads:
+                held_in.append(PAYLOAD_SCHEMAS)
             raise StoreAheadOfSource(
-                f"store.{table.name}, its derived tables or its payload schemas hold version {newest} and "
-                f"{self._source_name(table)} only {version}: empty them first (docs/runbooks/procedures/serving-store-reload.md)"
+                f"the store holds version {newest} and {self._source_name(table)} only {version}: empty "
+                + ", ".join(f"store.{store_table}" for store_table in held_in)
+                + " first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
         rows = self.source_rows(table, version)
