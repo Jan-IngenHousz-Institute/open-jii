@@ -43,21 +43,21 @@ describe("ComponentsSection", () => {
 
     expect(
       screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent),
-    ).toEqual(["Website", "Platform", "Data intake", "Data delivery", "Macro processing"]);
-    expect(screen.getAllByRole("group")).toHaveLength(5);
+    ).toEqual(["Platform", "Data intake", "Data delivery", "Macro processing"]);
+    expect(screen.getAllByRole("group")).toHaveLength(4);
   });
 
   describe("stale data", () => {
     it("mutes the badges", () => {
       renderSection(operationalStatusDocument, { isStale: true });
 
-      expect(badgeOf("Website")).not.toHaveClass("bg-status-active");
+      expect(badgeOf("Platform")).not.toHaveClass("bg-status-active");
     });
 
     it("shows the badges in their state colours when the data is fresh", () => {
       renderSection(operationalStatusDocument);
 
-      expect(badgeOf("Website")).toHaveClass("bg-status-active");
+      expect(badgeOf("Platform")).toHaveClass("bg-status-active");
     });
   });
 });

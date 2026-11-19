@@ -22,6 +22,6 @@ variable "developer_provider_name" {
 
 variable "allow_unauthenticated_identities" {
   type        = bool
-  description = "Whether to allow unauthenticated identities"
-  default     = true
+  description = "Whether a client with no signed-in session can get IoT publish credentials from the pool"
+  default     = false
 }

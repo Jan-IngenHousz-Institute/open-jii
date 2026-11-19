@@ -30,7 +30,7 @@ function incident(change: Partial<RawIncident> = {}): RawIncident {
     title: "Sign-in is slow",
     kind: "incident",
     impact: "degraded",
-    components: ["sign-in"],
+    components: ["data-delivery"],
     startsAt: "2026-11-04T09:00:00Z",
     updates: [update()],
     ...change,
@@ -65,7 +65,7 @@ describe("checkIncident", () => {
   });
 
   it("names an unknown component", () => {
-    const found = problems(incident({ components: ["sign-in", "billing"] }));
+    const found = problems(incident({ components: ["data-delivery", "billing"] }));
 
     expect(found).toEqual([
       expect.stringContaining('incident.components[1] "billing" is not one of'),
@@ -174,8 +174,10 @@ describe("checkIncident", () => {
 
     it("refuses a component named twice", () => {
       expect(
-        problems(incident({ components: ["sign-in", "platform", "sign-in", "sign-in"] })),
-      ).toEqual(["incident.components lists sign-in more than once."]);
+        problems(
+          incident({ components: ["data-delivery", "platform", "data-delivery", "data-delivery"] }),
+        ),
+      ).toEqual(["incident.components lists data-delivery more than once."]);
     });
   });
 
@@ -551,7 +553,7 @@ describe("file schemas", () => {
       title: "Sign-in is slow",
       kind: "incident",
       impact: "degraded",
-      components: ["sign-in"],
+      components: ["data-delivery"],
       startsAt: "2026-11-04T09:00:00Z",
     },
     update: { stage: "investigating", text: "We are looking into it." },

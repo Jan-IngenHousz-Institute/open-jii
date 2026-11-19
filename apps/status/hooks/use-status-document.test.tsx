@@ -146,16 +146,16 @@ describe("useStatusDocument", () => {
 
   describe("which document is held", () => {
     it("drops a component this page does not know instead of failing", async () => {
-      const [website] = operationalStatusDocument.components;
+      const [platform] = operationalStatusDocument.components;
       const { hook } = await mountWith({
         raw: {
           ...operationalStatusDocument,
-          components: [...operationalStatusDocument.components, { ...website, id: "mobile-app" }],
+          components: [...operationalStatusDocument.components, { ...platform, id: "mobile-app" }],
         },
       });
 
       expect(hook.result.current.hasFailed).toBe(false);
-      expect(hook.result.current.document?.components).toHaveLength(5);
+      expect(hook.result.current.document?.components).toHaveLength(4);
     });
 
     it("drops a component this page does not know from an incident, and the incident naming only those", async () => {

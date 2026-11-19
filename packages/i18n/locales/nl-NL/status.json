@@ -115,20 +115,10 @@
   },
   "component": {
     "delayNow": "De traagste recente metingen duurden ongeveer {{minutes}} minuten.",
-    "website": {
-      "name": "Website",
-      "description": "De openJII-website die je in een browser opent.",
-      "details": "Elke minuut laden we een pagina van de openJII-website van buiten ons netwerk en controleren we of die antwoordt en de productnaam bevat. De website werkt beperkt na twee trage of mislukte controles achter elkaar. Een controle is traag als die langer dan 3 seconden duurt. De website is uitgevallen na drie mislukte controles achter elkaar, of als er in de afgelopen 15 minuten minstens 20 verzoeken binnenkwamen en meer dan de helft daarvan mislukte."
-    },
-    "sign-in": {
-      "name": "Inloggen",
-      "description": "Inloggen op je openJII-account.",
-      "details": "Inloggen met een e-mailcode heeft onze e-mailservice nodig. Elke vijf minuten test het platform zijn verbinding met die service. Inloggen werkt beperkt als in de afgelopen 10 minuten elke test mislukt, of als in de afgelopen 15 minuten een e-mail met een inlogcode niet verstuurd kon worden."
-    },
     "platform": {
       "name": "Platform",
-      "description": "De openJII-dienst achter de website en de veldapp.",
-      "details": "Elke minuut sturen we een testverzoek naar het platform en meten we hoe snel het antwoordt. Elke vijf minuten controleert het platform ook zijn eigen verbindingen met de database en met Databricks, onze leverancier voor gegevensverwerking. Het platform werkt beperkt na twee trage of mislukte testverzoeken achter elkaar, of als de verbinding met Databricks in de afgelopen 10 minuten bij elke controle mislukte. Een testverzoek is traag als het langer dan 2 seconden duurt. Het platform is uitgevallen na drie mislukte testverzoeken achter elkaar, als de verbinding met de database in de afgelopen 10 minuten bij elke controle mislukte, of als er in de afgelopen 15 minuten minstens 10 verzoeken eindigden in een serverfout en die meer dan de helft van alle verzoeken uitmaakten."
+      "description": "De openJII-website en de veldapp, inclusief inloggen en data exporteren.",
+      "details": "Elke minuut laden we een pagina van de openJII-website van buiten ons netwerk en controleren we of die antwoordt en de productnaam bevat, en sturen we een testverzoek naar de dienst achter de website en de veldapp. Elke vijf minuten controleert het platform ook zijn eigen verbindingen met de database, met Databricks, onze leverancier voor gegevensverwerking, en met de e-mailservice die inlogcodes verstuurt. Het platform werkt beperkt na twee trage of mislukte controles achter elkaar, als zijn verbinding met Databricks in de afgelopen 10 minuten bij elke controle mislukte, als zijn verbinding met de e-mailservice in de afgelopen 10 minuten bij elke controle mislukte, als in de afgelopen 15 minuten minstens drie e-mails met een inlogcode niet verstuurd konden worden, of als er in het afgelopen uur minstens drie exports mislukten door een probleem aan onze kant. Een controle van de website is traag als die langer dan 3 seconden duurt, een testverzoek als het langer dan 2 seconden duurt. Het platform is uitgevallen na drie mislukte controles achter elkaar, als zijn verbinding met de database in de afgelopen 10 minuten bij elke controle mislukte, of als er in de afgelopen 15 minuten minstens 20 verzoeken bij de website binnenkwamen en meer dan de helft daarvan mislukte. Het is ook uitgevallen als in de afgelopen 15 minuten minstens 10 verzoeken eindigden in een serverfout en die meer dan de helft van alle verzoeken uitmaakten."
     },
     "data-intake": {
       "name": "Data-invoer",
@@ -144,11 +134,6 @@
       "name": "Macroverwerking",
       "description": "Macro's die op je metingen draaien.",
       "details": "De macroverwerking werkt beperkt als in het afgelopen uur een macro mislukte door een probleem aan onze kant, als er nog een achterstand van metingen op macroresultaten wacht, of als de traagste resultaten meer dan 5 minuten na hun metingen binnenkwamen. De macroverwerking is uitgevallen als de traagste resultaten meer dan 30 minuten na hun metingen binnenkwamen. Fouten in de eigen macrocode van een onderzoeker tellen niet mee."
-    },
-    "exports": {
-      "name": "Exports",
-      "description": "Het downloaden van experimentdata.",
-      "details": "Dit telt exports die mislukken door een probleem aan onze kant, niet door de data of het verzoek. Exports werken beperkt als er in het afgelopen uur een export op die manier is mislukt."
     }
   },
   "day": {

@@ -56,6 +56,13 @@ export const PLATFORM_MIN_ERRORS = 10;
 /** A few failed forwards can be a retry that lands, so only past this many is data being lost. */
 export const INGEST_OUTAGE_FAILURES = 5;
 
+/**
+ * One failed code email can be a passing SMTP error and one failed export a single bad table, so
+ * the page waits for this many in a window. Grafana alerts on the first one.
+ */
+export const SIGN_IN_EMAILS_FAILED_MIN = 3;
+export const EXPORTS_FAILED_MIN = 3;
+
 /** Researchers notice data that arrives a quarter of an hour late, so that is degraded. */
 export const DELIVERY_DEGRADED_LATENCY_MINUTES = 15;
 
@@ -160,7 +167,7 @@ function judgeWebsite({ probes, readings }: ComponentEvidence): ComponentVerdict
   return { state: stateOf(isUnreachable || isServingErrors, isSlow) };
 }
 
-function judgePlatform({ probes, readings }: ComponentEvidence): ComponentVerdict {
+function judgeApi({ probes, readings }: ComponentEvidence): ComponentVerdict {
   const errors = (readings.albElb5xx ?? 0) + (readings.albTarget5xx ?? 0);
   const requests = readings.albRequests ?? 0;
 
@@ -192,9 +199,25 @@ function judgeDataIntake({ readings }: ComponentEvidence): ComponentVerdict {
 
 function judgeSignIn({ readings }: ComponentEvidence): ComponentVerdict {
   const isEmailDown = isDependencyDown(readings.emailUp);
-  const hasFailedEmail = (readings.signInEmailsFailed ?? 0) > 0;
+  const hasFailedEmail = (readings.signInEmailsFailed ?? 0) >= SIGN_IN_EMAILS_FAILED_MIN;
 
   return { state: stateOf(false, isEmailDown || hasFailedEmail) };
+}
+
+function judgeExports({ readings }: ComponentEvidence): ComponentVerdict {
+  return { state: stateOf(false, (readings.exportsFailed ?? 0) >= EXPORTS_FAILED_MIN) };
+}
+
+/** The website, the API behind it and the app, signing in and exporting are one thing to a researcher. */
+function judgePlatform(evidence: ComponentEvidence): ComponentVerdict {
+  const verdicts = [
+    judgeWebsite(evidence),
+    judgeApi(evidence),
+    judgeSignIn(evidence),
+    judgeExports(evidence),
+  ];
+
+  return { state: worstState(verdicts.map((verdict) => verdict.state)) };
 }
 
 function judgeDataDelivery({ readings }: ComponentEvidence): ComponentVerdict {
@@ -241,10 +264,6 @@ export function judgeComponent(
   evidence: ComponentEvidence,
 ): ComponentVerdict {
   switch (id) {
-    case "website":
-      return judgeWebsite(evidence);
-    case "sign-in":
-      return judgeSignIn(evidence);
     case "platform":
       return judgePlatform(evidence);
     case "data-intake":
@@ -253,8 +272,6 @@ export function judgeComponent(
       return judgeDataDelivery(evidence);
     case "macro-processing":
       return judgeMacroProcessing(evidence);
-    case "exports":
-      return { state: stateOf(false, (evidence.readings.exportsFailed ?? 0) > 0) };
   }
 }
 

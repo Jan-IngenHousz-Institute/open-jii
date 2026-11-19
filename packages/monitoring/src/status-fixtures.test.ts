@@ -37,9 +37,8 @@ describe.each(fixtures)("the %s fixture", (_name, document) => {
     expect(statusDocumentSchema.parse(document)).toEqual(document);
   });
 
-  it("holds the five live components", () => {
+  it("holds the four live components", () => {
     expect(document.components.map((component) => component.id)).toEqual([
-      "website",
       "platform",
       "data-intake",
       "data-delivery",
@@ -168,7 +167,6 @@ describe("the maintenance fixture", () => {
     expect(
       maintenanceStatusDocument.components.map((component) => [component.id, component.state]),
     ).toEqual([
-      ["website", "maintenance"],
       ["platform", "maintenance"],
       ["data-intake", "operational"],
       ["data-delivery", "operational"],

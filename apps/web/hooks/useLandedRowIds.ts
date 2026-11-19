@@ -11,7 +11,8 @@ interface Seen {
 /**
  * Ids of the rows a refetch added to the same view (page, sort, filters),
  * named by `viewKey`. A first load or a change of view lands nothing, so only
- * rows that arrived while the table was open count.
+ * rows that arrived while the table was open count. `rows` must belong to
+ * that view; pass `undefined` while another view's rows stand in.
  */
 export function useLandedRowIds(
   rows: readonly { id?: unknown }[] | undefined,

@@ -209,11 +209,10 @@ module "iot_core" {
 }
 
 module "cognito" {
-  source                           = "../../modules/cognito"
-  region                           = var.aws_region
-  environment                      = var.environment
-  identity_pool_name               = "open-jii-${var.environment}-iot-identity-pool"
-  allow_unauthenticated_identities = true
+  source             = "../../modules/cognito"
+  region             = var.aws_region
+  environment        = var.environment
+  identity_pool_name = "open-jii-${var.environment}-iot-identity-pool"
 }
 
 module "vpc" {
@@ -515,12 +514,12 @@ module "migration_runner_ecs" {
 module "backend_alb" {
   source = "../../modules/alb"
 
-  service_name      = "backend"
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnets
-  container_port    = var.backend_container_port
-  security_groups   = [module.vpc.alb_security_group_id]
-  environment       = var.environment
+  service_name    = "backend"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.public_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
 
   health_check_path                = "/health"
   health_check_timeout             = 5

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { getAuthCallback } from "~/lib/auth-callback";
 
 import { cancelPasskeyCeremony } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
@@ -79,7 +80,7 @@ export function EmailLoginForm({
         if (!supported || cancelled) return;
         signInPasskeyMutation
           .mutateAsync({ autoFill: true })
-          .then(() => router.push(callbackUrl ?? "/platform"))
+          .then(() => router.push(getAuthCallback(callbackUrl)))
           .catch(() => undefined);
       })
       .catch(() => undefined);
@@ -155,11 +156,11 @@ export function EmailLoginForm({
 
       if (!isRegistered) {
         const registerUrl = callbackUrl
-          ? `/${locale}/register?callbackUrl=${encodeURIComponent(callbackUrl)}`
+          ? `/${locale}/register?callbackUrl=${encodeURIComponent(getAuthCallback(callbackUrl))}`
           : `/${locale}/register`;
         router.push(registerUrl);
       } else {
-        router.push(callbackUrl ?? "/platform");
+        router.push(getAuthCallback(callbackUrl));
       }
     } catch {
       otpForm.setError("code", { message: errorMessage });
