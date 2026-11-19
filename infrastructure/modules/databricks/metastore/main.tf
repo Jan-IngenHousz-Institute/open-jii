@@ -13,6 +13,10 @@ resource "databricks_metastore" "this" {
   name     = var.metastore_name
   owner    = var.owner
   region   = var.region
+
+  lifecycle {
+    ignore_changes = [delta_sharing_recipient_token_lifetime_in_seconds]
+  }
 }
 
 resource "databricks_metastore_assignment" "default_metastore" {

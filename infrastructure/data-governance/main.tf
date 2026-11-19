@@ -44,7 +44,8 @@ module "databricks_metastore" {
   source         = "../modules/databricks/metastore"
   metastore_name = "open_jii_metastore_aws_eu_central_1"
   region         = var.aws_region
-  owner          = "account users"
+  # The owner can grant anything in every catalog, so it is an admin group, never all account users.
+  owner = "admins (bog)"
 
   # Workspace IDs derived from workspaces map
   workspace_ids = [for ws in var.workspaces : ws.workspace_id]
