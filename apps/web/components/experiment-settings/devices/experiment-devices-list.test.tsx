@@ -1,6 +1,6 @@
 import { createIotDevice } from "@/test/factories";
 import { openOnUrl } from "@/test/list-request";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { act, render, renderHook, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
@@ -112,6 +112,46 @@ describe("ExperimentDevicesList", () => {
     expect(names()[0]).toContain("Zulu");
     await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
     expect(screen.queryByRole("button", { name: "common.resetSorting" })).not.toBeInTheDocument();
+  });
+
+  it("sorts families in both directions, keeping equal families stable and unregistered publishers visible", async () => {
+    const user = userEvent.setup();
+    renderList([
+      devices[1],
+      {
+        ...devices[1],
+        device: createIotDevice({ name: "Beta", deviceType: "mobile" }),
+        clientId: "beta",
+      },
+      devices[2],
+      devices[0],
+    ]);
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    expect(names()).toEqual([
+      expect.stringContaining("unregistered-publisher"),
+      expect.stringContaining("Zulu"),
+      expect.stringContaining("Alpha"),
+      expect.stringContaining("Beta"),
+    ]);
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    expect(names()).toEqual([
+      expect.stringContaining("Alpha"),
+      expect.stringContaining("Beta"),
+      expect.stringContaining("Zulu"),
+      expect.stringContaining("unregistered-publisher"),
+    ]);
+  });
+
+  it("returns the loaded experiment devices when explicitly refetched", async () => {
+    const { result } = renderHook(() =>
+      useExperimentDevicesList({ experimentId: "exp", devices, dataUpdatedAt: 1 }),
+    );
+    await act(async () => {
+      const refreshed = await result.current.refetch();
+      expect(refreshed.data).toEqual(devices);
+      expect(refreshed.error).toBeNull();
+    });
+    expect(result.current.data?.items).toEqual(devices);
   });
 
   it("restores search, family and sort from the URL without removing an unowned parameter", () => {

@@ -1,6 +1,6 @@
 import { createDeviceGroupMemberHealth } from "@/test/factories";
 import { openOnUrl } from "@/test/list-request";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, renderHook, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -268,6 +268,37 @@ describe("GroupDevicesTable", () => {
     );
     expect(screen.queryByRole("link", { name: "Before" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "After" })).toBeInTheDocument();
+  });
+
+  it("returns the loaded group members when explicitly refetched", async () => {
+    const members = [createDeviceGroupMemberHealth({ serialNumber: "AA:11" })];
+    const { result } = renderHook(() =>
+      useGroupDevicesList({
+        groupId: "group",
+        dataUpdatedAt: 1,
+        members,
+        labelByDeviceId: new Map(),
+        pipelineUnavailable: false,
+        now: NOW,
+      }),
+    );
+    await act(async () => {
+      const refreshed = await result.current.refetch();
+      expect(refreshed.data).toEqual(members);
+      expect(refreshed.error).toBeNull();
+    });
+    expect(result.current.data?.items).toEqual(members);
+  });
+
+  it("keeps a device name link from also triggering row navigation", async () => {
+    const user = userEvent.setup();
+    const member = createDeviceGroupMemberHealth({ serialNumber: "AA:11" });
+    const { router } = renderTable({ members: [member] });
+    const link = screen.getByRole("link", { name: "AA:11" });
+    expect(link).toHaveAttribute("href", `/en-US/platform/devices/${member.deviceId}/monitoring`);
+    link.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    await user.click(link);
+    expect(router.push).not.toHaveBeenCalled();
   });
 
   it("opens the device's dashboard from anywhere on the row", async () => {
