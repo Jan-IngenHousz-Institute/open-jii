@@ -9,6 +9,7 @@ import { GetExperimentDataUseCase } from "../application/use-cases/experiment-da
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 import { WatchExperimentTablesUseCase } from "../application/use-cases/experiment-data/watch-experiment-tables";
+import type { ExperimentTablesChange } from "../core/models/experiment-data.model";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
@@ -115,9 +116,9 @@ describe("ExperimentDataController", () => {
       const tables = [
         { identifier: "raw_data", totalRows: 3, latestRowAt: null, schemaRevision: null },
       ];
-      async function* changes() {
+      async function* changes(): AsyncGenerator<ExperimentTablesChange, void> {
         await Promise.resolve();
-        yield { type: "changed" as const, tables };
+        yield { type: "changed", tables };
       }
       const execute = vi
         .spyOn(watchExperimentTablesUseCase, "execute")
