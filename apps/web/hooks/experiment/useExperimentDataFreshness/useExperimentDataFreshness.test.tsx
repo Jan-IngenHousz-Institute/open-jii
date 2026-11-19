@@ -8,7 +8,10 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentTablesEvent } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentTableMetadata,
+  ExperimentTablesEvent,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentDataFreshness } from "./useExperimentDataFreshness";
 
@@ -77,6 +80,13 @@ function mountChangeStream() {
   };
 }
 
+function mountStoreListing(body: ExperimentTableMetadata[]) {
+  return server.mount(contract.experiments.getExperimentTables, {
+    body,
+    headers: { "x-data-source": "store" },
+  });
+}
+
 function dataKey(tableName: string) {
   return orpc.experiments.getExperimentData.queryKey({
     input: { id: "exp-1", tableName, page: 1, pageSize: 10 },
@@ -115,7 +125,7 @@ describe("useExperimentDataFreshness", () => {
     const spy = server.mount(contract.experiments.getExperimentTables, {
       body: () => [RAW, spy.callCount > 1 ? { ...MACRO, schemaRevision: "schema-2" } : MACRO],
     });
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"), {
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"), {
       queryClient,
     });
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
@@ -144,7 +154,7 @@ describe("useExperimentDataFreshness", () => {
       body: () => (spy.callCount > 1 ? [moved, MACRO] : [RAW, MACRO]),
     });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"), {
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"), {
       queryClient,
     });
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
@@ -173,7 +183,7 @@ describe("useExperimentDataFreshness", () => {
       body: () => (spy.callCount > 1 ? [widened] : [RAW]),
     });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"), {
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"), {
       queryClient,
     });
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
@@ -195,7 +205,7 @@ describe("useExperimentDataFreshness", () => {
 
     const { result } = renderHook(
       () => {
-        const freshness = useExperimentDataFreshness("exp-1", "warehouse");
+        const freshness = useExperimentDataFreshness("exp-1");
         const rows = useQuery(
           orpc.experiments.getExperimentData.queryOptions({
             input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
@@ -225,7 +235,7 @@ describe("useExperimentDataFreshness", () => {
       body: () => (spy.callCount > 1 ? [moved] : [RAW]),
     });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"), {
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"), {
       queryClient,
     });
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
@@ -254,15 +264,11 @@ describe("useExperimentDataFreshness", () => {
     });
     server.mount(contract.experiments.getExperimentTables, { body: [RAW, MACRO, newer] });
 
-    const { result: one } = renderHook(() =>
-      useExperimentDataFreshness("exp-1", "warehouse", ["raw_data"]),
-    );
+    const { result: one } = renderHook(() => useExperimentDataFreshness("exp-1", ["raw_data"]));
     const { result: two } = renderHook(() =>
-      useExperimentDataFreshness("exp-1", "warehouse", ["raw_data", "macro-1"]),
+      useExperimentDataFreshness("exp-1", ["raw_data", "macro-1"]),
     );
-    const { result: experiment } = renderHook(() =>
-      useExperimentDataFreshness("exp-1", "warehouse"),
-    );
+    const { result: experiment } = renderHook(() => useExperimentDataFreshness("exp-1"));
 
     await waitFor(() => expect(one.current.newestRowAt).toBe("2026-09-22T10:05:00.000Z"));
     await waitFor(() => expect(two.current.newestRowAt).toBe("2026-09-22T10:07:00.000Z"));
@@ -272,7 +278,7 @@ describe("useExperimentDataFreshness", () => {
   it("reports no newest row for an experiment without rows", async () => {
     server.mount(contract.experiments.getExperimentTables, { body: [] });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"));
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
 
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
     expect(result.current.newestRowAt).toBeNull();
@@ -283,7 +289,7 @@ describe("useExperimentDataFreshness", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const spy = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"));
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
 
     act(() => result.current.togglePaused());
@@ -302,7 +308,7 @@ describe("useExperimentDataFreshness", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const spy = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"));
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
 
     await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
@@ -320,7 +326,7 @@ describe("useExperimentDataFreshness", () => {
     await waitFor(() => expect(spy.callCount).toBe(callsWhileIdle + 1));
   });
 
-  describe("with rows from the store", () => {
+  describe("with a listing the store answered", () => {
     beforeEach(() => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       // The reconnect wait is then exactly its base: ten seconds, doubling.
@@ -338,11 +344,11 @@ describe("useExperimentDataFreshness", () => {
     }
 
     it("applies a change to the listing it holds, refetching the moved rows but not the listing", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const rowReads = server.mount(contract.experiments.getExperimentData, { body: [] });
       const stream = mountChangeStream();
       const { result } = renderHook(() => {
-        const freshness = useExperimentDataFreshness("exp-1", "store");
+        const freshness = useExperimentDataFreshness("exp-1");
         useQuery(
           orpc.experiments.getExperimentData.queryOptions({
             input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
@@ -368,9 +374,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("fetches the listing once for a change that names a new table", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
       const listingCalls = listing.callCount;
 
@@ -385,11 +391,11 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("retries rows whose refresh failed at a heartbeat, though nothing moved", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       server.mount(contract.experiments.getExperimentData, { status: 500 });
       const stream = mountChangeStream();
       const { result } = renderHook(() => {
-        useExperimentDataFreshness("exp-1", "store");
+        useExperimentDataFreshness("exp-1");
         return useQuery(
           orpc.experiments.getExperimentData.queryOptions({
             input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
@@ -408,9 +414,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("counts a heartbeat as current, so a quiet stream is not behind", async () => {
-      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
       for (let beat = 0; beat < 7; beat++) {
@@ -422,9 +428,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("stays live when the stream drops, and is behind two minutes after it last heard", async () => {
-      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
       for (let beat = 0; beat < 15; beat++) {
         await act(() => vi.advanceTimersByTimeAsync(20_000));
@@ -442,9 +448,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("polls every 30 s while the stream is down, and reconnects after a growing wait", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
       const listingCalls = listing.callCount;
 
@@ -463,9 +469,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("reconnects after a stream ends at its lifetime", async () => {
-      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
       await act(() => stream.end());
@@ -479,9 +485,9 @@ describe("useExperimentDataFreshness", () => {
     it.each([429, 503])(
       "reconnects after the growing wait when the stream is refused with %i",
       async (status) => {
-        server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+        mountStoreListing([RAW]);
         const opens = server.mount(contract.experiments.watchExperimentTables, { status });
-        renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+        renderHook(() => useExperimentDataFreshness("exp-1"));
         await waitFor(() => expect(opens.callCount).toBe(1));
 
         await act(() => vi.advanceTimersByTimeAsync(9_900));
@@ -498,9 +504,9 @@ describe("useExperimentDataFreshness", () => {
       queryClient.setQueryDefaults(listingKey, { gcTime: Infinity });
       queryClient.setQueryData(listingKey, { headers: { "x-data-source": "store" }, body: [RAW] });
       await act(() => vi.advanceTimersByTimeAsync(1_000));
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      renderHook(() => useExperimentDataFreshness("exp-1", "store"), { queryClient });
+      renderHook(() => useExperimentDataFreshness("exp-1"), { queryClient });
       await waitFor(() => expect(stream.opened()).toBe(1));
 
       await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
@@ -516,9 +522,9 @@ describe("useExperimentDataFreshness", () => {
     it.each([403, 404])(
       "polls instead of reconnecting when the stream is refused with %i",
       async (status) => {
-        const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+        const listing = mountStoreListing([RAW]);
         const opens = server.mount(contract.experiments.watchExperimentTables, { status });
-        const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+        const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
         await waitFor(() => expect(result.current.hasLoaded).toBe(true));
         await waitFor(() => expect(opens.callCount).toBe(1));
         const listingCalls = listing.callCount;
@@ -531,9 +537,9 @@ describe("useExperimentDataFreshness", () => {
     );
 
     it("closes the stream in a hidden tab, and reopens it with at most one fetch when shown", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
       act(() => focusManager.setFocused(false));
@@ -551,9 +557,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("closes the stream while paused, and reopens it with one fetch on resume", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
       act(() => result.current.togglePaused());
@@ -569,9 +575,9 @@ describe("useExperimentDataFreshness", () => {
     });
 
     it("closes the stream after ten idle minutes, and reopens it with one fetch on input", async () => {
-      const listing = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+      const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
-      const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "store"));
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
       await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
@@ -589,34 +595,33 @@ describe("useExperimentDataFreshness", () => {
       expect(listing.callCount).toBe(callsWhileIdle + 1);
     });
 
-    it("opens the stream when the rows' source turns to the store, and closes it when it turns back", async () => {
-      server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+    it("opens the stream when the store answers the listing, and closes it when the warehouse does", async () => {
+      const warehouse = { "x-data-source": "warehouse" };
+      server.mount(contract.experiments.getExperimentTables, { body: [RAW], headers: warehouse });
       const stream = mountChangeStream();
-
-      const { rerender } = renderHook(
-        ({ source }: { source: "warehouse" | "store" }) =>
-          useExperimentDataFreshness("exp-1", source),
-        { initialProps: { source: "warehouse" } },
-      );
+      const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
+      await waitFor(() => expect(result.current.hasLoaded).toBe(true));
       expect(stream.opened()).toBe(0);
 
-      rerender({ source: "store" });
+      mountStoreListing([RAW]);
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
       await waitFor(() => expect(stream.opened()).toBe(1));
 
-      rerender({ source: "warehouse" });
+      server.mount(contract.experiments.getExperimentTables, { body: [RAW], headers: warehouse });
+      await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
       await waitFor(() => expect(stream.closed()).toBe(1));
     });
   });
 
-  it("polls a surface whose rows come from the warehouse every 30 s, with no stream", async () => {
+  it("polls a listing the warehouse answered every 30 s, with no stream", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const listing = server.mount(contract.experiments.getExperimentTables, {
       body: [RAW],
-      headers: { "x-data-source": "store" },
+      headers: { "x-data-source": "warehouse" },
     });
     const stream = mountChangeStream();
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"));
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
     const callsAfterLoad = listing.callCount;
 
@@ -631,7 +636,7 @@ describe("useExperimentDataFreshness", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
 
-    const { result } = renderHook(() => useExperimentDataFreshness("exp-1", "warehouse"));
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
     await waitFor(() => expect(result.current.hasLoaded).toBe(true));
 
     server.mount(contract.experiments.getExperimentTables, { status: 500 });

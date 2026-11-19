@@ -1,8 +1,8 @@
 import { createExperimentDataTable, createExperimentTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useForm, FormProvider } from "react-hook-form";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -64,26 +64,16 @@ function mountTablesAndData(tableNames: string[] = ["readings"]) {
 }
 
 describe("VisualizationWorkspace", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("checks for new rows every 30 s as its chart reads them, from the warehouse", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+  it("follows the store's table changes when the store answers its listing", async () => {
     mountTablesAndData();
-    const listing = server.mount(contract.experiments.getExperimentTables, {
+    server.mount(contract.experiments.getExperimentTables, {
       body: [createExperimentTable({ identifier: "readings", displayName: "readings" })],
       headers: { "x-data-source": "store" },
     });
-    const changes = server.mount(contract.experiments.watchExperimentTables, { status: 500 });
+    const changes = server.mount(contract.experiments.watchExperimentTables, { status: 404 });
     render(<Harness />);
-    await waitFor(() => expect(listing.callCount).toBe(1));
 
-    await act(() => vi.advanceTimersByTimeAsync(29_000));
-    expect(listing.callCount).toBe(1);
-    await act(() => vi.advanceTimersByTimeAsync(1_000));
-    await waitFor(() => expect(listing.callCount).toBe(2));
-    expect(changes.called).toBe(false);
+    await waitFor(() => expect(changes.called).toBe(true));
   });
 
   it("renders the chart-type picker, the canvas area, and the inspector by default", async () => {

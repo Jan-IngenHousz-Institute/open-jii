@@ -13,7 +13,7 @@ describe("DataFreshness", () => {
       body: [createExperimentTable({ latestRowAt: "2026-09-22T10:05:00.000Z" })],
     });
 
-    render(<DataFreshness experimentId="exp-1" rowsSource="warehouse" />);
+    render(<DataFreshness experimentId="exp-1" />);
 
     expect(await screen.findByText("experimentData.freshness.live")).toBeInTheDocument();
     expect(screen.getByText("experimentData.freshness.newestData")).toBeInTheDocument();
@@ -22,7 +22,7 @@ describe("DataFreshness", () => {
   it("says there are no rows yet for an empty experiment", async () => {
     server.mount(contract.experiments.getExperimentTables, { body: [] });
 
-    render(<DataFreshness experimentId="exp-1" rowsSource="warehouse" />);
+    render(<DataFreshness experimentId="exp-1" />);
 
     expect(await screen.findByText("experimentData.freshness.noRows")).toBeInTheDocument();
   });
@@ -33,7 +33,7 @@ describe("DataFreshness", () => {
     });
     const user = userEvent.setup();
 
-    render(<DataFreshness experimentId="exp-1" rowsSource="warehouse" />);
+    render(<DataFreshness experimentId="exp-1" />);
     await user.click(await screen.findByRole("button", { name: "experimentData.freshness.pause" }));
 
     expect(screen.getByText("experimentData.freshness.paused")).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe("DataFreshness", () => {
   it("renders nothing until the listing arrives", () => {
     server.mount(contract.experiments.getExperimentTables, { delay: "infinite" });
 
-    const { container } = render(<DataFreshness experimentId="exp-1" rowsSource="warehouse" />);
+    const { container } = render(<DataFreshness experimentId="exp-1" />);
 
     expect(container).toBeEmptyDOMElement();
   });

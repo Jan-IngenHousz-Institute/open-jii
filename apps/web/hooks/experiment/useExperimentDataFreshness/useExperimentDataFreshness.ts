@@ -6,7 +6,6 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type {
-  ExperimentDataSource,
   ExperimentTableMetadata,
   ExperimentTableVersion,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -52,17 +51,14 @@ function isFocused(): boolean {
  * Follows the experiment's table listing while the page is visible and in use, and
  * refetches a table's rows and charts only when its count, newest row or schema
  * moves, and its columns only when its schema does, so an open page follows the
- * pipeline without resetting what the user is doing. Rows read from the store are
- * followed through its change stream, others by polling. `tableNames` picks whose
- * newest data to report; omitted, the whole experiment.
+ * pipeline without resetting what the user is doing. A listing the store answered
+ * is followed through the store's change stream, one from the warehouse by polling.
+ * `tableNames` picks whose newest data to report; omitted, the whole experiment.
  */
-export const useExperimentDataFreshness = (
-  experimentId: string,
-  rowsSource: ExperimentDataSource | undefined,
-  tableNames?: string[],
-) => {
+export const useExperimentDataFreshness = (experimentId: string, tableNames?: string[]) => {
   const queryClient = useQueryClient();
   const [isPaused, setIsPaused] = useState(false);
+  const [isStreamOpen, setIsStreamOpen] = useState(false);
   // What the page showed when paused, so the newest-row time matches the rows held still.
   const [heldTables, setHeldTables] = useState<ExperimentTableMetadata[] | undefined>();
   const [overdueAt, setOverdueAt] = useState(0);
@@ -73,11 +69,7 @@ export const useExperimentDataFreshness = (
   const isIdle = useIsIdle();
   const isIdlePaused = isIdle && !isPaused;
   const isPolling = !isPaused && !isIdle;
-  const isVisible = useSyncExternalStore(subscribeToFocus, isFocused, () => true);
-  const isListening = isPolling && isVisible && rowsSource === "store";
-  const stream = useExperimentTableChanges(experimentId, isListening);
-  const isStreamLive = stream.isOpen;
-  const isPollingListing = isPolling && !isStreamLive;
+  const isPollingListing = isPolling && !isStreamOpen;
 
   // A hidden tab stops polling, as refetchIntervalInBackground stays off, and closes the stream.
   const {
@@ -95,6 +87,11 @@ export const useExperimentDataFreshness = (
     }),
   );
   const tables = listing?.body;
+
+  const isVisible = useSyncExternalStore(subscribeToFocus, isFocused, () => true);
+  const isStoreListing = listing?.headers["x-data-source"] === "store";
+  const isListening = isPolling && isVisible && isStoreListing;
+  const stream = useExperimentTableChanges(experimentId, isListening, setIsStreamOpen);
 
   // Other screens share the listing and may refetch it while this one is
   // paused, so a pause holds the rows still and resume applies what moved.

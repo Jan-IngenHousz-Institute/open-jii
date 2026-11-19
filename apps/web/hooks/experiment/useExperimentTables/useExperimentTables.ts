@@ -16,5 +16,5 @@ export type { ExperimentTableMetadata };
 export const useExperimentTables = (experimentId: string) => {
   const { data, isLoading, error } = useQuery(experimentTablesQuery(orpc, experimentId));
 
-  return { tables: data?.tables, source: data?.source, isLoading, error };
+  return { tables: data, isLoading, error };
 };

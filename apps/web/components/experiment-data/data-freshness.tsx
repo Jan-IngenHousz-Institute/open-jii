@@ -6,7 +6,6 @@ import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
 import { Loader2, Pause, Play } from "lucide-react";
 
-import type { ExperimentDataSource } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
@@ -19,13 +18,12 @@ const DOT_CLASS: Record<DataFreshnessStatus, string> = {
 
 interface DataFreshnessProps {
   experimentId: string;
-  rowsSource: ExperimentDataSource | undefined;
   /** Whose newest data to report; omitted, the newest in the experiment. */
   tableNames?: string[];
 }
 
 /** Keeps the experiment's rows and charts current, and says how current they are. */
-export function DataFreshness({ experimentId, rowsSource, tableNames }: DataFreshnessProps) {
+export function DataFreshness({ experimentId, tableNames }: DataFreshnessProps) {
   const { t } = useTranslation("experiments");
   const locale = useLocale();
   const {
@@ -37,7 +35,7 @@ export function DataFreshness({ experimentId, rowsSource, tableNames }: DataFres
     isLoadingRows,
     isPaused,
     togglePaused,
-  } = useExperimentDataFreshness(experimentId, rowsSource, tableNames);
+  } = useExperimentDataFreshness(experimentId, tableNames);
 
   if (!hasLoaded) {
     return null;

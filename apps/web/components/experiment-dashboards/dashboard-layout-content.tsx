@@ -90,11 +90,7 @@ export function DashboardLayoutContent({
               {isEditing ? (
                 <AutosaveIndicator />
               ) : (
-                <DataFreshness
-                  experimentId={experimentId}
-                  rowsSource="warehouse"
-                  tableNames={tableNames}
-                />
+                <DataFreshness experimentId={experimentId} tableNames={tableNames} />
               )}
               {canEdit && (
                 <Button variant="outline" size="sm" onClick={toggleMode}>

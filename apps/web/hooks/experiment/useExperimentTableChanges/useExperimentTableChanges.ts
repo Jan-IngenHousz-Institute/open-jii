@@ -96,13 +96,16 @@ async function followTableChanges(
 
 /**
  * Follows the store's change stream of an experiment's tables while `isListening`, and writes each
- * change into the shared tables listing. `heardAt` is when the stream last said anything, a
- * heartbeat included; `isOpen` says whether it is connected now.
+ * change into the shared tables listing. `onOpenChange` hears whether the stream is connected;
+ * `heardAt` is when it last said anything, a heartbeat included.
  */
-export const useExperimentTableChanges = (experimentId: string, isListening: boolean) => {
+export const useExperimentTableChanges = (
+  experimentId: string,
+  isListening: boolean,
+  onOpenChange: (isOpen: boolean) => void,
+) => {
   const queryClient = useQueryClient();
   const [heardAt, setHeardAt] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (!isListening) {
@@ -123,7 +126,7 @@ export const useExperimentTableChanges = (experimentId: string, isListening: boo
 
     const handleEvent = (event: ExperimentTablesEvent) => {
       setHeardAt(Date.now());
-      setIsOpen(true);
+      onOpenChange(true);
 
       if (event.type === "heartbeat") {
         return;
@@ -157,13 +160,13 @@ export const useExperimentTableChanges = (experimentId: string, isListening: boo
     void followTableChanges(experimentId, controller.signal, {
       onConnect: handleConnect,
       onEvent: handleEvent,
-      onDrop: () => setIsOpen(false),
+      onDrop: () => onOpenChange(false),
     });
     return () => {
       controller.abort();
-      setIsOpen(false);
+      onOpenChange(false);
     };
-  }, [isListening, experimentId, queryClient]);
+  }, [isListening, experimentId, queryClient, onOpenChange]);
 
-  return { heardAt, isOpen: isListening && isOpen };
+  return { heardAt };
 };

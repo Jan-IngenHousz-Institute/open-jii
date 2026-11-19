@@ -18,9 +18,7 @@ export function useTableRowCounts(
     if (data === undefined && !error) {
       return undefined;
     }
-    const counts = new Map(
-      (data?.tables ?? []).map((table) => [table.identifier, table.totalRows]),
-    );
+    const counts = new Map((data ?? []).map((table) => [table.identifier, table.totalRows]));
     return (tableName: string) => counts.get(tableName) ?? 0;
   }, [data, error]);
 }
