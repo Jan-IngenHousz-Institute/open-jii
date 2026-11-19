@@ -6,7 +6,8 @@
 --
 -- The copy changes and deletes sheets in place, so unlike gold's rows these can go: an identifier an
 -- edit dropped, or every identifier of a deleted sheet, arrives as a row with is_deleted = 1 at the
--- commit that removed it, which FINAL leaves out.
+-- commit that removed it, which FINAL leaves out. A sheet keeps the time it was created through every
+-- edit, so a row's copies always land in the same month.
 CREATE TABLE IF NOT EXISTS metadata_rows
 (
     experiment_id String,
@@ -18,10 +19,14 @@ CREATE TABLE IF NOT EXISTS metadata_rows
     is_deleted UInt8 DEFAULT 0,
     _commit_version Int64,
     _commit_timestamp DateTime64(6, 'UTC'),
-    inserted_at DateTime64(6, 'UTC') DEFAULT now64(6)
+    inserted_at DateTime64(6, 'UTC') DEFAULT now64(6),
+    -- The feed's lag check reads the last few minutes' rows once a minute; this skips the rest.
+    INDEX recent_inserts inserted_at TYPE minmax GRANULARITY 1
 )
 ENGINE = ReplacingMergeTree(_commit_version, is_deleted)
-ORDER BY (experiment_id, sheet_id, identifier);
+PARTITION BY toYYYYMM(sheet_created_at)
+ORDER BY (experiment_id, sheet_id, identifier)
+SETTINGS non_replicated_deduplication_window = 10000;
 
 CREATE VIEW IF NOT EXISTS experiment_metadata_rows DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
 SELECT sheet_id, sheet_created_at, match_on, identifier, fields FROM metadata_rows FINAL WHERE experiment_id = {experiment:String};
