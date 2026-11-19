@@ -4,12 +4,14 @@ import { DatabricksAdapter } from "../../../../common/modules/databricks/databri
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
 import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
 import { GetIotDeviceFirmwareHistoryUseCase } from "./get-iot-device-firmware-history";
 
 const RANGE = { from: "2026-07-15T00:00:00.000Z", to: "2026-08-14T00:00:00.000Z" } as const;
+const SOURCES: DeviceDataSource[] = ["warehouse", "store"];
 
 describe("GetIotDeviceFirmwareHistoryUseCase", () => {
   const testApp = TestHarness.App;
@@ -37,18 +39,15 @@ describe("GetIotDeviceFirmwareHistoryUseCase", () => {
     await testApp.teardown();
   });
 
-  it.each(["warehouse", "store"] as const)(
-    "resolves the device's thing name before reading the %s",
-    async (source) => {
-      const device = await testApp.createIotDevice({ createdBy: userId });
-      const execute = vi.spyOn(inner, "execute").mockResolvedValue(success([]));
+  it.each(SOURCES)("resolves the device's thing name before reading the %s", async (source) => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    const execute = vi.spyOn(inner, "execute").mockResolvedValue(success([]));
 
-      const result = await useCase.execute(device.id, RANGE.from, RANGE.to, "day", source);
+    const result = await useCase.execute(device.id, RANGE.from, RANGE.to, "day", source);
 
-      assertSuccess(result);
-      expect(execute).toHaveBeenCalledWith(device.thingName, RANGE.from, RANGE.to, "day", source);
-    },
-  );
+    assertSuccess(result);
+    expect(execute).toHaveBeenCalledWith(device.thingName, RANGE.from, RANGE.to, "day", source);
+  });
 
   it("reads the store, not the warehouse, when the source is the store", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
