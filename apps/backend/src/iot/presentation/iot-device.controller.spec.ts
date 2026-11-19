@@ -1,6 +1,9 @@
 import { faker } from "@faker-js/faker";
+import type { AnyContractProcedure } from "@orpc/contract";
 import { StatusCodes } from "http-status-codes";
+import type { MockInstance } from "vitest";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   BulkRegisterIotDevicesResult,
@@ -11,17 +14,19 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
+import { DatabricksSqlService } from "../../common/modules/databricks/services/sql/sql.service";
+import { ServingStoreClientService } from "../../common/modules/serving-store/services/client/client.service";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
-import { DeviceDataSourceService } from "../application/services/device-data-source.service";
-import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
 import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
-import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
+import type { DeviceReads } from "../core/ports/device-reads.port";
 import { IOT_SERVING_STORE_PORT } from "../core/ports/serving-store.port";
 import type { ServingStorePort } from "../core/ports/serving-store.port";
 
@@ -787,79 +792,100 @@ describe("IotDeviceController", () => {
 
   describe("read source", () => {
     const WINDOW = { from: "2026-08-13T00:00:00.000Z", to: "2026-08-13T12:00:00.000Z" };
-    const notFound = failure(AppError.notFound("No device"));
 
-    const routes = [
+    interface DevicePageRead {
+      name: string;
+      route: AnyContractProcedure;
+      query: Record<string, string>;
+      read: keyof DeviceReads;
+    }
+
+    const devicePageReads: DevicePageRead[] = [
       {
         name: "last activity",
         route: contract.iot.getIotDeviceActivity,
         query: {},
         read: "getDeviceLastActivity",
-        mockUseCase: () =>
-          vi
-            .spyOn(testApp.module.get(GetIotDeviceActivityUseCase), "execute")
-            .mockResolvedValue(notFound),
       },
       {
         name: "observed experiments",
         route: contract.iot.listDeviceObservedExperiments,
         query: WINDOW,
         read: "getDeviceThroughput",
-        mockUseCase: () =>
-          vi
-            .spyOn(testApp.module.get(GetDeviceObservedExperimentsUseCase), "execute")
-            .mockResolvedValue(notFound),
       },
       {
         name: "firmware history",
         route: contract.iot.getDeviceFirmwareHistory,
         query: { ...WINDOW, bucket: "day" },
         read: "getDeviceFirmwareHistory",
-        mockUseCase: () =>
-          vi
-            .spyOn(testApp.module.get(GetIotDeviceFirmwareHistoryUseCase), "execute")
-            .mockResolvedValue(notFound),
       },
       {
         name: "monitoring",
         route: contract.iot.getDeviceMonitoring,
         query: { ...WINDOW, bucket: "hour" },
         read: "getDeviceThroughput",
-        mockUseCase: () =>
-          vi
-            .spyOn(testApp.module.get(GetDeviceMonitoringUseCase), "execute")
-            .mockResolvedValue(notFound),
       },
-    ] as const;
+    ];
 
-    it.each(routes)(
-      "reads a device's $name from the source the store flag picks",
-      async ({ route, query, mockUseCase }) => {
+    let warehouseQuery: MockInstance<DatabricksSqlService["executeSqlQuery"]>;
+    let storeQuery: MockInstance<ServingStoreClientService["query"]>;
+
+    beforeEach(() => {
+      const emptyResult = { columns: [], rows: [], totalRows: 0, truncated: false };
+      warehouseQuery = vi
+        .spyOn(testApp.module.get(DatabricksSqlService), "executeSqlQuery")
+        .mockResolvedValue(success(emptyResult));
+      storeQuery = vi
+        .spyOn(testApp.module.get(ServingStoreClientService), "query")
+        .mockResolvedValue(success({ rows: [] }));
+      const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
+    });
+
+    function readFromStore() {
+      const analyticsAdapter: MockAnalyticsAdapter = testApp.module.get(AnalyticsAdapter);
+      analyticsAdapter.setFlag(FEATURE_FLAGS.STORE_EXPERIMENT_READS, true);
+    }
+
+    it.each(devicePageReads)(
+      "reads a device's $name from the store, with no warehouse round trip, once the store flag is on",
+      async ({ route, query }) => {
         const device = await testApp.createIotDevice({ createdBy: userId });
-        const sourceFor = vi
-          .spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor")
-          .mockResolvedValue("store");
-        const execute = mockUseCase();
+        readFromStore();
 
         await testApp
           .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
           .withAuth(userId)
           .query(query)
-          .expect(StatusCodes.NOT_FOUND);
+          .expect(StatusCodes.OK);
 
-        expect(sourceFor).toHaveBeenCalledWith(expect.objectContaining({ id: userId }));
-        expect(execute.mock.lastCall?.at(-1)).toBe("store");
+        expect(storeQuery).toHaveBeenCalled();
+        expect(warehouseQuery).not.toHaveBeenCalled();
       },
     );
 
-    it.each(routes)(
+    it.each(devicePageReads)(
+      "reads a device's $name from the warehouse while the store flag is off",
+      async ({ route, query }) => {
+        const device = await testApp.createIotDevice({ createdBy: userId });
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.OK);
+
+        expect(warehouseQuery).toHaveBeenCalled();
+        expect(storeQuery).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(devicePageReads)(
       "refuses a device's $name to a viewer without access before reading the store",
       async ({ route, query, read }) => {
         const owner = await testApp.createTestUser({ name: "Other" });
         const device = await testApp.createIotDevice({ createdBy: owner });
-        vi.spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor").mockResolvedValue(
-          "store",
-        );
+        readFromStore();
         const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
         const storeRead = vi.spyOn(servingStore, read);
 
@@ -870,6 +896,7 @@ describe("IotDeviceController", () => {
           .expect(StatusCodes.FORBIDDEN);
 
         expect(storeRead).not.toHaveBeenCalled();
+        expect(storeQuery).not.toHaveBeenCalled();
       },
     );
   });
