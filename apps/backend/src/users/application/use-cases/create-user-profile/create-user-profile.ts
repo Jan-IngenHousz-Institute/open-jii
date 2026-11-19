@@ -54,12 +54,17 @@ export class CreateUserProfileUseCase {
         existingProfile !== null &&
         data.activated !== undefined &&
         data.activated !== existingProfile.activated;
+      const changesName =
+        existingProfile !== null &&
+        (data.firstName !== existingProfile.firstName ||
+          data.lastName !== existingProfile.lastName);
 
       const userProfileResult = await this.userRepository.transaction(async (tx) => {
         const profile = await this.userRepository.createOrUpdateUserProfile(tx, userId, data);
-        const annotations = changesActivation
-          ? await this.annotationsRepository.findOwedByAuthor(tx, userId)
-          : [];
+        const annotations =
+          changesActivation || changesName
+            ? await this.annotationsRepository.findOwedByAuthor(tx, userId)
+            : [];
         await this.outboxRepository.owe(tx, [
           { recordType: "contributor", recordId: userId, experimentId: null },
           ...annotations,

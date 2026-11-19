@@ -183,16 +183,35 @@ describe("CreateUserProfileUseCase", () => {
     );
 
     it.each([
+      ["first name", { firstName: "Grace", lastName: "Lovelace" }],
+      ["last name", { firstName: "Ada", lastName: "Hopper" }],
+    ])(
+      "owes the copy of every annotation the author made when an edit changes their %s, and no one else's",
+      async (_, name) => {
+        const userId = await testApp.createTestUser({ name: "Ada Lovelace" });
+        const mine = await annotatedByUserAndAnother(userId);
+
+        assertSuccess(await useCase.execute(name, userId));
+
+        expect(await owedAnnotations()).toEqual([
+          expect.objectContaining({
+            recordId: mine.id,
+            experimentId: mine.experimentId,
+            destination: "lakehouse",
+          }),
+        ]);
+      },
+    );
+
+    it.each([
       ["names the same activation", { activated: true }],
       ["leaves the activation out", {}],
-    ])("owes no annotation for an edit that %s", async (_, activation) => {
-      await annotatedByUserAndAnother(testUserId);
+    ])("owes no annotation for an edit that keeps the name and %s", async (_, activation) => {
+      const userId = await testApp.createTestUser({ name: "Ada Lovelace" });
+      await annotatedByUserAndAnother(userId);
 
       assertSuccess(
-        await useCase.execute(
-          { firstName: "Ada", lastName: "Lovelace", ...activation },
-          testUserId,
-        ),
+        await useCase.execute({ firstName: "Ada", lastName: "Lovelace", ...activation }, userId),
       );
 
       expect(await owedAnnotations()).toEqual([]);
