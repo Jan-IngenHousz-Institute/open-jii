@@ -3075,10 +3075,10 @@ describe("ExperimentDataRepository", () => {
       expect(result.value[0].totalRows).toBe(1);
     });
 
-    it("refuses a flagged read the warehouse would answer: a chart, or a table the store lacks", async () => {
-      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([largeTable]),
-      );
+    it("refuses a flagged read the warehouse would answer before reading any metadata: a chart, or a table the store lacks", async () => {
+      const metadata = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(failure(AppError.internal("Warehouse asleep")));
       const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
 
       const chart = await repository.getTableData({
@@ -3098,11 +3098,21 @@ describe("ExperimentDataRepository", () => {
         pageSize: 10,
         source: "warehouse",
       });
+      const deviceTable = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "device",
+        flagged: "only",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
 
-      for (const result of [chart, warehousePage]) {
+      for (const result of [chart, warehousePage, deviceTable]) {
         assertFailure(result);
         expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
       }
+      expect(metadata).not.toHaveBeenCalled();
       expect(warehouse).not.toHaveBeenCalled();
     });
 

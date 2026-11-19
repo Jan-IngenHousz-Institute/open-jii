@@ -201,6 +201,20 @@ export class ExperimentDataRepository {
     const isChartRead = hasAggregation || ((hasFilters || hasColumns) && !hasPaging);
     const readSource = isChartRead || join !== undefined ? "warehouse" : source;
 
+    // Charts, joined reads and tables the store does not hold read from the warehouse, and only
+    // the store's read builds the flag filter.
+    const isFlaggedReadUnsupported =
+      flagged !== undefined &&
+      (readSource !== "store" || !this.sourceReads(readSource).readsTable(tableName));
+    if (isFlaggedReadUnsupported) {
+      return failure(
+        AppError.badRequest(
+          "Rows can be filtered by flags only on a page of a table the serving store holds",
+          "FLAGGED_READ_UNSUPPORTED",
+        ),
+      );
+    }
+
     const read: ReadTrace = {
       experimentId,
       tableName,
@@ -227,16 +241,6 @@ export class ExperimentDataRepository {
       shape = joined.value;
     }
     if (flagged !== undefined) {
-      // Charts, joined reads and tables the store does not hold read from the warehouse, and only
-      // the store's read builds the flag filter.
-      if (shape.source !== "store") {
-        return failure(
-          AppError.badRequest(
-            "Rows can be filtered by flags only on a page of a table the serving store holds",
-            "FLAGGED_READ_UNSUPPORTED",
-          ),
-        );
-      }
       shape = { ...shape, flagged };
     }
 
