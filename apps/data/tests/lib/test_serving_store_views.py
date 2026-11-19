@@ -2,10 +2,8 @@
 which its reader reads only for the experiment a read names in a setting, and the contributor and
 client ids kept beside the rows.
 
-The tests run against a real store started with the module's config, which lets a read send that
-setting, and skip without one. infrastructure/modules/serving-store/clickhouse-config/local renders
-it; mount its config.xml as config.d/openjii.xml in the container test_serving_store_tables.py
-describes.
+The tests run against a real store, as described in test_serving_store_tables.py, and skip without
+one. The packaged server config allows custom settings under SQL_, as the store's does.
 """
 
 from __future__ import annotations
@@ -26,9 +24,9 @@ _DATABASE = "views_test"
 _READER = "views_test_reader"
 _READER_PROFILE = "views_test_reader_profile"
 _READER_POLICY = "views_test_reader_policy"
-_EXPERIMENT_SETTING = "custom_experiment"
+_EXPERIMENT_SETTING = "SQL_experiment"
 
-_MODULE = Path(__file__).parents[4] / "infrastructure/modules/serving-store/clickhouse-config"
+_MODULE = Path(__file__).parents[4] / "infrastructure/modules/serving-store"
 _USERS_XML = _MODULE / "templates/users.xml.tftpl"
 
 

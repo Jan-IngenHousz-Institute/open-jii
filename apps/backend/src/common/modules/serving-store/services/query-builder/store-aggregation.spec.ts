@@ -22,10 +22,7 @@ import { ServingStoreConfigService } from "../config/config.service";
 import { MACRO_RESULTS_TABLE } from "./store-tables";
 
 const FIXTURES = resolve(__dirname, "../../../../../../../data/tests/fixtures");
-const MODULE = resolve(
-  __dirname,
-  "../../../../../../../../infrastructure/modules/serving-store/clickhouse-config",
-);
+const MODULE = resolve(__dirname, "../../../../../../../../infrastructure/modules/serving-store");
 
 const zRow = z.object({
   /** The experiment the row belongs to, when not the one most cases read. */
@@ -262,14 +259,8 @@ describe("StoreAggregation", () => {
     expect(pagesOfTables).toContain("timeMatchedRows");
   });
 
-  it("sends the experiment as the setting the module's row policies read and its server allows", () => {
-    const config = readFileSync(resolve(MODULE, "templates/config.xml.tftpl"), "utf-8");
-    const prefix = /<custom_settings_prefixes>([^<]+)<\/custom_settings_prefixes>/.exec(
-      config,
-    )?.[1];
-
-    expect(prefix !== undefined && EXPERIMENT_SETTING.startsWith(prefix)).toBe(true);
-    expect(moduleRowFilter()).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
+  it("sends the experiment as the setting the module's row policies read", () => {
+    expect(READER_ACCESS.rowFilter).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
   });
 
   it("writes integer outputs as text, since a sum or an id may pass 2^53", () => {
@@ -389,19 +380,16 @@ describe("StoreAggregation", () => {
 });
 
 /**
- * Each chart case against a real store of the version the store runs, read by the module's own
- * reader, through the tables and their row policies, compared with Spark's results for the
- * warehouse's own SQL on the same rows. It rebuilds the `store` database, so it runs only against
- * a throwaway store, and skips without one. Start the store with the module's config and users as
- * infrastructure/modules/serving-store/clickhouse-config/local renders them:
+ * Each chart case against a real store of the version the store runs, read by a reader given the
+ * module's grants and row policy, through the tables, compared with Spark's results for the
+ * warehouse's own SQL on the same rows. It rebuilds the `store` database and its own reader, so it
+ * runs only against a throwaway store, and skips without one:
  *
- *   docker run -d -p 127.0.0.1:18123:8123 -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local \
- *     -v "$PWD/config.xml:/etc/clickhouse-server/config.d/openjii.xml:ro" \
- *     -v "$PWD/users.xml:/etc/clickhouse-server/users.d/openjii.xml:ro" \
+ *   docker run -d --name feed-test-clickhouse -p 127.0.0.1:18123:8123 \
+ *     -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
  *     clickhouse/clickhouse-server:25.8.33.6
- *
- * and run it with CLICKHOUSE_TEST_URL=http://127.0.0.1:18123, CLICKHOUSE_TEST_USER=admin and
- * CLICKHOUSE_TEST_PASSWORD=local.
+ *   CLICKHOUSE_TEST_URL=http://127.0.0.1:18123 CLICKHOUSE_TEST_USER=admin CLICKHOUSE_TEST_PASSWORD=local \
+ *     pnpm --filter backend exec vitest run src/common/modules/serving-store
  */
 const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
 const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
@@ -453,6 +441,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       values: [...FIXTURE.rows.map(macroRow("m1")), ...FIXTURE.matches.map(macroRow("m2"))],
       format: "JSONEachRow",
     });
+    await createReader(admin);
 
     const config = new ConfigService({
       servingStore: { url, username: READER, password: READER_PASSWORD },
@@ -463,6 +452,7 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
 
   afterAll(async () => {
     await client.onModuleDestroy();
+    await dropReader(admin);
     await admin.close();
   });
 
@@ -905,16 +895,45 @@ function expectSameValue(actual: number | string | null, expected: number | stri
   expect(actual).toEqual(expectedValue);
 }
 
-/** The rendered module's reader, whose password the local render sets. */
-const READER = "openjii_reader";
-const READER_PASSWORD = process.env.CLICKHOUSE_TEST_READER_PASSWORD ?? "local";
+/** A reader of this spec's own, given the grants and row policy the module gives the store's. */
+const READER = "chart_spec_reader";
+const READER_PASSWORD = "chart-spec";
+const READER_POLICY = "chart_spec_reader_policy";
 
-/** The reader's row filter, as infrastructure/modules/serving-store/clickhouse-config sets it. */
-function moduleRowFilter(): string {
+/** The reader's access as the module's main.tf writes its locals. */
+const READER_ACCESS = readerAccess();
+
+function readerAccess(): { views: string[]; tables: string[]; rowFilter: string } {
   const main = readFileSync(resolve(MODULE, "main.tf"), "utf-8");
-  const rowFilter = /reader_row_filter\s*=\s*"([^"]+)"/.exec(main)?.[1];
-  if (rowFilter === undefined) {
-    throw new Error("main.tf no longer sets reader_row_filter");
+  const local = (name: string) => {
+    const value = new RegExp(`^\\s*${name}\\s*=\\s*(\\[[^\\]]*\\]|"[^"]*")`, "m").exec(main)?.[1];
+    if (value === undefined) {
+      throw new Error(`main.tf no longer sets ${name}`);
+    }
+    return value;
+  };
+  const names = (list: string) => (list.match(/"[^"]+"/g) ?? []).map((name) => name.slice(1, -1));
+  return {
+    views: names(local("reader_views")),
+    tables: names(local("reader_tables")),
+    rowFilter: local("reader_row_filter").slice(1, -1),
+  };
+}
+
+async function createReader(admin: ClickHouseClient): Promise<void> {
+  await dropReader(admin);
+  await admin.command({ query: `CREATE USER ${READER} IDENTIFIED BY '${READER_PASSWORD}'` });
+  for (const name of [...READER_ACCESS.views, ...READER_ACCESS.tables]) {
+    await admin.command({ query: `GRANT SELECT ON store.${name} TO ${READER}` });
   }
-  return rowFilter;
+  const tables = READER_ACCESS.tables.map((table) => `store.${table}`).join(", ");
+  await admin.command({
+    query: `CREATE ROW POLICY ${READER_POLICY} ON ${tables} USING ${READER_ACCESS.rowFilter} TO ${READER}`,
+  });
+}
+
+async function dropReader(admin: ClickHouseClient): Promise<void> {
+  const tables = READER_ACCESS.tables.map((table) => `store.${table}`).join(", ");
+  await admin.command({ query: `DROP ROW POLICY IF EXISTS ${READER_POLICY} ON ${tables}` });
+  await admin.command({ query: `DROP USER IF EXISTS ${READER}` });
 }

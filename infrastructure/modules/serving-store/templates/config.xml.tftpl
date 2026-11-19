@@ -6,10 +6,6 @@
          rest is left to the system, the CloudWatch agent and the feed timer. -->
     <max_server_memory_usage_to_ram_ratio>0.8</max_server_memory_usage_to_ram_ratio>
 
-    <!-- The custom settings a read may send: the reader's row policy on each table reads the
-         experiment a read of the tables names as custom_experiment. -->
-    <custom_settings_prefixes>custom_</custom_settings_prefixes>
-
     <!-- The packaged defaults log at trace level into ten 1 GB files on the root volume. -->
     <logger>
         <level>information</level>
@@ -20,8 +16,8 @@
     <!-- A failed statement's text, with its parameters filled in, reaches the error returned, these
          logs, which go to CloudWatch, and the query log. Every string literal in it reads as '***'
          in all three, so what researchers filter by stays out; the statement itself runs unchanged.
-         Settings are not masked: the query log keeps the custom_experiment a read sends, an
-         experiment id, which every URL shows and no one keeps secret. -->
+         Settings are not masked: the query log keeps the SQL_experiment a chart's read sends, an
+         experiment id, which every URL shows. -->
     <query_masking_rules>
         <rule>
             <name>string literals</name>

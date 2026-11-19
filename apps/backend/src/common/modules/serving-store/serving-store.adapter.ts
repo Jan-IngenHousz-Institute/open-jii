@@ -28,7 +28,7 @@ import type { StoreAsOfSecondary } from "./services/query-builder/store-query-bu
 import { StoreTables } from "./services/query-builder/store-tables";
 
 /** The setting the reader's row policy on each table reads (infrastructure/modules/serving-store). */
-export const EXPERIMENT_SETTING = "custom_experiment";
+export const EXPERIMENT_SETTING = "SQL_experiment";
 
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
   static: "static",
