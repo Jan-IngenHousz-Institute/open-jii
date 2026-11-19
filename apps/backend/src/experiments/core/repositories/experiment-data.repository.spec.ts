@@ -3185,6 +3185,30 @@ describe("ExperimentDataRepository", () => {
       expect(build.mock.calls.every(([params]) => params.isChartRead === true)).toBe(true);
     });
 
+    it("reads a chart from the warehouse when the flag sends its reads there", async () => {
+      const store = vi.spyOn(servingStore, "executeQuery");
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+        );
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: { groupBy: [{ column: "plot" }] },
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(store).not.toHaveBeenCalled();
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY `plot`"))).toBe(true);
+    });
+
     it("groups a raw x by device in the warehouse once the table passes the cap", async () => {
       const rows = { columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false };
       const warehouse = vi
