@@ -1,6 +1,15 @@
-import { eq, experiments, organizationMembers } from "@repo/database";
+import {
+  eq,
+  experiments,
+  experimentDashboards,
+  experimentVisualizations,
+  organizationMembers,
+} from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDashboardRepository } from "../../../../experiments/core/repositories/experiment-dashboard.repository";
+import { ExperimentVisualizationRepository } from "../../../../experiments/core/repositories/experiment-visualization.repository";
+import { IotDeviceRepository } from "../../../../iot/core/repositories/iot-device.repository";
 import { OrganizationRepository } from "../../../../organizations/core/repositories/organization.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { GlobalSearchUseCase } from "./global-search";
@@ -31,7 +40,7 @@ describe("GlobalSearchUseCase", () => {
   });
 
   it("returns ranked matches across every searchable resource", async () => {
-    await testApp.createExperiment({
+    const { experiment } = await testApp.createExperiment({
       name: "Photosynthesis trial",
       userId,
       visibility: "public",
@@ -44,6 +53,26 @@ describe("GlobalSearchUseCase", () => {
       createdBy: userId,
     });
     await testApp.createOrganization("Photosynthesis Lab", { visibility: "public" });
+    await testApp.createIotDevice({
+      createdBy: userId,
+      name: "Photosynthesis sensor",
+      deviceType: "multispeq",
+    });
+
+    await testApp.database.insert(experimentDashboards).values({
+      experimentId: experiment.id,
+      name: `Photosynthesis dashboard ${crypto.randomUUID()}`,
+      createdBy: userId,
+    });
+    await testApp.database.insert(experimentVisualizations).values({
+      experimentId: experiment.id,
+      name: `Photosynthesis chart ${crypto.randomUUID()}`,
+      createdBy: userId,
+      chartFamily: "basic",
+      chartType: "bar",
+      config: {},
+      dataConfig: {},
+    });
 
     const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
@@ -55,6 +84,22 @@ describe("GlobalSearchUseCase", () => {
     expect(types).toContain("workbook");
     expect(types).toContain("calibration_definition");
     expect(types).toContain("organization");
+    expect(types).toContain("device");
+    expect(types).toContain("dashboard");
+    expect(types).toContain("visualization");
+    for (const row of result.value.results) {
+      if (row.type === "dashboard" || row.type === "visualization") {
+        expect(row.parent).toEqual({
+          type: "experiment",
+          id: experiment.id,
+          title: experiment.name,
+        });
+        expect(row.meta).toBeNull();
+        expect(row).not.toHaveProperty("score");
+      } else {
+        expect(row.parent).toBeNull();
+      }
+    }
     // A definition is browsed by family, so that is the label it carries.
     const calibration = result.value.results.find((r) => r.type === "calibration_definition");
     expect(calibration?.title).toBe("Photosynthesis bench calibration");
@@ -67,6 +112,53 @@ describe("GlobalSearchUseCase", () => {
     const organization = result.value.results.find((r) => r.type === "organization");
     expect(organization?.title).toBe("Photosynthesis Lab");
     expect(organization?.meta).toBeNull();
+  });
+
+  it("merges device candidates with their family and no parent or score in the response", async () => {
+    const deviceRepository = testApp.module.get(IotDeviceRepository);
+    const deviceId = crypto.randomUUID();
+    const search = vi.spyOn(deviceRepository, "search").mockResolvedValue(
+      success([
+        {
+          id: deviceId,
+          name: "Field sensor",
+          description: "MSQ-20431",
+          deviceType: "multispeq",
+          score: 1,
+        },
+      ]),
+    );
+
+    const result = await useCase.execute(userId, "MSQ-20431", 8, false);
+
+    assertSuccess(result);
+    expect(search).toHaveBeenCalledWith("MSQ-20431", userId, 8);
+    expect(result.value.results).toEqual([
+      {
+        type: "device",
+        id: deviceId,
+        title: "Field sensor",
+        subtitle: "MSQ-20431",
+        meta: "multispeq",
+        parent: null,
+      },
+    ]);
+  });
+
+  it.each([
+    ["dashboard", ExperimentDashboardRepository],
+    ["visualization", ExperimentVisualizationRepository],
+  ] as const)("propagates a %s repository failure", async (_type, Repository) => {
+    const error = failure(AppError.repositoryError("Child search failed"));
+    vi.spyOn(testApp.module.get(Repository), "search").mockResolvedValue(error);
+    expect(await useCase.execute(userId, "canopy", 20, true)).toBe(error);
+  });
+
+  it("propagates a device repository failure", async () => {
+    const error = failure(AppError.repositoryError("Device search failed"));
+    vi.spyOn(testApp.module.get(IotDeviceRepository), "search").mockResolvedValue(error);
+
+    expect(await useCase.execute(userId, "canopy", 20, true)).toBe(error);
   });
 
   // A result would open a page the caller cannot reach while calibration is flagged off.
@@ -320,6 +412,33 @@ describe("GlobalSearchUseCase", () => {
       expect(titles).not.toContain("Hidden photosynthesis macro");
       expect(titles).not.toContain("Hidden photosynthesis protocol");
       expect(titles).not.toContain("Hidden photosynthesis workbook");
+    });
+
+    it("hides a private workbook matched only by markdown cell text from an outsider", async () => {
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, otherUserId, "owner");
+      const workbook = await testApp.createWorkbook({
+        name: "Field notebook",
+        description: "Observations from the trial",
+        createdBy: otherUserId,
+        visibility: "private",
+        organizationId: orgId,
+        cells: [{ id: "m1", type: "markdown", content: "Quorblentine observations" }],
+      });
+
+      const toOwner = await useCase.execute(otherUserId, "quorblentine", 20, true);
+
+      assertSuccess(toOwner);
+      expect(toOwner.value.results).toContainEqual(
+        expect.objectContaining({ type: "workbook", id: workbook.id }),
+      );
+
+      const toOutsider = await useCase.execute(userId, "quorblentine", 20, true);
+
+      assertSuccess(toOutsider);
+      expect(toOutsider.value.results).not.toContainEqual(
+        expect.objectContaining({ type: "workbook", id: workbook.id }),
+      );
     });
 
     it("shows a private macro/protocol/workbook to a grantee", async () => {

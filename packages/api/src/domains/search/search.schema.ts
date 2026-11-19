@@ -4,7 +4,7 @@ import { z } from "zod";
 export const zGlobalSearchQuery = z.object({
   query: z.string().trim().min(1).max(200).describe("Search term"),
   // The backend overfetches `limit` per entity type and merges by score, so this also bounds the
-  // heaviest query the palette can issue (5 types x limit candidate rows).
+  // heaviest query the palette can issue (9 types x limit candidate rows).
   limit: z.coerce.number().int().min(1).max(32).optional().default(20),
 });
 
@@ -16,6 +16,9 @@ export const zSearchResultType = z.enum([
   "workbook",
   "calibration_definition",
   "organization",
+  "device",
+  "dashboard",
+  "visualization",
 ]);
 
 /** A single normalized, ranked search result. */
@@ -30,6 +33,13 @@ export const zSearchResult = z.object({
    * (experiments, workbooks) or when the row leaves it unset (organizations).
    */
   meta: z.string().nullable(),
+  parent: z
+    .object({
+      type: z.literal("experiment"),
+      id: z.string().guid(),
+      title: z.string(),
+    })
+    .nullable(),
 });
 
 /** Flat, cross-type relevance-ordered results. The client groups by `type` for display. */

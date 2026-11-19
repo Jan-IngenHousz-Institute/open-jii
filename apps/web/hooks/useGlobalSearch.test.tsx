@@ -1,4 +1,5 @@
 import { orpc } from "@/lib/orpc";
+import { createSearchResult } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -47,13 +48,12 @@ describe("useGlobalSearch", () => {
     server.mount(contract.search.globalSearch, {
       body: {
         results: [
-          {
+          createSearchResult({
             type: "organization",
             id: "org-private",
             title: "Private Lab",
-            subtitle: null,
             meta: "research_institute",
-          },
+          }),
         ],
       },
     });
