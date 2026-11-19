@@ -300,7 +300,9 @@ describe("IotDeviceController", () => {
 
   describe("listIotDevices", () => {
     it("lists the user's devices (200)", async () => {
-      const device = await testApp.createIotDevice({ createdBy: userId });
+      const { searchVector: _searchVector, ...device } = await testApp.createIotDevice({
+        createdBy: userId,
+      });
 
       const response: SuperTestResponse<IotDeviceList> = await testApp
         .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
