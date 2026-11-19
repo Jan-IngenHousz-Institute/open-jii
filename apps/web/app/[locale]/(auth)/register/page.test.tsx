@@ -33,13 +33,36 @@ describe("RegisterPage", () => {
   it("redirects to login when unauthenticated", async () => {
     vi.mocked(auth).mockResolvedValue(null);
     await RegisterPage(props).catch(() => undefined);
-    expect(redirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=/en-US/register");
+    expect(redirect).toHaveBeenCalledWith(
+      `/en-US/login?callbackUrl=${encodeURIComponent("/en-US/register?callbackUrl=%2Fplatform")}`,
+    );
   });
 
   it("redirects to platform when already registered", async () => {
     vi.mocked(auth).mockResolvedValue(createSession());
     await RegisterPage(props);
     expect(redirect).toHaveBeenCalledWith("/en-US/platform");
+  });
+
+  it.each([
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
+    ["https://example.com", "/en-US/platform"],
+  ])("validates the destination for a registered user: %s", async (callbackUrl, expected) => {
+    vi.mocked(auth).mockResolvedValue(createSession());
+    await RegisterPage({ ...props, searchParams: Promise.resolve({ callbackUrl }) });
+    expect(redirect).toHaveBeenCalledWith(expected);
+  });
+
+  it("preserves the final destination across an unauthenticated registration visit", async () => {
+    vi.mocked(auth).mockResolvedValue(null);
+    const callbackUrl = "http://localhost:3100/login/openjii?returnTo=%2Fdevices";
+    await RegisterPage({ ...props, searchParams: Promise.resolve({ callbackUrl }) }).catch(
+      () => undefined,
+    );
+    const registrationUrl = `/en-US/register?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+    expect(redirect).toHaveBeenCalledWith(
+      `/en-US/login?callbackUrl=${encodeURIComponent(registrationUrl)}`,
+    );
   });
 
   it("renders registration form for unregistered authenticated user", async () => {
