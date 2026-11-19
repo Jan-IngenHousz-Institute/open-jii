@@ -28,8 +28,8 @@ import { ErrorCodes } from "../../../common/utils/error-codes";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { AnnotationMergerService } from "../../application/services/annotation-merger.service";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
+import { ExperimentDataSourceService } from "../../application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
-import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
 import {
   MACRO_TABLE_CONFIG,
   PAGE_TOO_LARGE_MESSAGE,
@@ -141,7 +141,7 @@ export class ExperimentDataRepository {
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
     private readonly annotationMerger: AnnotationMergerService,
-    private readonly warehouseReads: ExperimentWarehouseReadsService,
+    private readonly dataSource: ExperimentDataSourceService,
     private readonly storeReads: ExperimentStoreReadsService,
   ) {}
 
@@ -202,7 +202,7 @@ export class ExperimentDataRepository {
     // Only the store's read builds the flag filter, so a read the warehouse would answer is refused.
     const isFlaggedReadUnsupported =
       flagged !== undefined &&
-      (source !== "store" || !this.sourceReads(source).readsTable(tableName));
+      (source !== "store" || !this.dataSource.readsFor(source).readsTable(tableName));
     if (isFlaggedReadUnsupported) {
       return failure(
         AppError.badRequest(
@@ -561,7 +561,7 @@ export class ExperimentDataRepository {
       const rows = await this.cachePort.tryCache(
         `table-metadata:${source}:${experimentId}`,
         async () => {
-          const result = await this.sourceReads(source).tablesMetadata(experimentId);
+          const result = await this.dataSource.readsFor(source).tablesMetadata(experimentId);
           if (result.isFailure()) {
             throw result.error;
           }
@@ -729,7 +729,7 @@ export class ExperimentDataRepository {
     tableName: string,
     requestedSource: ExperimentDataSource,
   ): Promise<Result<TableShape>> {
-    const source = this.sourceReads(requestedSource).readsTable(tableName)
+    const source = this.dataSource.readsFor(requestedSource).readsTable(tableName)
       ? requestedSource
       : "warehouse";
     const metadataResult = await this.tableMetadata(experimentId, tableName, source);
@@ -874,7 +874,7 @@ export class ExperimentDataRepository {
       const columns = await this.schemaCache.tryCache(
         `view-columns:${source}:${view}`,
         async () => {
-          const result = await this.sourceReads(source).viewColumns(tableType, identifier);
+          const result = await this.dataSource.readsFor(source).viewColumns(tableType, identifier);
           if (result.isFailure()) {
             throw result.error;
           }
@@ -998,11 +998,7 @@ export class ExperimentDataRepository {
   }
 
   private reads(shape: TableShape): ExperimentTableReads {
-    return this.sourceReads(shape.source);
-  }
-
-  private sourceReads(source: ExperimentDataSource): ExperimentTableReads {
-    return source === "store" ? this.storeReads : this.warehouseReads;
+    return this.dataSource.readsFor(shape.source);
   }
 
   private async buildQuery(
