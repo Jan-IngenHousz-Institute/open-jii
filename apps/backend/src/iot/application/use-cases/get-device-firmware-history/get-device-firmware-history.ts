@@ -23,7 +23,7 @@ export class GetDeviceFirmwareHistoryUseCase {
     source: DeviceDataSource,
   ): Promise<Result<DeviceFirmwareVersion[]>> {
     const result = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceFirmwareHistory(thingName, from, to, bucket);
     if (result.isFailure()) {
       return failure(result.error);

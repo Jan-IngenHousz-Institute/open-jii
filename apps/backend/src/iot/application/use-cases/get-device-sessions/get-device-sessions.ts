@@ -32,7 +32,7 @@ export class GetDeviceSessionsUseCase {
     source: DeviceDataSource,
   ): Promise<Result<DeviceSessionsResult>> {
     const eventsResult = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceLifecycleEvents(thingName, from, to, EVENT_QUERY_CAP + 1);
     if (eventsResult.isFailure()) {
       return failure(eventsResult.error);

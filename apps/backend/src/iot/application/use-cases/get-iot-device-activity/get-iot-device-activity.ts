@@ -40,7 +40,7 @@ export class GetIotDeviceActivityUseCase {
     // Enrichment, never a gate: a failure is reported as unavailable so
     // "never sent data" and "the source down" stay distinguishable.
     const activityResult = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceLastActivity(deviceResult.value.thingName);
     if (activityResult.isFailure()) {
       this.logger.warn({

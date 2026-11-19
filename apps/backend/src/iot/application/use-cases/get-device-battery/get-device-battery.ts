@@ -21,7 +21,7 @@ export class GetDeviceBatteryUseCase {
     source: DeviceDataSource,
   ): Promise<Result<DeviceBatteryPoint[]>> {
     const result = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceBatterySeries(thingName, from, to, bucket);
     if (result.isFailure()) {
       return failure(result.error);

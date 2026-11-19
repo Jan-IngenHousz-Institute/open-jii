@@ -61,7 +61,7 @@ describe("DeviceDataSourceService", () => {
   });
 
   it("hands out each source's reads", () => {
-    expect(service.reads("store")).toBe(servingStore);
-    expect(service.reads("warehouse")).toBe(testApp.module.get(IOT_DATABRICKS_PORT));
+    expect(service.readsFor("store")).toBe(servingStore);
+    expect(service.readsFor("warehouse")).toBe(testApp.module.get(IOT_DATABRICKS_PORT));
   });
 });

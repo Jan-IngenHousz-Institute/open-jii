@@ -46,7 +46,7 @@ export class GetDeviceObservedExperimentsUseCase {
     }
 
     const throughputResult = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceThroughput(deviceResult.value.thingName, from, to, "day");
     if (throughputResult.isFailure()) {
       return failure(throughputResult.error);

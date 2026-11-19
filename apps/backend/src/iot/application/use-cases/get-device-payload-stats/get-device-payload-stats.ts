@@ -30,7 +30,7 @@ export class GetDevicePayloadStatsUseCase {
     to: string,
     source: DeviceDataSource,
   ): Promise<Result<DevicePayloadStats>> {
-    const reads = this.dataSource.reads(source);
+    const reads = this.dataSource.readsFor(source);
     const [result, macroResult] = await Promise.all([
       reads.getDevicePayloadBreakdown(thingName, from, to),
       reads.getDeviceMacroBreakdown(thingName, from, to),

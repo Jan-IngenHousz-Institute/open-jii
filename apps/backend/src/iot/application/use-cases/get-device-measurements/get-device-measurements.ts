@@ -23,7 +23,7 @@ export class GetDeviceMeasurementsUseCase {
     source: DeviceDataSource,
   ): Promise<Result<DeviceMeasurement[]>> {
     const result = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceRecentMeasurements(thingName, from, to, RECENT_MEASUREMENT_LIMIT);
     if (result.isFailure()) {
       return failure(result.error);

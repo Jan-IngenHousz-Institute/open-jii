@@ -32,7 +32,7 @@ export class DeviceDataSourceService {
     return isStoreRead ? "store" : "warehouse";
   }
 
-  reads(source: DeviceDataSource): DeviceReads {
+  readsFor(source: DeviceDataSource): DeviceReads {
     return source === "store" ? this.servingStore : this.databricksPort;
   }
 }

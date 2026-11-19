@@ -21,7 +21,7 @@ export class GetDeviceThroughputUseCase {
     source: DeviceDataSource,
   ): Promise<Result<DeviceThroughputBucket[]>> {
     const result = await this.dataSource
-      .reads(source)
+      .readsFor(source)
       .getDeviceThroughput(thingName, from, to, bucket);
     if (result.isFailure()) {
       return failure(result.error);
