@@ -1,3 +1,4 @@
+SET LOCAL lock_timeout = '5s';--> statement-breakpoint
 -- Generated expressions use bare column names. GIN and trigram indexes are maintained here
 -- because drizzle-kit cannot serialize gin_trgm_ops; the snapshot does not track them.
 ALTER TABLE "workbooks" drop column "search_vector";--> statement-breakpoint
