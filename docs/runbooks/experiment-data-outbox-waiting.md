@@ -4,11 +4,10 @@
 holds annotations and metadata sheets, and every change to one owes its current state to the
 lakehouse's copy, which exports, charts and the warehouse views read. The serving store's sheet rows
 come from that copy through the store feed. Each owed copy is a row in `experiment_data_outbox`, and
-the worker on every backend task applies them. Every five minutes each
-task publishes `ExperimentDataCopiesWaiting`, how many rows are owed, and
-`ExperimentDataCopyOldestWaitingSeconds`, how long since the oldest was first owed (its `created_at`,
-on the database's clock). The rule fires when the age stays above 1,800 seconds for 5 minutes. A
-copy usually lands within seconds.
+the worker on every backend task applies them. Every five minutes each task publishes
+`ExperimentDataCopiesWaiting`, how many rows are owed, and `ExperimentDataCopyOldestWaitingSeconds`,
+how long since the oldest was first owed (its `created_at`, on the database's clock). The rule fires
+when the age stays above 1,800 seconds for 5 minutes. A copy usually lands within seconds.
 
 Pages read annotations from Postgres, so nobody sees a stale annotation. What waits is the copy: an
 export, a chart, or the custom metadata a page shows, may be missing the latest edits.
@@ -45,7 +44,7 @@ once the cause is fixed the rows land at their next attempt. To land them now, m
 ```sql
 update experiment_data_outbox
 set next_attempt_at = (now() at time zone 'utc')
-where claimed_at is null and destination = '<destination>';
+where claimed_at is null;
 ```
 
 Do not delete rows: a deleted row is a copy nobody owes again until the record changes.

@@ -2875,10 +2875,11 @@ metrics:
     runbook: docs/runbooks/experiment-data-outbox-waiting.md
     notes: >-
       How long the oldest copy of an annotation or metadata sheet still owed to the lakehouse has
-      waited since it was first owed, 0 when none is. Every backend task
-      publishes it every five minutes beside ExperimentDataCopiesWaiting, the number owed. A copy
-      normally lands within seconds; the retries wait 10 s, 1, 5 and 15 minutes, so one still owed
-      after 30 minutes has failed five times, and the next waits an hour. Pages read annotations
-      from Postgres, so a waiting copy delays exports, charts and the custom metadata store pages
-      show, which the store feed takes from the lakehouse's copy. Since a quiet outbox still reads 0, the rule treats no data as firing too: about
-      twenty minutes after the last point, it says the job that reports the outbox has stopped.
+      waited since it was first owed, 0 when none is. Every backend task publishes it every five
+      minutes beside ExperimentDataCopiesWaiting, the number owed. A copy normally lands within
+      seconds; the retries wait 10 s, 1, 5 and 15 minutes, so one still owed after 30 minutes has
+      failed five times, and the next waits an hour. Pages read annotations from Postgres, so a
+      waiting copy delays exports, charts and the custom metadata store pages show, which the store
+      feed takes from the lakehouse's copy. Since a quiet outbox still reads 0, the rule treats no
+      data as firing too: about twenty minutes after the last point, it says the job that reports
+      the outbox has stopped.
