@@ -77,7 +77,10 @@ describe("ExperimentDataOutboxWorker", () => {
   }
 
   /** Owes the copies of records no experiment owns, as a profile or device write does. */
-  async function oweUnowned(recordType: "contributor" | "device", ...recordIds: string[]) {
+  async function oweWithoutExperiment(
+    recordType: "contributor" | "device",
+    ...recordIds: string[]
+  ) {
     await testApp.database.transaction((tx) =>
       testApp.module.get(ExperimentDataOutboxRepository).owe(
         tx,
@@ -183,7 +186,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const remove = vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
     const deactivated = await testApp.createTestUser({ name: "Grace Hopper", activated: false });
     const gone = faker.string.uuid();
-    await oweUnowned("contributor", userId, deactivated, gone);
+    await oweWithoutExperiment("contributor", userId, deactivated, gone);
 
     expect(await worker.drain()).toEqual({ applied: 3, retried: 0, released: 0 });
 
@@ -217,7 +220,7 @@ describe("ExperimentDataOutboxWorker", () => {
       status: "active",
     });
     const gone = faker.string.uuid();
-    await oweUnowned("device", device.id, gone);
+    await oweWithoutExperiment("device", device.id, gone);
 
     expect(await worker.drain()).toEqual({ applied: 2, retried: 0, released: 0 });
 
@@ -239,7 +242,7 @@ describe("ExperimentDataOutboxWorker", () => {
   it("keeps a contributor's copy owed, with the reason, while the lakehouse refuses it", async () => {
     const warehouse = testApp.module.get(ContributorProfilesWarehouseRepository);
     vi.spyOn(warehouse, "merge").mockResolvedValue(failure(AppError.internal("Warehouse down")));
-    await oweUnowned("contributor", userId);
+    await oweWithoutExperiment("contributor", userId);
 
     expect(await worker.drain()).toEqual({ applied: 0, retried: 1, released: 0 });
 

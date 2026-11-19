@@ -21,7 +21,7 @@ import { TestHarness } from "../../../test/test-harness";
 import type { IotDeviceDto, CreateIotDeviceDto } from "../models/iot-device.model";
 import { deviceRungSql, IotDeviceRepository } from "./iot-device.repository";
 
-/** Each write in a transaction of its own, as the use cases run them. */
+// create and delete take the caller's transaction.
 const register = (devices: IotDeviceRepository, dto: CreateIotDeviceDto, userId: string) =>
   devices.transaction((tx) => devices.create(tx, dto, userId));
 

@@ -96,7 +96,7 @@ export class UserAuthHook {
     return getSessionFromCtx(ctx);
   }
 
-  /** Signing in again undoes a deactivation. A failure is logged and the sign-in stands. */
+  /** A failure must not fail a sign-in that has already succeeded. */
   private async reactivateProfile(ctx: AuthHookContext) {
     const user = ctx.context.newSession?.user;
     if (!user?.id) {
