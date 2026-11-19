@@ -8,6 +8,7 @@ import type {
 import { PageBytes } from "../../../experiments/core/models/page-bytes.model";
 import type {
   ServingStorePort,
+  StoreMetadataSheet,
   StoreQuery,
   StoreQueryColumn,
   StoreQueryParams,
@@ -46,20 +47,22 @@ export class ServingStoreAdapter implements ServingStorePort {
     return StoreTables.of(tableType, tableName)?.takesCustomMetadata === true;
   }
 
-  withCustomMetadata(
-    table: ExperimentTableMetadata,
-    schema: string | null,
-  ): ExperimentTableMetadata {
-    const customMetadataSchema = this.takesCustomMetadata(table.tableType, table.identifier)
-      ? schema
-      : null;
-    const schemaRevision = this.schemaRevision([
-      table.macroSchema ?? null,
-      table.questionsSchema ?? null,
-      customMetadataSchema,
-      table.uploadSchema ?? null,
-    ]);
-    return { ...table, customMetadataSchema, schemaRevision };
+  async getMetadataSheets(experimentId: string): Promise<Result<StoreMetadataSheet[]>> {
+    const experiment = this.experimentArgument(experimentId);
+    const sql = `SELECT sheet_id, match_on, schema, toString(_commit_version) FROM experiment_metadata_sheets(${experiment}) ORDER BY sheet_created_at, sheet_id`;
+
+    const result = await this.client.query(sql);
+    if (result.isFailure()) {
+      return result;
+    }
+    return success(
+      result.value.rows.map(([id, matchOn, schema, version]) => ({
+        id: String(id),
+        matchOn: String(matchOn),
+        schema: typeof schema === "string" ? schema : null,
+        version: String(version),
+      })),
+    );
   }
 
   /**

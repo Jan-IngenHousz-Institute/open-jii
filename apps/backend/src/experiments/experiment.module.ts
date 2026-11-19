@@ -26,6 +26,7 @@ import { AnnotationMergerService } from "./application/services/annotation-merge
 // Services
 import { AnnotationsOutboxService } from "./application/services/annotations-outbox.service";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
+import { CustomMetadataService } from "./application/services/custom-metadata.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExperimentDataOutboxMetricsService } from "./application/services/experiment-data-outbox-metrics.service";
 import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
@@ -259,6 +260,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ContributorAnonymizerService,
     ExperimentDataSourceService,
     NumberAnswersService,
+    CustomMetadataService,
     ExperimentWarehouseReadsService,
     ExperimentStoreReadsService,
     MultipartUploadService,

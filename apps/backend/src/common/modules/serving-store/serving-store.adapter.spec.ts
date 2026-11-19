@@ -103,31 +103,26 @@ describe("ServingStoreAdapter", () => {
     ]);
   });
 
-  it("gives the sheets' schema to the tables whose rows take custom metadata, and to their revision", async () => {
-    vi.spyOn(client, "query")
-      .mockResolvedValueOnce(
-        success({
-          rows: [
-            ["static", "raw_data", null, 3, null],
-            ["macro", "m1", null, 2, null],
-            ["upload", "t1", "plots", 1, null],
-          ],
-        }),
-      )
-      .mockResolvedValueOnce(success({ rows: [] }));
-    const schema = "OBJECT<area: DECIMAL(4,2)>";
+  it("lists an experiment's metadata sheets oldest first, for the tables whose rows take them", async () => {
+    const query = vi.spyOn(client, "query").mockResolvedValue(
+      success({
+        rows: [
+          ["s1", "plot", "OBJECT<area: DECIMAL(4,2)>", "3"],
+          ["s2", "column:device_id", null, "5"],
+        ],
+      }),
+    );
 
-    const listed = await adapter.getExperimentTableMetadata("e1");
-    assertSuccess(listed);
-    const tables = listed.value.map((table) => adapter.withCustomMetadata(table, schema));
+    const sheets = await adapter.getMetadataSheets("e1");
 
-    expect(tables.map(({ customMetadataSchema }) => customMetadataSchema)).toEqual([
-      schema,
-      schema,
-      null,
+    assertSuccess(sheets);
+    expect(sheets.value).toEqual([
+      { id: "s1", matchOn: "plot", schema: "OBJECT<area: DECIMAL(4,2)>", version: "3" },
+      { id: "s2", matchOn: "column:device_id", schema: null, version: "5" },
     ]);
-    expect(tables[0].schemaRevision).toBe(createHash("md5").update(`||${schema}|`).digest("hex"));
-    expect(tables[2].schemaRevision).toBe(listed.value[2].schemaRevision);
+    expect(query.mock.calls[0][0]).toContain(
+      "FROM experiment_metadata_sheets(experiment = 'e1') ORDER BY sheet_created_at, sheet_id",
+    );
     expect(adapter.takesCustomMetadata("upload", "t1")).toBe(false);
     expect(adapter.takesCustomMetadata("macro", "m1")).toBe(true);
   });
@@ -1518,14 +1513,26 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
   describe("custom metadata on a page", () => {
     const experiment = "metadata-e";
-    // Gold's schema for the three sheets' rows below, without their _id and identifier.
+    // The three sheets' rows below together, as custom_metadata_schemas.json has gold type them.
     const schema =
       "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(22,2), extra: STRING, note: STRING, soil: STRING>";
-    const metadataSheets = [
-      { id: "s-old", matchOn: "plot" },
-      { id: "s-new", matchOn: "column:device_id" },
-      { id: "s-other", matchOn: "column:timezone" },
-    ];
+
+    // A sheet as the feed sends it, with the schema gold gives its rows alone.
+    const sheet = (
+      sheetId: string,
+      createdAt: string,
+      matchOn: string,
+      sheetSchema: string,
+      commit = 1,
+    ) => ({
+      experiment_id: experiment,
+      sheet_id: sheetId,
+      sheet_created_at: createdAt,
+      match_on: matchOn,
+      schema: sheetSchema,
+      is_deleted: 0,
+      _commit_version: commit,
+    });
 
     // A sheet row as the feed sends it from the lakehouse's copy of the sheet.
     const sheetRow = (
@@ -1557,15 +1564,27 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       _commit_timestamp: "2026-09-14 10:01:00",
     });
 
+    /** The experiment's sheets as the store lists them, and their schemas joined. */
+    async function sheetsOf(experimentId: string) {
+      const sheets = await adapter.getMetadataSheets(experimentId);
+      assertSuccess(sheets);
+      const joined = VariantSchema.mergeKeepingDecimals(
+        sheets.value.flatMap((listed) => listed.schema ?? []),
+      );
+      return { sheets: sheets.value, schema: joined ?? "" };
+    }
+
     async function page(
       params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+      experimentId = experiment,
     ) {
+      const { sheets, schema: joined } = await sheetsOf(experimentId);
       const data = await rowsOf({
         tableName: "raw_data",
         tableType: "static",
-        experimentId: experiment,
-        variants: [{ columnName: "custom_metadata", schema, suffix: "metadata" }],
-        metadataSheets,
+        experimentId,
+        variants: [{ columnName: "custom_metadata", schema: joined, suffix: "metadata" }],
+        metadataSheets: sheets,
         ...params,
       });
       return data.rows;
@@ -1608,6 +1627,25 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         ],
         format: "JSONEachRow",
       });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          sheet(
+            "s-old",
+            "2026-09-01 08:00:00",
+            "plot",
+            "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(4,2), note: STRING, soil: STRING>",
+          ),
+          sheet(
+            "s-new",
+            "2026-09-02 08:00:00",
+            "column:device_id",
+            "OBJECT<area: BIGINT, note: VOID, soil: STRING>",
+          ),
+          sheet("s-other", "2026-09-03 08:00:00", "column:timezone", "OBJECT<extra: STRING>"),
+        ],
+        format: "JSONEachRow",
+      });
     });
 
     it("folds the sheets oldest first, writes decimals at their scale and leaves an unmatched row null", async () => {
@@ -1645,17 +1683,49 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(loam).toEqual([["31"]]);
     });
 
-    it("types the sheets' rows as the listing's schema says", () => {
-      const rows = [
-        { soil: "clay", area: 1.15, "Plot no.": 3, note: "dry" },
-        { soil: "sand", area: 12.25, note: "wet" },
-        { soil: "a repeat, which the first row wins" },
-        { soil: "loam" },
-        { area: 5, note: null },
-        { extra: "matches nothing" },
-      ].map((row) => JSON.stringify(row));
+    it("lists the sheets oldest first, and their schemas join as gold types their rows together", async () => {
+      const { sheets, schema: joined } = await sheetsOf(experiment);
 
-      expect(VariantSchema.ofJson(rows)).toBe(schema);
+      expect(sheets.map(({ id, matchOn }) => [id, matchOn])).toEqual([
+        ["s-old", "plot"],
+        ["s-new", "column:device_id"],
+        ["s-other", "column:timezone"],
+      ]);
+      expect(joined).toBe(schema);
+    });
+
+    it("lists a sheet at its newest commit, and no longer once it is deleted", async () => {
+      const edited = "edited-e";
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet("s1", "2026-09-01 08:00:00", "plot", "OBJECT<soil: STRING>"),
+            experiment_id: edited,
+          },
+          {
+            ...sheet("s1", "2026-09-01 08:00:00", "plot", "OBJECT<area: BIGINT>", 2),
+            experiment_id: edited,
+          },
+          {
+            ...sheet("s2", "2026-09-02 08:00:00", "plot", "OBJECT<ph: BIGINT>"),
+            experiment_id: edited,
+          },
+          {
+            ...sheet("s2", "2026-09-02 08:00:00", "plot", "OBJECT<ph: BIGINT>", 3),
+            experiment_id: edited,
+            is_deleted: 1,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const sheets = await adapter.getMetadataSheets(edited);
+
+      assertSuccess(sheets);
+      expect(sheets.value).toEqual([
+        { id: "s1", matchOn: "plot", schema: "OBJECT<area: BIGINT>", version: "2" },
+      ]);
     });
 
     it("reads integers past the 64-bit ranges as the warehouse does, with the rest of their row", async () => {
@@ -1671,9 +1741,8 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           small: Number("-1234567890123456800"),
         },
       ];
-      const codesSchema = VariantSchema.ofJson(
-        rows.map(({ plot: _plot, ...fields }) => JSON.stringify(fields)),
-      );
+      // As custom_metadata_schemas.json has gold type these rows.
+      const codesSchema = "OBJECT<code: DECIMAL(21,0), small: BIGINT, soil: STRING>";
       await admin.insert({
         table: "measurements",
         values: rows.map(({ plot }, index) => ({
@@ -1691,20 +1760,27 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         })),
         format: "JSONEachRow",
       });
-
-      const data = await rowsOf({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId: codes,
-        variants: [{ columnName: "custom_metadata", schema: codesSchema ?? "", suffix: "x" }],
-        metadataSheets: [{ id: "s-codes", matchOn: "plot" }],
-        columns: ["id", "soil", "code", "small"],
-        ordering: { column: "id", direction: "ASC" },
-        limit: 10,
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet("s-codes", "2026-09-01 08:00:00", "plot", codesSchema),
+            experiment_id: codes,
+          },
+        ],
+        format: "JSONEachRow",
       });
 
-      expect(codesSchema).toBe("OBJECT<code: DECIMAL(21,0), small: BIGINT, soil: STRING>");
-      expect(data.rows).toEqual([
+      const rowsRead = await page(
+        {
+          columns: ["id", "soil", "code", "small"],
+          ordering: { column: "id", direction: "ASC" },
+          limit: 10,
+        },
+        codes,
+      );
+
+      expect(rowsRead).toEqual([
         ["41", "clay", "18446744073709552000", null],
         ["42", "sand", "100000000000000000000", null],
         ["43", "silt", "-9223372036854776000", null],
@@ -1721,8 +1797,8 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         area: plot / 4,
         ...Object.fromEntries(columns.map((column) => [column, `v${plot % 50}-${column}`])),
       }));
-      const wideSchema =
-        VariantSchema.ofJson(plotFields.map((fields) => JSON.stringify(fields))) ?? "";
+      // Gold types a quarter's fractions and the whole plots together as DECIMAL(22,2).
+      const wideSchema = `OBJECT<area: DECIMAL(22,2), ${columns.map((column) => `${column}: STRING`).join(", ")}>`;
       let capped: ServingStoreClientService;
       let cappedAdapter: ServingStoreAdapter;
 
@@ -1734,7 +1810,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           tableType: "static",
           experimentId: wide,
           variants: [{ columnName: "custom_metadata", schema: wideSchema, suffix: "metadata" }],
-          metadataSheets: [{ id: "s-wide", matchOn: "plot" }],
+          metadataSheets: [{ id: "s-wide", matchOn: "plot", schema: wideSchema, version: "1" }],
           ...params,
         });
         assertSuccess(query);

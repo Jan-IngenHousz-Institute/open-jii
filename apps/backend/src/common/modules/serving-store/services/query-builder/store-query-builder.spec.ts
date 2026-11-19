@@ -384,9 +384,9 @@ describe("StoreQueryBuilder", () => {
 
   describe("custom metadata", () => {
     const sheets = [
-      { id: "s1", matchOn: "plot" },
-      { id: "s2", matchOn: "column:device_id" },
-      { id: "s3", matchOn: "column:timezone" },
+      { id: "s1", matchOn: "plot", schema: null, version: "1" },
+      { id: "s2", matchOn: "column:device_id", schema: null, version: "2" },
+      { id: "s3", matchOn: "column:timezone", schema: null, version: "3" },
     ];
     const withMetadata = () =>
       measurements()

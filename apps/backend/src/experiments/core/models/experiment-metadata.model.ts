@@ -1,12 +1,3 @@
-import { z } from "zod";
-
-/** What matches a sheet's rows to readings; a sheet saved before its shape was checked may lack it. */
-export const zMetadataSheetMatch = z.object({
-  identifierColumnId: z.string(),
-  experimentQuestionId: z.string(),
-  rows: z.array(z.record(z.string(), z.unknown())),
-});
-
 /** A metadata sheet as the API answers with it: the record, its id named `metadataId`. */
 export interface ExperimentMetadataDto {
   metadataId: string;

@@ -150,18 +150,6 @@ describe("ExperimentMetadataRepository", () => {
     expect(listed.value).toEqual([newer, older]);
   });
 
-  it("lists each of an experiment's sheets' id and last update, and no other experiment's", async () => {
-    const edited = sheet({ updatedAt: new Date("2026-09-03T08:00:00.000Z") });
-    const { experiment: other } = await testApp.createExperiment({ name: "Other trial", userId });
-    await insert(edited);
-    await insert(sheet({ experimentId: other.id }));
-
-    const versions = await repository.findVersions(experimentId);
-
-    assertSuccess(versions);
-    expect(versions.value).toEqual([{ id: edited.id, updatedAt: edited.updatedAt }]);
-  });
-
   it("sizes each sheet as text before its document is read", async () => {
     const small = sheet({ metadata: { name: "a" } });
     const large = sheet({ metadata: { notes: "x".repeat(10_000) } });

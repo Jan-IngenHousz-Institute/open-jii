@@ -25,7 +25,11 @@ const SHEET_CASES = resolve(
 );
 
 const zSheetCases = z.array(
-  z.object({ name: z.string(), rows: z.array(z.string()), schema: z.string().nullable() }),
+  z.object({
+    name: z.string(),
+    schema: z.string().nullable(),
+    rowSchemas: z.array(z.string().nullable()),
+  }),
 );
 
 describe("VariantSchema.topLevelFieldNames", () => {
@@ -114,23 +118,18 @@ describe("VariantSchema.merge", () => {
   });
 });
 
-describe("VariantSchema.ofJson", () => {
+describe("VariantSchema.mergeKeepingDecimals", () => {
   const cases = zSheetCases.parse(JSON.parse(readFileSync(SHEET_CASES, "utf-8")));
 
-  it.each(cases)("types $name as gold does", ({ rows, schema }) => {
-    expect(VariantSchema.ofJson(rows)).toBe(schema);
+  // Each row stands for a sheet of its own, whose schema the store holds apart.
+  it.each(cases)("joins the schemas of $name as gold types them together", (sheet) => {
+    const schemas = sheet.rowSchemas.filter((schema) => schema !== null);
+
+    expect(VariantSchema.mergeKeepingDecimals(schemas)).toBe(sheet.schema);
   });
 
-  it("has no schema without rows, or when every row is null", () => {
-    expect(VariantSchema.ofJson([])).toBeNull();
-    expect(VariantSchema.ofJson(["null"])).toBeNull();
-  });
-
-  it("reads a sheet's numbers as JSON.stringify writes them", () => {
-    const rows = [{ area: 1.5 }, { area: 12.25 }, { area: 1e21 }].map((row) => JSON.stringify(row));
-
-    expect(VariantSchema.ofJson(rows.slice(0, 2))).toBe("OBJECT<area: DECIMAL(4,2)>");
-    expect(VariantSchema.ofJson(rows)).toBe("OBJECT<area: DOUBLE>");
+  it("has nothing to merge without a schema", () => {
+    expect(VariantSchema.mergeKeepingDecimals([])).toBeNull();
   });
 });
 

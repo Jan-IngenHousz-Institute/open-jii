@@ -10,26 +10,9 @@ type SchemaNode =
   | { kind: "array"; element: SchemaNode }
   | { kind: "object"; fields: Map<string, SchemaNode> };
 
-/** A number as Spark's `parse_json` holds it: a long, a decimal's digits, or a double. */
-type SparkNumber =
-  | { kind: "long"; text: string }
-  | { kind: "decimal"; negative: boolean; whole: string; fraction: string }
-  | { kind: "double"; value: number };
-
-/** A JSON number's text as it was written, so its digits decide its type. */
-class NumberText {
-  constructor(readonly text: string) {}
-}
-
 const VARIANT: SchemaNode = { kind: "scalar", name: "VARIANT" };
 const DOUBLE: SchemaNode = { kind: "scalar", name: "DOUBLE" };
-const BIGINT: SchemaNode = { kind: "scalar", name: "BIGINT" };
-const STRING: SchemaNode = { kind: "scalar", name: "STRING" };
-const BOOLEAN: SchemaNode = { kind: "scalar", name: "BOOLEAN" };
-const VOID: SchemaNode = { kind: "scalar", name: "VOID" };
 
-const LONG_MIN = -(2n ** 63n);
-const LONG_MAX = 2n ** 63n - 1n;
 const DECIMAL_DIGITS = 38;
 const DECIMAL = /^DECIMAL\((\d+),(\d+)\)$/;
 
@@ -78,13 +61,14 @@ export class VariantSchema {
   }
 
   /**
-   * The schema gold gives metadata sheet rows, or null: `schema_of_variant_agg` over each row's
-   * JSON after one more `to_json` and `parse_json`, decimals kept. The cases in
+   * The schema `schema_of_variant_agg` gives the rows of several custom metadata schemas together,
+   * decimals kept, as gold's listing types custom metadata. The store keeps one per metadata sheet,
+   * and this joins an experiment's. Null when there are none. The cases in
    * `apps/data/tests/fixtures/custom_metadata_schemas.json`, worked out by gold's notebook, pin it.
    */
-  static ofJson(texts: readonly string[]): string | null {
-    const merged = texts
-      .map((text) => VariantSchema.nodeOf(VariantSchema.parseJson(text)))
+  static mergeKeepingDecimals(schemas: readonly string[]): string | null {
+    const merged = schemas
+      .map((schema) => VariantSchema.parse(schema))
       .reduce<SchemaNode | null>(
         (sum, node) =>
           sum === null
@@ -92,7 +76,7 @@ export class VariantSchema {
             : VariantSchema.mergeNodes(sum, node, VariantSchema.widenKeepingDecimals),
         null,
       );
-    return merged === null || VariantSchema.isVoid(merged) ? null : VariantSchema.render(merged);
+    return merged === null ? null : VariantSchema.render(merged);
   }
 
   /** A `DECIMAL(p,s)` type's precision and scale, null for any other type. */
@@ -184,96 +168,6 @@ export class VariantSchema {
     const scale = Math.max(x.scale, y.scale);
     const precision = Math.max(x.precision - x.scale, y.precision - y.scale) + scale;
     return precision > DECIMAL_DIGITS ? "DOUBLE" : `DECIMAL(${precision},${scale})`;
-  }
-
-  private static parseJson(text: string): unknown {
-    const parsed: unknown = JSON.parse(
-      text,
-      (_key: string, value: unknown, context?: { source?: string }) =>
-        typeof value === "number" && context?.source !== undefined
-          ? new NumberText(context.source)
-          : value,
-    );
-    return parsed;
-  }
-
-  private static nodeOf(value: unknown): SchemaNode {
-    if (value instanceof NumberText) {
-      const reread = VariantSchema.afterToJson(VariantSchema.sparkNumber(value.text));
-      return VariantSchema.numberNode(reread);
-    }
-    if (value === null) return VOID;
-    if (typeof value === "string") return STRING;
-    if (typeof value === "boolean") return BOOLEAN;
-    if (Array.isArray(value)) {
-      const element = value
-        .map((item: unknown) => VariantSchema.nodeOf(item))
-        .reduce<SchemaNode>(
-          (sum, node) => VariantSchema.mergeNodes(sum, node, VariantSchema.widenKeepingDecimals),
-          VOID,
-        );
-      return { kind: "array", element };
-    }
-    if (typeof value === "object") {
-      const fields = Object.entries(value).map(
-        ([name, field]: [string, unknown]): [string, SchemaNode] => [
-          name,
-          VariantSchema.nodeOf(field),
-        ],
-      );
-      return { kind: "object", fields: new Map(fields) };
-    }
-    return VARIANT;
-  }
-
-  /** `parse_json` keeps a long as one, digits with a point as a decimal of up to 38 digits, and
-   *  anything else, an exponent included, as a double. */
-  private static sparkNumber(text: string): SparkNumber {
-    const isInteger = /^-?\d+$/.test(text);
-    if (isInteger && BigInt(text) >= LONG_MIN && BigInt(text) <= LONG_MAX) {
-      return { kind: "long", text };
-    }
-
-    const isPlain = /^-?[\d.]+$/.test(text);
-    const [whole, fraction = ""] = text.replace(/^-/, "").split(".");
-    const digits = `${whole}${fraction}`.replace(/^0+/, "");
-    const fits = Math.max(digits.length, 1) <= DECIMAL_DIGITS && fraction.length <= DECIMAL_DIGITS;
-    if (isPlain && fits) {
-      return { kind: "decimal", negative: text.startsWith("-"), whole, fraction };
-    }
-    return { kind: "double", value: Number(text) };
-  }
-
-  /** What `parse_json` reads from the text `to_json` writes for the number: a decimal without its
-   *  trailing zeros, and a double as Java prints it, plainly only from 10^-3 up to 10^7. */
-  private static afterToJson(number: SparkNumber): SparkNumber {
-    if (number.kind === "long") return number;
-
-    if (number.kind === "double") {
-      const magnitude = Math.abs(number.value);
-      const isPlainInJava = magnitude === 0 || (magnitude >= 1e-3 && magnitude < 1e7);
-      if (!isPlainInJava) return number;
-      const plain = String(number.value);
-      return VariantSchema.sparkNumber(plain.includes(".") ? plain : `${plain}.0`);
-    }
-
-    const fraction = number.fraction.replace(/0+$/, "");
-    const isZero = /^0*$/.test(`${number.whole}${fraction}`);
-    const sign = number.negative && !isZero ? "-" : "";
-    const point = fraction === "" ? "" : `.${fraction}`;
-    return VariantSchema.sparkNumber(`${sign}${number.whole}${point}`);
-  }
-
-  /** `schema_of_variant` types a decimal by its digits without trailing zeros, a whole one at
-   *  scale 0. */
-  private static numberNode(number: SparkNumber): SchemaNode {
-    if (number.kind === "long") return BIGINT;
-    if (number.kind === "double") return DOUBLE;
-
-    const fraction = number.fraction.replace(/0+$/, "");
-    const digits = `${number.whole}${fraction}`.replace(/^0+/, "");
-    const precision = Math.max(digits.length, fraction.length, 1);
-    return { kind: "scalar", name: `DECIMAL(${precision},${fraction.length})` };
   }
 
   /** Fields in UTF-16 order, as Spark's Java strings compare and as JavaScript's do. */

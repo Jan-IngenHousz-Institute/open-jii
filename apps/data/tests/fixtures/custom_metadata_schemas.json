@@ -2,211 +2,300 @@
   {
     "name": "integers are BIGINT",
     "rows": ["{\"n\": 5}", "{\"n\": 70000000000}"],
-    "schema": "OBJECT<n: BIGINT>"
+    "schema": "OBJECT<n: BIGINT>",
+    "rowSchemas": ["OBJECT<n: BIGINT>", "OBJECT<n: BIGINT>"]
   },
   {
     "name": "a fraction keeps its digits and scale",
     "rows": ["{\"area\": 1.5}", "{\"area\": 12.25}"],
-    "schema": "OBJECT<area: DECIMAL(4,2)>"
+    "schema": "OBJECT<area: DECIMAL(4,2)>",
+    "rowSchemas": ["OBJECT<area: DECIMAL(2,1)>", "OBJECT<area: DECIMAL(4,2)>"]
   },
   {
     "name": "trailing zeros go",
     "rows": ["{\"area\": 1.50}"],
-    "schema": "OBJECT<area: DECIMAL(2,1)>"
+    "schema": "OBJECT<area: DECIMAL(2,1)>",
+    "rowSchemas": ["OBJECT<area: DECIMAL(2,1)>"]
   },
   {
     "name": "an integer widens a decimal as DECIMAL(20,0)",
     "rows": ["{\"v\": 5}", "{\"v\": 0.5}"],
-    "schema": "OBJECT<v: DECIMAL(21,1)>"
+    "schema": "OBJECT<v: DECIMAL(21,1)>",
+    "rowSchemas": ["OBJECT<v: BIGINT>", "OBJECT<v: DECIMAL(1,1)>"]
   },
   {
     "name": "a whole number written with a fraction is an integer",
     "rows": ["{\"v\": 5.0}", "{\"v\": 1000.0}"],
-    "schema": "OBJECT<v: BIGINT>"
+    "schema": "OBJECT<v: BIGINT>",
+    "rowSchemas": ["OBJECT<v: BIGINT>", "OBJECT<v: BIGINT>"]
   },
   {
     "name": "a negative decimal",
     "rows": ["{\"v\": -12.5}"],
-    "schema": "OBJECT<v: DECIMAL(3,1)>"
+    "schema": "OBJECT<v: DECIMAL(3,1)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(3,1)>"]
   },
   {
     "name": "a decimal below a tenth",
     "rows": ["{\"v\": 0.05}"],
-    "schema": "OBJECT<v: DECIMAL(2,2)>"
+    "schema": "OBJECT<v: DECIMAL(2,2)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(2,2)>"]
   },
   {
     "name": "decimals widen to the larger whole part and scale",
     "rows": ["{\"v\": 123.4}", "{\"v\": 0.55}"],
-    "schema": "OBJECT<v: DECIMAL(5,2)>"
+    "schema": "OBJECT<v: DECIMAL(5,2)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(4,1)>", "OBJECT<v: DECIMAL(2,2)>"]
   },
   {
     "name": "1e3",
     "rows": ["{\"v\": 1e3}"],
-    "schema": "OBJECT<v: DECIMAL(4,0)>"
+    "schema": "OBJECT<v: DECIMAL(4,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(4,0)>"]
   },
   {
     "name": "1E3",
     "rows": ["{\"v\": 1E3}"],
-    "schema": "OBJECT<v: DECIMAL(4,0)>"
+    "schema": "OBJECT<v: DECIMAL(4,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(4,0)>"]
   },
   {
     "name": "1e2",
     "rows": ["{\"v\": 1e2}"],
-    "schema": "OBJECT<v: DECIMAL(3,0)>"
+    "schema": "OBJECT<v: DECIMAL(3,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(3,0)>"]
   },
   {
     "name": "2.5e1",
     "rows": ["{\"v\": 2.5e1}"],
-    "schema": "OBJECT<v: DECIMAL(2,0)>"
+    "schema": "OBJECT<v: DECIMAL(2,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(2,0)>"]
   },
   {
     "name": "1.5e-3",
     "rows": ["{\"v\": 1.5e-3}"],
-    "schema": "OBJECT<v: DECIMAL(4,4)>"
+    "schema": "OBJECT<v: DECIMAL(4,4)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(4,4)>"]
   },
   {
     "name": "1.5e-10",
     "rows": ["{\"v\": 1.5e-10}"],
-    "schema": "OBJECT<v: DOUBLE>"
+    "schema": "OBJECT<v: DOUBLE>",
+    "rowSchemas": ["OBJECT<v: DOUBLE>"]
   },
   {
     "name": "1e300",
     "rows": ["{\"v\": 1e300}"],
-    "schema": "OBJECT<v: DOUBLE>"
+    "schema": "OBJECT<v: DOUBLE>",
+    "rowSchemas": ["OBJECT<v: DOUBLE>"]
   },
   {
     "name": "a long decimal",
     "rows": ["{\"v\": 0.12345678901234567890123}"],
-    "schema": "OBJECT<v: DECIMAL(23,23)>"
+    "schema": "OBJECT<v: DECIMAL(23,23)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(23,23)>"]
   },
   {
     "name": "a decimal past 38 digits reads as a double first",
     "rows": ["{\"v\": 0.123456789012345678901234567890123456789}"],
-    "schema": "OBJECT<v: DECIMAL(17,17)>"
+    "schema": "OBJECT<v: DECIMAL(17,17)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(17,17)>"]
   },
   {
     "name": "a merge past 38 digits is DOUBLE",
     "rows": ["{\"v\": 0.12345678901234567890123}", "{\"v\": 5}"],
-    "schema": "OBJECT<v: DOUBLE>"
+    "schema": "OBJECT<v: DOUBLE>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(23,23)>", "OBJECT<v: BIGINT>"]
   },
   {
     "name": "an integer past a long is a decimal",
     "rows": ["{\"v\": 123456789012345678901234567890}"],
-    "schema": "OBJECT<v: DECIMAL(30,0)>"
+    "schema": "OBJECT<v: DECIMAL(30,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(30,0)>"]
   },
   {
     "name": "a decimal and a double",
     "rows": ["{\"v\": 0.5}", "{\"v\": 1e300}"],
-    "schema": "OBJECT<v: DOUBLE>"
+    "schema": "OBJECT<v: DOUBLE>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(1,1)>", "OBJECT<v: DOUBLE>"]
   },
   {
     "name": "an integer and a double",
     "rows": ["{\"v\": 5}", "{\"v\": 1e300}"],
-    "schema": "OBJECT<v: DOUBLE>"
+    "schema": "OBJECT<v: DOUBLE>",
+    "rowSchemas": ["OBJECT<v: BIGINT>", "OBJECT<v: DOUBLE>"]
   },
   {
     "name": "text and a number",
     "rows": ["{\"v\": \"x\"}", "{\"v\": 1}"],
-    "schema": "OBJECT<v: VARIANT>"
+    "schema": "OBJECT<v: VARIANT>",
+    "rowSchemas": ["OBJECT<v: STRING>", "OBJECT<v: BIGINT>"]
   },
   {
     "name": "a decimal and a boolean",
     "rows": ["{\"v\": 0.5}", "{\"v\": true}"],
-    "schema": "OBJECT<v: VARIANT>"
+    "schema": "OBJECT<v: VARIANT>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(1,1)>", "OBJECT<v: BOOLEAN>"]
   },
   {
     "name": "an object and text",
     "rows": ["{\"v\": {\"a\": 1}}", "{\"v\": \"x\"}"],
-    "schema": "OBJECT<v: VARIANT>"
+    "schema": "OBJECT<v: VARIANT>",
+    "rowSchemas": ["OBJECT<v: OBJECT<a: BIGINT>>", "OBJECT<v: STRING>"]
   },
   {
     "name": "text that holds a number",
     "rows": ["{\"v\": \"1.5\"}"],
-    "schema": "OBJECT<v: STRING>"
+    "schema": "OBJECT<v: STRING>",
+    "rowSchemas": ["OBJECT<v: STRING>"]
   },
   {
     "name": "booleans",
     "rows": ["{\"ok\": true}", "{\"ok\": false}"],
-    "schema": "OBJECT<ok: BOOLEAN>"
+    "schema": "OBJECT<ok: BOOLEAN>",
+    "rowSchemas": ["OBJECT<ok: BOOLEAN>", "OBJECT<ok: BOOLEAN>"]
   },
   {
     "name": "null alone",
     "rows": ["{\"note\": null}"],
-    "schema": "OBJECT<note: VOID>"
+    "schema": "OBJECT<note: VOID>",
+    "rowSchemas": ["OBJECT<note: VOID>"]
   },
   {
     "name": "null and text",
     "rows": ["{\"note\": null}", "{\"note\": \"dry\"}"],
-    "schema": "OBJECT<note: STRING>"
+    "schema": "OBJECT<note: STRING>",
+    "rowSchemas": ["OBJECT<note: VOID>", "OBJECT<note: STRING>"]
   },
   {
     "name": "arrays merge their elements",
     "rows": ["{\"xs\": [1, 2]}", "{\"xs\": [0.5]}"],
-    "schema": "OBJECT<xs: ARRAY<DECIMAL(21,1)>>"
+    "schema": "OBJECT<xs: ARRAY<DECIMAL(21,1)>>",
+    "rowSchemas": ["OBJECT<xs: ARRAY<BIGINT>>", "OBJECT<xs: ARRAY<DECIMAL(1,1)>>"]
   },
   {
     "name": "an array and null",
     "rows": ["{\"v\": [1]}", "{\"v\": null}"],
-    "schema": "OBJECT<v: ARRAY<BIGINT>>"
+    "schema": "OBJECT<v: ARRAY<BIGINT>>",
+    "rowSchemas": ["OBJECT<v: ARRAY<BIGINT>>", "OBJECT<v: VOID>"]
   },
   {
     "name": "an empty array",
     "rows": ["{\"v\": []}", "{\"v\": [1.5]}"],
-    "schema": "OBJECT<v: ARRAY<DECIMAL(2,1)>>"
+    "schema": "OBJECT<v: ARRAY<DECIMAL(2,1)>>",
+    "rowSchemas": ["OBJECT<v: ARRAY<VOID>>", "OBJECT<v: ARRAY<DECIMAL(2,1)>>"]
   },
   {
     "name": "objects sort their fields",
     "rows": ["{\"o\": {\"b\": 1, \"a\": \"x\"}}"],
-    "schema": "OBJECT<o: OBJECT<a: STRING, b: BIGINT>>"
+    "schema": "OBJECT<o: OBJECT<a: STRING, b: BIGINT>>",
+    "rowSchemas": ["OBJECT<o: OBJECT<a: STRING, b: BIGINT>>"]
   },
   {
     "name": "nested decimals widen",
     "rows": ["{\"o\": {\"x\": 1.5}}", "{\"o\": {\"x\": 2}, \"e\": {}}"],
-    "schema": "OBJECT<e: OBJECT<>, o: OBJECT<x: DECIMAL(21,1)>>"
+    "schema": "OBJECT<e: OBJECT<>, o: OBJECT<x: DECIMAL(21,1)>>",
+    "rowSchemas": [
+      "OBJECT<o: OBJECT<x: DECIMAL(2,1)>>",
+      "OBJECT<e: OBJECT<>, o: OBJECT<x: BIGINT>>"
+    ]
   },
   {
     "name": "odd names",
     "rows": ["{\"Plot no.\": 3, \"with space\": \"y\", \"_lead\": 1, \"9lead\": 2}"],
-    "schema": "OBJECT<`9lead`: BIGINT, `Plot no.`: BIGINT, _lead: BIGINT, `with space`: STRING>"
+    "schema": "OBJECT<`9lead`: BIGINT, `Plot no.`: BIGINT, _lead: BIGINT, `with space`: STRING>",
+    "rowSchemas": [
+      "OBJECT<`9lead`: BIGINT, `Plot no.`: BIGINT, _lead: BIGINT, `with space`: STRING>"
+    ]
   },
   {
     "name": "a row with only its identifier",
     "rows": ["{}"],
-    "schema": "OBJECT<>"
+    "schema": "OBJECT<>",
+    "rowSchemas": ["OBJECT<>"]
   },
   {
     "name": "a whole number past a long as JavaScript writes it",
     "rows": ["{\"v\": 100000000000000000000}"],
-    "schema": "OBJECT<v: DECIMAL(21,0)>"
+    "schema": "OBJECT<v: DECIMAL(21,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(21,0)>"]
   },
   {
     "name": "the largest long",
     "rows": ["{\"v\": 9223372036854775807}"],
-    "schema": "OBJECT<v: BIGINT>"
+    "schema": "OBJECT<v: BIGINT>",
+    "rowSchemas": ["OBJECT<v: BIGINT>"]
   },
   {
     "name": "one past the largest long",
     "rows": ["{\"v\": 9223372036854775808}"],
-    "schema": "OBJECT<v: DECIMAL(19,0)>"
+    "schema": "OBJECT<v: DECIMAL(19,0)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(19,0)>"]
   },
   {
     "name": "exponents as JavaScript writes them",
     "rows": ["{\"big\": 1e+21, \"small\": 1.5e-7}"],
-    "schema": "OBJECT<big: DOUBLE, small: DOUBLE>"
+    "schema": "OBJECT<big: DOUBLE, small: DOUBLE>",
+    "rowSchemas": ["OBJECT<big: DOUBLE, small: DOUBLE>"]
   },
   {
     "name": "the smallest plain fraction JavaScript writes",
     "rows": ["{\"v\": 0.000001}"],
-    "schema": "OBJECT<v: DECIMAL(6,6)>"
+    "schema": "OBJECT<v: DECIMAL(6,6)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(6,6)>"]
   },
   {
     "name": "a double's every digit",
     "rows": ["{\"v\": 0.30000000000000004}"],
-    "schema": "OBJECT<v: DECIMAL(17,17)>"
+    "schema": "OBJECT<v: DECIMAL(17,17)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(17,17)>"]
   },
   {
     "name": "zero with a fraction",
     "rows": ["{\"v\": 0.0}"],
-    "schema": "OBJECT<v: BIGINT>"
+    "schema": "OBJECT<v: BIGINT>",
+    "rowSchemas": ["OBJECT<v: BIGINT>"]
+  },
+  {
+    "name": "a 16 and a 17 digit fraction",
+    "rows": ["{\"v\": 9284706.999413481}", "{\"v\": 29667.680253587514}"],
+    "schema": "OBJECT<v: DECIMAL(19,12)>",
+    "rowSchemas": ["OBJECT<v: DECIMAL(16,9)>", "OBJECT<v: DECIMAL(17,12)>"]
+  },
+  {
+    "name": "integers past the 64-bit ranges as JavaScript writes them",
+    "rows": [
+      "{\"soil\": \"clay\", \"code\": 18446744073709552000}",
+      "{\"soil\": \"sand\", \"code\": 100000000000000000000}",
+      "{\"soil\": \"silt\", \"code\": -9223372036854776000}",
+      "{\"soil\": \"loam\", \"code\": -1234567890123456800, \"small\": -1234567890123456800}"
+    ],
+    "schema": "OBJECT<code: DECIMAL(21,0), small: BIGINT, soil: STRING>",
+    "rowSchemas": [
+      "OBJECT<code: DECIMAL(20,0), soil: STRING>",
+      "OBJECT<code: DECIMAL(21,0), soil: STRING>",
+      "OBJECT<code: DECIMAL(19,0), soil: STRING>",
+      "OBJECT<code: BIGINT, small: BIGINT, soil: STRING>"
+    ]
+  },
+  {
+    "name": "plots with a dotted key, a fraction and a repeated identifier",
+    "rows": [
+      "{\"Plot no.\": 3, \"area\": 1.15, \"note\": \"dry\", \"soil\": \"clay\"}",
+      "{\"area\": 12.25, \"note\": \"wet\", \"soil\": \"sand\"}",
+      "{\"soil\": \"a repeat, which the first row wins\"}"
+    ],
+    "schema": "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(4,2), note: STRING, soil: STRING>",
+    "rowSchemas": [
+      "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(3,2), note: STRING, soil: STRING>",
+      "OBJECT<area: DECIMAL(4,2), note: STRING, soil: STRING>",
+      "OBJECT<soil: STRING>"
+    ]
+  },
+  {
+    "name": "devices with a whole area and a null",
+    "rows": ["{\"soil\": \"loam\"}", "{\"area\": 5, \"note\": null}"],
+    "schema": "OBJECT<area: BIGINT, note: VOID, soil: STRING>",
+    "rowSchemas": ["OBJECT<soil: STRING>", "OBJECT<area: BIGINT, note: VOID>"]
   }
 ]

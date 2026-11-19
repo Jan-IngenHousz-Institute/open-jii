@@ -28,10 +28,15 @@ export interface StoreQuery {
   columns: StoreQueryColumn[];
 }
 
-/** A metadata sheet as a read matches it: by a question's answer, or by `column:device_id`. */
+/** A metadata sheet as the store holds it, from the lakehouse's copy of the sheets. */
 export interface StoreMetadataSheet {
   id: string;
+  /** The question whose answer matches a row's identifier, or `column:device_id`. */
   matchOn: string;
+  /** Gold's schema of the sheet's rows, decimals kept; null for a sheet without rows. */
+  schema: string | null;
+  /** The commit the store holds the sheet at, which every change to the sheet moves. */
+  version: string;
 }
 
 export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
@@ -57,11 +62,8 @@ export interface ServingStorePort {
   /** Whether the experiment's metadata sheets match the table's rows; an upload's they never do. */
   takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean;
 
-  /** The listed table with the schema the sheets give, where it takes them, and its revision. */
-  withCustomMetadata(
-    table: ExperimentTableMetadata,
-    schema: string | null,
-  ): ExperimentTableMetadata;
+  /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
+  getMetadataSheets(experimentId: string): Promise<Result<StoreMetadataSheet[]>>;
 
   getExperimentTableColumns(
     tableType: ExperimentTableType,
