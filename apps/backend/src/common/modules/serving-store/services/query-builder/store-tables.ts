@@ -68,8 +68,8 @@ const DEVICE: StoreColumn = {
   idOf: "device",
 };
 
-// A row's cells take the annotations added after the measurement from Postgres, after its own; the
-// flag filter reads their row ids from Postgres too. Custom metadata reads as none for now.
+// The store holds the sheets (experiment_metadata_rows, experiment_metadata_sheets), but pages do
+// not join them yet, so custom metadata reads as none.
 const CUSTOM_METADATA: StoreColumn = {
   name: "custom_metadata",
   type: "VARIANT",
