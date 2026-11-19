@@ -75,9 +75,6 @@ export class ExperimentMetadataStoreRepository {
     if (held.isFailure()) {
       return held;
     }
-    if (!canContinue()) {
-      return success("stopped");
-    }
 
     const rows = sheets.flatMap((sheet) => {
       const current = this.rowsOf(sheet, claimedAt);
@@ -87,6 +84,11 @@ export class ExperimentMetadataStoreRepository {
         .map((identifier) => this.tombstone(sheet, identifier, claimedAt));
       return [...current, ...removed];
     });
+    // Reading the held rows and building a large sheet's rows can both outlast the claim.
+    if (!canContinue()) {
+      return success("stopped");
+    }
+
     const inserted = await this.servingStore.insertRows("metadata_rows", rows);
     return inserted.map((): "merged" => "merged");
   }
