@@ -328,6 +328,26 @@ jobs:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
       environment: "dev"
+      CLICKHOUSE_TEST_URL: http://127.0.0.1:8123
+      CLICKHOUSE_TEST_USER: admin
+      CLICKHOUSE_TEST_PASSWORD: ci-store-tests
+    # The store for the backend and data tests that read and write a real one. An empty image starts
+    # no container, so a PR touching neither app skips the pull. Keep the tag at clickhouse_version in
+    # infrastructure/modules/serving-store/variables.tf.
+    services:
+      clickhouse:
+        image: ${{ (contains(fromJSON(needs.detect.outputs.affected_apps), 'backend') || contains(fromJSON(needs.detect.outputs.affected_apps), 'data')) && 'clickhouse/clickhouse-server:25.8.33.6' || '' }}
+        env:
+          CLICKHOUSE_USER: admin
+          CLICKHOUSE_PASSWORD: ci-store-tests
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "wget --spider --quiet http://127.0.0.1:8123/ping"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
