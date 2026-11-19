@@ -57,7 +57,7 @@
     "filters": { "groups": [{ "rollout_percentage": 0 }] }
   },
   "store-experiment-reads": {
-    "name": "An experiment's tables, pages, filter values and columns, and a device's pages, read from the serving store; charts and an experiment's Devices tab stay on the warehouse. On for one organisation's members while both read paths are compared, off for everyone else.",
+    "name": "Every read the serving store answers comes from it, so a page never mixes the store's columns with the warehouse's cells. On for one organisation's members while both read paths are compared, off for everyone else.",
     "active": true,
     "continuity": false,
     "tags": ["backend", "serving-store"],
