@@ -180,7 +180,8 @@ export class ExperimentTableChangesService implements OnModuleDestroy {
 
   private async check(experimentId: string, watch: Watch): Promise<void> {
     const result = await this.experimentDataRepository.listedTablesMetadata(experimentId, "store");
-    if (this.watches.get(experimentId) !== watch) {
+    const isSuperseded = this.watches.get(experimentId) !== watch;
+    if (isSuperseded) {
       return;
     }
 
