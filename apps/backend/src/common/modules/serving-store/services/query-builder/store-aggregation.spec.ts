@@ -724,6 +724,34 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
     expect(data.rows).toEqual([["A", null]]);
   });
 
+  it("filters a chart by contributor as a page filters", async () => {
+    const row = {
+      ...emptyMacroRow("contributors"),
+      timestamp: "2026-09-07 00:00:00",
+      device_name: "A",
+    };
+    await admin.insert({
+      table: "macro_results",
+      values: [
+        { ...row, id: 1, raw_id: 1, user_id: ADA },
+        { ...row, id: 2, raw_id: 2, user_id: ADA },
+        { ...row, id: 3, raw_id: 3, user_id: BEN, device_name: "B" },
+      ],
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      ...storeRead("groupedStats", "contributors"),
+      aggregation: {
+        groupBy: [{ column: "device_name" }],
+        functions: [{ column: "*", function: "count" }],
+      },
+      filters: [{ column: "contributor.id", operator: "equals", value: ADA }],
+    });
+
+    expect(data.rows).toEqual([["A", "2"]]);
+  });
+
   describe("matching a second table by time", () => {
     beforeAll(async () => {
       const primary = { ...emptyMacroRow("joined"), macro_id: "m1" };

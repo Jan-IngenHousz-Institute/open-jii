@@ -3153,6 +3153,7 @@ describe("ExperimentDataRepository", () => {
 
     it("reads an aggregated and an unpaged read from the store as chart reads", async () => {
       const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+      const warehouseMetadata = vi.spyOn(databricksPort, "getExperimentTableMetadata");
       const store = vi
         .spyOn(servingStore, "executeQuery")
         .mockResolvedValue(
@@ -3179,6 +3180,7 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(aggregated);
       assertSuccess(series);
       expect(warehouse).not.toHaveBeenCalled();
+      expect(warehouseMetadata).not.toHaveBeenCalled();
       expect(store.mock.calls[0][0].sql).toContain("GROUP BY `plot`");
       expect(build.mock.calls.every(([params]) => params.isChartRead === true)).toBe(true);
     });
