@@ -20,13 +20,10 @@ export const STATUS_HISTORY_DAYS = 90;
 export const DAY_MINUTES = 1440;
 
 export const STATUS_COMPONENT_IDS = [
-  "website",
-  "sign-in",
   "platform",
   "data-intake",
   "data-delivery",
   "macro-processing",
-  "exports",
 ] as const;
 
 export const statusComponentIdSchema = z.enum(STATUS_COMPONENT_IDS);

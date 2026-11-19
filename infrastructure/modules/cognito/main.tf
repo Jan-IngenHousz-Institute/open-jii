@@ -12,6 +12,8 @@ resource "aws_cognito_identity_pool" "this" {
 }
 
 resource "aws_iam_role" "unauth" {
+  count = var.allow_unauthenticated_identities ? 1 : 0
+
   name = "${var.identity_pool_name}-unauth-role"
 
   assume_role_policy = jsonencode({
@@ -33,6 +35,8 @@ resource "aws_iam_role" "unauth" {
 }
 
 resource "aws_iam_policy" "unauth_iot" {
+  count = var.allow_unauthenticated_identities ? 1 : 0
+
   name        = "${var.identity_pool_name}-unauth-iot"
   description = "Allow unauthenticated identities to connect and publish to experiment/data_ingest/v1"
 
@@ -58,8 +62,10 @@ resource "aws_iam_policy" "unauth_iot" {
 }
 
 resource "aws_iam_role_policy_attachment" "unauth_iot_attach" {
-  role       = aws_iam_role.unauth.name
-  policy_arn = aws_iam_policy.unauth_iot.arn
+  count = var.allow_unauthenticated_identities ? 1 : 0
+
+  role       = aws_iam_role.unauth[0].name
+  policy_arn = aws_iam_policy.unauth_iot[0].arn
 }
 
 resource "aws_iam_role" "auth" {
@@ -86,10 +92,10 @@ resource "aws_iam_role" "auth" {
 resource "aws_cognito_identity_pool_roles_attachment" "this" {
   identity_pool_id = aws_cognito_identity_pool.this.id
 
-  roles = {
-    authenticated   = aws_iam_role.auth.arn
-    unauthenticated = aws_iam_role.unauth.arn
-  }
+  roles = merge(
+    { authenticated = aws_iam_role.auth.arn },
+    var.allow_unauthenticated_identities ? { unauthenticated = aws_iam_role.unauth[0].arn } : {},
+  )
 }
 
 resource "aws_iam_policy" "auth_iot" {

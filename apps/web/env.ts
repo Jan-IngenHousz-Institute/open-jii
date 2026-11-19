@@ -6,6 +6,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:3020"),
   NEXT_PUBLIC_DOCS_URL: z.string().url().default("http://localhost:3010"),
   NEXT_PUBLIC_STATUS_URL: z.string().url().default("http://localhost:3030"),
+  NEXT_PUBLIC_EQUIPMENT_URL: z.string().url().default("http://localhost:3100"),
+  // Devices this organization owns link to Lab; unset hides the link.
+  NEXT_PUBLIC_JII_ORGANIZATION_ID: z.string().uuid().optional(),
   NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
   // Allows ?mockDevices=1 to offer fake IoT devices outside dev builds (e2e).
   NEXT_PUBLIC_ENABLE_MOCK_DEVICES: z.enum(["true", "false"]).default("false"),
@@ -33,6 +36,8 @@ const parseEnv = () => {
       NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
       NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
       NEXT_PUBLIC_STATUS_URL: process.env.NEXT_PUBLIC_STATUS_URL,
+      NEXT_PUBLIC_EQUIPMENT_URL: process.env.NEXT_PUBLIC_EQUIPMENT_URL,
+      NEXT_PUBLIC_JII_ORGANIZATION_ID: process.env.NEXT_PUBLIC_JII_ORGANIZATION_ID,
       NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
       NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
       NEXT_PUBLIC_POSTHOG_UI_HOST: process.env.NEXT_PUBLIC_POSTHOG_UI_HOST,

@@ -73,7 +73,7 @@ resource "aws_iam_policy" "kinesis_access_policy" {
         Resource = ["*"],
         Condition = {
           StringEquals = {
-            "kms:ViaService" = "kinesis.${data.aws_region.current.name}.amazonaws.com"
+            "kms:ViaService" = "kinesis.${data.aws_region.current.region}.amazonaws.com"
           }
         }
       },

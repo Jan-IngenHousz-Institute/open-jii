@@ -36,6 +36,7 @@ class ReporterUnderTest extends ErrorReporterService {
           withContext,
           getContext: () => undefined,
           isFeatureEnabled: vi.fn(),
+          on: vi.fn(),
           shutdown: vi.fn(),
         }
       : null;

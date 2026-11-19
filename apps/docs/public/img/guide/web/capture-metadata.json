@@ -720,11 +720,11 @@
     },
     {
       "asset": "status-page.webp",
-      "sha256": "4597cfcce5dcfcce9f8a66cfab0c4dc23cfdab89833bd4d240b58ec55fa507ac",
-      "script": "one-off Playwright capture of the public page, not scripted",
-      "environment": "status.dev.openjii.org",
+      "sha256": "37816d5aaade37b2b4ffac8f853b3691eb5b013a15f0cf99ab6f31655cfdd70e",
+      "script": "one-off Playwright capture of the status app's dev server, not scripted",
+      "environment": "local status app on the operational sample (pnpm status:fixtures operational)",
       "route": "/",
-      "captured_at": "2026-11-16T05:26:00+00:00",
+      "captured_at": "2026-11-18T11:13:20+00:00",
       "viewport": {
         "width": 1280,
         "height": 900
@@ -732,12 +732,12 @@
       "color_scheme": "light",
       "locale": "en-US",
       "review_status": "approved",
-      "reviewed_at": "2026-11-16T05:30:00+00:00",
-      "reviewer": "status-links",
-      "review_notes": "The public status page with every component operational. It shows no account, email or location.",
+      "reviewed_at": "2026-11-18T11:13:20+00:00",
+      "reviewer": "status-fold",
+      "review_notes": "The status page's operational sample with the four components, Platform first. The sample's history is made up. It shows no account, email or location, and the dev server's indicator was removed before the capture. Encoded as WebP at quality 90 with metadata omitted using cwebp.",
       "redactions": [],
       "live_checks_observed": [
-        "status.dev.openjii.org was checked 05:25 UTC with all five components operational."
+        "The page listed Platform, Data intake, Data delivery and Macro processing, all operational."
       ]
     }
   ]

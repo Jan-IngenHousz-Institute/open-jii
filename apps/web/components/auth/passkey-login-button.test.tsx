@@ -30,6 +30,15 @@ describe("PasskeyLoginButton", () => {
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/platform"));
   });
 
+  it.each([
+    ["http://localhost:3100/login/openjii", "http://localhost:3100/login/openjii"],
+    ["https://example.com", "/platform"],
+  ])("validates the return address %s", async (callbackUrl, expected) => {
+    const { router } = render(<PasskeyLoginButton callbackUrl={callbackUrl} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "auth.loginWith-passkey" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expected));
+  });
+
   it("shows a destructive toast and does not redirect on failure", async () => {
     vi.mocked(authClient.signIn.passkey).mockResolvedValue({
       data: null,

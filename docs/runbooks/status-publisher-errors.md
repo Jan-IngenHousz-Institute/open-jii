@@ -71,6 +71,20 @@ Contentful stayed unreadable, which logs that line first because it had written 
   that minute. A release that raises `PUBLISHER_STATE_VERSION` fails the same way on its first run,
   and no older version reads either, so delete the object then.
 
+  A release that removes a component fails the same way, with an `unrecognized_keys` error naming
+  its id. Drop that key from the object, which keeps every other component's history:
+
+  ```bash
+  aws s3api get-object --bucket open-jii-status-state-<env> --key publisher-state.json state.json
+  jq 'del(.components["<id>"])' state.json > trimmed.json
+  aws s3api put-object --bucket open-jii-status-state-<env> --key publisher-state.json \
+    --body trimmed.json --content-type application/json
+  ```
+
+  The minutes the failed runs missed are recorded as unknown. The release that folds Website, Sign-in
+  and Exports into Platform needs this once on dev, for `website`, `sign-in` and `exports`. Prod's
+  publisher first runs after that release, so prod needs nothing.
+
 - **The saved feed state is corrupt.** The publisher carries what subscribers were last told, and
   the last content it read from Contentful, in `status-feed.json`. A state that no longer parses
   does not stop the run: the log shows one JSON line with `"warning": "status-feed-unreadable"` and

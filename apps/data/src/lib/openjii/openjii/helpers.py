@@ -97,6 +97,10 @@ def explode_set_data(df, set_column="set"):
     )
 
 
+class TableMetadataNotFound(ValueError):
+    """The table has no metadata row, which gold writes after the table's first row arrives."""
+
+
 def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="centrum"):
     """Fetch metadata for a specific experiment table.
 
@@ -135,7 +139,9 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
 
     rows = metadata_df.collect()
     if not rows:
-        raise ValueError(f"No metadata found for experiment {experiment_id}, identifier {identifier}")
+        raise TableMetadataNotFound(
+            f"No metadata found for experiment {experiment_id}, identifier {identifier}"
+        )
 
     row = rows[0]
     return {

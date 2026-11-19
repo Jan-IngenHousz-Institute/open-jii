@@ -4,7 +4,7 @@
 mail a six-digit code. When the email server does not take the message, the auth server logs
 `Sign-in code email failed` with the code's type but never the address
 (`packages/auth/src/email-otp.ts`), and a metric filter on the backend's log group counts the line.
-Better Auth still answers that the code was sent, so the person waits for an email that never comes. The status page shows Sign-in degraded for 15 minutes after one.
+Better Auth still answers that the code was sent, so the person waits for an email that never comes. The status page shows Platform degraded while three or more failed in the last 15 minutes, so one failure alerts here before the page changes.
 
 ## See what happened
 

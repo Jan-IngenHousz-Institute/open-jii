@@ -49,7 +49,7 @@ function incident(change: Partial<Incident> = {}): Incident {
     kind: "incident",
     title: "Sign-in is slow",
     impact: "degraded",
-    components: ["sign-in"],
+    components: ["macro-processing"],
     startsAt: "2026-11-03T11:00:00.000Z",
     updates: [],
     ...change,
@@ -82,7 +82,7 @@ function statusDocument(change: DocumentChange = {}): StatusDocument {
   return {
     version: 1,
     generatedAt: BASE,
-    components: change.components ?? [component("website"), component("platform")],
+    components: change.components ?? [component("data-delivery"), component("platform")],
     incidents: change.incidents ?? [],
     notices: change.notices ?? [],
   };
@@ -108,7 +108,7 @@ function typesOf(events: StatusEvent[]): string[] {
 
 describe("the first run", () => {
   const document = statusDocument({
-    components: [component("website"), component("platform", "outage")],
+    components: [component("data-delivery"), component("platform", "outage")],
     incidents: [
       incident({ updates: [update({ id: "upd-1" })] }),
       incident({ id: "inc-2", resolvedAt: "2026-11-03T11:30:00.000Z" }),
@@ -138,7 +138,7 @@ describe("the first run", () => {
         { id: "maint-2", kind: "maintenance", phase: "in-progress", updates: [] },
       ],
       components: {
-        website: { state: "operational", since: BASE },
+        "data-delivery": { state: "operational", since: BASE },
         platform: { state: "outage", since: BASE },
       },
       notices: [{ id: "notice-1", title: "Heads up" }],
@@ -882,12 +882,16 @@ describe("maintenance", () => {
 });
 
 describe("components", () => {
-  const healthy = statusDocument({ components: [component("website"), component("platform")] });
+  const healthy = statusDocument({
+    components: [component("data-delivery"), component("platform")],
+  });
 
   it("announces a component whose state differs from the snapshot", () => {
     const { events } = run(
       baselineOf(healthy),
-      statusDocument({ components: [component("website"), component("platform", "degraded")] }),
+      statusDocument({
+        components: [component("data-delivery"), component("platform", "degraded")],
+      }),
       "2026-11-03T12:05:40.000Z",
     );
 
@@ -904,10 +908,10 @@ describe("components", () => {
 
   describe("the id of a change", () => {
     const degraded = statusDocument({
-      components: [component("website"), component("platform", "degraded")],
+      components: [component("data-delivery"), component("platform", "degraded")],
     });
     const outage = statusDocument({
-      components: [component("website"), component("platform", "outage")],
+      components: [component("data-delivery"), component("platform", "outage")],
     });
 
     function idsOf(result: ReturnType<typeof run>): string[] {
@@ -957,12 +961,14 @@ describe("components", () => {
     it("takes the run's time when a state changes", () => {
       const { announced } = run(
         baselineOf(healthy),
-        statusDocument({ components: [component("website"), component("platform", "degraded")] }),
+        statusDocument({
+          components: [component("data-delivery"), component("platform", "degraded")],
+        }),
         LATER,
       );
 
       expect(announced.components).toEqual({
-        website: { state: "operational", since: BASE },
+        "data-delivery": { state: "operational", since: BASE },
         platform: { state: "degraded", since: LATER },
       });
     });
@@ -972,20 +978,20 @@ describe("components", () => {
     const { events } = run(
       baselineOf(healthy),
       statusDocument({
-        components: [component("website", "outage"), component("platform", "degraded")],
+        components: [component("data-delivery", "outage"), component("platform", "degraded")],
       }),
       LATER,
     );
 
     expect(events.map((event) => ("component" in event ? event.component : undefined))).toEqual([
-      "website",
+      "data-delivery",
       "platform",
     ]);
   });
 
   it("announces a recovery as it does a failure", () => {
     const down = statusDocument({
-      components: [component("website"), component("platform", "outage")],
+      components: [component("data-delivery"), component("platform", "outage")],
     });
 
     const { events } = run(baselineOf(down), healthy, LATER);
@@ -994,20 +1000,20 @@ describe("components", () => {
   });
 
   it("treats a component the snapshot does not know as a baseline", () => {
-    const previous = baselineOf(statusDocument({ components: [component("website")] }));
+    const previous = baselineOf(statusDocument({ components: [component("data-delivery")] }));
 
     const { events, announced } = run(previous, healthy, LATER);
 
     expect(events).toEqual([]);
     expect(announced.components).toEqual({
-      website: { state: "operational", since: BASE },
+      "data-delivery": { state: "operational", since: BASE },
       platform: { state: "operational", since: LATER },
     });
   });
 
   describe("held back while an incident or window speaks for it", () => {
     const down = statusDocument({
-      components: [component("website"), component("platform", "outage")],
+      components: [component("data-delivery"), component("platform", "outage")],
     });
 
     it.each([
@@ -1029,14 +1035,14 @@ describe("components", () => {
 
     it("still announces a component the open incident does not name", () => {
       const document = statusDocument({
-        components: [component("website", "degraded"), component("platform", "outage")],
+        components: [component("data-delivery", "degraded"), component("platform", "outage")],
         incidents: [incident({ impact: "outage", components: ["platform"] })],
       });
 
       const { events } = run(baselineOf(healthy), document, LATER);
 
       expect(typesOf(events)).toEqual(["incident.opened", "component.changed"]);
-      expect(events[1]).toMatchObject({ component: "website" });
+      expect(events[1]).toMatchObject({ component: "data-delivery" });
     });
 
     it.each([
@@ -1048,7 +1054,7 @@ describe("components", () => {
       "holds back a change to $to under an open $impact incident: $isHeld",
       ({ impact, to, isHeld }) => {
         const document = statusDocument({
-          components: [component("website"), component("platform", to)],
+          components: [component("data-delivery"), component("platform", to)],
           incidents: [incident({ impact, components: ["platform"] })],
         });
 
@@ -1167,7 +1173,7 @@ describe("components", () => {
         endsAt: "2026-11-03T12:30:00.000Z",
       });
       const inMaintenance = statusDocument({
-        components: [component("website"), component("platform", "maintenance")],
+        components: [component("data-delivery"), component("platform", "maintenance")],
       });
       const previous = baselineOf({ ...inMaintenance, incidents: [window] });
 
@@ -1186,7 +1192,7 @@ describe("components", () => {
         endsAt: "2026-11-03T12:30:00.000Z",
       });
       const inMaintenance = statusDocument({
-        components: [component("website"), component("platform", "maintenance")],
+        components: [component("data-delivery"), component("platform", "maintenance")],
       });
       const previous = baselineOf({ ...inMaintenance, incidents: [window] });
 
@@ -1270,13 +1276,13 @@ describe("notices", () => {
 
 describe("a busy run", () => {
   const before = statusDocument({
-    components: [component("website"), component("platform"), component("data-intake")],
+    components: [component("data-delivery"), component("platform"), component("data-intake")],
     incidents: [incident({ id: "old", resolvedAt: "2026-11-03T11:30:00.000Z" })],
     notices: [notice({ id: "old-notice" })],
   });
   const after = statusDocument({
     components: [
-      component("website", "degraded"),
+      component("data-delivery", "degraded"),
       component("platform"),
       component("data-intake", "outage"),
     ],
@@ -1304,7 +1310,10 @@ describe("a busy run", () => {
   });
 
   it("holds back only the component the new incident names", () => {
-    expect(result.events.at(-1)).toMatchObject({ type: "component.changed", component: "website" });
+    expect(result.events.at(-1)).toMatchObject({
+      type: "component.changed",
+      component: "data-delivery",
+    });
   });
 
   it("stamps every event with the run, the environment and the page", () => {
@@ -1343,7 +1352,7 @@ describe("a busy run", () => {
 describe("every event type", () => {
   const baselineAt = "2026-11-03T11:55:00.000Z";
   const before = statusDocument({
-    components: [component("website"), component("platform")],
+    components: [component("data-delivery"), component("platform")],
     incidents: [
       incident({ id: "open-1" }),
       incident({ id: "open-2" }),
@@ -1358,7 +1367,7 @@ describe("every event type", () => {
     notices: [notice({ id: "gone" })],
   });
   const after = statusDocument({
-    components: [component("website", "degraded"), component("platform")],
+    components: [component("data-delivery", "degraded"), component("platform")],
     incidents: [
       incident({ id: "open-1", updates: [update({ id: "upd-a", stage: "identified" })] }),
       incident({
@@ -1398,7 +1407,7 @@ describe("every event type", () => {
       "maintenance.scheduled:window-3:2026-11-04T12:00:00.000Z",
       `notice.posted:fresh:${baselineAt}`,
       `notice.removed:gone:${baselineAt}`,
-      `component.changed:website:${baselineAt}:degraded`,
+      `component.changed:data-delivery:${baselineAt}:degraded`,
     ]);
   });
 
@@ -1470,7 +1479,7 @@ function changed(id: string): StatusEvent {
     occurredAt: BASE,
     pageUrl: PAGE_URL,
     type: "component.changed",
-    component: "website",
+    component: "data-delivery",
     from: "operational",
     to: "degraded",
   };

@@ -88,8 +88,7 @@ resource "databricks_job" "this" {
           data_security_mode  = task.value.data_security_mode
           single_user_name    = task.value.single_user_name
 
-          policy_id                   = task.value.policy_id
-          apply_policy_default_values = task.value.policy_id != null ? true : null
+          policy_id = task.value.policy_id
 
           # Merge global spark configs with task-specific configs, with task configs taking precedence
           spark_conf = merge(
