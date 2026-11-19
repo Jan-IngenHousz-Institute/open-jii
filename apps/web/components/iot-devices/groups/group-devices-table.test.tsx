@@ -1,5 +1,6 @@
 import { createDeviceGroupMemberHealth } from "@/test/factories";
-import { render, screen, userEvent } from "@/test/test-utils";
+import { openOnUrl } from "@/test/list-request";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -8,6 +9,8 @@ import type {
 } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { GroupDevicesTable } from "./group-devices-table";
+import { GroupMonitoringFilter } from "./group-monitoring-filter";
+import { useGroupDevicesList } from "./use-group-devices-list";
 
 const NOW = Date.now();
 const STALE = new Date(NOW - 3 * 3_600_000).toISOString();
@@ -34,24 +37,42 @@ interface TableSetup {
   labels?: Map<string, string>;
   versions?: Map<string, string>;
   pipelineUnavailable?: boolean;
+  dataUpdatedAt?: number;
 }
 
-function renderTable({
+function DeviceTable({
   members,
   labels = new Map(),
   versions = new Map(),
   pipelineUnavailable = false,
+  dataUpdatedAt = 1,
 }: TableSetup) {
-  return render(
-    <GroupDevicesTable
-      monitoring={monitoringWith(members, pipelineUnavailable)}
-      members={members}
-      labelByDeviceId={labels}
-      versionByDeviceId={versions}
-      locale="en-US"
-      now={NOW}
-    />,
+  const list = useGroupDevicesList({
+    groupId: "group",
+    dataUpdatedAt,
+    members,
+    labelByDeviceId: labels,
+    pipelineUnavailable,
+    now: NOW,
+  });
+  return (
+    <>
+      <GroupMonitoringFilter list={list} />
+      <GroupDevicesTable
+        monitoring={monitoringWith(members, pipelineUnavailable)}
+        members={list.data?.items ?? []}
+        labelByDeviceId={labels}
+        versionByDeviceId={versions}
+        locale="en-US"
+        now={NOW}
+        list={list}
+      />
+    </>
   );
+}
+
+function renderTable(props: TableSetup) {
+  return render(<DeviceTable {...props} />);
 }
 
 describe("GroupDevicesTable", () => {
@@ -108,33 +129,154 @@ describe("GroupDevicesTable", () => {
   });
 
   it("shows the no-matches message when the filter empties the roster", () => {
-    render(
-      <GroupDevicesTable
-        monitoring={monitoringWith([createDeviceGroupMemberHealth()])}
-        members={[]}
-        labelByDeviceId={new Map()}
-        versionByDeviceId={new Map()}
-        locale="en-US"
-        now={NOW}
-      />,
-    );
+    openOnUrl("/platform/devices/groups/group/monitoring", "q=unmatched");
+    renderTable({ members: [createDeviceGroupMemberHealth({ serialNumber: "AA:11" })] });
 
     expect(screen.getByText("iot.groups.monitoring.filter.noMatches")).toBeInTheDocument();
+  });
+
+  it("sorts health in the filter menu order ascending and descending", async () => {
+    const user = userEvent.setup();
+    const members = [
+      createDeviceGroupMemberHealth({
+        serialNumber: "Silent",
+        connectivity: online,
+        lastDataAt: STALE,
+      }),
+      createDeviceGroupMemberHealth({ serialNumber: "Unknown", connectivity: null }),
+      createDeviceGroupMemberHealth({
+        serialNumber: "Offline",
+        connectivity: { connected: false, lastSeenAt: null },
+      }),
+      createDeviceGroupMemberHealth({
+        serialNumber: "Online",
+        connectivity: online,
+        lastDataAt: RECENT,
+      }),
+    ];
+    renderTable({ members });
+    await user.click(screen.getByRole("button", { name: /iot.groups.monitoring.stateColumn:/ }));
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Online",
+      "Offline",
+      "Unknown",
+      "Silent",
+    ]);
+    await user.click(screen.getByRole("button", { name: /iot.groups.monitoring.stateColumn:/ }));
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Silent",
+      "Unknown",
+      "Offline",
+      "Online",
+    ]);
+  });
+
+  it("sorts family by its stored value ascending and descending", async () => {
+    const user = userEvent.setup();
+    renderTable({
+      members: [
+        createDeviceGroupMemberHealth({ serialNumber: "Mobile", deviceType: "mobile" }),
+        createDeviceGroupMemberHealth({ serialNumber: "Ambyte", deviceType: "ambyte" }),
+        createDeviceGroupMemberHealth({ serialNumber: "Ambit", deviceType: "ambit" }),
+      ],
+    });
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Ambit",
+      "Ambyte",
+      "Mobile",
+    ]);
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Mobile",
+      "Ambyte",
+      "Ambit",
+    ]);
+  });
+
+  it("uses Shift-click family sorting to break health ties", async () => {
+    const user = userEvent.setup();
+    renderTable({
+      members: [
+        createDeviceGroupMemberHealth({
+          serialNumber: "Mobile online",
+          deviceType: "mobile",
+          connectivity: online,
+        }),
+        createDeviceGroupMemberHealth({
+          serialNumber: "Ambit unknown",
+          deviceType: "ambit",
+          connectivity: null,
+        }),
+        createDeviceGroupMemberHealth({
+          serialNumber: "Ambit online",
+          deviceType: "ambit",
+          connectivity: online,
+        }),
+      ],
+      pipelineUnavailable: true,
+    });
+    await user.click(screen.getByRole("button", { name: /iot.groups.monitoring.stateColumn:/ }));
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Ambit online",
+      "Mobile online",
+      "Ambit unknown",
+    ]);
+    expect(
+      screen.getByRole("button", { name: /iot.devices.columns.family:/ }),
+    ).toHaveAccessibleName(
+      "iot.devices.columns.family: common.sortAscending, common.sortSecondary",
+    );
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    await user.keyboard("{/Shift}");
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Mobile online",
+      "Ambit online",
+      "Ambit unknown",
+    ]);
+  });
+
+  it("clears health, family and search from the zero-results action", async () => {
+    const user = userEvent.setup();
+    openOnUrl(
+      "/platform/devices/groups/group/monitoring",
+      "groupHealth=offline&deviceFamily=mobile&q=missing",
+    );
+    renderTable({
+      members: [createDeviceGroupMemberHealth({ serialNumber: "AA:11", connectivity: null })],
+    });
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "common.clearFilters" })[1]);
+    expect(
+      screen.getByPlaceholderText("iot.groups.monitoring.filter.searchPlaceholder"),
+    ).toHaveValue("");
+    await waitFor(() => expect(screen.getByRole("link", { name: "AA:11" })).toBeInTheDocument());
+  });
+
+  it("refreshes the roster when the parent query version changes", () => {
+    const { rerender } = renderTable({
+      members: [createDeviceGroupMemberHealth({ serialNumber: "Before" })],
+    });
+    expect(screen.getByRole("link", { name: "Before" })).toBeInTheDocument();
+    rerender(
+      <DeviceTable
+        members={[createDeviceGroupMemberHealth({ serialNumber: "After" })]}
+        dataUpdatedAt={2}
+      />,
+    );
+    expect(screen.queryByRole("link", { name: "Before" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "After" })).toBeInTheDocument();
   });
 
   it("opens the device's dashboard from anywhere on the row", async () => {
     const user = userEvent.setup();
     const member = createDeviceGroupMemberHealth({ name: "Gateway", connectivity: online });
-    const { router } = render(
-      <GroupDevicesTable
-        monitoring={monitoringWith([member])}
-        members={[member]}
-        labelByDeviceId={new Map([[member.deviceId, "Gateway"]])}
-        versionByDeviceId={new Map()}
-        locale="en-US"
-        now={NOW}
-      />,
-    );
+    const { router } = renderTable({
+      members: [member],
+      labels: new Map([[member.deviceId, "Gateway"]]),
+    });
 
     await user.click(screen.getByText("iot.devices.connectivity.connected"));
 

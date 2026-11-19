@@ -28,11 +28,10 @@ import { buildGroupActivity, memberLabels } from "./group-activity";
 import { GroupDataByExperimentPanel } from "./group-data-by-experiment-panel";
 import { GroupDevicesTable } from "./group-devices-table";
 import { GroupFirmwarePanel } from "./group-firmware-panel";
-import type { MemberFilter } from "./group-health";
-import { filterGroupMembers, summarizeGroupHealth } from "./group-health";
 import { GroupMonitoringFilter } from "./group-monitoring-filter";
 import { GroupMonitoringTiles } from "./group-monitoring-tiles";
 import { GroupThroughputPanel } from "./group-throughput-panel";
+import { useGroupDevicesList } from "./use-group-devices-list";
 
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
 
@@ -56,10 +55,10 @@ export function GroupMonitoringContent() {
     range: resolveMonitoringPreset(DEFAULT_PRESET),
     preset: DEFAULT_PRESET,
   }));
-  const [filter, setFilter] = useState<MemberFilter>({ search: "", status: "all" });
 
   const {
     data: monitoring,
+    dataUpdatedAt,
     isLoading,
     isFetching,
     isError,
@@ -87,16 +86,15 @@ export function GroupMonitoringContent() {
       ? new Map<string, string>()
       : memberLabels(monitoring.members, labelFor);
 
-  const filteredMembers =
-    monitoring === undefined
-      ? []
-      : filterGroupMembers(
-          monitoring.members,
-          filter,
-          monitoring.pipelineUnavailable,
-          now,
-          labelFor,
-        );
+  const list = useGroupDevicesList({
+    groupId: params.groupId,
+    dataUpdatedAt,
+    members: monitoring?.members,
+    labelByDeviceId: labels,
+    pipelineUnavailable: monitoring?.pipelineUnavailable ?? true,
+    now,
+  });
+  const filteredMembers = list.matchingMembers;
   const filteredIds = new Set(filteredMembers.map((member) => member.deviceId));
   const isFiltered =
     monitoring !== undefined && filteredMembers.length !== monitoring.members.length;
@@ -144,11 +142,7 @@ export function GroupMonitoringContent() {
         </div>
 
         {monitoring !== undefined && monitoring.members.length > 0 && (
-          <GroupMonitoringFilter
-            filter={filter}
-            onFilterChange={setFilter}
-            summary={summarizeGroupHealth(monitoring.members, monitoring.pipelineUnavailable, now)}
-          />
+          <GroupMonitoringFilter list={list} />
         )}
 
         <GroupMonitoringTiles
@@ -203,7 +197,8 @@ export function GroupMonitoringContent() {
 
           <GroupDevicesTable
             monitoring={monitoring}
-            members={filteredMembers}
+            members={list.data?.items ?? []}
+            list={list}
             labelByDeviceId={labels}
             versionByDeviceId={versionByDeviceId}
             locale={locale}

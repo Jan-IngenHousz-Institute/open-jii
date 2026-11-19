@@ -11,6 +11,7 @@ import { Popover, PopoverTrigger } from "./popover";
 export interface ListFilterOption<T extends string> {
   value: T;
   label: string;
+  count?: number;
 }
 
 export interface ListFilter<T extends string = string> {

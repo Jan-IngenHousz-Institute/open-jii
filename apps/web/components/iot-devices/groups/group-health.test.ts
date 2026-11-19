@@ -74,28 +74,36 @@ describe("filterGroupMembers", () => {
   const members = [
     createDeviceGroupMemberHealth({
       name: "Greenhouse Gateway",
+      deviceType: "ambyte",
       serialNumber: "AA:11",
       connectivity: online,
       lastDataAt: RECENT,
     }),
     createDeviceGroupMemberHealth({
       name: "Field Node",
+      deviceType: "multispeq",
       serialNumber: "BB:22",
       connectivity: online,
       lastDataAt: STALE,
     }),
     createDeviceGroupMemberHealth({
       name: "Cold Spare",
+      deviceType: "ambyte",
       serialNumber: "CC:33",
       connectivity: { connected: false, lastSeenAt: null },
     }),
-    createDeviceGroupMemberHealth({ name: null, serialNumber: "DD:44", connectivity: null }),
+    createDeviceGroupMemberHealth({
+      name: null,
+      serialNumber: "DD:44",
+      deviceType: "mobile",
+      connectivity: null,
+    }),
   ];
 
   it("searches names and serials case-insensitively", () => {
     const byName = filterGroupMembers(
       members,
-      { search: "greenhouse", status: "all" },
+      { search: "greenhouse", statuses: [], families: [] },
       false,
       NOW,
       label,
@@ -104,7 +112,7 @@ describe("filterGroupMembers", () => {
 
     const bySerial = filterGroupMembers(
       members,
-      { search: "dd:44", status: "all" },
+      { search: "dd:44", statuses: [], families: [] },
       false,
       NOW,
       label,
@@ -112,9 +120,15 @@ describe("filterGroupMembers", () => {
     expect(bySerial.map(label)).toEqual(["unnamed"]);
   });
 
-  it("filters by each status chip", () => {
+  it("filters by each health value", () => {
     const pick = (status: "all" | "online" | "offline" | "silent" | "unknown") =>
-      filterGroupMembers(members, { search: "", status }, false, NOW, label).map(label);
+      filterGroupMembers(
+        members,
+        { search: "", statuses: status === "all" ? [] : [status], families: [] },
+        false,
+        NOW,
+        label,
+      ).map(label);
 
     expect(pick("all")).toHaveLength(4);
     expect(pick("online")).toEqual(["Greenhouse Gateway", "Field Node"]);
@@ -123,10 +137,76 @@ describe("filterGroupMembers", () => {
     expect(pick("unknown")).toEqual(["unnamed"]);
   });
 
+  it("matches any selected health value without duplicating silent online members", () => {
+    expect(
+      filterGroupMembers(
+        members,
+        { search: "", statuses: ["offline", "unknown"], families: [] },
+        false,
+        NOW,
+        label,
+      ).map(label),
+    ).toEqual(["Cold Spare", "unnamed"]);
+    expect(
+      filterGroupMembers(
+        members,
+        { search: "", statuses: ["online", "silent"], families: [] },
+        false,
+        NOW,
+        label,
+      ).map(label),
+    ).toEqual(["Greenhouse Gateway", "Field Node"]);
+    expect(
+      filterGroupMembers(
+        members,
+        { search: "", statuses: ["silent"], families: [] },
+        true,
+        NOW,
+        label,
+      ),
+    ).toEqual([]);
+  });
+
+  it("matches any selected family and leaves all families visible when none are selected", () => {
+    expect(
+      filterGroupMembers(
+        members,
+        { search: "", statuses: [], families: ["ambyte", "mobile"] },
+        false,
+        NOW,
+        label,
+      ).map(label),
+    ).toEqual(["Greenhouse Gateway", "Cold Spare", "unnamed"]);
+    expect(
+      filterGroupMembers(members, { search: "", statuses: [], families: [] }, false, NOW, label),
+    ).toEqual(members);
+  });
+
+  it("combines families with health and search", () => {
+    expect(
+      filterGroupMembers(
+        members,
+        { search: "gateway", statuses: ["online", "unknown"], families: ["ambyte", "mobile"] },
+        false,
+        NOW,
+        label,
+      ).map(label),
+    ).toEqual(["Greenhouse Gateway"]);
+    expect(
+      filterGroupMembers(
+        members,
+        { search: "", statuses: ["silent"], families: ["ambyte"] },
+        false,
+        NOW,
+        label,
+      ),
+    ).toEqual([]);
+  });
+
   it("combines search and status", () => {
     const result = filterGroupMembers(
       members,
-      { search: "node", status: "silent" },
+      { search: "node", statuses: ["silent"], families: [] },
       false,
       NOW,
       label,

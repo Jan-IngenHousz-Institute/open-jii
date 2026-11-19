@@ -8,6 +8,27 @@ import { labels, makeFilters } from "./list-filter-fixtures";
 Element.prototype.scrollIntoView = vi.fn();
 
 describe("ListFilterMenu", () => {
+  it("shows optional value counts, including zero, without changing uncounted options", async () => {
+    const user = userEvent.setup();
+    const { filters } = makeFilters();
+    const counted = filters.map((filter) => ({
+      ...filter,
+      options: filter.options.map((option, index) => ({
+        ...option,
+        count: filter.key === "status" ? index : undefined,
+      })),
+    }));
+    render(<ListFilterMenu filters={counted} labels={labels} />);
+
+    await user.click(screen.getByRole("button", { name: "Filter" }));
+    await user.click(screen.getByRole("option", { name: "Status" }));
+    expect(screen.getByRole("option", { name: "Draft 0" })).toBeVisible();
+    expect(screen.getByRole("option", { name: "Active 1" })).toBeVisible();
+    expect(screen.getByText("0")).toHaveClass("tabular-nums", "text-muted-foreground");
+    await user.click(screen.getByRole("option", { name: "Visibility" }));
+    expect(screen.getByRole("option", { name: "Public" })).toHaveTextContent(/^Public$/);
+  });
+
   it("shows one Filter button without a count while nothing is picked", () => {
     render(<ListFilterMenu filters={makeFilters().filters} labels={labels} />);
 

@@ -1,6 +1,8 @@
+import { BarChart } from "@/components/charts/bar-chart";
 import { createDeviceGroupMemberHealth } from "@/test/factories";
+import { openOnUrl } from "@/test/list-request";
 import { server } from "@/test/msw/server";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -111,12 +113,64 @@ describe("GroupMonitoringContent", () => {
     );
 
     expect(screen.getByRole("link", { name: "Alpha" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Beta" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "Beta" })).not.toBeInTheDocument(),
+    );
     // Firmware follows the filter, so the mixed-version flag clears.
     expect(screen.queryByText("iot.groups.monitoring.mixedFirmware")).not.toBeInTheDocument();
   });
 
-  it("filters by status chip", async () => {
+  it("scopes tiles, throughput, firmware and events to the selected family", async () => {
+    const user = userEvent.setup();
+    const alpha = createDeviceGroupMemberHealth({
+      name: "Alpha",
+      deviceType: "ambyte",
+      connectivity: { connected: true, lastSeenAt: null },
+      lastDataAt: STALE,
+    });
+    const beta = createDeviceGroupMemberHealth({
+      name: "Beta",
+      deviceType: "mobile",
+      connectivity: null,
+    });
+    mountMonitoring({
+      members: [alpha, beta],
+      throughput: [
+        { bucketStart: new Date().toISOString(), deviceId: alpha.deviceId, count: 3 },
+        { bucketStart: new Date().toISOString(), deviceId: beta.deviceId, count: 9 },
+      ],
+      firmware: [
+        { deviceId: alpha.deviceId, version: "1.0.0", lastSeen: STALE },
+        { deviceId: beta.deviceId, version: "2.0.0", lastSeen: STALE },
+      ],
+      events: [alpha, beta].map((member) => ({
+        deviceId: member.deviceId,
+        eventType: "disconnected",
+        eventTimestamp: STALE,
+        disconnectReason: "CONNECTION_LOST",
+      })),
+    });
+    render(<GroupMonitoringContent />);
+    await screen.findByText("iot.groups.monitoring.mixedFirmware");
+    expect(screen.getByText("iot.groups.monitoring.silentCount")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    await user.click(screen.getByRole("option", { name: "iot.devices.columns.family" }));
+    await user.click(screen.getByRole("option", { name: "Mobile" }));
+    await user.keyboard("{Escape}{Escape}");
+    expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
+    expect(screen.queryByText("iot.groups.monitoring.silentCount")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.groups.monitoring.mixedFirmware")).not.toBeInTheDocument();
+    expect(screen.queryByText("1.0.0")).not.toBeInTheDocument();
+    expect(screen.queryByText("Alpha · CONNECTION_LOST")).not.toBeInTheDocument();
+    expect(screen.getByText("Beta · CONNECTION_LOST")).toBeInTheDocument();
+    expect(vi.mocked(BarChart).mock.lastCall?.[0].data).toEqual([
+      expect.objectContaining({ name: "Beta" }),
+    ]);
+    expect(screen.getByTitle("9")).toBeInTheDocument();
+  });
+
+  it("filters by health from the Filter menu", async () => {
     const user = userEvent.setup();
     mountMonitoring({
       members: [
@@ -132,10 +186,99 @@ describe("GroupMonitoringContent", () => {
     render(<GroupMonitoringContent />);
 
     await screen.findByRole("link", { name: "Online One" });
-    await user.click(screen.getByRole("button", { name: /filter.silent/ }));
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    await user.click(screen.getByRole("option", { name: "iot.groups.monitoring.stateColumn" }));
+    await user.click(screen.getByRole("option", { name: "iot.groups.monitoring.filter.silent" }));
 
     expect(screen.getByRole("link", { name: "Online One" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Ghost" })).not.toBeInTheDocument();
+  });
+
+  it("pages and sorts only the roster while summary panels keep all matching members", async () => {
+    const user = userEvent.setup();
+    mountMonitoring({
+      members: Array.from({ length: 21 }, (_, index) =>
+        createDeviceGroupMemberHealth({
+          name: `Gateway ${String(21 - index).padStart(2, "0")}`,
+          connectivity: null,
+        }),
+      ),
+    });
+    render(<GroupMonitoringContent />);
+    await screen.findByRole("link", { name: "Gateway 21" });
+    expect(screen.queryByRole("link", { name: "Gateway 01" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "pagination.next" }));
+    expect(screen.getByRole("link", { name: "Gateway 01" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Gateway 21" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /iot.groups.deviceColumn:/ }));
+    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
+    expect(screen.getAllByRole("link")[0]).toHaveTextContent("Gateway 01");
+    expect(screen.queryByRole("link", { name: "Gateway 21" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
+    expect(screen.getAllByRole("link")[0]).toHaveTextContent("Gateway 21");
+  });
+
+  it("restores list state across range changes and preserves an unowned URL parameter", async () => {
+    const user = userEvent.setup();
+    openOnUrl(
+      `/platform/devices/groups/${GROUP_ID}/monitoring`,
+      `other=1&groupHealth=offline,unknown&deviceFamily=ambyte,mobile&q=Gateway&sort=${encodeURIComponent(JSON.stringify([{ field: "health", direction: "asc" }]))}`,
+    );
+    mountMonitoring({
+      members: [
+        createDeviceGroupMemberHealth({
+          name: "Gateway Online",
+          deviceType: "ambyte",
+          connectivity: { connected: true, lastSeenAt: null },
+        }),
+        createDeviceGroupMemberHealth({
+          name: "Gateway Unknown",
+          deviceType: "mobile",
+          connectivity: null,
+        }),
+        createDeviceGroupMemberHealth({
+          name: "Gateway Offline",
+          deviceType: "ambyte",
+          connectivity: { connected: false, lastSeenAt: null },
+        }),
+        createDeviceGroupMemberHealth({
+          name: "Gateway Other Family",
+          deviceType: "multispeq",
+          connectivity: null,
+        }),
+        createDeviceGroupMemberHealth({
+          name: "Other Offline",
+          connectivity: { connected: false, lastSeenAt: null },
+        }),
+      ],
+    });
+    const { router } = render(<GroupMonitoringContent />);
+    await screen.findByRole("link", { name: "Gateway Offline" });
+    expect(
+      screen.getByPlaceholderText("iot.groups.monitoring.filter.searchPlaceholder"),
+    ).toHaveValue("Gateway");
+    expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Gateway Offline",
+      "Gateway Unknown",
+    ]);
+    expect(
+      screen.getByRole("columnheader", { name: "iot.groups.monitoring.stateColumn" }),
+    ).toHaveAttribute("aria-sort", "ascending");
+    await user.click(screen.getByText("iot.devices.monitoring.range.last7d"));
+    await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(2));
+    expect(
+      screen.getByPlaceholderText("iot.groups.monitoring.filter.searchPlaceholder"),
+    ).toHaveValue("Gateway");
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
+    expect(router.replace).toHaveBeenLastCalledWith(
+      expect.stringContaining(
+        "other=1&groupHealth=offline,unknown&deviceFamily=ambyte,mobile&q=Gateway",
+      ),
+      { scroll: false },
+    );
+    expect(
+      screen.getByRole("button", { name: "iot.devices.monitoring.range.last7d" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("never judges silence when the pipeline is unavailable, and says why", async () => {

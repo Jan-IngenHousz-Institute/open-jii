@@ -59,6 +59,9 @@ export function ValueList({ filter, commandRef, onLeave }: ValueListProps) {
                   {isPicked && <CheckIcon className="size-3.5" />}
                 </span>
                 {option.label}
+                {option.count !== undefined && (
+                  <span className="text-muted-foreground ml-auto tabular-nums">{option.count}</span>
+                )}
               </CommandItem>
             );
           })}
