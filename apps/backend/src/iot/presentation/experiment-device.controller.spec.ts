@@ -16,9 +16,6 @@ import { DatabricksAdapter } from "../../common/modules/databricks/databricks.ad
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
-import { DeviceDataSourceService } from "../application/services/device-data-source.service";
-import { IOT_SERVING_STORE_PORT } from "../core/ports/serving-store.port";
-import type { ServingStorePort } from "../core/ports/serving-store.port";
 
 const ENDPOINT = "abc123-ats.iot.eu-central-1.amazonaws.com";
 
@@ -342,33 +339,6 @@ describe("ExperimentDeviceController", () => {
       .expect(StatusCodes.OK);
 
     expect(response.body.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]);
-  });
-
-  it("keeps a device series on the warehouse with the store flag on, like the list beside it", async () => {
-    const { experiment } = await testApp.createExperiment({ name: "E", userId });
-    vi.spyOn(testApp.module.get(DeviceDataSourceService), "sourceFor").mockResolvedValue("store");
-    const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
-    const store = vi.spyOn(servingStore, "getExperimentDeviceSeries");
-    vi.spyOn(databricksAdapter, "getExperimentDeviceSeries").mockResolvedValue(
-      success([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]),
-    );
-
-    const path = testApp.resolveOrpcPath(contract.experiments.getExperimentDeviceSeries, {
-      id: experiment.id,
-    });
-    const response: SuperTestResponse<ExperimentDeviceSeries> = await testApp
-      .get(path)
-      .query({
-        clientId: "AMBYTE_A",
-        from: "2026-08-04T12:00:00.000Z",
-        to: "2026-09-03T12:00:00.000Z",
-        bucket: "day",
-      })
-      .withAuth(userId)
-      .expect(StatusCodes.OK);
-
-    expect(response.body.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]);
-    expect(store).not.toHaveBeenCalled();
   });
 
   it("rejects a series range longer than the contract allows (400)", async () => {

@@ -318,7 +318,6 @@ describe("ServingStoreAdapter", () => {
       await adapter.getDevicePayloadBreakdown(thing, from, to);
       await adapter.getDeviceMacroBreakdown(thing, from, to);
       await adapter.getDeviceFirmwareHistory(thing, from, to, "hour");
-      await adapter.getExperimentDeviceSeries("e1", thing, from, to, "day");
       await adapter.getDeviceRecentMeasurements(thing, from, to, 50);
 
       const statements = query.mock.calls.map(([sql]) => sql);
@@ -331,7 +330,6 @@ describe("ServingStoreAdapter", () => {
         "device_measurements",
         "device_measurements",
         "device_measurements",
-        "device_measurements",
         "device_newest_measurements",
       ]);
       for (const sql of statements.slice(0, -1)) {
@@ -339,7 +337,6 @@ describe("ServingStoreAdapter", () => {
       }
       expect(statements.at(-1)).toContain("device = 'it\\'s-1'");
       expect(statements.at(-1)).toContain("rows = 50");
-      expect(statements[7]).toContain("experiment_id = 'e1'");
     });
 
     it("bounds each read by the window, parsed as UTC", async () => {
@@ -2509,21 +2506,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(withRows.value).toEqual({ lastDataAt: "2026-10-20T09:00:00.000Z" });
       expect(onlyEvents.value).toEqual({ lastDataAt: null });
       expect(unseen.value).toEqual({ lastDataAt: null });
-    });
-
-    it("counts one device's rows inside one experiment only", async () => {
-      const [inSecond, otherDevice] = await Promise.all([
-        adapter.getExperimentDeviceSeries(second, "dev-1", from, to, "hour"),
-        adapter.getExperimentDeviceSeries(first, "dev-2", from, to, "hour"),
-      ]);
-
-      assertSuccess(inSecond);
-      assertSuccess(otherDevice);
-      expect(inSecond.value).toEqual([
-        { bucketStart: "2026-10-19T11:00:00.000Z", count: 1 },
-        { bucketStart: "2026-10-19T13:00:00.000Z", count: 2 },
-      ]);
-      expect(otherDevice.value).toEqual([{ bucketStart: "2026-10-19T10:00:00.000Z", count: 1 }]);
     });
   });
 });

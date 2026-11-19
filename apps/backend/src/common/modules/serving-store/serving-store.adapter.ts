@@ -21,7 +21,6 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
-  ExperimentDeviceSeriesRow,
 } from "../../../iot/core/ports/device-reads.port";
 import type { ServingStorePort as IotServingStorePort } from "../../../iot/core/ports/serving-store.port";
 import { AppError, failure, success } from "../../utils/fp-utils";
@@ -325,36 +324,6 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
 
     const lastDataAt = result.value.rows.at(0)?.at(0);
     return success({ lastDataAt: CellValues.text(lastDataAt, "TIMESTAMP") });
-  }
-
-  /** Scoped on both keys, so it never returns traffic into other experiments. */
-  async getExperimentDeviceSeries(
-    experimentId: string,
-    clientId: string,
-    from: string,
-    to: string,
-    bucket: "hour" | "day",
-  ): Promise<Result<ExperimentDeviceSeriesRow[]>> {
-    const experiment = new StoreQueryBuilder().escapeValue(experimentId);
-    const result = await this.client.query(
-      [
-        `SELECT ${this.timeBucket(bucket)} AS bucket_start, count()`,
-        `FROM device_measurements(${this.deviceArgument(clientId)})`,
-        `WHERE experiment_id = ${experiment} AND ${this.window("timestamp", from, to)}`,
-        "GROUP BY bucket_start",
-        "ORDER BY bucket_start ASC",
-      ].join("\n"),
-    );
-    if (result.isFailure()) {
-      return result;
-    }
-
-    return success(
-      result.value.rows.map(([bucketStart, count]) => ({
-        bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
-        count: Number(count),
-      })),
-    );
   }
 
   async getDeviceLifecycleEvents(

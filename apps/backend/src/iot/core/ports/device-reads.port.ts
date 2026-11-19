@@ -1,12 +1,6 @@
 import type { Result } from "../../../common/utils/fp-utils";
 import type { DeviceLifecycleEventRow } from "../models/device-lifecycle-event.model";
 
-/** One time bucket of one device's measurement volume inside one experiment. */
-export interface ExperimentDeviceSeriesRow {
-  bucketStart: string | null;
-  count: number;
-}
-
 /** One time bucket of measurement volume, attributed to an experiment. */
 export interface DeviceThroughputRow {
   bucketStart: string | null;
@@ -61,13 +55,6 @@ export interface DeviceMeasurementRow {
 /** A device's reads, which the warehouse and the serving store both answer. */
 export interface DeviceReads {
   getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>>;
-  getExperimentDeviceSeries(
-    experimentId: string,
-    clientId: string,
-    from: string,
-    to: string,
-    bucket: "hour" | "day",
-  ): Promise<Result<ExperimentDeviceSeriesRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
     from: string,
