@@ -121,7 +121,7 @@ describe("ExperimentDataController", () => {
       }
       const execute = vi
         .spyOn(watchExperimentTablesUseCase, "execute")
-        .mockResolvedValue(success(changes()));
+        .mockReturnValue(success(changes()));
 
       const response = await testApp
         .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
