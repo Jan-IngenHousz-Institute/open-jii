@@ -11,6 +11,8 @@ import type {
 
 const RECONNECT_MS = 10_000;
 const MAX_RECONNECT_MS = 2 * 60_000;
+/** The backend sends a heartbeat every 20 s, so this long without one is a connection that died. */
+const SILENT_AFTER_MS = 45_000;
 /** Answers a retry would get again, so the page polls instead. */
 const REFUSED_STATUSES = new Set([401, 403, 404]);
 
@@ -49,7 +51,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 
 /**
  * Listens until `signal` aborts, reconnecting with a growing, jittered wait after a stream that
- * ended or dropped, and giving up on an answer a retry would get again.
+ * ended, dropped or fell silent, and giving up on an answer a retry would get again.
  */
 async function followTableChanges(
   experimentId: string,
@@ -67,12 +69,19 @@ async function followTableChanges(
 
   while (!isStopped()) {
     onConnect();
+    const connection = new AbortController();
+    const hangUp = () => connection.abort();
+    signal.addEventListener("abort", hangUp, { once: true });
+    let silence = setTimeout(hangUp, SILENT_AFTER_MS);
+
     try {
       const events = await orpcClient.experiments.watchExperimentTables(
         { id: experimentId },
-        { signal },
+        { signal: connection.signal },
       );
       for await (const event of events) {
+        clearTimeout(silence);
+        silence = setTimeout(hangUp, SILENT_AFTER_MS);
         attempt = 0;
         onEvent(event);
       }
@@ -82,6 +91,9 @@ async function followTableChanges(
         onDrop();
         return;
       }
+    } finally {
+      clearTimeout(silence);
+      signal.removeEventListener("abort", hangUp);
     }
     if (isStopped()) {
       return;

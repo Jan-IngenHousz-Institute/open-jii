@@ -50,7 +50,11 @@ function mountChangeStream() {
         }
       };
       // The client's abort reaches the handler's signal or cancels the body, whichever comes first.
-      request.signal.addEventListener("abort", markClosed);
+      // A browser then fails the body's reads, which the mock does not, so the abort fails them.
+      request.signal.addEventListener("abort", () => {
+        markClosed();
+        stream?.error(request.signal.reason);
+      });
       const body = new ReadableStream<Uint8Array>({
         start: (controller) => {
           stream = controller;
@@ -66,7 +70,10 @@ function mountChangeStream() {
     opened: () => streams.length,
     closed: () => closed.size,
     send: async (event: ExperimentTablesEvent) => {
-      streams.at(-1)?.enqueue(encoder.encode(`event: message\ndata: ${JSON.stringify(event)}\n\n`));
+      const current = streams.at(-1);
+      if (current && !closed.has(current)) {
+        current.enqueue(encoder.encode(`event: message\ndata: ${JSON.stringify(event)}\n\n`));
+      }
       await vi.advanceTimersByTimeAsync(10);
     },
     drop: async () => {
@@ -343,6 +350,14 @@ describe("useExperimentDataFreshness", () => {
       await act(() => stream.send({ type: "changed", tables: [RAW_VERSION] }));
     }
 
+    /** Lets time pass on an open stream, which the backend keeps alive with heartbeats. */
+    async function beat(stream: ReturnType<typeof mountChangeStream>, times: number) {
+      for (let beat = 0; beat < times; beat++) {
+        await act(() => vi.advanceTimersByTimeAsync(20_000));
+        await act(() => stream.send({ type: "heartbeat" }));
+      }
+    }
+
     it("applies a change to the listing it holds, refetching the moved rows but not the listing", async () => {
       const listing = mountStoreListing([RAW]);
       const rowReads = server.mount(contract.experiments.getExperimentData, { body: [] });
@@ -360,7 +375,7 @@ describe("useExperimentDataFreshness", () => {
       await waitFor(() => expect(rowReads.callCount).toBe(1));
       const listingCalls = listing.callCount;
 
-      await act(() => vi.advanceTimersByTimeAsync(60_000));
+      await beat(stream, 3);
       await act(() =>
         stream.send({
           type: "changed",
@@ -419,10 +434,7 @@ describe("useExperimentDataFreshness", () => {
       const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
-      for (let beat = 0; beat < 7; beat++) {
-        await act(() => vi.advanceTimersByTimeAsync(20_000));
-        await act(() => stream.send({ type: "heartbeat" }));
-      }
+      await beat(stream, 7);
 
       expect(result.current.status).toBe("live");
     });
@@ -432,10 +444,7 @@ describe("useExperimentDataFreshness", () => {
       const stream = mountChangeStream();
       const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
-      for (let beat = 0; beat < 15; beat++) {
-        await act(() => vi.advanceTimersByTimeAsync(20_000));
-        await act(() => stream.send({ type: "heartbeat" }));
-      }
+      await beat(stream, 15);
 
       server.mount(contract.experiments.getExperimentTables, { status: 500 });
       server.mount(contract.experiments.watchExperimentTables, { status: 500 });
@@ -580,7 +589,8 @@ describe("useExperimentDataFreshness", () => {
       const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
       await goLive(stream);
 
-      await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+      await beat(stream, 29);
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
       expect(result.current.status).toBe("paused");
       await waitFor(() => expect(stream.closed()).toBe(1));
       const callsWhileIdle = listing.callCount;
@@ -593,6 +603,24 @@ describe("useExperimentDataFreshness", () => {
       await act(() => vi.advanceTimersByTimeAsync(1_000));
 
       expect(listing.callCount).toBe(callsWhileIdle + 1);
+    });
+
+    it("treats a stream silent past two heartbeats as dropped, and polls until it reconnects", async () => {
+      const listing = mountStoreListing([RAW]);
+      const stream = mountChangeStream();
+      renderHook(() => useExperimentDataFreshness("exp-1"));
+      await goLive(stream);
+      await waitFor(() => expect(listing.callCount).toBe(2));
+
+      await act(() => vi.advanceTimersByTimeAsync(44_000));
+      expect(stream.closed()).toBe(0);
+      await act(() => vi.advanceTimersByTimeAsync(1_000));
+      await waitFor(() => expect(stream.closed()).toBe(1));
+
+      await act(() => vi.advanceTimersByTimeAsync(10_000));
+      await waitFor(() => expect(stream.opened()).toBe(2));
+      await act(() => vi.advanceTimersByTimeAsync(20_000));
+      await waitFor(() => expect(listing.callCount).toBe(3));
     });
 
     it("opens the stream when the store answers the listing, and closes it when the warehouse does", async () => {
