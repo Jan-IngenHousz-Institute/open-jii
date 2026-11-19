@@ -2880,4 +2880,5 @@ metrics:
       normally lands within seconds; the retries wait 10 s, 1, 5 and 15 minutes, so one still owed
       after 30 minutes has failed five times, and the next waits an hour. Pages read annotations
       and sheets from Postgres, so a waiting copy delays exports, charts and store filters, not the
-      page itself.
+      page itself. Since a quiet outbox still reads 0, the rule treats no data as firing too: about
+      twenty minutes after the last point, it says the job that reports the outbox has stopped.

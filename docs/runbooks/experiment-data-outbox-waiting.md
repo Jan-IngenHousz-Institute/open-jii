@@ -52,6 +52,23 @@ where claimed_at is null and destination = '<destination>';
 
 Do not delete rows: a deleted row is a copy nobody owes again until the record changes.
 
+## No data at all
+
+Every task publishes the age every five minutes, 0 when nothing waits, so an empty chart means the
+job that reports the outbox stopped, not that the copies did. The rule then fires about 20 minutes
+after the last point: the query looks back 15 minutes, then the rule holds for 5 more. Either the
+backend is not running, and `api-hosts-unhealthy` or `dependency-health` fires alongside, or it runs
+but cannot count the outbox or publish what it counted:
+
+```bash
+aws logs tail /aws/ecs/backend-service-<env> --since 1h --filter-pattern '{ $.operation = "experiment-data-outbox-metrics" }'
+```
+
+A failed count points at the database; a publish refused for permissions points at the task role's
+`OpenJII/Backend` policy in `infrastructure/modules/ecs/main.tf`. The copies may still be landing
+meanwhile: the outbox rows above say whether they are.
+
 ## Closing
 
-Do not close until the age has read 0 for 15 minutes.
+Do not close until the age has read 0 for 15 minutes, which after no data also means the
+reporting is back.

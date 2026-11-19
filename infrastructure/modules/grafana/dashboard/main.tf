@@ -938,7 +938,8 @@ resource "grafana_rule_group" "email_health" {
 }
 
 # Copies of annotations and metadata sheets. The backend publishes the outbox's gauges every five
-# minutes from each task, so no data is a quiet backend, which dependency-health watches.
+# minutes from each task, 0 when nothing waits, so no data means the reporting has stopped and the
+# rule fires.
 resource "grafana_rule_group" "experiment_data_copies" {
   provider         = grafana.amg
   name             = "Experiment Data Copies"
@@ -947,7 +948,9 @@ resource "grafana_rule_group" "experiment_data_copies" {
 
   # Catalog entry 151. Every task publishes the same age, so the highest reads right however many
   # run. A copy unreachable for everyone holds every row; one record failing on every attempt
-  # crosses it too.
+  # crosses it too. No point at all for the query's 15 minutes and the 5 to hold means the job
+  # reporting the outbox has stopped, as when it cannot count the outbox, while copies may be
+  # stuck, so no data fires as well.
   rule {
     name      = "Experiment Data Copies Waiting"
     condition = "C"
@@ -1014,12 +1017,12 @@ resource "grafana_rule_group" "experiment_data_copies" {
       }
     }
 
-    no_data_state  = "OK"
+    no_data_state  = "Alerting"
     exec_err_state = "OK"
     for            = "5m"
 
     annotations = {
-      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse or the serving store refuses every copy, or one record fails on every attempt. Exports, charts and store filters miss the latest edits until it lands."
+      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse or the serving store refuses every copy, or one record fails on every attempt. Exports, charts and store filters miss the latest edits until it lands. It also fires when the backend has stopped reporting the outbox."
       summary          = "Annotation and sheet copies are not landing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid
