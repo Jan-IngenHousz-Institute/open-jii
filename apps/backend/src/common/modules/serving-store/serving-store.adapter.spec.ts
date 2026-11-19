@@ -378,6 +378,23 @@ describe("ServingStoreAdapter", () => {
       ]);
     });
 
+    it("leaves out a client whose total is no number, rather than counting it as NaN", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["thing-1", "500"],
+            ["thing-2", "nan"],
+            ["thing-3", null],
+          ],
+        }),
+      );
+
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([{ clientId: "thing-1", measurements: 500 }]);
+    });
+
     it("passes a failed read through", async () => {
       vi.spyOn(client, "query").mockResolvedValue(
         failure(AppError.internal("The serving store could not answer the read")),

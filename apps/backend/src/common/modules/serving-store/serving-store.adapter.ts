@@ -355,19 +355,17 @@ export class ServingStoreAdapter implements ServingStorePort, MetricsServingStor
   }
 
   async getClientTotals(): Promise<Result<ClientTotalsRow[]>> {
-    const result = await this.client.query(
-      "SELECT client_id, total_measurements FROM metrics_client_totals",
-    );
+    const result = await this.readMetricsView("metrics_client_totals", [
+      "client_id",
+      "total_measurements",
+    ]);
     if (result.isFailure()) {
       return result;
     }
 
-    return success(
-      result.value.rows.map(([clientId, measurements]) => ({
-        clientId: typeof clientId === "string" ? clientId : null,
-        measurements: Number(measurements),
-      })),
-    );
+    const mapped = result.value.clientTotals();
+    this.warnDroppedMetricsRows("metrics_client_totals", result.value.rows.length - mapped.length);
+    return success(mapped);
   }
 
   async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {

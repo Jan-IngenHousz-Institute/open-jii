@@ -16,6 +16,7 @@ import type {
   ResourceDailyRow,
   ScopedDailyRow,
 } from "../ports/metrics-reads.port";
+import type { ClientTotalsRow } from "../ports/serving-store.port";
 
 /**
  * A metrics table's rows as the warehouse writes its cells, each column found by its name, so
@@ -84,6 +85,15 @@ export class MetricsTable {
       }))
       .filter((row): row is FamilyTotalsRow => row.family !== null && row.measurements !== null);
     return MetricsTable.byMeasurements(families);
+  }
+
+  clientTotals(): ClientTotalsRow[] {
+    return this.rows
+      .map((row) => ({
+        clientId: cellString(row[this.index.client_id]),
+        measurements: cellNumber(row[this.index.total_measurements]),
+      }))
+      .filter((row): row is ClientTotalsRow => row.measurements !== null);
   }
 
   activityWindows(): ActivityWindowsRow | null {
