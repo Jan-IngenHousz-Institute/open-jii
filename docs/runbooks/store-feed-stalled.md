@@ -60,7 +60,7 @@ Rows the store could not read never stall the feed: they go to `store.feed_rejec
 ## Switching the feed off and on
 
 The feed is on in an environment when `local.serving_store_feed_start_versions` in
-`infrastructure/env/<env>/main.tf` holds a start version for each table, and off when it is empty;
+`infrastructure/env/<env>/main.tf` holds a start version for each table, and off when it holds none;
 the pipelines carry the feed's notebook and settings only while it is on. Changing it and applying
 restarts both pipelines, and the feed's alerts go with the switch. When minutes matter more than a
 pull request, remove the `serving_store_feed` notebook from each pipeline's source code in the

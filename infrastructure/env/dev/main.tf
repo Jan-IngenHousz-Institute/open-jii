@@ -2223,9 +2223,9 @@ module "serving_store" {
 locals {
   # The gold version each feed sink starts at when its checkpoint is new. Gold keeps old versions'
   # files for seven days, so read these on the day the feed first ships, and again before any
-  # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
-  # the feed's alerts. device_events is silver's lifecycle events, whose change feed starts at the
-  # version that switched it on; empty keeps its sink off.
+  # checkpoint reset (docs/runbooks/store-feed-stalled.md). An empty version keeps its sink off, and
+  # with every one empty the feed and its alerts are off. device_events is silver's lifecycle events,
+  # whose change feed starts at the version that switched it on.
   serving_store_feed_start_versions = {
     measurements  = "58430"
     uploads       = "44"
@@ -2235,16 +2235,16 @@ locals {
     metadata_rows = "latest"
     device_events = ""
   }
-  serving_store_feed = length(local.serving_store_feed_start_versions) > 0
+  serving_store_feed_settings = {
+    for table, version in local.serving_store_feed_start_versions :
+    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
+  }
+  serving_store_feed = length(local.serving_store_feed_settings) > 0
 
   # Only while the feed is on do the pipelines carry it: a settings change starts a pipeline
   # before a release has deployed the notebook.
   centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed"] : []
   macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = {
-    for table, version in local.serving_store_feed_start_versions :
-    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
-  }
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
