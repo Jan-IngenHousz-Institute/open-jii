@@ -13,7 +13,8 @@ export const FEATURE_FLAGS = {
   // the registry shipped and now hides device calibration instead.
   CALIBRATION: "iot-devices",
   // Every read the serving store answers, switched together so a page never mixes the store's
-  // columns with the warehouse's cells.
+  // columns with the warehouse's cells. The platform metrics, which no user reads, follow it under a
+  // condition on `environment`.
   STORE_EXPERIMENT_READS: "store-experiment-reads",
 } as const;
 
