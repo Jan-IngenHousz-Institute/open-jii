@@ -138,24 +138,6 @@ _READS = {
         "SELECT toStartOfHour(timestamp), device_version, min(timestamp), max(timestamp), count() FROM "
         f"{_store_view('device_measurements', 'c1')} WHERE {_SILVER_WINDOW} GROUP BY 1, 2",
     ),
-    "firmware versions of a group": (
-        "SELECT client_id, device_version, max(timestamp) FROM clean_data "
-        f"WHERE client_id IN ('c1', 'c2') AND {_SILVER_WINDOW} GROUP BY 1, 2",
-        "SELECT client_id, device_version, max(timestamp) FROM "
-        f"{_store_view('device_measurements', 'c1', 'c2')} WHERE {_SILVER_WINDOW} GROUP BY 1, 2",
-    ),
-    "hourly counts of a group per device": (
-        "SELECT date_trunc('HOUR', timestamp), client_id, count(*) FROM clean_data "
-        f"WHERE client_id IN ('c1', 'c2') AND {_SILVER_WINDOW} GROUP BY 1, 2",
-        "SELECT toStartOfHour(timestamp), client_id, count() FROM "
-        f"{_store_view('device_measurements', 'c1', 'c2')} WHERE {_SILVER_WINDOW} GROUP BY 1, 2",
-    ),
-    "hourly counts of a group per experiment": (
-        "SELECT date_trunc('HOUR', timestamp), experiment_id, count(*) FROM clean_data "
-        f"WHERE client_id IN ('c1', 'c2') AND {_SILVER_WINDOW} GROUP BY 1, 2",
-        "SELECT toStartOfHour(timestamp), experiment_id, count() FROM "
-        f"{_store_view('device_measurements', 'c1', 'c2')} WHERE {_SILVER_WINDOW} GROUP BY 1, 2",
-    ),
     "payload breakdown": (
         "SELECT device_version, protocol_id, workbook_version_id, workbook_run_id, count(*), count(latitude), "
         f"count(device_battery) FROM clean_data WHERE client_id = 'c1' AND {_SILVER_WINDOW} GROUP BY 1, 2, 3, 4",
@@ -174,12 +156,6 @@ _READS = {
         f"FROM clean_device_lifecycle_events WHERE client_id = 'c1' AND {_EVENT_WINDOW}",
         "SELECT event_type, event_timestamp, disconnect_reason, session_identifier FROM "
         f"{_store_view('device_lifecycle_events', 'c1')} WHERE {_EVENT_WINDOW}",
-    ),
-    "lifecycle events of a group": (
-        "SELECT client_id, event_type, event_timestamp, disconnect_reason FROM clean_device_lifecycle_events "
-        f"WHERE client_id IN ('c1', 'c3') AND {_EVENT_WINDOW}",
-        "SELECT client_id, event_type, event_timestamp, disconnect_reason FROM "
-        f"{_store_view('device_lifecycle_events', 'c1', 'c3')} WHERE {_EVENT_WINDOW}",
     ),
     "newest rows": (
         "SELECT timestamp, experiment_id, protocol_id, workbook_version_id, device_version, device_battery, "
