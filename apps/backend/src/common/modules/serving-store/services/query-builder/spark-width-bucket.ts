@@ -27,9 +27,15 @@ export class SparkWidthBucket {
     const origin = this.literalDecimal(bucket.origin);
     const width = this.literalDecimal(bucket.width);
     const isDouble = position === undefined || origin === undefined || width === undefined;
-    if (isDouble || (origin[1] === 0 && width[1] === 0)) {
+    if (isDouble) {
       return;
     }
+
+    const isWholeLiterals = origin[1] === 0 && width[1] === 0;
+    if (isWholeLiterals) {
+      return;
+    }
+
     const difference = this.subtracted(position, origin);
     this.division = { difference, width, quotient: this.divided(difference, width) };
   }

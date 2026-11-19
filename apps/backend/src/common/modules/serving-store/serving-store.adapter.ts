@@ -352,9 +352,8 @@ export class ServingStoreAdapter implements ServingStorePort {
         return CellValues.payloadCell(payloads.get(text.column), text.key, type);
       }
       if (idOf === "device") {
-        return isPairText === true && (typeof value === "string" || value === null)
-          ? value
-          : JSON.stringify(value);
+        const isPairTextCell = isPairText === true && (typeof value === "string" || value === null);
+        return isPairTextCell ? value : JSON.stringify(value);
       }
       if (idOf === "contributor") {
         return typeof value === "string" ? value : null;
