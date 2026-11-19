@@ -2856,7 +2856,7 @@ metrics:
       Platform dashboard's Email chart, with no limit of its own: the age is what the rule watches.
 
   - num: 151
-    id: experiment-data-copies-waiting
+    id: experiment-data-outbox-waiting
     name: Oldest waiting annotation or sheet copy
     family: observability
     area: api

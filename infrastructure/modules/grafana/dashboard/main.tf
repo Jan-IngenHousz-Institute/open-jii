@@ -1026,10 +1026,10 @@ resource "grafana_rule_group" "experiment_data_copies" {
       summary          = "Annotation and sheet copies are not landing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid
-      __panelId__      = local.heartbeat_panel_ids["experiment-data-copies-waiting"]
+      __panelId__      = local.heartbeat_panel_ids["experiment-data-outbox-waiting"]
     }
     labels = {
-      metric_id = "experiment-data-copies-waiting"
+      metric_id = "experiment-data-outbox-waiting"
       severity  = "warning"
       service   = "backend"
     }
