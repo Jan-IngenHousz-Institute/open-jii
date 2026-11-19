@@ -143,14 +143,13 @@ export class MetricsTable {
     }
 
     const name = cellString(row[this.index.parameter]);
-    const label = cellString(row[this.index.label]) ?? name;
     const observations = cellNumber(row[this.index.observations]);
     const median = cellNumber(row[this.index.median_value]);
     if (name === null || observations === null || median === null) {
       return null;
     }
 
-    return { label: label ?? name, name, observations, median };
+    return { label: cellString(row[this.index.label]) ?? name, name, observations, median };
   }
 
   poolFacts(): PoolFactsRow | null {
