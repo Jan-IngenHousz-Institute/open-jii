@@ -472,7 +472,7 @@ export const zExperimentDataQuery = z.object({
   flagged: zExperimentDataFlagged
     .optional()
     .describe(
-      "Only rows with a flag, or only rows without one, counting flags recorded on the phone and those added afterwards. Needs the serving store; without one the read answers 400",
+      "Only rows with a flag, or only rows without one, counting flags recorded on the phone and those added afterwards. Only a page, with page and pageSize set, of a table the serving store holds can be filtered by flags; any other read, such as a chart or a joined read, answers 400 FLAGGED_READ_UNSUPPORTED",
     ),
   // `limit` only takes effect when filters or aggregation switch the
   // response off the page-based path. Page/pageSize keep their existing
