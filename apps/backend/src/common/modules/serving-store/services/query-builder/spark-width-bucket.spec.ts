@@ -35,6 +35,20 @@ describe("SparkWidthBucket", () => {
     const bucket = new SparkWidthBucket("BIGINT", { origin: 10, width: 5, scale: "number" });
 
     expect(bucket.type).toBe("BIGINT");
-    expect(bucket.sql("x")).toBe("toInt64(floor((x - 10) / 5))");
+    expect(bucket.sql("x")).toContain("accurateCastOrNull(floor((x - 10) / 5), 'Int64')");
+  });
+
+  it("casts a double's floor as Spark does, NaN to 0 and past either bound to that bound", () => {
+    const bucket = new SparkWidthBucket("DOUBLE", { origin: 0, width: 1, scale: "number" });
+    const floor = "floor((`v` - 0) / 1)";
+
+    expect(bucket.sql("`v`")).toBe(
+      [
+        `multiIf(isNaN(${floor}), 0`,
+        `${floor} >= 9223372036854775808.0, 9223372036854775807`,
+        `${floor} <= -9223372036854775808.0, -9223372036854775808`,
+        `accurateCastOrNull(${floor}, 'Int64'))`,
+      ].join(", "),
+    );
   });
 });

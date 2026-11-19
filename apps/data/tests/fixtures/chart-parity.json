@@ -1260,6 +1260,31 @@
         "direction": "DESC"
       },
       "limit": 3
+    },
+    "numberWidthNaN": {
+      "experiment": "nans",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "v",
+            "widthBucket": {
+              "origin": 0,
+              "width": 1,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "v_bucket",
+        "direction": "ASC"
+      }
     }
   }
 }

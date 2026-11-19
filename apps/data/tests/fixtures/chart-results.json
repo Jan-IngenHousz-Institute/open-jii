@@ -915,6 +915,42 @@
       ]
     ]
   },
+  "numberWidthNaN": {
+    "columns": [
+      "v_bucket",
+      "count_count"
+    ],
+    "types": [
+      "BIGINT",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        null,
+        1
+      ],
+      [
+        -9223372036854775808,
+        1
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        9223372036854775807,
+        1
+      ]
+    ]
+  },
   "quarters": {
     "columns": [
       "timestamp_quarter",

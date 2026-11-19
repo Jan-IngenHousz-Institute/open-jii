@@ -5,6 +5,11 @@ type Decimal = [number, number];
 
 const MAX_PRECISION = 38;
 
+const LONG_MAX = "9223372036854775807";
+const LONG_MIN = "-9223372036854775808";
+/** 2^63 as a double, the first double past a BIGINT. */
+const LONG_EDGE = "9223372036854775808.0";
+
 /**
  * An equal-width bucket as Spark computes it. Spark divides whole numbers as doubles, whose floor
  * is a BIGINT, but reads a literal with a fraction as a DECIMAL, which keeps the division exact at
@@ -41,7 +46,7 @@ export class SparkWidthBucket {
     const origin = String(this.bucket.origin);
     const width = String(this.bucket.width);
     if (this.division === undefined) {
-      return `toInt64(floor((${position} - ${origin}) / ${width}))`;
+      return this.long(`floor((${position} - ${origin}) / ${width})`);
     }
 
     // Spark rounds the exact quotient half up at its scale. The store's division cuts at the
@@ -53,6 +58,20 @@ export class SparkWidthBucket {
     const difference = `toDecimal256(${position}, ${cut}) - toDecimal256('${origin}', ${cut})`;
     const quotient = `divide(${difference}, toDecimal256('${width}', ${widthScale}))`;
     return `toInt64(floor(round(${quotient}, ${scale})))`;
+  }
+
+  /**
+   * A double's floor as Spark casts it to a BIGINT, as Java does: NaN to 0 and past either bound
+   * to that bound, where the store's cast refuses NaN and infinity. The store may evaluate every
+   * branch on every row, so the last one never throws.
+   */
+  private long(floor: string): string {
+    return [
+      `multiIf(isNaN(${floor}), 0`,
+      `${floor} >= ${LONG_EDGE}, ${LONG_MAX}`,
+      `${floor} <= -${LONG_EDGE}, ${LONG_MIN}`,
+      `accurateCastOrNull(${floor}, 'Int64'))`,
+    ].join(", ");
   }
 
   private wholeColumn(type: string): Decimal | undefined {
