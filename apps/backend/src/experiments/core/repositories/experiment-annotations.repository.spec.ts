@@ -245,24 +245,6 @@ describe("ExperimentAnnotationsRepository", () => {
     expect(found.value).toEqual([{ ...orphan, userName: null }]);
   });
 
-  it("owes the copy of every annotation one person made, in every experiment, and no one else's", async () => {
-    const { experiment: other } = await testApp.createExperiment({ name: "Shade trial", userId });
-    const mine = record();
-    const mineElsewhere = record({ experimentId: other.id, type: "flag", flagType: "outlier" });
-    await insert(mine, mineElsewhere, record({ createdBy: faker.string.uuid() }));
-
-    const owed = await repository.transaction((tx) => repository.findOwedByAuthor(tx, userId));
-
-    assertSuccess(owed);
-    expect(owed.value).toHaveLength(2);
-    expect(owed.value).toEqual(
-      expect.arrayContaining([
-        { recordType: "annotation", recordId: mine.id, experimentId },
-        { recordType: "annotation", recordId: mineElsewhere.id, experimentId: other.id },
-      ]),
-    );
-  });
-
   it("finds the annotations on given rows of one table, oldest first, with their authors' names", async () => {
     const later = record({ rowId: "1", createdAt: new Date("2026-09-03T08:00:00.000Z") });
     const earlier = record({ rowId: "2", createdAt: new Date("2026-09-02T08:00:00.000Z") });

@@ -3,7 +3,6 @@ import { Injectable, Logger, Inject } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { success, Result, failure, AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
-import { ExperimentAnnotationsRepository } from "../../../../experiments/core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import type { NewsletterPort } from "../../../../newsletter/core/ports/newsletter.port";
 import { NEWSLETTER_PORT } from "../../../../newsletter/core/ports/newsletter.port";
@@ -24,7 +23,6 @@ export class DeleteUserUseCase {
     private readonly userRepository: UserRepository,
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
     @Inject(NEWSLETTER_PORT) private readonly newsletterPort: NewsletterPort,
-    private readonly annotationsRepository: ExperimentAnnotationsRepository,
     private readonly outboxRepository: ExperimentDataOutboxRepository,
     private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
@@ -89,10 +87,8 @@ export class DeleteUserUseCase {
         });
         const deleteResult = await this.userRepository.transaction(async (tx) => {
           await this.userRepository.delete(tx, id);
-          const annotations = await this.annotationsRepository.findOwedByAuthor(tx, id);
           await this.outboxRepository.owe(tx, [
             { recordType: "contributor", recordId: id, experimentId: null },
-            ...annotations,
           ]);
         });
 

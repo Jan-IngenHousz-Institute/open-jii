@@ -208,40 +208,9 @@ describe("DeleteUserUseCase", () => {
       expect(nudge).toHaveBeenCalledTimes(1);
     });
 
-    it("owes the copy of every annotation the closed account made, which drops its name, and no one else's", async () => {
+    it("keeps the account open when the copy its closing owes cannot be written", async () => {
       const userId = await testApp.createTestUser({});
-      const ownerId = await testApp.createTestUser({});
-      const { experiment } = await testApp.createExperiment({
-        name: "Shade trial",
-        userId: ownerId,
-      });
-      const mine = await testApp.createAnnotation({
-        experimentId: experiment.id,
-        createdBy: userId,
-      });
-      await testApp.createAnnotation({ experimentId: experiment.id, createdBy: ownerId });
-
-      assertSuccess(await useCase.execute(userId));
-
-      const owed = await testApp.database.select().from(experimentDataOutbox);
-      expect(owed.filter(({ recordType }) => recordType === "annotation")).toEqual([
-        expect.objectContaining({
-          recordId: mine.id,
-          experimentId: experiment.id,
-          destination: "lakehouse",
-        }),
-      ]);
-    });
-
-    it("keeps the account open when the copies its closing owes cannot be written", async () => {
-      const userId = await testApp.createTestUser({});
-      const ownerId = await testApp.createTestUser({});
-      const { experiment } = await testApp.createExperiment({
-        name: "Shade trial",
-        userId: ownerId,
-      });
-      await testApp.createAnnotation({ experimentId: experiment.id, createdBy: userId });
-      // The rows land, and the failure after them takes them back with the closing.
+      // The row lands, and the failure after it takes it back with the closing.
       const real = new ExperimentDataOutboxRepository(testApp.database);
       const outbox = testApp.module.get(ExperimentDataOutboxRepository);
       vi.spyOn(outbox, "owe").mockImplementation(async (tx, records) => {
