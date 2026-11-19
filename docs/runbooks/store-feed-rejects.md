@@ -67,7 +67,9 @@ unset ADMIN_PASSWORD
 
 A row that only the feed's normalisation can fix cannot be sent as it is, and neither can one whose
 message says it was cut. Once the feed's code can send them, a
-[reload](procedures/serving-store-reload.md) of their experiments does.
+[reload](procedures/serving-store-reload.md) of their experiments does. A reload leaves the sheets
+alone: a refused `metadata_rows` row goes again once its sheet is owed to the lakehouse, as
+[Metadata sheets](procedures/serving-store-reload.md#metadata-sheets) describes.
 
 ## Closing
 
