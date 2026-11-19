@@ -5,7 +5,8 @@ test_serving_store_tables.py describes. Every figure is equal but for these tole
 - A row silver holds twice, or a macro result gold recomputed, counts once in the store.
 - Volume is the bytes of each payload's JSON as gold writes it out, not as the device sent it.
 - A bare NaN or Infinity token, which gold reads as null, is no reading in the store.
-- Medians are exact, where percentile_approx may pick a neighbouring value beyond 10,000 values.
+- Medians are Greenwald-Khanna sketches at accuracy 10,000 on both sides, which may pick different
+  neighbouring values beyond 10,000 values.
 - Zones are gold's, so a zone Spark rejects counts as none, where the pipeline counts it.
 - Family totals are per client, and the backend names each client's family from the registry.
 """

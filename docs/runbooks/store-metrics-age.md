@@ -25,8 +25,9 @@ The first view with an exception is the cause. The ones after it show `WaitingFo
 ## Likely causes, most common first
 
 - **Code 241, the memory cap.** A refresh runs under its definer's 4 GiB per query. The views that
-  hold the most come last in the chain, and `metrics_parameter_stats`, which holds every reading of
-  90 days, is the one that grows with the data. Find what it read:
+  hold the most come last in the chain, and `metrics_parameter_stats`, which reads every reading of
+  90 days into a median sketch of fixed size per parameter, is the one that grows with the data.
+  Find what it read:
 
   ```sql
   SELECT event_time, query_duration_ms, formatReadableSize(memory_usage) AS memory, read_rows
@@ -36,8 +37,7 @@ The first view with an exception is the cause. The ones after it show `WaitingFo
   LIMIT 5;
   ```
 
-  The fix is a change to the view in a new migration, such as counting each value once before
-  taking the median, not a higher cap.
+  The fix is a change to the view in a new migration, not a higher cap.
 
 - **The store restarted** and the chain has not run since. It runs at the next seven minutes past
   the hour. To run it now, refresh the views in chain order, waiting for each:

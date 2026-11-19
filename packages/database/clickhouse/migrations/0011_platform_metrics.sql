@@ -316,8 +316,9 @@ CROSS JOIN
 ) AS day_runs;
 
 -- Over 90 days, as Spark reads the values: a macro's value is a number when it is one, a boolean or
--- a number in text with control characters and spaces around it, and the median is the lower middle
--- value with NaN above every number.
+-- a number in text with control characters and spaces around it. The median is the Greenwald-Khanna
+-- sketch percentile_approx takes at its default accuracy, with NaN above every number; a sorted copy
+-- of every reading would outgrow the refresh's 4 GiB as the readings grow.
 CREATE MATERIALIZED VIEW IF NOT EXISTS metrics_parameter_stats
 REFRESH EVERY 1 HOUR OFFSET 7 MINUTE DEPENDS ON metrics_pool_facts
 ENGINE = MergeTree ORDER BY (category, parameter)
@@ -327,7 +328,7 @@ SELECT
     label,
     category,
     count() AS observations,
-    arraySort(groupArray(value))[toUInt64(ceil(count() / 2))] AS median_value,
+    quantileGK(10000, 0.5)(value) AS median_value,
     now64(6) AS computed_at
 FROM
 (
