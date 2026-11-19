@@ -64,6 +64,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
               output_format_json_quote_denormals: 1,
               // A read's own JSON keeps a dotted key such as "Plot no." whole.
               json_type_escape_dots_in_keys: 1,
+              // Spark writes a sheet's integer outside Int64 and UInt64 as plain digits, and
+              // simdjson refuses the whole row for it.
+              allow_simdjson: 0,
               // A payload field is projected under its own name, which may be a column's, such as
               // user_id; the column must still read as the column everywhere else in the query.
               prefer_column_name_to_alias: 1,

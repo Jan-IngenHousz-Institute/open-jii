@@ -410,17 +410,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       : `base.questions_data[${this.escapeValue(matchOn)}]`;
   }
 
-  /**
-   * A matched sheet row's fields as JSON text by key. The extraction drops the fraction the copier
-   * gave an integer outside Int64 and UInt64, which the JSON type refuses without one, so it goes
-   * back on.
-   */
+  /** A matched sheet row's fields as JSON text by key. */
   private sheetFields(alias: string): string {
     const pairs = `JSONExtractKeysAndValuesRaw(if(${alias}.matched = 1, ${alias}.fields, '{}'))`;
-    const isOutsideIntegers =
-      "match(kv.2, '^-?[0-9]+$') AND toInt64OrNull(kv.2) IS NULL AND toUInt64OrNull(kv.2) IS NULL";
-    const readable = `arrayMap(kv -> (kv.1, if(${isOutsideIntegers}, concat(kv.2, '.0'), kv.2)), ${pairs})`;
-    return `CAST(${readable}, 'Map(String, String)')`;
+    return `CAST(${pairs}, 'Map(String, String)')`;
   }
 
   /**
