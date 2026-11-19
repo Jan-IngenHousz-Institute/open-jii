@@ -102,8 +102,8 @@ class StoreReload:
         version, committed_at = self.latest_version(table)
         if newest > version:
             raise StoreAheadOfSource(
-                f"store.{table.name}, its copies or its payload schemas hold version {newest} and "
-                f"{table.layer}'s {table.source_table} only {version}: empty them first (docs/runbooks/procedures/serving-store-reload.md)"
+                f"store.{table.name}, its derived tables or its payload schemas hold version {newest} and "
+                f"{self._source_name(table)} only {version}: empty them first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
         rows = self.source_rows(table, version)
@@ -124,7 +124,7 @@ class StoreReload:
         if not written.rejected:
             if not allow_removal:
                 self._check_removal(table, version, experiment_id)
-            for store_table in (table.name, *table.copies):
+            for store_table in (table.name, *table.derived_tables):
                 self._delete_older(store_table, version, experiment_id)
             if table.payloads and not schemas.rejected:
                 # A table type's schemas carry its source table's versions, so the older ones are
@@ -207,12 +207,12 @@ class StoreReload:
             time.sleep(delay)
 
     def _newest_stored_version(self, table: StoreTable) -> int:
-        """The newest commit the store holds of the table, its rows, their copies or its payload
-        schemas."""
+        """The newest commit the store holds of the table, in its rows, its derived tables or its
+        payload schemas."""
         database = self.writer.database
         newest = [
             f"(SELECT max(_commit_version) FROM {database}.{store_table})"
-            for store_table in (table.name, *table.copies)
+            for store_table in (table.name, *table.derived_tables)
         ]
         parameters = {}
         if table.payloads:
@@ -240,11 +240,12 @@ class StoreReload:
             return
 
         largest = sorted(removed.items(), key=lambda item: item[1], reverse=True)[:20]
+        source = self._source_name(table)
         raise RemovalOverLimit(
-            f"the delete would remove {total} rows of store.{table.name} that {table.layer}'s {table.source_table} "
+            f"the delete would remove {total} rows of store.{table.name} that {source} "
             f"no longer holds, over the limit of {REMOVAL_LIMIT}: "
             + ", ".join(f"{experiment} ({count})" for experiment, count in largest)
-            + f". Nothing was deleted. If {table.layer} is being refreshed, wait for it; if the rows should go, "
+            + f". Nothing was deleted. If {source} is being refreshed, wait for it; if the rows should go, "
             "run again with ALLOW_REMOVAL set to true (docs/runbooks/procedures/serving-store-reload.md)"
         )
 

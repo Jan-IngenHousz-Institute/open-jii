@@ -79,7 +79,6 @@ class StoreTable:
 
     name: str
     source_table: str
-    layer = "gold"
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
     # The time the source processed a row at, later on a recomputed copy than on the row it replaces.
@@ -95,7 +94,7 @@ class StoreTable:
     per_experiment = True
     # The store tables the migrations keep from this one by a materialized view, which a reload's
     # delete reaches too, since a view only adds rows.
-    copies: tuple[str, ...] = ()
+    derived_tables: tuple[str, ...] = ()
 
     @property
     def counted_by(self) -> str:
@@ -172,7 +171,7 @@ class Measurements(StoreTable):
     source_table = EXPERIMENT_RAW_DATA_TABLE
     table_type = "static"
     payloads = ("questions_data",)
-    copies = ("measurements_by_device",)
+    derived_tables = ("measurements_by_device",)
 
     def identifier(self) -> Column:
         return F.lit("raw_data")
@@ -419,7 +418,6 @@ class DeviceEvents(StoreTable):
 
     name = "device_events"
     source_table = CLEAN_DEVICE_LIFECYCLE_EVENTS_TABLE
-    layer = "silver"
     partitioned_by = "event_timestamp"
     processed_at = "ingestion_timestamp"
     per_experiment = False

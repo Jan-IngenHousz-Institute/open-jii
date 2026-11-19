@@ -81,16 +81,16 @@ for table in tables:
 
     counted = "experiments" if table.per_experiment else "devices"
     print(
-        f"[serving store] Reloaded {table.name} at {table.layer} version {reloaded.version}: "
+        f"[serving store] Reloaded {table.name} at {table.source_table} version {reloaded.version}: "
         f"{reloaded.written.inserted} rows sent, {reloaded.written.rejected} refused (in feed_rejects); "
-        f"{sum(reloaded.source.values())} rows in {table.layer} and {sum(reloaded.store.values())} in the store "
+        f"{sum(reloaded.source.values())} rows in {table.source_table} and {sum(reloaded.store.values())} in the store "
         f"over {len(reloaded.source)} {counted}, {sum(reloaded.newer.values())} of them written by the feed since",
         flush=True,
     )
     found_nothing = experiment_id is not None and not (reloaded.source or reloaded.store or reloaded.older)
     if found_nothing:
         print(
-            f"[serving store] Neither {table.layer} nor store.{table.name} holds experiment {experiment_id} now; "
+            f"[serving store] Neither {table.source_table} nor store.{table.name} holds experiment {experiment_id} now; "
             "unless it was deleted, check the id"
         )
 
@@ -106,7 +106,9 @@ for table in tables:
             "the older ones stay; fix them as store-feed-rejects describes, then run the reload again"
         )
     if reloaded.missing:
-        mismatches.append(f"{table.name} lacks {reloaded.missing} of {table.layer}'s rows, in {named(reloaded.short)}")
+        mismatches.append(
+            f"{table.name} lacks {reloaded.missing} of {table.source_table}'s rows, in {named(reloaded.short)}"
+        )
     if reloaded.older:
         mismatches.append(
             f"{table.name} holds rows from before version {reloaded.version} that the feed sent after the "

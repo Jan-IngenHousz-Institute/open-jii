@@ -636,7 +636,7 @@ def test_a_chunk_sent_again_after_a_reloads_delete_stays_out_of_the_device_copy(
 ) -> None:
     lines = _measurement_lines(spark, "resent")
     writer.insert(MEASUREMENTS.name, lines)
-    for table in (MEASUREMENTS.name, *MEASUREMENTS.copies):
+    for table in (MEASUREMENTS.name, *MEASUREMENTS.derived_tables):
         store.run(f"DELETE FROM {_DATABASE}.{table} WHERE _commit_version < 8 AND experiment_id = 'resent'")
 
     assert writer.insert(MEASUREMENTS.name, lines) == Written(inserted=3)

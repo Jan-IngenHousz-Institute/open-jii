@@ -102,7 +102,7 @@ only when those rows should go, as for an experiment gold has dropped, and only 
 
 The cluster takes a few minutes to start. Each table's result is one line of the task's output:
 
-`[serving store] Reloaded <table> at <gold or silver> version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in <gold or silver> and <n> in the store over <n> <experiments or devices>, <n> of them written by the feed since`
+`[serving store] Reloaded <table> at <source table> version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in <source table> and <n> in the store over <n> <experiments or devices>, <n> of them written by the feed since`
 
 ## After a migration the feed fills
 
