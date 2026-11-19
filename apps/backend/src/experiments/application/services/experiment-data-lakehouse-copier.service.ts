@@ -1,28 +1,26 @@
 import { success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { CopyKey } from "../../core/models/experiment-data-outbox.model";
 
 /** What copying one group of records came to. */
 export type CopyOutcome = "copied" | "stopped" | { failed: string };
 
 /**
- * Copies one kind of record from Postgres to one of its copies. A copy takes each record's state at
- * the time of the copy: it writes the records that still exist and deletes the copies of the rest,
- * so several edits arrive as one and copying a record twice does no harm.
+ * Copies one kind of record from Postgres to the lakehouse. A copy takes each record's state at the
+ * time of the copy: it writes the records that still exist and deletes the copies of the rest, so
+ * several edits arrive as one and copying a record twice does no harm.
  */
-export abstract class ExperimentDataCopierService<T extends { id: string }> {
+export abstract class ExperimentDataLakehouseCopierService<T extends { id: string }> {
   /** The records each statement-sized group copies. */
-  groupsOf(owed: CopyKey[]): Promise<Result<CopyKey[][]>> {
-    return Promise.resolve(success([owed]));
+  groupsOf(ids: string[]): Promise<Result<string[][]>> {
+    return Promise.resolve(success([ids]));
   }
 
-  /** `claimedAt` versions the serving store's copy, so a later claim wins however late it lands. */
-  async copy(owed: CopyKey[], canContinue: () => boolean, claimedAt: Date): Promise<CopyOutcome> {
+  async copy(ids: string[], canContinue: () => boolean): Promise<CopyOutcome> {
     if (!canContinue()) {
       return "stopped";
     }
 
-    const found = await this.find(owed.map(({ id }) => id));
+    const found = await this.find(ids);
     if (found.isFailure()) {
       return { failed: found.error.message };
     }
@@ -31,7 +29,7 @@ export abstract class ExperimentDataCopierService<T extends { id: string }> {
     }
 
     if (found.value.length > 0) {
-      const merged = await this.merge(found.value, canContinue, claimedAt);
+      const merged = await this.merge(found.value, canContinue);
       if (merged.isFailure()) {
         return { failed: merged.error.message };
       }
@@ -40,7 +38,7 @@ export abstract class ExperimentDataCopierService<T extends { id: string }> {
       }
     }
 
-    const gone = this.gone(owed, found.value);
+    const gone = this.gone(ids, found.value);
     if (gone.length === 0) {
       return "copied";
     }
@@ -48,7 +46,7 @@ export abstract class ExperimentDataCopierService<T extends { id: string }> {
       return "stopped";
     }
 
-    const deleted = await this.remove(gone, claimedAt);
+    const deleted = await this.remove(gone);
     return deleted.isFailure() ? { failed: deleted.error.message } : "copied";
   }
 
@@ -58,13 +56,12 @@ export abstract class ExperimentDataCopierService<T extends { id: string }> {
   protected abstract merge(
     records: T[],
     canContinue: () => boolean,
-    claimedAt: Date,
   ): Promise<Result<"merged" | "stopped">>;
 
-  protected abstract remove(gone: CopyKey[], claimedAt: Date): Promise<Result<void>>;
+  protected abstract remove(ids: string[]): Promise<Result<void>>;
 
-  protected gone(owed: CopyKey[], found: { id: string }[]): CopyKey[] {
+  protected gone(ids: string[], found: { id: string }[]): string[] {
     const kept = new Set(found.map(({ id }) => id));
-    return owed.filter(({ id }) => !kept.has(id));
+    return ids.filter((id) => !kept.has(id));
   }
 }

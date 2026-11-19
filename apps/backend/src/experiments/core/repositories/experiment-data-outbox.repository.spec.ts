@@ -5,8 +5,6 @@ import { createSecondaryDatabase, eq, experimentDataOutbox, sql } from "@repo/da
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type { OwedRecord } from "../models/experiment-data-outbox.model";
-import { SERVING_STORE_PORT } from "../ports/serving-store.port";
-import type { ServingStorePort } from "../ports/serving-store.port";
 import { ExperimentDataOutboxRepository } from "./experiment-data-outbox.repository";
 
 describe("ExperimentDataOutboxRepository", () => {
@@ -19,14 +17,6 @@ describe("ExperimentDataOutboxRepository", () => {
   function annotation(): OwedRecord {
     return {
       recordType: "annotation",
-      recordId: faker.string.uuid(),
-      experimentId: faker.string.uuid(),
-    };
-  }
-
-  function sheet(): OwedRecord {
-    return {
-      recordType: "metadata_sheet",
       recordId: faker.string.uuid(),
       experimentId: faker.string.uuid(),
     };
@@ -107,46 +97,6 @@ describe("ExperimentDataOutboxRepository", () => {
     assertSuccess(waiting);
     expect(waiting.value.waiting).toBe(2);
     expect(waiting.value.oldestWaitingSeconds).toBeGreaterThanOrEqual(1800);
-  });
-
-  describe("the serving store's copies", () => {
-    const hasCopier = (has: boolean) =>
-      vi
-        .spyOn(testApp.module.get<ServingStorePort>(SERVING_STORE_PORT), "hasCopier")
-        .mockReturnValue(has);
-
-    it("leaves a store copy unclaimed on a task without the copier", async () => {
-      hasCopier(false);
-      const record = sheet();
-      await owe(record);
-      await testApp.database
-        .insert(experimentDataOutbox)
-        .values({ ...record, destination: "serving_store" });
-
-      expect((await claim()).map(({ destination }) => destination)).toEqual(["lakehouse"]);
-      expect(await rows()).toContainEqual(
-        expect.objectContaining({ destination: "serving_store", claimedAt: null }),
-      );
-    });
-
-    it("claims a record's store copy while its lakehouse copy is held", async () => {
-      const record = sheet();
-      hasCopier(false);
-      await owe(record);
-      expect(await claim()).toHaveLength(1);
-
-      hasCopier(true);
-      await owe(record);
-
-      expect((await claim()).map(({ destination }) => destination)).toEqual(["serving_store"]);
-    });
-
-    it("owes an annotation to the lakehouse alone, since the store reads flags from Postgres", async () => {
-      hasCopier(true);
-      await owe(annotation());
-
-      expect((await rows()).map(({ destination }) => destination)).toEqual(["lakehouse"]);
-    });
   });
 
   it("keeps one waiting row however often a record changes", async () => {
@@ -264,10 +214,10 @@ describe("ExperimentDataOutboxRepository", () => {
       // Each handle pools one connection, so this claim's statement runs inside the open
       // transaction: it reads before the change commits, and its own claim commits last.
       await reclaimer.database.execute(sql`BEGIN`);
-      const reclaimed = await new ExperimentDataOutboxRepository(
-        reclaimer.database,
-        testApp.module.get(SERVING_STORE_PORT),
-      ).claimDue(LEASE_MS, 10);
+      const reclaimed = await new ExperimentDataOutboxRepository(reclaimer.database).claimDue(
+        LEASE_MS,
+        10,
+      );
       commit();
       await change;
 

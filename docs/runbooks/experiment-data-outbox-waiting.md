@@ -1,17 +1,17 @@
 # experiment-data-outbox-waiting
 
 **A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes.** Postgres
-holds annotations and metadata sheets, and every change to one owes its current state to each copy
-the environment keeps: the lakehouse, which exports, charts and the warehouse views read, and, for
-sheets, the serving store, where the environment has its copier. Each owed copy is a row in
-`experiment_data_outbox`, and the worker on every backend task applies them. Every five minutes each
+holds annotations and metadata sheets, and every change to one owes its current state to the
+lakehouse's copy, which exports, charts and the warehouse views read. The serving store's sheet rows
+come from that copy through the store feed. Each owed copy is a row in `experiment_data_outbox`, and
+the worker on every backend task applies them. Every five minutes each
 task publishes `ExperimentDataCopiesWaiting`, how many rows are owed, and
 `ExperimentDataCopyOldestWaitingSeconds`, how long since the oldest was first owed (its `created_at`,
 on the database's clock). The rule fires when the age stays above 1,800 seconds for 5 minutes. A
 copy usually lands within seconds.
 
-Pages read annotations and sheets from Postgres, so nobody sees a stale page. What waits is the
-copy: an export, a chart or a store filter may be missing the latest edits.
+Pages read annotations from Postgres, so nobody sees a stale annotation. What waits is the copy: an
+export, a chart, or the custom metadata a page shows, may be missing the latest edits.
 
 ## Which copy, and why
 
@@ -24,18 +24,16 @@ order by created_at
 limit 50;
 ```
 
-- **Every row of one destination waits with the same error:** that copy is unreachable.
-  - `lakehouse`: the SQL warehouse is refusing statements or the backend's Databricks token is
-    wrong. A cold warehouse is not it: the first retries outlast a cold start.
-  - `serving_store`: the store is down (`store-answers`), or its copier's login is wrong. The copier
-    is `openjii_copier`; its secret is the store module's `copier` credentials.
+- **Every row waits with the same error:** the lakehouse is unreachable. The SQL warehouse is
+  refusing statements or the backend's Databricks token is wrong. A cold warehouse is not it: the
+  first retries outlast a cold start.
 - **One row climbs while the rest land:** that record fails on every attempt; `last_error` says
   why. A sheet the warehouse refuses, for example, keeps failing until it is edited.
 
 The worker logs each failure, and from the fifth attempt on as an error:
 
 ```bash
-aws logs tail /aws/ecs/backend-service-<env> --since 2h --filter-pattern '{ $.msg = "Could not copy experiment data; will retry" }'
+aws logs tail /aws/ecs/backend-service-<env> --since 2h --filter-pattern '{ $.msg = "Could not copy experiment data to the lakehouse; will retry" }'
 ```
 
 ## After the fix

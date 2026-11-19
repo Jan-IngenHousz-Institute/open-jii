@@ -1,27 +1,19 @@
 import { Injectable, Logger } from "@nestjs/common";
-import type { BeforeApplicationShutdown } from "@nestjs/common";
+import type { OnApplicationShutdown } from "@nestjs/common";
 import { Interval } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import type {
   ClaimedOutboxRow,
-  ExperimentDataDestination,
   ExperimentDataRecordType,
-  OwedDestination,
 } from "../../core/models/experiment-data-outbox.model";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
-import type { CopyOutcome, ExperimentDataCopierService } from "./experiment-data-copier.service";
+import type {
+  CopyOutcome,
+  ExperimentDataLakehouseCopierService,
+} from "./experiment-data-lakehouse-copier.service";
 import { MetadataSheetsLakehouseCopierService } from "./metadata-sheets-lakehouse-copier.service";
-import { MetadataSheetsStoreCopierService } from "./metadata-sheets-store-copier.service";
-
-/** One kind of record and the copy it is owed, which a claim's rows are applied by. */
-interface CopyTarget {
-  recordType: ExperimentDataRecordType;
-  destination: ExperimentDataDestination;
-}
-
-type Copier = ExperimentDataCopierService<{ id: string }>;
 
 /** A claim older than this was abandoned by a task that died, and is taken back. */
 export const LEASE_MS = 5 * 60_000;
@@ -55,12 +47,12 @@ export interface OutboxDrainCounts {
 }
 
 /**
- * Claims the outbox's rows and hands each kind of record to the copier of the copy it is owed. The
- * order of the rows does not matter, since a copy takes each record's state at the time of the
- * copy. Every task runs this loop; Postgres hands each one different rows.
+ * Claims the outbox's rows and hands each kind of record to its copier. The order of the rows does
+ * not matter, since a copy takes each record's state at the time of the copy. Every task runs this
+ * loop; Postgres hands each one different rows.
  */
 @Injectable()
-export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
+export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   private readonly logger = new Logger(ExperimentDataOutboxWorker.name);
   private draining = false;
   /** The latest drain, which a task shutting down waits for. */
@@ -70,21 +62,17 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
   private nudged = false;
   /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
-  /** Exactly the copies `OWED_COPIES` lists, so a copy owed without a copier does not compile. */
-  private readonly copiers: {
-    [R in ExperimentDataRecordType]: Record<OwedDestination<R>, Copier>;
-  };
+  private readonly copiers: Record<
+    ExperimentDataRecordType,
+    ExperimentDataLakehouseCopierService<{ id: string }>
+  >;
 
   constructor(
     private readonly outbox: ExperimentDataOutboxRepository,
-    annotationsLakehouse: AnnotationsLakehouseCopierService,
-    sheetsLakehouse: MetadataSheetsLakehouseCopierService,
-    sheetsStore: MetadataSheetsStoreCopierService,
+    annotations: AnnotationsLakehouseCopierService,
+    sheets: MetadataSheetsLakehouseCopierService,
   ) {
-    this.copiers = {
-      annotation: { lakehouse: annotationsLakehouse },
-      metadata_sheet: { lakehouse: sheetsLakehouse, serving_store: sheetsStore },
-    };
+    this.copiers = { annotation: annotations, metadata_sheet: sheets };
   }
 
   @Interval(EXPERIMENT_DATA_OUTBOX_INTERVAL, INTERVAL_MS)
@@ -104,10 +92,9 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
 
   /**
    * Nothing new is claimed or started, and the drain running finishes: a claim in flight still
-   * commits, and its rows go back rather than wait out the lease. It runs before the clients close,
-   * which they do on application shutdown.
+   * commits, and its rows go back rather than wait out the lease.
    */
-  async beforeApplicationShutdown(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     this.stopping = true;
     await this.running;
   }
@@ -182,8 +169,8 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
     deadlineAt: number,
   ): Promise<OutboxDrainCounts> {
     const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-    for (const { target, rows } of this.byTarget(claimed)) {
-      const outcome = await this.apply(target, rows, deadlineAt);
+    for (const [recordType, rows] of this.byRecordType(claimed)) {
+      const outcome = await this.apply(recordType, rows, deadlineAt);
       counts.applied += outcome.applied;
       counts.retried += outcome.retried;
       counts.released += outcome.released;
@@ -192,44 +179,29 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
   }
 
   /**
-   * Copies one kind of record to one copy a statement's worth at a time, clearing each group's rows
-   * once it landed. A failed group sends its own rows back to wait, and the groups it kept from
-   * being tried go back as they were; a claim past its deadline, or a task shutting down, puts what
-   * is left back as it was. A copy no copier makes waits, with that as its error.
+   * Copies one kind of record a statement's worth at a time, clearing each group's rows once it
+   * landed. A failed group sends its own rows back to wait, and the groups it kept from being tried
+   * go back as they were; a claim past its deadline, or a task shutting down, puts what is left back
+   * as it was.
    */
   private async apply(
-    target: CopyTarget,
+    recordType: ExperimentDataRecordType,
     rows: ClaimedOutboxRow[],
     deadlineAt: number,
   ): Promise<OutboxDrainCounts> {
     const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-    const copiers: Partial<Record<ExperimentDataDestination, Copier>> =
-      this.copiers[target.recordType];
-    const copier = copiers[target.destination];
-    if (copier === undefined) {
-      await this.retry(
-        target,
-        rows,
-        `No copier copies ${target.recordType} records to ${target.destination}`,
-      );
-      counts.retried = rows.length;
-      return counts;
-    }
-
-    const groups = await copier.groupsOf(
-      rows.map((row) => ({ id: row.recordId, experimentId: row.experimentId })),
-    );
+    const copier = this.copiers[recordType];
+    const groups = await copier.groupsOf(rows.map((row) => row.recordId));
     if (groups.isFailure()) {
-      await this.retry(target, rows, groups.error.message);
+      await this.retry(recordType, rows, groups.error.message);
       counts.retried = rows.length;
       return counts;
     }
 
     const canContinue = () => Date.now() < deadlineAt && !this.stopping;
-    const claimedAt = new Date(Math.max(...rows.map((row) => row.claimedAt.getTime())));
     let left = rows;
-    for (const group of groups.value) {
-      const outcome = await copier.copy(group, canContinue, claimedAt).catch(
+    for (const ids of groups.value) {
+      const outcome = await copier.copy(ids, canContinue).catch(
         (error: unknown): CopyOutcome => ({
           failed: error instanceof Error ? error.message : String(error),
         }),
@@ -238,29 +210,29 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
         this.logger.warn({
           msg: "Stopped a copy of experiment data before it finished; the rest waits for the next drain",
           operation: "experiment-data-outbox",
-          ...target,
+          recordType,
           rows: left.length,
         });
-        await this.release(target, left);
+        await this.release(recordType, left);
         counts.released = left.length;
         return counts;
       }
       if (outcome !== "copied") {
-        const tried = new Set(group.map(({ id }) => id));
+        const tried = new Set(ids);
         const failed = left.filter((row) => tried.has(row.recordId));
         const untried = left.filter((row) => !tried.has(row.recordId));
-        await this.retry(target, failed, outcome.failed);
+        await this.retry(recordType, failed, outcome.failed);
         counts.retried = failed.length;
         if (untried.length > 0) {
-          await this.release(target, untried);
+          await this.release(recordType, untried);
           counts.released = untried.length;
         }
         return counts;
       }
 
-      const done = new Set(group.map(({ id }) => id));
+      const done = new Set(ids);
       await this.clear(
-        target,
+        recordType,
         left.filter((row) => done.has(row.recordId)),
       );
       counts.applied += done.size;
@@ -270,14 +242,14 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
   }
 
   /** Deletes the rows whose copies landed, as long as this task still holds them. */
-  private async clear(target: CopyTarget, rows: ClaimedOutboxRow[]) {
+  private async clear(recordType: ExperimentDataRecordType, rows: ClaimedOutboxRow[]) {
     const deleted = await this.outbox.markApplied(rows);
     if (deleted.isFailure()) {
       this.logger.error({
         msg: "Copied experiment data but could not clear its outbox rows; the lease will copy them again",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "experiment-data-outbox",
-        ...target,
+        recordType,
         rows: rows.length,
         error: deleted.error.message,
       });
@@ -285,18 +257,22 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
       this.logger.warn({
         msg: "Lost the claim on copied experiment data before clearing it; another task has those rows",
         operation: "experiment-data-outbox",
-        ...target,
+        recordType,
         rows: rows.length - deleted.value,
       });
     }
   }
 
-  private async retry(target: CopyTarget, rows: ClaimedOutboxRow[], error: string) {
+  private async retry(
+    recordType: ExperimentDataRecordType,
+    rows: ClaimedOutboxRow[],
+    error: string,
+  ) {
     const attempts = Math.max(...rows.map((row) => row.attempts)) + 1;
     const failed = {
-      msg: "Could not copy experiment data; will retry",
+      msg: "Could not copy experiment data to the lakehouse; will retry",
       operation: "experiment-data-outbox",
-      ...target,
+      recordType,
       rows: rows.length,
       attempts,
       error,
@@ -315,39 +291,37 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
         msg: "Could not put experiment data copies back to wait; the lease will offer them again",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "experiment-data-outbox",
-        ...target,
+        recordType,
         error: retried.error.message,
       });
     }
   }
 
-  private async release(target: CopyTarget, rows: ClaimedOutboxRow[]) {
+  private async release(recordType: ExperimentDataRecordType, rows: ClaimedOutboxRow[]) {
     const released = await this.outbox.release(rows);
     if (released.isFailure()) {
       this.logger.error({
         msg: "Could not put unfinished experiment data copies back; the lease will offer them again",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "experiment-data-outbox",
-        ...target,
+        recordType,
         error: released.error.message,
       });
     }
   }
 
-  private byTarget(rows: ClaimedOutboxRow[]): { target: CopyTarget; rows: ClaimedOutboxRow[] }[] {
-    const groups = new Map<string, { target: CopyTarget; rows: ClaimedOutboxRow[] }>();
+  private byRecordType(
+    rows: ClaimedOutboxRow[],
+  ): Map<ExperimentDataRecordType, ClaimedOutboxRow[]> {
+    const groups = new Map<ExperimentDataRecordType, ClaimedOutboxRow[]>();
     for (const row of rows) {
-      const key = `${row.recordType}:${row.destination}`;
-      const group = groups.get(key);
+      const group = groups.get(row.recordType);
       if (group) {
-        group.rows.push(row);
+        group.push(row);
       } else {
-        groups.set(key, {
-          target: { recordType: row.recordType, destination: row.destination },
-          rows: [row],
-        });
+        groups.set(row.recordType, [row]);
       }
     }
-    return [...groups.values()];
+    return groups;
   }
 }

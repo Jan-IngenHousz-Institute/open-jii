@@ -21,13 +21,10 @@ import {
 } from "../models/experiment-data-outbox.model";
 import type {
   ClaimedOutboxRow,
-  ExperimentDataDestination,
   OutboxClaim,
   OwedRecord,
   WaitingCopies,
 } from "../models/experiment-data-outbox.model";
-import { SERVING_STORE_PORT } from "../ports/serving-store.port";
-import type { ServingStorePort } from "../ports/serving-store.port";
 
 /**
  * A raw statement is not read through drizzle's column mappers, so the enums come back as text
@@ -62,23 +59,18 @@ interface RetryChanges {
 
 @Injectable()
 export class ExperimentDataOutboxRepository {
-  constructor(
-    @Inject("DATABASE") private readonly database: DatabaseInstance,
-    @Inject(SERVING_STORE_PORT) private readonly servingStore: ServingStorePort,
-  ) {}
+  constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
 
   /**
-   * Owes each record's current state to every copy it keeps here, inside the caller's transaction.
-   * A record already waiting is made due now rather than queued twice.
+   * Owes each record's current state to every copy it keeps, inside the caller's transaction. A
+   * record already waiting is made due now rather than queued twice.
    */
   async owe(tx: DbOrTx, records: OwedRecord[]): Promise<void> {
     const unique = new Map(
       records.map((record) => [`${record.recordType}:${record.recordId}`, record]),
     );
     const rows = [...unique.values()].flatMap((record) =>
-      OWED_COPIES[record.recordType]
-        .filter((destination) => this.keeps(destination))
-        .map((destination) => ({ ...record, destination })),
+      OWED_COPIES[record.recordType].map((destination) => ({ ...record, destination })),
     );
 
     for (let start = 0; start < rows.length; start += INSERT_CHUNK_SIZE) {
@@ -110,15 +102,11 @@ export class ExperimentDataOutboxRepository {
    * claimed, even an abandoned one, and the abandoned claim is taken back before it. A claim this
    * read predates shows on the row it locks: a locked row is skipped, and a row changed since the
    * read is checked again as it now stands. Rows of a destination or kind this build does not
-   * know, written by a newer task during a deploy, are left for that task, as are rows of a copy
-   * this task has no connection to.
+   * know, written by a newer task during a deploy, are left for that task.
    */
   async claimDue(leaseMs: number, limit: number): Promise<Result<ClaimedOutboxRow[]>> {
     const now = sql`(now() AT TIME ZONE 'UTC')`;
     const leaseStart = sql`${now} - make_interval(secs => ${leaseMs / 1000})`;
-    const keptDestinations = zExperimentDataDestination.options.filter((destination) =>
-      this.keeps(destination),
-    );
     const other = alias(experimentDataOutbox, "other");
     const recordClaimed = exists(
       this.database
@@ -143,7 +131,7 @@ export class ExperimentDataOutboxRepository {
                   AND ${experimentDataOutbox.nextAttemptAt} <= ${now}
                   AND NOT ${recordClaimed})
                  OR ${experimentDataOutbox.claimedAt} <= ${leaseStart})
-            AND ${inArray(experimentDataOutbox.destination, keptDestinations)}
+            AND ${inArray(experimentDataOutbox.destination, zExperimentDataDestination.options)}
             AND ${inArray(experimentDataOutbox.recordType, zExperimentDataRecordType.options)}
           ORDER BY ${experimentDataOutbox.nextAttemptAt}
           LIMIT ${limit}
@@ -295,11 +283,6 @@ export class ExperimentDataOutboxRepository {
 
       return retried;
     });
-  }
-
-  /** The lakehouse always; the store only where this environment has its copier. */
-  private keeps(destination: ExperimentDataDestination): boolean {
-    return destination !== "serving_store" || this.servingStore.hasCopier();
   }
 
   /** Postgres's SQLSTATE 23505, which drizzle passes on as the error's cause. */

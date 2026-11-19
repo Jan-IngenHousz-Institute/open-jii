@@ -24,14 +24,10 @@ export class ServingStoreConfigService {
       return null;
     }
 
-    const copierUsername = this.configService.get<string>("servingStore.copierUsername") ?? "";
-    const copierPassword = this.configService.get<string>("servingStore.copierPassword") ?? "";
-    const hasNoCopier = copierUsername === "" && copierPassword === "";
     const parsed = servingStoreConfigSchema.safeParse({
       url,
       username: this.configService.get<string>("servingStore.username"),
       password: this.configService.get<string>("servingStore.password"),
-      copier: hasNoCopier ? null : { username: copierUsername, password: copierPassword },
     });
     if (!parsed.success) {
       // The issues name the fields only; a value could be the password.

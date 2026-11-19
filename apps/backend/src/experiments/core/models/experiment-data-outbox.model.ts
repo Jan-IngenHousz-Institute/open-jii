@@ -8,23 +8,11 @@ export type ExperimentDataRecordType = z.infer<typeof zExperimentDataRecordType>
 export const zExperimentDataDestination = z.enum(experimentDataDestinationEnum.enumValues);
 export type ExperimentDataDestination = z.infer<typeof zExperimentDataDestination>;
 
-/**
- * The copies each kind of record keeps beside Postgres, where the environment has each one. The
- * store reads which rows carry a flag from Postgres, so it keeps no copy of annotations.
- */
-export const OWED_COPIES = {
+/** The copies each kind of record keeps beside Postgres. */
+export const OWED_COPIES: Record<ExperimentDataRecordType, ExperimentDataDestination[]> = {
   annotation: ["lakehouse"],
-  metadata_sheet: ["lakehouse", "serving_store"],
-} as const satisfies Record<ExperimentDataRecordType, readonly ExperimentDataDestination[]>;
-
-/** The copies one kind of record is owed. */
-export type OwedDestination<R extends ExperimentDataRecordType> = (typeof OWED_COPIES)[R][number];
-
-/** A record a copy is owed, by the keys every copy finds it under. */
-export interface CopyKey {
-  id: string;
-  experimentId: string;
-}
+  metadata_sheet: ["lakehouse"],
+};
 
 /** A record whose current state its copies are owed. */
 export interface OwedRecord {

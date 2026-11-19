@@ -34,7 +34,6 @@ import { ExperimentStoreReadsService } from "./application/services/experiment-s
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MetadataSheetsLakehouseCopierService } from "./application/services/metadata-sheets-lakehouse-copier.service";
-import { MetadataSheetsStoreCopierService } from "./application/services/metadata-sheets-store-copier.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { NumberAnswersService } from "./application/services/number-answers.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
@@ -119,7 +118,6 @@ import { ExperimentDeviceRegistryRepository } from "./core/repositories/experime
 import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
-import { ExperimentMetadataStoreRepository } from "./core/repositories/experiment-metadata-store.repository";
 import { ExperimentMetadataWarehouseRepository } from "./core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
 import { ExperimentVisualizationRepository } from "./core/repositories/experiment-visualization.repository";
@@ -229,7 +227,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentJoinRequestRepository,
     ExperimentJoinCodeRepository,
     ExperimentMetadataWarehouseRepository,
-    ExperimentMetadataStoreRepository,
     ExperimentMetadataRepository,
     ExperimentDataOutboxRepository,
     ExperimentAnnotationsWarehouseRepository,
@@ -256,7 +253,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataOutboxWorker,
     AnnotationsLakehouseCopierService,
     MetadataSheetsLakehouseCopierService,
-    MetadataSheetsStoreCopierService,
     ExperimentDataOutboxMetricsService,
     AnnotationMergerService,
     ExportRunReconcilerService,

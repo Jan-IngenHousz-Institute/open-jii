@@ -68,7 +68,7 @@ describe("ServingStoreClientService", () => {
   });
 
   afterEach(async () => {
-    await client.onApplicationShutdown();
+    await client.onModuleDestroy();
   });
 
   afterAll(async () => {

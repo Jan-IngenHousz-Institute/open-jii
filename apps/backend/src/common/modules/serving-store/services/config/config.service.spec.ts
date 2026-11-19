@@ -20,34 +20,13 @@ describe("ServingStoreConfigService", () => {
       url: "http://10.0.1.5:8123",
       username: "reader",
       password: "p",
-      copier: null,
     });
-  });
-
-  it("reads the copier's credentials where the outbox copies to the store", () => {
-    const config = configOf({
-      url: "http://10.0.1.5:8123",
-      username: "reader",
-      password: "p",
-      copierUsername: "copier",
-      copierPassword: "q",
-    });
-
-    expect(config.getConfig()?.copier).toEqual({ username: "copier", password: "q" });
   });
 
   it("stops boot for a store without credentials, naming the fields and never a value", () => {
     expect(() => configOf({ url: "http://10.0.1.5:8123", username: "reader" })).toThrow(
       "Invalid serving store configuration: password",
     );
-    expect(() =>
-      configOf({
-        url: "http://10.0.1.5:8123",
-        username: "reader",
-        password: "p",
-        copierUsername: "copier",
-      }),
-    ).toThrow("Invalid serving store configuration: copier.password");
   });
 
   it("refuses a read where there is no store", async () => {

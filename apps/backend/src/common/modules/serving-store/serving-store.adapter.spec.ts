@@ -6,9 +6,7 @@ import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
-import type { MetadataSheetRecord } from "../../../experiments/core/models/experiment-metadata.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
-import { ExperimentMetadataStoreRepository } from "../../../experiments/core/repositories/experiment-metadata-store.repository";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
@@ -469,7 +467,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
   });
 
   afterAll(async () => {
-    await client.onApplicationShutdown();
+    await client.onModuleDestroy();
     await admin.close();
   });
 
@@ -1432,86 +1430,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(await unsortedIds("only", [])).toEqual(["21"]);
     expect(await count("only", [])).toEqual([["1"]]);
     expect(await count("exclude", [])).toEqual([["2"]]);
-  });
-
-  describe("the outbox's copies", () => {
-    let copier: ServingStoreClientService;
-    let sheets: ExperimentMetadataStoreRepository;
-
-    const sheet: MetadataSheetRecord = {
-      id: "s1",
-      experimentId: EXPERIMENT,
-      metadata: {
-        identifierColumnId: "plot",
-        experimentQuestionId: "plot",
-        rows: [
-          { _id: "r1", plot: "A1", soil: "clay" },
-          { _id: "r2", plot: "B2", soil: "sand" },
-        ],
-      },
-      createdBy: ADA,
-      createdAt: new Date("2026-09-01T08:00:00.123Z"),
-      updatedAt: new Date("2026-09-01T08:00:00.123Z"),
-    };
-
-    const claim = (minute: number) => new Date(Date.UTC(2026, 8, 14, 11, minute));
-
-    async function viewRows(view: string, columns: string) {
-      const result = await admin.query({
-        query: `SELECT ${columns} FROM ${view}(experiment = '${EXPERIMENT}') ORDER BY ${columns}`,
-        format: "JSONEachRow",
-      });
-      return result.json();
-    }
-
-    beforeAll(() => {
-      // The admin stands in for the copier, whose grants the infrastructure sets.
-      const config = new ConfigService({
-        servingStore: {
-          url: STORE_URL,
-          username: STORE_USER,
-          password: STORE_PASSWORD,
-          copierUsername: STORE_USER,
-          copierPassword: STORE_PASSWORD,
-        },
-      });
-      copier = new ServingStoreClientService(new ServingStoreConfigService(config));
-      const store = new ServingStoreAdapter(copier);
-      sheets = new ExperimentMetadataStoreRepository(store);
-    });
-
-    afterAll(async () => {
-      await copier.onApplicationShutdown();
-    });
-
-    it("keeps a sheet's current rows, so the rows an edit dropped and a deleted sheet read no more", async () => {
-      assertSuccess(await sheets.merge([sheet], () => true, claim(1)));
-      assertSuccess(
-        await sheets.merge(
-          [
-            {
-              ...sheet,
-              metadata: { ...sheet.metadata, rows: [{ _id: "r1", plot: "A1", soil: "loam" }] },
-            },
-          ],
-          () => true,
-          claim(2),
-        ),
-      );
-
-      expect(
-        await viewRows("experiment_metadata_rows", "identifier, fields, sheet_created_at"),
-      ).toEqual([
-        {
-          identifier: "A1",
-          fields: '{"soil":"loam"}',
-          sheet_created_at: "2026-09-01 08:00:00.123000",
-        },
-      ]);
-
-      assertSuccess(await sheets.delete([{ id: sheet.id, experimentId: EXPERIMENT }], claim(3)));
-      expect(await viewRows("experiment_metadata_rows", "identifier")).toEqual([]);
-    });
   });
 });
 

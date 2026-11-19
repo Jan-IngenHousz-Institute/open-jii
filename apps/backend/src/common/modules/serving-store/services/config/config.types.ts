@@ -1,22 +1,13 @@
 import { z } from "zod";
 
-export interface StoreCredentials {
+export interface ServingStoreConfig {
+  url: string;
   username: string;
   password: string;
 }
 
-export interface ServingStoreConfig extends StoreCredentials {
-  url: string;
-  /** The outbox's copier; null where no copies are owed to the store. */
-  copier: StoreCredentials | null;
-}
-
-const zCredentials = z.object({
+export const servingStoreConfigSchema = z.object({
+  url: z.string().url(),
   username: z.string().min(1),
   password: z.string().min(1),
-});
-
-export const servingStoreConfigSchema = zCredentials.extend({
-  url: z.string().url(),
-  copier: zCredentials.nullable(),
 });
