@@ -1,8 +1,8 @@
 #!/bin/bash
 # Each store table's feed, once a minute: rows it took in the last minute and, over the last five,
-# rows it refused and the p95 from gold's commit to the store's insert. Refused rows are counted
-# over five minutes so that a run that fails or comes late cannot leave them unreported. A table
-# nothing reached reports zero rows. The backend's reads follow.
+# rows it refused and the p95 from its source table's commit to the store's insert. Refused rows
+# are counted over five minutes so that a run that fails or comes late cannot leave them
+# unreported. A table nothing reached reports zero rows. The backend's reads follow.
 set -euo pipefail
 
 query="

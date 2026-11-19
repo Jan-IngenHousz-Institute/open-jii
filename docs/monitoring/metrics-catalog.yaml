@@ -669,7 +669,7 @@ metrics:
 
   - num: 120
     id: store-feed-latency
-    name: Gold to serving store
+    name: Source table to serving store
     family: observability
     area: latency
     source: aws
@@ -685,9 +685,9 @@ metrics:
     baseline: { method: threshold, max: 60 }
     runbook: docs/runbooks/store-feed-latency.md
     notes: >-
-      The p95 per store table, over the last five minutes, from gold's commit to the store's insert.
-      A timer on the store's instance queries ClickHouse once a minute and sends it while rows
-      arrive. The target is a minute. Rules exist only where the pipelines feed the store.
+      The p95 per store table, over the last five minutes, from its source table's commit to the
+      store's insert. A timer on the store's instance queries ClickHouse once a minute and sends it
+      while rows arrive. The target is a minute. Rules exist only where the pipelines feed the store.
 
   - num: 121
     id: store-feed-stalled

@@ -2215,7 +2215,7 @@ resource "grafana_rule_group" "serving_store_feed" {
       for            = "5m"
 
       annotations = {
-        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from gold."
+        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from its source table's commit."
         summary          = "Serving store feed slow: ${rule.key}"
         runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-latency.md"
         __dashboardUid__ = local.heartbeat_daily_uid
