@@ -154,15 +154,9 @@ function sortTarget(
  * The window-only path activates only with no groupBy entries and no
  * row-aggregating functions, so raw series can coexist with running totals
  * and raw-row windows.
- *
- * `builder` writes the dialect: Spark's by default, the store's for its reads.
  */
-export function wrapWithAggregation(
-  innerSql: string,
-  opts: AggregationRead,
-  builder?: BaseQueryBuilder,
-): string {
-  return buildAggregation(innerSql, opts, builder).sql;
+export function wrapWithAggregation(innerSql: string, opts: AggregationRead): string {
+  return buildAggregation(innerSql, opts).sql;
 }
 
 /** The aggregated statement and its outputs in their order, each with the item it came from. */
@@ -250,7 +244,7 @@ export function buildAggregation(
   }
 
   if (selectClauses.length === 0 && windowProjections.length === 0) {
-    throw new Error("wrapWithAggregation called without aggregation content");
+    throw new Error("buildAggregation called without aggregation content");
   }
 
   // Explode belongs to the outer FROM: the inner query reads whole rows,
