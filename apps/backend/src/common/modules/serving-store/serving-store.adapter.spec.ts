@@ -2,12 +2,11 @@ import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { storeMigrationStatements } from "../../../test/store-migrations";
+import { localList, settingsProfileClause, storeUser } from "../../../test/store-module";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
@@ -403,89 +402,8 @@ describe("ServingStoreAdapter", () => {
       assertFailure(await adapter.getPoolFacts());
       assertFailure(await adapter.getClientTotals());
     });
-
-    it("reads metrics views the module grants the reader", () => {
-      const views = localList("metrics_views");
-      const read = new Set(storeUser("reader").grants);
-
-      expect(views).toHaveLength(11);
-      for (const view of views) {
-        expect(read).toContain(`GRANT SELECT ON store.${view}`);
-      }
-    });
   });
 });
-
-/** The serving store module's infrastructure, which says what each store user may do. */
-const SERVING_STORE_MODULE = resolve(
-  __dirname,
-  "../../../../../../infrastructure/modules/serving-store",
-);
-
-function moduleFile(path: string): string {
-  return readFileSync(resolve(SERVING_STORE_MODULE, path), "utf-8");
-}
-
-/** A list of names from the serving store module's locals. */
-function localList(name: string): string[] {
-  const listing =
-    new RegExp(`\\n {2}${name} = \\[([^\\]]*)\\]`).exec(moduleFile("main.tf"))?.[1] ?? "";
-  return [...listing.matchAll(/"(\w+)"/g)].map(([, item]) => item);
-}
-
-/** A store user's profile and grants as the serving store module writes them into users.xml. */
-function storeUser(role: string): { profile: string; grants: string[] } {
-  const block =
-    new RegExp(`\\n {4}${role} = \\{([\\s\\S]*?)\\n {4}\\}`).exec(moduleFile("main.tf"))?.[1] ?? "";
-  const profile = /profile\s*=\s*"(\w+)"/.exec(block)?.[1] ?? "";
-  const grants = [
-    ...block.matchAll(
-      /\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"((?:GRANT|REVOKE) [^"]+)"/g,
-    ),
-  ].flatMap((match) => {
-    const plain = match.at(4);
-    if (plain !== undefined) {
-      return [plain];
-    }
-    const [, name, listings, template] = match;
-    return [...listings.matchAll(/local\.(\w+)/g)].flatMap(([, listing]) =>
-      localList(listing).map((value) => template.replace(`\${${name}}`, value)),
-    );
-  });
-  return { profile, grants };
-}
-
-/** A profile's settings as users.xml sets them, its parent's first, and the ones it fixes. */
-function profileSettings(name: string): { settings: Map<string, string>; fixed: string[] } {
-  const profiles = moduleFile("templates/users.xml.tftpl").replace(/<!--[\s\S]*?-->/g, "");
-  const body =
-    new RegExp(`<profiles>[\\s\\S]*?<${name}>([\\s\\S]*?)</${name}>`).exec(profiles)?.[1] ?? "";
-  const constraints = /<constraints>([\s\S]*?)<\/constraints>/.exec(body)?.[1] ?? "";
-  const parent = /<profile>(\w+)<\/profile>/.exec(body)?.[1];
-
-  const settings = new Map(parent === undefined ? [] : profileSettings(parent).settings);
-  const own = body.replace(/<constraints>[\s\S]*?<\/constraints>/, "");
-  for (const [, setting, value] of own.matchAll(/<(\w+)>([^<]*)<\/\1>/g)) {
-    if (setting !== "profile") {
-      settings.set(setting, value);
-    }
-  }
-
-  const fixed = [...constraints.matchAll(/<(\w+)><const\/><\/\1>/g)].map(([, setting]) => setting);
-  return { settings, fixed };
-}
-
-/** The profile as a settings profile the store can be given over SQL, every constraint kept. */
-function settingsProfileClause(name: string): string {
-  const { settings, fixed } = profileSettings(name);
-  const valued = [...settings].map(
-    ([setting, value]) => `${setting} = ${value}${fixed.includes(setting) ? " CONST" : ""}`,
-  );
-  const unvalued = fixed
-    .filter((setting) => !settings.has(setting))
-    .map((setting) => `${setting} CONST`);
-  return [...valued, ...unvalued].join(", ");
-}
 
 /**
  * The adapter's reads against a real store of the version the store runs, through the migrations'
