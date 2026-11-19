@@ -32,15 +32,12 @@ export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "is
   text?: { column: string; key?: string };
 };
 
-/** A column the rows first kept sort by going up, and where its nulls go. */
-export interface FirstRowsTerm {
-  column: string;
-  nulls: "FIRST" | "LAST";
-}
-
-/** The order the rows first kept are chosen in, and whether rows tied with the last are kept too. */
+/**
+ * The columns the rows first kept are chosen by, each going up as Spark sorts a read, and whether
+ * rows tied with the last are kept too.
+ */
 export interface FirstRows {
-  order: FirstRowsTerm[];
+  order: string[];
   withTies: boolean;
 }
 
@@ -621,7 +618,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
     const key = this.key.join(", ");
     const order = first.order
-      .map(({ column, nulls }) => `${this.projectedExpression(column)} ASC NULLS ${nulls}`)
+      .map((column) =>
+        this.nanApart(
+          this.projectedExpression(column),
+          this.outputColumn(column).type,
+          "ASC NULLS FIRST",
+        ),
+      )
       .join(", ");
     const firstKeys = this.joinClauses([
       `SELECT ${key}`,
@@ -1063,7 +1066,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
     }
     if (mode?.kind === "number") {
-      const sorted = this.nanApart(target, this.outputColumn(column).type, `${direction} NULLS LAST`);
+      const sorted = this.nanApart(
+        target,
+        this.outputColumn(column).type,
+        `${direction} NULLS LAST`,
+      );
       return `${sorted}${rowId ? `, ${rowId} ASC` : ""}`;
     }
     if (mode?.kind === "pseudonym") {

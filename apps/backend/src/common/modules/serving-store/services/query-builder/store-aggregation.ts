@@ -1,10 +1,7 @@
 import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
-import {
-  buildAggregation,
-  isCumsumCappable,
-} from "../../../databricks/services/query-builder/expressions/aggregation";
+import { buildAggregation } from "../../../databricks/services/query-builder/expressions/aggregation";
 import type { AggregationOutput } from "../../../databricks/services/query-builder/expressions/aggregation";
 import type {
   AggregateExpression,
@@ -15,7 +12,7 @@ import type {
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
 import { SparkWidthBucket } from "./spark-width-bucket";
 import { StoreQueryBuilder } from "./store-query-builder";
-import type { FirstRows, FirstRowsTerm, StoreOutputColumn } from "./store-query-builder";
+import type { FirstRows, StoreOutputColumn } from "./store-query-builder";
 
 /**
  * A chart's grouping and aggregates over a store read, written by the warehouse's own wrapper in
@@ -36,8 +33,8 @@ export class StoreAggregation {
     }
 
     const inner = this.rows.outputColumns().map(({ name, type, idOf }) => ({ name, type, idOf }));
-    // The shared cap keeps the first rows in the windows' order; the store finds them by key
-    // first, so it never extracts every row's payload to choose them.
+    // The store finds a capped read's rows by key first, so it never extracts every row's payload
+    // to choose them.
     const firstRows = this.firstRows(inner, page.ordering);
     if (firstRows !== undefined && page.limit !== undefined) {
       this.rows.keepFirst(firstRows, page.limit + (page.offset ?? 0));
@@ -65,37 +62,38 @@ export class StoreAggregation {
   }
 
   /**
-   * The rows the shared cap keeps, when every window looks back in one order. A tie breaker sorts
-   * nulls last, as the store's plain ASC in the window does.
+   * The rows a read may stop at before its windows run: only where it shows its rows going up in
+   * the order every window looks back in, so the rows it keeps hold each kept row's earlier rows
+   * and every window reads as over every row. A running sum adds in the rows tied with it, so its
+   * cut keeps every row tied with the last.
    */
   private firstRows(inner: StoreOutputColumn[], ordering?: QueryOrdering): FirstRows | undefined {
     const hasGroups = (this.aggregation.groupBy ?? []).length > 0;
-    if (hasGroups) {
+    const isGoingUp = ordering !== undefined && ordering.direction !== "DESC";
+    if (hasGroups || !isGoingUp) {
       return undefined;
     }
 
-    const orders = (this.aggregation.functions ?? []).map((item): FirstRowsTerm[] | undefined => {
+    const orders = (this.aggregation.functions ?? []).map((item): string[] | undefined => {
       if (item.function === "cumsum") {
-        return isCumsumCappable(ordering)
-          ? [{ column: ordering.column, nulls: "FIRST" }]
-          : undefined;
+        return [ordering.column];
       }
-      if (aggregateKind(item.function) !== "rowWindow" || item.orderColumn === undefined) {
+      const isReadOrderWindow =
+        aggregateKind(item.function) === "rowWindow" && item.orderColumn === ordering.column;
+      if (!isReadOrderWindow) {
         return undefined;
       }
-      const order: FirstRowsTerm = { column: item.orderColumn, nulls: "LAST" };
       const tie = item.tieBreaker;
-      return tie !== undefined && tie !== item.orderColumn
-        ? [order, { column: tie, nulls: "LAST" }]
-        : [order];
+      return tie !== undefined && tie !== ordering.column
+        ? [ordering.column, tie]
+        : [ordering.column];
     });
 
     const isPlainValue = (column: string) =>
       inner.some((candidate) => candidate.name === column && candidate.idOf === undefined);
     const keys = new Set(orders.map((order) => JSON.stringify(order)));
     const [order] = orders;
-    const isOneOrder =
-      keys.size === 1 && (order?.every(({ column }) => isPlainValue(column)) ?? false);
+    const isOneOrder = keys.size === 1 && (order?.every(isPlainValue) ?? false);
     const hasRunningSum = (this.aggregation.functions ?? []).some(
       (item) => item.function === "cumsum",
     );

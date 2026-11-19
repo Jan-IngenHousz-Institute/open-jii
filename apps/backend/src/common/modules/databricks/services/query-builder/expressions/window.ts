@@ -14,20 +14,15 @@ function orderExpression(item: AggregateExpression, builder: BaseQueryBuilder): 
 }
 
 export function buildWindowSpec(item: AggregateExpression, builder: BaseQueryBuilder): string {
+  const order = orderExpression(item, builder);
   const partition = item.partitionColumn
     ? `PARTITION BY ${builder.escapeIdentifier(item.partitionColumn)} `
     : "";
-  return `${partition}ORDER BY ${buildWindowOrder(item, builder)}`;
-}
-
-/** The order a row window looks back in, across its partitions. */
-export function buildWindowOrder(item: AggregateExpression, builder: BaseQueryBuilder): string {
-  const order = orderExpression(item, builder);
   const tie =
     item.tieBreaker && item.tieBreaker !== item.orderColumn
       ? `, ${builder.escapeIdentifier(item.tieBreaker)} ASC`
       : "";
-  return `${order} ASC NULLS LAST${tie}`;
+  return `${partition}ORDER BY ${order} ASC NULLS LAST${tie}`;
 }
 
 export function buildRowWindowExpression(
@@ -36,7 +31,7 @@ export function buildRowWindowExpression(
 ): { sql: string; alias: string } {
   const order = orderExpression(item, builder);
   const window = `OVER (${buildWindowSpec(item, builder)})`;
-  const alias = builder.aggregateAlias(item);
+  const alias = item.alias ?? `${item.column}_${item.function}`;
   const result = (sql: string) => ({
     sql: `CASE WHEN ${order} IS NULL THEN NULL ELSE ${sql} END`,
     alias,

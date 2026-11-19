@@ -14,47 +14,6 @@ import type {
   QueryOrdering,
 } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
-import { buildWindowOrder } from "./window";
-
-const ROW_ID = "id";
-const CAP_RANK = "__cap_rank";
-
-/**
- * Whether a running sum's rows may be cut to the limit before it runs: along the row id going up,
- * as the cut goes. Ids repeat, so the cut keeps every row tied with its last.
- */
-export function isCumsumCappable(ordering: QueryOrdering | undefined): ordering is QueryOrdering {
-  return ordering?.column === ROW_ID && ordering.direction !== "DESC";
-}
-
-/**
- * The rows a read keeps every row of, first cut to its limit in the order its windows look back
- * in, so the windows run over at most that many rows. A row's earlier rows in that order all come
- * before it, so each shown row's window reads exactly as over every row. A running sum adds in
- * every row that shares its id, so its cut keeps all rows up to the last kept row's id. Windows
- * that look back in different orders run over every row.
- */
-function cappedRows(
-  from: string,
-  windows: { orders: Set<string | undefined>; hasRunningSum: boolean },
-  page: AggregationRead,
-  builder: BaseQueryBuilder,
-): string {
-  const [order] = windows.orders;
-  const hasOneOrder = windows.orders.size === 1 && order !== undefined;
-  if (!hasOneOrder || page.limit === undefined) {
-    return from;
-  }
-
-  const count = page.limit + (page.offset ?? 0);
-  if (!windows.hasRunningSum) {
-    return `(SELECT * FROM ${from} ORDER BY ${order} LIMIT ${count})`;
-  }
-  // A row's rank counts the rows before it, so every row that shares the last kept id ranks in.
-  const rank = builder.quoteName(CAP_RANK);
-  const ranked = `SELECT *, rank() OVER (ORDER BY ${order}) AS ${rank} FROM ${from}`;
-  return `(SELECT * EXCEPT (${rank}) FROM (${ranked}) WHERE ${rank} <= ${count})`;
-}
 
 /** What an aggregated read groups, computes, sorts and pages by. */
 interface AggregationRead {
@@ -224,8 +183,6 @@ export function buildAggregation(
   const orderSql = sortTarget(builder, opts.ordering);
 
   let firstGroupBySql: string | undefined;
-  const windowOrders = new Set<string | undefined>();
-  let hasRunningSum = false;
   let firstGroupColumn: string | undefined;
 
   if (opts.aggregation) {
@@ -274,15 +231,6 @@ export function buildAggregation(
         outputNames.add(expr.alias);
         windowOutputs.push({ kind: "aggregate", name: expr.alias, item });
         windowProjections.push(`${expr.sql} AS ${quoteAlias(expr.alias)}`);
-        hasRunningSum = true;
-        windowOrders.add(
-          isCumsumCappable(opts.ordering)
-            ? builder.aggregateOrdering(cumsumOrderBy, {
-                column: cumsumOrderColumn ?? cumsumOrderBy,
-                direction: "ASC",
-              })
-            : undefined,
-        );
         continue;
       }
 
@@ -291,7 +239,6 @@ export function buildAggregation(
         outputNames.add(expr.alias);
         windowOutputs.push({ kind: "aggregate", name: expr.alias, item });
         windowProjections.push(`${expr.sql} AS ${builder.quoteName(expr.alias)}`);
-        windowOrders.add(buildWindowOrder(item, builder));
         continue;
       }
 
@@ -319,7 +266,7 @@ export function buildAggregation(
   if (isWindowOnly) {
     // Window-only path: keep every raw column from the inner subquery so
     // non-aggregated series still have their values to plot.
-    sql = `SELECT *, ${windowProjections.join(", ")} FROM ${cappedRows(from, { orders: windowOrders, hasRunningSum }, opts, builder)}`;
+    sql = `SELECT *, ${windowProjections.join(", ")} FROM ${from}`;
   } else {
     const projections = [...selectClauses, ...windowProjections];
     sql = `SELECT ${projections.join(", ")} FROM ${from}`;

@@ -235,6 +235,62 @@
       "device_name": "A",
       "latitude": 1.0,
       "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "cut",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":4,\"v\":10.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "Q",
+      "latitude": 1.0,
+      "output": "{\"v\":20.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":30.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "Q",
+      "latitude": 1.0,
+      "output": "{\"n\":3,\"v\":40.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":2,\"v\":50.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "Q",
+      "latitude": 1.0,
+      "output": "{\"n\":6,\"v\":60.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 7,
+      "timestamp": "2026-09-07 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":5,\"v\":70.0}"
     }
   ],
   "matchSchema": "OBJECT<w: DOUBLE>",
@@ -961,8 +1017,7 @@
         "direction": "ASC"
       },
       "compare": ["id", "v", "v_cumsum", "n_cumsum"],
-      "limit": 6,
-      "exact": true
+      "limit": 6
     },
     "rowWindowsCapped": {
       "aggregation": {
@@ -1006,8 +1061,7 @@
         "direction": "ASC"
       },
       "compare": ["id", "v_previous", "v_change_from_previous", "seconds_since_previous", "row"],
-      "limit": 6,
-      "exact": true
+      "limit": 6
     },
     "rowWindowsByNullableOrderCapped": {
       "aggregation": {
@@ -1034,8 +1088,7 @@
         "direction": "ASC"
       },
       "compare": ["id", "v_previous", "row"],
-      "limit": 6,
-      "exact": true
+      "limit": 6
     },
     "rowCumsumTiedAtCap": {
       "experiment": "ties",
@@ -1056,8 +1109,35 @@
         "direction": "ASC"
       },
       "compare": ["id", "v_cumsum", "n_cumsum"],
-      "limit": 6,
-      "exact": true
+      "limit": 6
+    },
+    "rowWindowsCappedAlongTheirOrder": {
+      "experiment": "cut",
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "n",
+        "direction": "ASC"
+      },
+      "compare": ["id", "n", "v_previous", "row"],
+      "limit": 4
     },
     "fractionalTimeWidthEdge": {
       "experiment": "edges",

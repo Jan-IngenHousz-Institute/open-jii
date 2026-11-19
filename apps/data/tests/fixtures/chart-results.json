@@ -1345,17 +1345,17 @@
         3
       ],
       [
+        4,
+        null,
+        null
+      ],
+      [
         5,
         null,
         1
       ],
       [
         6,
-        null,
-        1
-      ],
-      [
-        8,
         null,
         1
       ]
@@ -1413,9 +1413,49 @@
         1
       ],
       [
-        8,
+        6,
         null,
         null,
+        null,
+        1
+      ]
+    ]
+  },
+  "rowWindowsCappedAlongTheirOrder": {
+    "columns": [
+      "id",
+      "n",
+      "v_previous",
+      "row"
+    ],
+    "types": [
+      "BIGINT",
+      "BIGINT",
+      "DOUBLE",
+      "INT"
+    ],
+    "rows": [
+      [
+        2,
+        null,
+        null,
+        null
+      ],
+      [
+        3,
+        1,
+        null,
+        1
+      ],
+      [
+        5,
+        2,
+        30.0,
+        2
+      ],
+      [
+        4,
+        3,
         null,
         1
       ]

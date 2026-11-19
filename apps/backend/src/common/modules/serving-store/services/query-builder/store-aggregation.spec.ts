@@ -82,8 +82,6 @@ const zCase = z.object({
   compare: z.array(z.string()).optional(),
   /** A test cap in place of the read's ceiling, for a table larger than it. */
   limit: z.number().optional(),
-  /** Spark checks each shown row against the same windows computed over every row. */
-  exact: z.boolean().optional(),
 });
 
 const zFixture = z.object({
@@ -170,10 +168,15 @@ function storeRead(
 // against chart-results.json; the store's spec below expects the same results.
 it("keeps the Spark chart fixture in sync with the warehouse's generated queries", async () => {
   const service = new QueryBuilderService();
-  const warehouseRead = (
-    { experiment, columns, join, filters, aggregation, ordering }: z.infer<typeof zCase>,
-    limit: number | undefined,
-  ) => {
+  const warehouseRead = ({
+    experiment,
+    columns,
+    join,
+    filters,
+    aggregation,
+    ordering,
+    limit,
+  }: z.infer<typeof zCase>) => {
     const scoped = {
       whereConditions: [["experiment_id", experiment ?? "charts"]] satisfies [string, string][],
     };
@@ -204,17 +207,13 @@ it("keeps the Spark chart fixture in sync with the warehouse's generated queries
       filters,
       aggregation,
       ordering,
-      limit,
+      limit: limit ?? CHART_LIMIT,
     });
     assertSuccess(built);
     return built.value;
   };
   const queries = Object.fromEntries(
-    Object.entries(FIXTURE.cases).flatMap(([name, read]) => {
-      const capped: [string, string] = [name, warehouseRead(read, read.limit ?? CHART_LIMIT)];
-      const uncapped: [string, string] = [`${name} over every row`, warehouseRead(read, undefined)];
-      return read.exact === true ? [capped, uncapped] : [capped];
-    }),
+    Object.entries(FIXTURE.cases).map(([name, read]) => [name, warehouseRead(read)]),
   );
 
   await expect(JSON.stringify(queries, null, 2) + "\n").toMatchFileSnapshot(
@@ -292,27 +291,40 @@ describe("StoreAggregation", () => {
     expect(query.value.sql).toContain("ORDER BY `device_name` ASC NULLS FIRST");
   });
 
-  it("finds a capped window's rows by key in the window's order before reading their payloads", () => {
-    const windows = adapter.buildExperimentQuery(storeRead("rowWindowsCapped"));
+  it("finds a capped read's rows by key in the read's own order before reading their payloads", () => {
+    const windows = adapter.buildExperimentQuery(storeRead("rowWindowsCappedAlongTheirOrder"));
     const sum = adapter.buildExperimentQuery(storeRead("rowCumsumCapped"));
 
     assertSuccess(windows);
     assertSuccess(sum);
     expect(windows.value.sql).toMatch(
-      /\) IN \(SELECT [^\n]+\nFROM macro_results FINAL\nWHERE [^\n]+\nORDER BY timestamp ASC NULLS LAST, id ASC NULLS LAST, [^\n]+\nLIMIT 6\)/,
+      /\) IN \(SELECT [^\n]+\nFROM macro_results FINAL\nWHERE [^\n]+\nORDER BY accurateCastOrNull\(macro_output\.`n`, 'Int64'\) ASC NULLS FIRST, id ASC NULLS FIRST, [^\n]+\nLIMIT 4\)/,
     );
     expect(sum.value.sql).toContain("\nORDER BY id ASC NULLS FIRST\nLIMIT 6 WITH TIES)");
   });
 
-  it("reads every row for a running sum along a column rows may share", () => {
+  it("keeps every row tied with the last for a running sum along a column rows share", () => {
     const query = adapter.buildExperimentQuery({
       ...storeRead("rowCumsumCapped"),
       ordering: { column: "timestamp", direction: "ASC" },
     });
 
     assertSuccess(query);
+    expect(query.value.sql).toContain("\nORDER BY timestamp ASC NULLS FIRST\nLIMIT 6 WITH TIES)");
+  });
+
+  const goingDown: StoreQueryParams = {
+    ...storeRead("rowWindowsCappedAlongTheirOrder"),
+    ordering: { column: "n", direction: "DESC" },
+  };
+  it.each([
+    ["windows that look back in another order than the read shows", storeRead("rowWindowsCapped")],
+    ["a read shown going down", goingDown],
+  ])("reads every row before %s", (_case, read) => {
+    const query = adapter.buildExperimentQuery(read);
+
+    assertSuccess(query);
     expect(query.value.sql).not.toContain(") IN (SELECT ");
-    expect(query.value.sql.match(/LIMIT 6/g)).toHaveLength(1);
   });
 
   it("groups a device as the warehouse groups its struct: a registered one by its client id", () => {
