@@ -133,12 +133,21 @@ interface StatusComponentDefinition {
 }
 
 export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
-  { id: "website", live: true, signals: ["websiteRequests", "websiteFailedRequests"] },
-  { id: "sign-in", live: true, signals: ["emailUp", "signInEmailsFailed"] },
   {
     id: "platform",
     live: true,
-    signals: ["databaseUp", "databricksUp", "albElb5xx", "albTarget5xx", "albRequests"],
+    signals: [
+      "websiteRequests",
+      "websiteFailedRequests",
+      "databaseUp",
+      "databricksUp",
+      "albElb5xx",
+      "albTarget5xx",
+      "albRequests",
+      "emailUp",
+      "signInEmailsFailed",
+      "exportsFailed",
+    ],
   },
   {
     id: "data-intake",
@@ -163,7 +172,6 @@ export const STATUS_COMPONENTS: StatusComponentDefinition[] = [
     live: true,
     signals: ["macroPlatformFailures", "macroLatencyP95", "macroBacklog"],
   },
-  { id: "exports", live: true, signals: ["exportsFailed"] },
 ];
 
 type QueryBuilder = (id: string, periodSeconds: number) => MetricDataQuery;

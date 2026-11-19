@@ -27,13 +27,10 @@ export interface SlackMessage {
  * translations. A test in the status app fails when they differ from `component.<id>.name`.
  */
 export const STATUS_COMPONENT_NAMES: Record<StatusComponentId, string> = {
-  website: "Website",
-  "sign-in": "Sign-in",
   platform: "Platform",
   "data-intake": "Data intake",
   "data-delivery": "Data delivery",
   "macro-processing": "Macro processing",
-  exports: "Exports",
 };
 
 const STAGE_NAMES: Record<IncidentUpdate["stage"], string> = {

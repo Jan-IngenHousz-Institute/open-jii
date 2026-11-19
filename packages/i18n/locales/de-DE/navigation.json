@@ -76,6 +76,9 @@
       "showKeyboardShortcuts": "Tastenkürzel anzeigen",
       "openDocumentation": "Dokumentation öffnen"
     },
+    "result": {
+      "inParent": "in {{title}}"
+    },
     "status": {
       "searching": "Suche...",
       "errorTitle": "Etwas ist schiefgelaufen",

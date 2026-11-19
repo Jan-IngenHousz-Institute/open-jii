@@ -35713,7 +35713,10 @@
                               "macro",
                               "workbook",
                               "calibration_definition",
-                              "organization"
+                              "organization",
+                              "device",
+                              "dashboard",
+                              "visualization"
                             ],
                             "type": "string"
                           },
@@ -35743,6 +35746,33 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "parent": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "const": "experiment"
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "id",
+                                  "title"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -35750,7 +35780,8 @@
                           "id",
                           "title",
                           "subtitle",
-                          "meta"
+                          "meta",
+                          "parent"
                         ]
                       }
                     }

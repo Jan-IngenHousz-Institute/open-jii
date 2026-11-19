@@ -11,6 +11,7 @@ import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
 import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
+import { getAuthCallback } from "~/lib/auth-callback";
 import { orpc } from "~/lib/orpc";
 import { parseApiError } from "~/util/apiError";
 
@@ -30,6 +31,25 @@ export interface Registration {
   acceptedTerms?: boolean;
   newsletterOptIn?: boolean;
   otp?: string;
+}
+
+// Mailchimp calls have no timeout, so a hung subscription must not keep someone on the form.
+const NEWSLETTER_WAIT_MS = 5_000;
+
+function leavesThisOrigin(destination: string): boolean {
+  return new URL(destination, window.location.href).origin !== window.location.origin;
+}
+
+async function settleWithin(promise: Promise<unknown>, ms: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const elapsed = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms);
+  });
+  try {
+    await Promise.race([promise, elapsed]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function RegistrationForm({
@@ -113,8 +133,9 @@ export function RegistrationForm({
       return;
     }
 
+    const destination = getAuthCallback(callbackUrl);
     if (newsletterOptIn) {
-      void subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
+      const subscription = subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
         const isForgottenEmail = parseApiError(error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
         toast({
           description: isForgottenEmail
@@ -122,10 +143,12 @@ export function RegistrationForm({
             : t("registration.newsletterOptInError"),
         });
       });
+      // Only a cross-origin page load aborts the request, so only that waits for it.
+      if (leavesThisOrigin(destination)) await settleWithin(subscription, NEWSLETTER_WAIT_MS);
     }
 
     toast({ description: t("registration.successMessage") });
-    router.push(callbackUrl ?? "/platform");
+    router.push(destination);
   };
 
   const { mutateAsync: createUserProfile } = useCreateUserProfile({

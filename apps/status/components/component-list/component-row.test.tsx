@@ -46,12 +46,12 @@ function bars() {
 describe("ComponentRow", () => {
   describe("heading and trigger", () => {
     it("names the component alone in its heading, with the chevron as the only icon", () => {
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
       const heading = screen.getByRole("heading", { level: 3 });
-      const trigger = within(heading).getByRole("button", { name: "Website" });
+      const trigger = within(heading).getByRole("button", { name: "Platform" });
 
-      expect(heading.textContent).toBe("Website");
+      expect(heading.textContent).toBe("Platform");
       expect(trigger.querySelectorAll("svg")).toHaveLength(1);
       expect(trigger.querySelector("svg.lucide-chevron-down")).not.toBeNull();
       expect(document.querySelector("svg.lucide-info")).toBeNull();
@@ -59,10 +59,10 @@ describe("ComponentRow", () => {
 
     it("expands to the details", async () => {
       const user = userEvent.setup();
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
       expect(screen.queryByText(/Every minute we load a page of the openJII website/)).toBeNull();
 
-      await user.click(screen.getByRole("button", { name: "Website" }));
+      await user.click(screen.getByRole("button", { name: "Platform" }));
 
       expect(
         screen.getByText(/Every minute we load a page of the openJII website/),
@@ -72,13 +72,13 @@ describe("ComponentRow", () => {
 
   describe("state for assistive tech", () => {
     it("describes the strip by the state and the uptime line", () => {
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
       const group = screen.getByRole("group");
 
-      expect(group).toHaveAccessibleName("Website, last 90 days");
+      expect(group).toHaveAccessibleName("Platform, last 90 days");
       expect(group).toHaveAccessibleDescription(
-        "Operational 99.97% available in the last 90 days · 27 min degraded",
+        "Operational 99.96% available in the last 90 days · 2 h 26 min degraded",
       );
     });
 
@@ -91,34 +91,34 @@ describe("ComponentRow", () => {
 
   describe("uptime line", () => {
     it("says the figure covers the last 90 days", () => {
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
-      expect(screen.getByText("99.97% available in the last 90 days")).toBeInTheDocument();
-      expect(screen.getByText(/· 27 min degraded/)).toBeInTheDocument();
+      expect(screen.getByText("99.96% available in the last 90 days")).toBeInTheDocument();
+      expect(screen.getByText(/· 2 h 26 min degraded/)).toBeInTheDocument();
     });
 
     it("says since when while fewer than 90 days are recorded", () => {
-      const days = componentOf(operationalStatusDocument, "website").days.slice(-3);
-      renderRow(operationalStatusDocument, "website", { days });
+      const days = componentOf(operationalStatusDocument, "platform").days.slice(-3);
+      renderRow(operationalStatusDocument, "platform", { days });
 
-      expect(screen.getByText("99.97% available since November 1, 2026")).toBeInTheDocument();
+      expect(screen.getByText("99.96% available since November 1, 2026")).toBeInTheDocument();
       expect(screen.queryByText(/in the last 90 days/)).not.toBeInTheDocument();
     });
 
     it("writes every figure with two decimals", () => {
-      renderRow(operationalStatusDocument, "website", { uptimePercent: 99.9 });
+      renderRow(operationalStatusDocument, "platform", { uptimePercent: 99.9 });
 
       expect(screen.getByText("99.90% available in the last 90 days")).toBeInTheDocument();
     });
 
     it("writes exactly 100 without decimals", () => {
-      renderRow(operationalStatusDocument, "website", { uptimePercent: 100 });
+      renderRow(operationalStatusDocument, "platform", { uptimePercent: 100 });
 
       expect(screen.getByText("100% available in the last 90 days")).toBeInTheDocument();
     });
 
     it("counts days in the degraded total", () => {
-      renderRow(operationalStatusDocument, "website", { degradedMinutes: 5490 });
+      renderRow(operationalStatusDocument, "platform", { degradedMinutes: 5490 });
 
       expect(screen.getByText(/· 3 d 19 h degraded/)).toBeInTheDocument();
     });
@@ -127,7 +127,7 @@ describe("ComponentRow", () => {
   describe("on a wide viewport", () => {
     it("shows 90 days from 90 days ago to today", () => {
       stubViewport(false);
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
       expect(bars()).toHaveLength(90);
       expect(screen.getByText("90 days ago")).toBeInTheDocument();
@@ -138,24 +138,24 @@ describe("ComponentRow", () => {
   describe("on a narrow viewport", () => {
     it("shows the last 30 days and says so at the start of the strip", () => {
       stubViewport(true);
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
       expect(bars()).toHaveLength(30);
       expect(screen.getByText("30 days ago")).toBeInTheDocument();
       expect(screen.queryByText("90 days ago")).toBeNull();
-      expect(screen.getByRole("group", { name: "Website, last 30 days" })).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "Platform, last 30 days" })).toBeInTheDocument();
     });
 
     it("keeps the figure over 90 days, and says so", () => {
       stubViewport(true);
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
-      expect(screen.getByText("99.97% available in the last 90 days")).toBeInTheDocument();
+      expect(screen.getByText("99.96% available in the last 90 days")).toBeInTheDocument();
     });
 
     it("grows to 90 days when the viewport widens", () => {
       const viewport = stubViewport(true);
-      renderRow(operationalStatusDocument, "website");
+      renderRow(operationalStatusDocument, "platform");
 
       viewport.resizeTo("wide");
 
@@ -204,7 +204,9 @@ describe("ComponentRow", () => {
           .map((item) => item.textContent),
       ).toEqual([
         "October 18, 2026: Outage for 12 min, Degraded for 20 min",
+        "October 2, 2026: Outage for 42 min, Degraded for 9 min",
         "September 30, 2026: Maintenance for 1 h",
+        "September 14, 2026: Degraded for 18 min",
         "September 12, 2026: Degraded for 4 min",
         "August 21, 2026: Degraded for 1 h 35 min",
       ]);
@@ -233,7 +235,7 @@ describe("ComponentRow", () => {
     });
 
     it("leaves out the incidents that name other components", () => {
-      renderRow(incidentStatusDocument, "website");
+      renderRow(incidentStatusDocument, "platform");
 
       expect(bars().at(-1)).toHaveAttribute(
         "aria-label",
@@ -242,8 +244,8 @@ describe("ComponentRow", () => {
     });
 
     it("says so when there were none in the last 90 days", async () => {
-      const clean = componentOf(operationalStatusDocument, "website").days.map(withoutProblems);
-      renderRow(operationalStatusDocument, "website", { days: clean });
+      const clean = componentOf(operationalStatusDocument, "platform").days.map(withoutProblems);
+      renderRow(operationalStatusDocument, "platform", { days: clean });
 
       await expand();
 

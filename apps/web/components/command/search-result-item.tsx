@@ -3,8 +3,19 @@
 import { organizationTypeLabelKey } from "@/components/organizations/organization-labels";
 import { formatSensorFamily } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
-import { BookOpen, Building2, Code, FileSliders, Leaf, Microscope } from "lucide-react";
-import * as React from "react";
+import {
+  BookOpen,
+  Building2,
+  ChartNoAxesCombined,
+  Code,
+  Cpu,
+  FileSliders,
+  LayoutDashboard,
+  Leaf,
+  Microscope,
+  Search,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
 import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
@@ -12,14 +23,17 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { CommandItem } from "@repo/ui/components/command";
 
-const ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }>> = {
+const ICONS: Partial<Record<string, LucideIcon>> = {
   experiment: Leaf,
   protocol: FileSliders,
   macro: Code,
   workbook: BookOpen,
   calibration_definition: Microscope,
   organization: Building2,
-};
+  device: Cpu,
+  dashboard: LayoutDashboard,
+  visualization: ChartNoAxesCombined,
+} satisfies Record<SearchResultType, LucideIcon>;
 
 const LANGUAGE_LABELS: Record<string, string> = {
   python: "Python",
@@ -40,7 +54,7 @@ function metaLabel(type: SearchResultType, meta: string, t: (key: string) => str
     // An unrecognised spelling renders as stored rather than as a missing-key placeholder.
     return parsed.success ? t(organizationTypeLabelKey(parsed.data)) : meta;
   }
-  if (type === "protocol") return formatSensorFamily(meta);
+  if (type === "protocol" || type === "device") return formatSensorFamily(meta);
   // Any other label: capitalize the first letter.
   return meta.charAt(0).toUpperCase() + meta.slice(1);
 }
@@ -53,7 +67,8 @@ export function SearchResultItem({
   onSelect: (result: SearchResult) => void;
 }) {
   const { t } = useTranslation();
-  const Icon = ICONS[result.type];
+  const { t: tNavigation } = useTranslation("navigation");
+  const Icon = ICONS[result.type] ?? Search;
   // Descriptions can contain rich-text markup (experiments), so strip tags for a clean one-liner.
   const subtitle = result.subtitle ? stripHtml(result.subtitle) : "";
   return (
@@ -75,6 +90,11 @@ export function SearchResultItem({
             </Badge>
           )}
         </span>
+        {result.parent && (
+          <span className="text-muted-foreground truncate text-xs">
+            {tNavigation("commandPalette.result.inParent", { title: result.parent.title })}
+          </span>
+        )}
         {subtitle && <span className="text-muted-foreground truncate text-xs">{subtitle}</span>}
       </div>
     </CommandItem>

@@ -1,15 +1,19 @@
 # Application Load Balancer - Layer 7 load balancer with advanced routing
-# Internet-facing ALB that only accepts traffic from CloudFront via custom header verification
+#
+# Two shapes, chosen by var.internal:
+# - internal: in private subnets with no public address. CloudFront reaches it through a VPC
+#   origin, so no shared header is needed.
+# - internet-facing: in public subnets, forwarding only requests that carry the custom header
+#   CloudFront adds. Kept until every environment has moved to the internal shape.
 
-# This ALB is intentionally internet-facing — it is the public entrypoint,
-# fronted by CloudFront + WAF and header-verified. Exposure is by design.
+# An internet-facing instance is fronted by CloudFront + WAF and header-verified.
 #trivy:ignore:AVD-AWS-0053
 resource "aws_lb" "app_alb" {
   name               = "${var.service_name}-alb"
-  internal           = false
+  internal           = var.internal
   load_balancer_type = "application"
   security_groups    = var.security_groups
-  subnets            = var.public_subnet_ids
+  subnets            = var.subnet_ids
   # Idle timeout balances connection efficiency vs resource usage
   # 60s default is good for APIs; increase for long-running connections
   idle_timeout = var.idle_timeout
@@ -75,8 +79,11 @@ resource "aws_lb_target_group" "app_tg" {
 }
 
 # HTTP Listener - always redirects to HTTPS for security
-# We don't allow HTTP access to the ALB for enhanced security
+# We don't allow HTTP access to the ALB for enhanced security. The VPC origin only speaks HTTPS,
+# so an internal ALB has no HTTP listener at all.
 resource "aws_lb_listener" "http_listener" {
+  count = var.internal ? 0 : 1
+
   load_balancer_arn = aws_lb.app_alb.arn
   port              = 80
   protocol          = "HTTP"
@@ -94,7 +101,7 @@ resource "aws_lb_listener" "http_listener" {
   }
 }
 
-# HTTPS Listener - handles encrypted traffic on port 443 with custom header validation
+# HTTPS Listener - handles encrypted traffic on port 443
 resource "aws_lb_listener" "https_listener" {
   load_balancer_arn = aws_lb.app_alb.arn
   port              = 443
@@ -102,14 +109,19 @@ resource "aws_lb_listener" "https_listener" {
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06" # Latest TLS policy for security
   certificate_arn   = var.certificate_arn
 
-  # Default action: If no header match, return 403 Forbidden
+  # Internal: only CloudFront's VPC origin can reach it, so everything is forwarded.
+  # Internet-facing: anything without CloudFront's header gets a 403.
   default_action {
-    type = "fixed-response"
+    type             = var.internal ? "forward" : "fixed-response"
+    target_group_arn = var.internal ? aws_lb_target_group.app_tg.arn : null
 
-    fixed_response {
-      content_type = "application/json"
-      message_body = jsonencode({ error = "Access denied. Invalid origin." })
-      status_code  = "403"
+    dynamic "fixed_response" {
+      for_each = var.internal ? [] : [1]
+      content {
+        content_type = "application/json"
+        message_body = jsonencode({ error = "Access denied. Invalid origin." })
+        status_code  = "403"
+      }
     }
   }
 }
@@ -117,6 +129,8 @@ resource "aws_lb_listener" "https_listener" {
 # CloudFront custom header condition and forwarding rule
 # Only requests with the correct header are forwarded to the target group
 resource "aws_lb_listener_rule" "cloudfront_header_rule" {
+  count = var.internal ? 0 : 1
+
   listener_arn = aws_lb_listener.https_listener.arn
   priority     = 1
 
@@ -133,4 +147,44 @@ resource "aws_lb_listener_rule" "cloudfront_header_rule" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.app_tg.arn
   }
+}
+
+# Without these, giving the listener and the rule a count would recreate them on the
+# internet-facing ALB that serves traffic today.
+moved {
+  from = aws_lb_listener.http_listener
+  to   = aws_lb_listener.http_listener[0]
+}
+
+moved {
+  from = aws_lb_listener_rule.cloudfront_header_rule
+  to   = aws_lb_listener_rule.cloudfront_header_rule[0]
+}
+
+# CloudFront reaches an internal ALB through a service-managed network interface in the VPC.
+# Creating it waits until it is Deployed, which can take up to 15 minutes.
+resource "aws_cloudfront_vpc_origin" "this" {
+  count = var.internal ? 1 : 0
+
+  vpc_origin_endpoint_config {
+    name                   = "${var.service_name}-alb-${var.environment}"
+    arn                    = aws_lb.app_alb.arn
+    http_port              = 80
+    https_port             = 443
+    origin_protocol_policy = "https-only"
+
+    origin_ssl_protocols {
+      items    = ["TLSv1.2"]
+      quantity = 1
+    }
+  }
+
+  tags = merge(
+    {
+      Name        = "${var.service_name}-alb-${var.environment}"
+      Environment = var.environment
+      Service     = var.service_name
+    },
+    var.tags
+  )
 }

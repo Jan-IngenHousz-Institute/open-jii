@@ -21,7 +21,7 @@ const document: StatusDocument = {
   version: 1,
   generatedAt: NOW,
   components: [
-    { id: "website", state: "operational", uptimePercent: 100, degradedMinutes: 0, days: [] },
+    { id: "platform", state: "operational", uptimePercent: 100, degradedMinutes: 0, days: [] },
   ],
   incidents: [
     {
@@ -29,7 +29,7 @@ const document: StatusDocument = {
       kind: "incident",
       title: "Sign-in is slow",
       impact: "degraded",
-      components: ["sign-in"],
+      components: ["data-intake"],
       startsAt: "2026-11-03T11:00:00.000Z",
       updates: [],
     },
@@ -89,7 +89,7 @@ describe("statusFeedStateSchema", () => {
       "a component kept as a bare state",
       {
         version: STATUS_FEED_STATE_VERSION,
-        announced: { ...announced, components: { website: "operational" } },
+        announced: { ...announced, components: { platform: "operational" } },
       },
     ],
     [
@@ -188,12 +188,12 @@ describe("announceEvents", () => {
   const content = { fetchedAt: NOW, incidents: document.incidents, notices: document.notices };
   const accept: SendBatch = () => Promise.resolve([]);
 
-  function websiteTo(previous: Announced, state: ComponentState, minute: number) {
-    const website = { ...document.components[0], state };
+  function platformTo(previous: Announced, state: ComponentState, minute: number) {
+    const platform = { ...document.components[0], state };
 
     return statusEvents({
       previous,
-      document: { ...document, components: [website] },
+      document: { ...document, components: [platform] },
       environment: "dev",
       pageUrl: "https://status.dev.example.org/",
       now: new Date(Date.parse(NOW) + minute * 60_000),
@@ -229,7 +229,7 @@ describe("announceEvents", () => {
     );
 
   it("saves the events as pending before sending them, and clears them once SNS takes them", async () => {
-    const degraded = websiteTo(announced, "degraded", 1);
+    const degraded = platformTo(announced, "degraded", 1);
     const { saved, save } = store();
     const send = vi.fn(accept);
 
@@ -241,7 +241,7 @@ describe("announceEvents", () => {
   });
 
   it("still announces the recovery after a send whose save failed", async () => {
-    const degraded = websiteTo(announced, "degraded", 1);
+    const degraded = platformTo(announced, "degraded", 1);
     const first = store(2);
 
     await expect(
@@ -249,7 +249,7 @@ describe("announceEvents", () => {
     ).rejects.toThrow("S3 refused the write");
 
     const feed = lastOf(first.saved);
-    const recovered = websiteTo(feed.announced, "operational", 2);
+    const recovered = platformTo(feed.announced, "operational", 2);
     const send = vi.fn(accept);
     await announceEvents({ feed, ...recovered, content, send, save: store().save });
 
@@ -257,8 +257,8 @@ describe("announceEvents", () => {
   });
 
   it("keeps an event SNS refused for the next run, which sends it first", async () => {
-    const degraded = websiteTo(announced, "degraded", 1);
-    const outage = websiteTo(degraded.announced, "outage", 2);
+    const degraded = platformTo(announced, "degraded", 1);
+    const outage = platformTo(degraded.announced, "outage", 2);
     const { saved, save } = store();
     const refuseFirst = vi.fn<SendBatch>(() =>
       Promise.resolve([{ Id: "0", Code: "Throttled", Message: "slow down" }]),
@@ -285,7 +285,7 @@ describe("announceEvents", () => {
   });
 
   it("keeps every event pending when SNS cannot be reached", async () => {
-    const event = websiteTo(announced, "degraded", 1).events[0];
+    const event = platformTo(announced, "degraded", 1).events[0];
     const events: StatusEvent[] = Array.from({ length: 12 }, (_, index) => ({
       ...event,
       id: `event-${index}`,
@@ -312,7 +312,7 @@ describe("announceEvents", () => {
   });
 
   it("leaves out an event too large for SNS, so it cannot block the others", async () => {
-    const degraded = websiteTo(announced, "degraded", 1);
+    const degraded = platformTo(announced, "degraded", 1);
     const huge = { ...degraded.events[0], id: "x".repeat(SNS_BATCH_BYTES) };
     const { saved, save } = store();
     const send = vi.fn(accept);

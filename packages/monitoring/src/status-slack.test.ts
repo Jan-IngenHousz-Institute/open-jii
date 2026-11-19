@@ -216,35 +216,35 @@ const events: [string, StatusEvent, string[]][] = [
     {
       ...envelope,
       type: "component.changed",
-      component: "sign-in",
+      component: "platform",
       from: "operational",
       to: "degraded",
     },
-    ["*Component changed: Sign-in is degraded*", "Sign-in changed from Operational to Degraded."],
+    ["*Component changed: Platform is degraded*", "Platform changed from Operational to Degraded."],
   ],
   [
     "a component that is down",
     {
       ...envelope,
       type: "component.changed",
-      component: "exports",
+      component: "data-intake",
       from: "degraded",
       to: "outage",
     },
-    ["*Component changed: Exports is down*", "Exports changed from Degraded to Outage."],
+    ["*Component changed: Data intake is down*", "Data intake changed from Degraded to Outage."],
   ],
   [
     "a component that recovered",
     {
       ...envelope,
       type: "component.changed",
-      component: "website",
+      component: "data-delivery",
       from: "outage",
       to: "operational",
     },
     [
-      "*Component changed: Website is working normally*",
-      "Website changed from Outage to Operational.",
+      "*Component changed: Data delivery is working normally*",
+      "Data delivery changed from Outage to Operational.",
     ],
   ],
   [
@@ -333,7 +333,7 @@ describe("the impact", () => {
       {
         ...envelope,
         type: "component.changed",
-        component: "website",
+        component: "platform",
         from: "operational",
         to: "outage",
       },

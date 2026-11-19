@@ -25,6 +25,8 @@ import {
   DELIVERY_OUTAGE_LATENCY_MINUTES,
   DELIVERY_STALL_IDLE_MINUTES,
   INGEST_OUTAGE_FAILURES,
+  SIGN_IN_EMAILS_FAILED_MIN,
+  EXPORTS_FAILED_MIN,
   ITERATOR_AGE_DEGRADED_MINUTES,
   ITERATOR_AGE_RESTART_MINUTES,
   MACRO_DEGRADED_LATENCY_MINUTES,
@@ -53,13 +55,10 @@ import type {
 import { collapseReadings } from "./status-readings.js";
 
 const LIVE_IDS: StatusComponentId[] = [
-  "website",
-  "sign-in",
   "platform",
   "data-intake",
   "data-delivery",
   "macro-processing",
-  "exports",
 ];
 
 const HEALTHY_PROBES: StatusProbes = {
@@ -116,46 +115,40 @@ interface Case {
 const FAILED_PROBE = { ok: false, durationMs: 10_000 };
 
 const thresholdCases: Case[] = [
-  { id: "website", name: "everything healthy", change: {}, state: "operational" },
+  { id: "platform", name: "everything healthy", change: {}, state: "operational" },
   {
-    id: "website",
-    name: "a probe at the slow limit",
+    id: "platform",
+    name: "a website probe at the slow limit",
     change: { probes: { website: { ok: true, durationMs: WEBSITE_SLOW_PROBE_MS } } },
     state: "operational",
   },
   {
-    id: "website",
-    name: "a probe over the slow limit",
+    id: "platform",
+    name: "a website probe over the slow limit",
     change: { probes: { website: { ok: true, durationMs: WEBSITE_SLOW_PROBE_MS + 1 } } },
     state: "degraded",
   },
   {
-    id: "website",
-    name: "a failed probe",
+    id: "platform",
+    name: "a failed website probe",
     change: { probes: { website: FAILED_PROBE } },
     state: "outage",
   },
   {
-    id: "website",
-    name: "the platform's probe failing",
-    change: { probes: { platform: FAILED_PROBE } },
-    state: "operational",
-  },
-  {
-    id: "website",
-    name: "half the requests failing",
+    id: "platform",
+    name: "half the website requests failing",
     change: { readings: { websiteRequests: 40, websiteFailedRequests: 20 } },
     state: "operational",
   },
   {
-    id: "website",
-    name: "just over half the requests failing",
+    id: "platform",
+    name: "just over half the website requests failing",
     change: { readings: { websiteRequests: 40, websiteFailedRequests: 21 } },
     state: "outage",
   },
   {
-    id: "website",
-    name: "every request failing below the request minimum",
+    id: "platform",
+    name: "every website request failing below the request minimum",
     change: {
       readings: {
         websiteRequests: WEBSITE_MIN_REQUESTS - 1,
@@ -165,8 +158,8 @@ const thresholdCases: Case[] = [
     state: "operational",
   },
   {
-    id: "website",
-    name: "every request failing at the request minimum",
+    id: "platform",
+    name: "every website request failing at the request minimum",
     change: {
       readings: {
         websiteRequests: WEBSITE_MIN_REQUESTS,
@@ -176,7 +169,7 @@ const thresholdCases: Case[] = [
     state: "outage",
   },
   {
-    id: "website",
+    id: "platform",
     name: "no CloudFront datapoints",
     change: { readings: { websiteRequests: undefined, websiteFailedRequests: undefined } },
     state: "operational",
@@ -199,12 +192,6 @@ const thresholdCases: Case[] = [
     name: "a failed probe",
     change: { probes: { platform: FAILED_PROBE } },
     state: "outage",
-  },
-  {
-    id: "platform",
-    name: "the website's probe failing",
-    change: { probes: { website: FAILED_PROBE } },
-    state: "operational",
   },
   {
     id: "platform",
@@ -558,45 +545,57 @@ const thresholdCases: Case[] = [
   },
 
   {
-    id: "sign-in",
+    id: "platform",
     name: "the email check reading 1",
     change: { readings: { emailUp: 1 } },
     state: "operational",
   },
   {
-    id: "sign-in",
+    id: "platform",
     name: "the email check reading 0",
     change: { readings: { emailUp: 0 } },
     state: "degraded",
   },
   {
-    id: "sign-in",
+    id: "platform",
     name: "no email check",
     change: { readings: { emailUp: undefined } },
     state: "operational",
   },
   {
-    id: "sign-in",
-    name: "one sign-in email that failed to send",
-    change: { readings: { signInEmailsFailed: 1 } },
+    id: "platform",
+    name: "sign-in emails that failed to send, one fewer than the minimum",
+    change: { readings: { signInEmailsFailed: SIGN_IN_EMAILS_FAILED_MIN - 1 } },
+    state: "operational",
+  },
+  {
+    id: "platform",
+    name: "sign-in emails that failed to send, at the minimum",
+    change: { readings: { signInEmailsFailed: SIGN_IN_EMAILS_FAILED_MIN } },
     state: "degraded",
   },
   {
-    id: "sign-in",
+    id: "platform",
     name: "no failed-email datapoint",
     change: { readings: { signInEmailsFailed: undefined } },
     state: "operational",
   },
   {
-    id: "exports",
+    id: "platform",
     name: "no failed exports",
     change: { readings: { exportsFailed: 0 } },
     state: "operational",
   },
   {
-    id: "exports",
-    name: "one failed export",
-    change: { readings: { exportsFailed: 1 } },
+    id: "platform",
+    name: "failed exports, one fewer than the minimum",
+    change: { readings: { exportsFailed: EXPORTS_FAILED_MIN - 1 } },
+    state: "operational",
+  },
+  {
+    id: "platform",
+    name: "failed exports, at the minimum",
+    change: { readings: { exportsFailed: EXPORTS_FAILED_MIN } },
     state: "degraded",
   },
 ];
@@ -613,6 +612,8 @@ describe("the thresholds and windows", () => {
       PLATFORM_OUTAGE_ERROR_SHARE,
       PLATFORM_MIN_ERRORS,
       INGEST_OUTAGE_FAILURES,
+      SIGN_IN_EMAILS_FAILED_MIN,
+      EXPORTS_FAILED_MIN,
       DELIVERY_DEGRADED_LATENCY_MINUTES,
       DELIVERY_OUTAGE_LATENCY_MINUTES,
       ITERATOR_AGE_DEGRADED_MINUTES,
@@ -635,6 +636,8 @@ describe("the thresholds and windows", () => {
       PLATFORM_OUTAGE_ERROR_SHARE: 0.5,
       PLATFORM_MIN_ERRORS: 10,
       INGEST_OUTAGE_FAILURES: 5,
+      SIGN_IN_EMAILS_FAILED_MIN: 3,
+      EXPORTS_FAILED_MIN: 3,
       DELIVERY_DEGRADED_LATENCY_MINUTES: 15,
       DELIVERY_OUTAGE_LATENCY_MINUTES: 60,
       ITERATOR_AGE_DEGRADED_MINUTES: 10,
@@ -910,7 +913,10 @@ describe("recording measured outcomes", () => {
       readings: { ingestForwardingFailures: INGEST_OUTAGE_FAILURES + 1 },
     });
 
-    expect(componentOf(result, "website")).toMatchObject({ state: "degraded", degradedMinutes: 2 });
+    expect(componentOf(result, "platform")).toMatchObject({
+      state: "degraded",
+      degradedMinutes: 2,
+    });
     expect(componentOf(result, "data-intake")).toMatchObject({
       state: "outage",
       uptimePercent: 66.67,
@@ -920,7 +926,7 @@ describe("recording measured outcomes", () => {
       degradedMinutes: 1,
       downMinutes: 1,
     });
-    expect(componentOf(result, "platform").state).toBe("operational");
+    expect(componentOf(result, "macro-processing").state).toBe("operational");
     expectValid(result);
   });
 
@@ -1130,11 +1136,11 @@ describe.each<ProbedId>(["website", "platform"])("consecutive bad probes of %s",
   it.each(stepCases)("reads $name", ({ steps, states, degradedStreak, outageStreak }) => {
     const results = runSteps(id, steps);
 
-    expect(results.map((result) => componentOf(result, id).state)).toEqual(states);
-    expect(results.map((result) => result.state.components[id]?.degradedStreak)).toEqual(
+    expect(results.map((result) => componentOf(result, "platform").state)).toEqual(states);
+    expect(results.map((result) => result.state.components.platform?.degradedStreak)).toEqual(
       degradedStreak,
     );
-    expect(results.map((result) => result.state.components[id]?.outageStreak)).toEqual(
+    expect(results.map((result) => result.state.components.platform?.outageStreak)).toEqual(
       outageStreak,
     );
   });
@@ -1150,7 +1156,7 @@ describe.each<ProbedId>(["website", "platform"])("consecutive bad probes of %s",
         () => "slow",
       );
       const last = runSteps(id, steps).at(-1);
-      const component = last === undefined ? undefined : componentOf(last, id);
+      const component = last === undefined ? undefined : componentOf(last, "platform");
 
       expect(component?.days[0]).toMatchObject({ degradedMinutes, state: expected });
       expect(component?.degradedMinutes).toBe(degradedMinutes);
@@ -1159,14 +1165,16 @@ describe.each<ProbedId>(["website", "platform"])("consecutive bad probes of %s",
 });
 
 describe("the two probes", () => {
-  it("are counted apart", () => {
+  it("count toward the platform's one streak", () => {
     const first = run(undefined, "2026-11-03T12:00:00.000Z", {
+      probes: { website: FAILED_PROBE },
+    });
+    const second = run(first.state, "2026-11-03T12:01:00.000Z", {
       probes: { platform: FAILED_PROBE },
     });
 
-    expect(first.state.components.platform).toMatchObject({ outageStreak: 1, degradedStreak: 1 });
-    expect(first.state.components.website).toMatchObject({ outageStreak: 0, degradedStreak: 0 });
-    expect(first.state.components["data-intake"]).toMatchObject({
+    expect(second.state.components.platform).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
+    expect(second.state.components["data-intake"]).toMatchObject({
       outageStreak: 0,
       degradedStreak: 0,
     });
@@ -1201,9 +1209,9 @@ describe("recording a minute only once", () => {
       const second = run(first.state, "2026-11-03T12:01:05.000Z", change);
       const again = run(second.state, "2026-11-03T12:01:50.000Z", change);
 
-      expect(again.state.components.website).toMatchObject({ outageStreak, degradedStreak });
-      expect(componentOf(again, "website").state).toBe("degraded");
-      expect(componentOf(again, "website").days[0]).toMatchObject({
+      expect(again.state.components.platform).toMatchObject({ outageStreak, degradedStreak });
+      expect(componentOf(again, "platform").state).toBe("degraded");
+      expect(componentOf(again, "platform").days[0]).toMatchObject({
         recordedMinutes: 2,
         degradedMinutes: 1,
       });
@@ -1226,7 +1234,7 @@ describe("recording a minute only once", () => {
     const next = run(earlier.state, "2026-11-03T12:06:00.000Z");
 
     expect(earlier.state.lastJudgedAt).toBe("2026-11-03T12:05:00.000Z");
-    expect(componentOf(next, "website").days[0]).toMatchObject({
+    expect(componentOf(next, "platform").days[0]).toMatchObject({
       recordedMinutes: 2,
       unknownMinutes: 0,
     });
@@ -1237,14 +1245,14 @@ describe("minutes that were not judged", () => {
   it("counts the minutes between two runs as unknown and recorded", () => {
     const first = run(undefined, "2026-11-03T12:00:00.000Z");
     const later = run(first.state, "2026-11-03T12:05:00.000Z");
-    const website = componentOf(later, "website");
+    const platform = componentOf(later, "platform");
 
-    expect(website.days[0]).toMatchObject({
+    expect(platform.days[0]).toMatchObject({
       recordedMinutes: 6,
       unknownMinutes: 4,
       state: "operational",
     });
-    expect(website.uptimePercent).toBe(33.33);
+    expect(platform.uptimePercent).toBe(33.33);
     expectValid(later);
   });
 
@@ -1252,7 +1260,7 @@ describe("minutes that were not judged", () => {
     const first = run(undefined, "2026-11-03T12:00:00.000Z");
     const next = run(first.state, "2026-11-03T12:01:00.000Z");
 
-    expect(componentOf(next, "website").days[0]).toMatchObject({
+    expect(componentOf(next, "platform").days[0]).toMatchObject({
       recordedMinutes: 2,
       unknownMinutes: 0,
     });
@@ -1274,17 +1282,17 @@ describe("minutes that were not judged", () => {
     const first = run(undefined, "2026-11-03T12:00:00.000Z");
     const later = run(first.state, "2026-11-03T12:30:00.000Z");
 
-    expect(componentOf(later, "website").days[0]?.state).toBe("operational");
+    expect(componentOf(later, "platform").days[0]?.state).toBe("operational");
   });
 
   it("starts a component that became live at now, without unknown history", () => {
     const startedToday = { ...cleanDay("2026-11-03"), recordedMinutes: 1 };
-    const previous = stateWithDays("2026-11-03T11:55:00.000Z", [startedToday], ["website"]);
+    const previous = stateWithDays("2026-11-03T11:55:00.000Z", [startedToday], ["platform"]);
     const result = run(previous, "2026-11-03T12:00:00.000Z");
 
-    expect(componentOf(result, "website").days[0]?.unknownMinutes).toBe(4);
-    expect(componentOf(result, "platform").days).toHaveLength(1);
-    expect(componentOf(result, "platform").days[0]).toMatchObject({
+    expect(componentOf(result, "platform").days[0]?.unknownMinutes).toBe(4);
+    expect(componentOf(result, "data-intake").days).toHaveLength(1);
+    expect(componentOf(result, "data-intake").days[0]).toMatchObject({
       recordedMinutes: 1,
       unknownMinutes: 0,
     });
@@ -1300,9 +1308,12 @@ describe.each<ProbedId>(["website", "platform"])("streaks of %s across a gap", (
     const second = run(first.state, minuteStamp(1), failed);
     const afterGap = run(second.state, minuteStamp(5), failed);
 
-    expect(second.state.components[id]).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
-    expect(afterGap.state.components[id]).toMatchObject({ outageStreak: 1, degradedStreak: 1 });
-    expect(componentOf(afterGap, id).state).toBe("operational");
+    expect(second.state.components.platform).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
+    expect(afterGap.state.components.platform).toMatchObject({
+      outageStreak: 1,
+      degradedStreak: 1,
+    });
+    expect(componentOf(afterGap, "platform").state).toBe("operational");
   });
 
   it("keep counting when every minute was judged", () => {
@@ -1310,8 +1321,8 @@ describe.each<ProbedId>(["website", "platform"])("streaks of %s across a gap", (
     const second = run(first.state, minuteStamp(1), failed);
     const third = run(second.state, minuteStamp(2), failed);
 
-    expect(third.state.components[id]).toMatchObject({ outageStreak: 3, degradedStreak: 3 });
-    expect(componentOf(third, id).state).toBe("outage");
+    expect(third.state.components.platform).toMatchObject({ outageStreak: 3, degradedStreak: 3 });
+    expect(componentOf(third, "platform").state).toBe("outage");
   });
 });
 
@@ -1319,7 +1330,7 @@ describe("keeping ninety days", () => {
   it("drops the oldest day when a new one begins", () => {
     const previous = stateWithDays("2026-11-02T23:59:00.000Z", cleanDays("2026-11-02", 90));
     const result = run(previous, "2026-11-03T00:00:00.000Z");
-    const days = componentOf(result, "website").days;
+    const days = componentOf(result, "platform").days;
 
     expect(days).toHaveLength(90);
     expect(days[0]?.date).toBe("2026-08-06");
@@ -1330,20 +1341,20 @@ describe("keeping ninety days", () => {
   it("keeps ninety days when a gap longer than the history has passed", () => {
     const previous = stateWithDays("2026-05-01T00:00:00.000Z", cleanDays("2026-05-01", 90));
     const result = run(previous, "2026-11-03T12:00:00.000Z");
-    const website = componentOf(result, "website");
+    const platform = componentOf(result, "platform");
 
-    expect(website.days).toHaveLength(90);
-    expect(website.days[0]).toMatchObject({
+    expect(platform.days).toHaveLength(90);
+    expect(platform.days[0]).toMatchObject({
       date: "2026-08-06",
       recordedMinutes: 1440,
       unknownMinutes: 1440,
     });
-    expect(website.days[89]).toMatchObject({
+    expect(platform.days[89]).toMatchObject({
       date: "2026-11-03",
       recordedMinutes: 721,
       unknownMinutes: 720,
     });
-    expect(website.uptimePercent).toBe(0);
+    expect(platform.uptimePercent).toBe(0);
     expectValid(result);
   });
 });
@@ -1356,10 +1367,10 @@ describe("uptime and degraded minutes in the document", () => {
     ];
     const previous = stateWithDays("2026-11-02T23:59:00.000Z", days);
     const result = run(previous, "2026-11-03T00:00:00.000Z");
-    const website = componentOf(result, "website");
+    const platform = componentOf(result, "platform");
 
-    expect(website.degradedMinutes).toBe(42);
-    expect(website.uptimePercent).toBe(Math.round(10_000 * (1 - 72 / (2881 - 720))) / 100);
+    expect(platform.degradedMinutes).toBe(42);
+    expect(platform.uptimePercent).toBe(Math.round(10_000 * (1 - 72 / (2881 - 720))) / 100);
   });
 });
 
@@ -1368,7 +1379,7 @@ describe("open incidents", () => {
 
   it("raises the state to the incident's impact and records the minute that way", () => {
     const result = run(undefined, now, {
-      incidents: [incident({ impact: "outage", components: ["platform", "exports"] })],
+      incidents: [incident({ impact: "outage", components: ["platform", "data-intake"] })],
     });
 
     expect(componentOf(result, "platform")).toMatchObject({ state: "outage" });
@@ -1376,7 +1387,7 @@ describe("open incidents", () => {
       downMinutes: 1,
       state: "outage",
     });
-    expect(componentOf(result, "website").state).toBe("operational");
+    expect(componentOf(result, "data-delivery").state).toBe("operational");
     expectValid(result);
   });
 
@@ -1391,10 +1402,10 @@ describe("open incidents", () => {
 
   it("applies to every component it names", () => {
     const result = run(undefined, now, {
-      incidents: [incident({ components: ["website", "data-delivery"] })],
+      incidents: [incident({ components: ["platform", "data-delivery"] })],
     });
 
-    expect(componentOf(result, "website").state).toBe("degraded");
+    expect(componentOf(result, "platform").state).toBe("degraded");
     expect(componentOf(result, "data-delivery").state).toBe("degraded");
     expect(componentOf(result, "data-intake").state).toBe("operational");
   });
@@ -1535,8 +1546,8 @@ describe("state round trip", () => {
     const next = run(stored, "2026-11-03T12:02:00.000Z", { probes: { website: FAILED_PROBE } });
 
     expect(stored).toEqual(result.state);
-    expect(next.state.components.website).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
-    expect(componentOf(next, "website").days[0]).toMatchObject({ recordedMinutes: 3 });
+    expect(next.state.components.platform).toMatchObject({ outageStreak: 2, degradedStreak: 2 });
+    expect(componentOf(next, "platform").days[0]).toMatchObject({ recordedMinutes: 3 });
     expectValid(next);
   });
 
@@ -1547,13 +1558,13 @@ describe("state round trip", () => {
     expect(
       publisherStateSchema.safeParse({
         ...result.state,
-        components: { website: { outageStreak: -1, degradedStreak: 0, days: [] } },
+        components: { platform: { outageStreak: -1, degradedStreak: 0, days: [] } },
       }).success,
     ).toBe(false);
     expect(
       publisherStateSchema.safeParse({
         ...result.state,
-        components: { website: { outageStreak: 0, degradedStreak: -1, days: [] } },
+        components: { platform: { outageStreak: 0, degradedStreak: -1, days: [] } },
       }).success,
     ).toBe(false);
   });

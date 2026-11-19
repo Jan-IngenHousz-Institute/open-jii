@@ -371,6 +371,7 @@
           "title": "Overview",
           "description": "What this device is, and where its setup stands."
         },
+        "equipmentLink": "Open in openJII Lab",
         "about": {
           "title": "About"
         }

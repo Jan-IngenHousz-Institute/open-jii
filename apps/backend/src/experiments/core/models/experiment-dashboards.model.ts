@@ -37,11 +37,13 @@ export const updateExperimentDashboardSchema = createInsertSchema(experimentDash
     widgets: z.array(zExperimentDashboardWidget).optional(),
   });
 
-export const selectExperimentDashboardSchema = createSelectSchema(experimentDashboards).extend({
-  layout: zExperimentDashboardLayout,
-  widgets: z.array(zExperimentDashboardWidget),
-  createdByName: z.string().optional(),
-});
+export const selectExperimentDashboardSchema = createSelectSchema(experimentDashboards)
+  .omit({ searchVector: true })
+  .extend({
+    layout: zExperimentDashboardLayout,
+    widgets: z.array(zExperimentDashboardWidget),
+    createdByName: z.string().optional(),
+  });
 
 export type CreateExperimentDashboardDto = z.infer<typeof createExperimentDashboardSchema>;
 export type UpdateExperimentDashboardDto = z.infer<typeof updateExperimentDashboardSchema>;

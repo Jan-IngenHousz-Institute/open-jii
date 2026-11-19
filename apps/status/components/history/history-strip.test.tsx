@@ -72,7 +72,7 @@ describe("HistoryStrip", () => {
     });
 
     it("adds nothing to a full history", () => {
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       expect(labelsOf()[0]).toBe("August 6, 2026: no downtime recorded");
     });
@@ -88,14 +88,14 @@ describe("HistoryStrip", () => {
 
   describe("on a narrow viewport", () => {
     it("shows only the last 30 days, still ending today", () => {
-      renderStrip(operationalStatusDocument, "website", 30);
+      renderStrip(operationalStatusDocument, "platform", 30);
 
       const labels = labelsOf();
 
       expect(labels).toHaveLength(30);
       expect(labels[0]).toBe("October 5, 2026: no downtime recorded");
       expect(labels[29]).toBe("November 3, 2026, today so far: no downtime recorded");
-      expect(screen.getByRole("group", { name: "Website, last 30 days" })).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "Platform, last 30 days" })).toBeInTheDocument();
     });
 
     it("keeps the blips of the days it shows", () => {
@@ -108,7 +108,7 @@ describe("HistoryStrip", () => {
 
     it("takes Home and End to the ends of the 30 days", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website", 30);
+      renderStrip(operationalStatusDocument, "platform", 30);
       await user.tab();
       expect(bars()[29]).toHaveFocus();
 
@@ -129,7 +129,7 @@ describe("HistoryStrip", () => {
 
   describe("spoken labels", () => {
     it("gives every recorded kind of minute", () => {
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       expect(labelsOf()).toContain("October 2, 2026: Outage for 42 min, Degraded for 9 min");
     });
@@ -173,7 +173,7 @@ describe("HistoryStrip", () => {
 
   describe("assistive tech", () => {
     it("exposes only the current stop of the strip", () => {
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       const exposed = within(screen.getByRole("group")).getAllByRole("img");
 
@@ -184,7 +184,7 @@ describe("HistoryStrip", () => {
 
     it("passes the exposure on to the bar that takes the stop, and keeps every bar reachable", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       await user.tab();
 
       await user.keyboard("{ArrowLeft}");
@@ -227,7 +227,7 @@ describe("HistoryStrip", () => {
   describe("keyboard", () => {
     it("is one tab stop, and Tab lands on today", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       expect(bars().filter((bar) => bar.tabIndex === 0)).toHaveLength(1);
 
@@ -238,7 +238,7 @@ describe("HistoryStrip", () => {
 
     it("moves with the arrow keys, Home and End, and stops at the ends", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       await user.tab();
 
       await user.keyboard("{ArrowLeft}");
@@ -264,7 +264,7 @@ describe("HistoryStrip", () => {
 
     it("moves on from the bar that was clicked, not from the one last reached by key", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       await user.click(bars()[40] ?? document.body);
       expect(bars()[40]).toHaveFocus();
@@ -282,7 +282,7 @@ describe("HistoryStrip", () => {
 
     it("makes the clicked bar the tab stop", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       await user.click(bars()[40] ?? document.body);
 
@@ -290,7 +290,7 @@ describe("HistoryStrip", () => {
     });
 
     it("holds back the page's own scrolling for the keys it handles", () => {
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = bars()[89] ?? document.body;
 
       for (const key of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
@@ -299,7 +299,7 @@ describe("HistoryStrip", () => {
     });
 
     it("leaves every other key alone", () => {
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = bars()[89] ?? document.body;
 
       for (const key of ["ArrowUp", "ArrowDown", "PageUp", "a", "Tab"]) {
@@ -309,7 +309,7 @@ describe("HistoryStrip", () => {
 
     it("leaves the strip on the next Tab", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       await user.tab();
 
       await user.tab();
@@ -370,7 +370,7 @@ describe("HistoryStrip", () => {
   describe("hover", () => {
     it("opens the card on hover without a fade", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = screen.getByLabelText("October 2, 2026: Outage for 42 min, Degraded for 9 min");
 
       await user.hover(bar);
@@ -382,7 +382,7 @@ describe("HistoryStrip", () => {
 
     it("shows one day's card at a time as the pointer sweeps along the bars", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       await user.hover(bars()[87] ?? document.body);
       await screen.findByText("November 1, 2026", { selector: "p" });
@@ -414,7 +414,7 @@ describe("HistoryStrip", () => {
 
     it("keeps the card open while the pointer crosses the gap to it", () => {
       vi.useFakeTimers();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = bars()[87] ?? document.body;
 
       fireEvent.pointerEnter(bar);
@@ -432,7 +432,7 @@ describe("HistoryStrip", () => {
 
     it("still swaps to the next bar's card at once", () => {
       vi.useFakeTimers();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
 
       fireEvent.pointerEnter(bars()[87] ?? document.body);
       advance(0);
@@ -452,7 +452,7 @@ describe("HistoryStrip", () => {
 
     it("opens the day's card with a tap", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = bars()[39] ?? document.body;
 
       await tap(user, bar);
@@ -463,7 +463,7 @@ describe("HistoryStrip", () => {
 
     it("closes the card with a second tap on the same bar", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = bars()[39] ?? document.body;
       await tap(user, bar);
       await screen.findByText("September 14, 2026", { selector: "p" });
@@ -477,7 +477,7 @@ describe("HistoryStrip", () => {
 
     it("moves the card to the bar tapped next", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       await tap(user, bars()[39] ?? document.body);
       await screen.findByText("September 14, 2026", { selector: "p" });
 
@@ -491,7 +491,7 @@ describe("HistoryStrip", () => {
 
     it("closes the card with a tap elsewhere on the page", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       await tap(user, bars()[39] ?? document.body);
       await screen.findByText("September 14, 2026", { selector: "p" });
 
@@ -504,7 +504,7 @@ describe("HistoryStrip", () => {
 
     it("keeps the card open when the bar under the mouse is clicked", async () => {
       const user = userEvent.setup();
-      renderStrip(operationalStatusDocument, "website");
+      renderStrip(operationalStatusDocument, "platform");
       const bar = bars()[39] ?? document.body;
       await user.hover(bar);
       await screen.findByText("September 14, 2026", { selector: "p" });

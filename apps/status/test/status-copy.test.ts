@@ -13,6 +13,8 @@ import {
   DELIVERY_OUTAGE_LATENCY_MINUTES,
   DELIVERY_STALL_IDLE_MINUTES,
   INGEST_OUTAGE_FAILURES,
+  SIGN_IN_EMAILS_FAILED_MIN,
+  EXPORTS_FAILED_MIN,
   ITERATOR_AGE_DEGRADED_MINUTES,
   MACRO_DEGRADED_LATENCY_MINUTES,
   MACRO_OUTAGE_LATENCY_MINUTES,
@@ -55,35 +57,22 @@ function digitsIn(text: string) {
 
 const CASES: [string, string, string[]][] = [
   [
-    "website",
-    en.component.website.details,
-    [
-      `${count(MINUTES_FOR_DEGRADED)} slow or failed checks in a row`,
-      `slow if it takes more than ${seconds(WEBSITE_SLOW_PROBE_MS)}`,
-      `${count(MINUTES_FOR_OUTAGE)} failed checks in a row`,
-      `in ${recent(RULE_WINDOW_MINUTES)}, at least ${WEBSITE_MIN_REQUESTS} requests`,
-      "more than half of them failed",
-    ],
-  ],
-  [
-    "sign-in",
-    en.component["sign-in"].details,
-    [
-      `every test in ${recent(DEPENDENCY_WINDOW_MINUTES)} fails`,
-      `failed to send in ${recent(RULE_WINDOW_MINUTES)}`,
-    ],
-  ],
-  [
     "platform",
     en.component.platform.details,
     [
-      `${count(MINUTES_FOR_DEGRADED)} slow or failed test requests in a row`,
+      `${count(MINUTES_FOR_DEGRADED)} slow or failed checks in a row`,
+      `slow if it takes more than ${seconds(WEBSITE_SLOW_PROBE_MS)}`,
       `slow if it takes more than ${seconds(PLATFORM_SLOW_PROBE_MS)}`,
-      `${count(MINUTES_FOR_OUTAGE)} failed test requests in a row`,
+      `${count(MINUTES_FOR_OUTAGE)} failed checks in a row`,
+      `in ${recent(RULE_WINDOW_MINUTES)}, at least ${WEBSITE_MIN_REQUESTS} requests`,
+      "more than half of them failed",
       `in ${recent(RULE_WINDOW_MINUTES)}, at least ${PLATFORM_MIN_ERRORS} requests ended in a server error`,
+      "more than half of all requests",
       `Databricks failed every check in ${recent(DEPENDENCY_WINDOW_MINUTES)}`,
       `database failed every check in ${recent(DEPENDENCY_WINDOW_MINUTES)}`,
-      "more than half of all requests",
+      `email service failed every check in ${recent(DEPENDENCY_WINDOW_MINUTES)}`,
+      `at least ${count(SIGN_IN_EMAILS_FAILED_MIN)} emails with a sign-in code failed to send in ${recent(RULE_WINDOW_MINUTES)}`,
+      `at least ${count(EXPORTS_FAILED_MIN)} exports failed in ${recent(MACRO_FAILURE_WINDOW_MINUTES)}`,
     ],
   ],
   [
@@ -116,7 +105,6 @@ const CASES: [string, string, string[]][] = [
       `more than ${span(MACRO_OUTAGE_LATENCY_MINUTES)} after their measurements`,
     ],
   ],
-  ["exports", en.component.exports.details, [`in ${recent(MACRO_FAILURE_WINDOW_MINUTES)}`]],
 ];
 
 describe("the en-US component details", () => {
@@ -131,7 +119,7 @@ describe("the en-US component details", () => {
   });
 
   it("names a page of the website, not the home page the probe deliberately avoids", () => {
-    expect(en.component.website.details).not.toMatch(/home page/i);
+    expect(en.component.platform.details).not.toMatch(/home page/i);
   });
 
   it("says more than half where the judge compares against half", () => {

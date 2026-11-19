@@ -64,7 +64,14 @@ variable "lifecycle_rules" {
     abort_incomplete_multipart_upload_days = optional(number)
     prefix                                 = optional(string)
     noncurrent_version_expiration_days     = optional(number)
+    expired_object_delete_marker           = optional(bool, false)
   }))
   default = []
+
+  # S3 refuses an expiration that sets both days and expired_object_delete_marker.
+  validation {
+    condition     = alltrue([for r in var.lifecycle_rules : !(r.expired_object_delete_marker && r.expiration_days != null)])
+    error_message = "A lifecycle rule can set expiration_days or expired_object_delete_marker, not both."
+  }
 }
 
