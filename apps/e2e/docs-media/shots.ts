@@ -346,14 +346,32 @@ export const SHOTS: readonly Shot[] = [
     slug: "experiment-devices",
     publish: "img/guide/web/experiment-devices.webp",
     frame: "desktop",
-    // Needs a local experiment whose id matches one that has published data in
-    // the dev lakehouse; the seed alone yields an empty roster.
-    route: async () => `/platform/experiments/${await experimentId("Ambyte Field Trial")}/devices`,
+    // Local registry devices bound to a seeded experiment. The lakehouse is not
+    // reachable locally, so the tiles read what the registry alone can say.
+    route: async () =>
+      `/platform/experiments/${await experimentId("[Seed] Soil Health Monitoring — Midwest")}/devices`,
     async prepare(page) {
-      await page.getByRole("table").waitFor({ timeout: 60_000 });
+      await page.getByPlaceholder(/search devices/i).waitFor({ timeout: 60_000 });
+      await page.getByRole("button", { name: /^Filter/ }).waitFor();
       await settle(page, 1500);
     },
-    scope: "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles",
+    scope:
+      "Experiment Devices tab with its tiles, searchable and filterable device list and selected device detail",
+  },
+  {
+    slug: "devices-list",
+    publish: "img/guide/web/devices-list.webp",
+    frame: "desktop",
+    route: "/platform/devices",
+    async prepare(page) {
+      await page.getByPlaceholder("Search by name or serial number").waitFor({ timeout: 60_000 });
+      await page.getByRole("button", { name: /^Filter/ }).click();
+      await page.getByRole("option", { name: /^Status/ }).click();
+      await page.getByRole("option", { name: /^Onboarded/ }).waitFor();
+      await settle(page, 1200);
+    },
+    scope:
+      "Device list with search, the Filter menu open on Status with per-status counts, sortable headers and pager",
   },
   {
     slug: "workbook-design",
