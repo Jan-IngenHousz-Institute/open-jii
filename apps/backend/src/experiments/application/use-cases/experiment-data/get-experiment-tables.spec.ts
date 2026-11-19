@@ -279,6 +279,7 @@ describe("GetExperimentTablesUseCase", () => {
         schemaRevision: null,
       };
       const servingStore: ServingStorePort = testApp.module.get(SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "getMetadataSheets").mockResolvedValue(success([]));
       vi.spyOn(servingStore, "getExperimentTableMetadata")
         .mockResolvedValueOnce(success([rawData]))
         .mockResolvedValue(
