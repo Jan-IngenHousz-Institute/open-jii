@@ -1,5 +1,5 @@
-"""What each store table holds, built from the change feed of the table it reads: a gold table, or
-the lakehouse's copy of the metadata sheets."""
+"""What each store table holds, built from the change feed of the table it reads: a gold or silver
+table, or the lakehouse's copy of the metadata sheets."""
 
 from __future__ import annotations
 
@@ -106,11 +106,11 @@ class StoreTable:
         return f"LIVE.{self.source_table}"
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
-        """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
+        """One JSON line, in column ``line``, per row the source inserted or updated in ``changes``, with
         the time the store partitions it by in ``partition_time``. The table's Float64 columns come
         first in the line.
 
-        A reloaded line says it arrived when gold committed it, so the store's delivery metrics,
+        A reloaded line says it arrived when the source committed it, so the store's delivery metrics,
         which read ``inserted_at``, count only the rows the feed sends.
         """
         rows = changes.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
@@ -163,7 +163,7 @@ class StoreTable:
         raise NotImplementedError
 
     def key(self) -> list[Column]:
-        """The store table's sorting key, on which it folds rows into one, from gold's columns."""
+        """The store table's sorting key, on which it folds rows into one, from the source's columns."""
         raise NotImplementedError
 
 
