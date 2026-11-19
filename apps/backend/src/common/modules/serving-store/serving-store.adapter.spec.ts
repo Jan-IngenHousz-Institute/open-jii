@@ -1526,8 +1526,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       { id: "s-new", matchOn: "column:device_id" },
       { id: "s-other", matchOn: "column:timezone" },
     ];
-    let reader: ServingStoreClientService;
-    let readerAdapter: ServingStoreAdapter;
 
     // A sheet row as the feed sends it from the lakehouse's copy of the sheet.
     const sheetRow = (
@@ -1562,7 +1560,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     async function page(
       params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
     ) {
-      const query = readerAdapter.buildExperimentQuery({
+      const data = await rowsOf({
         tableName: "raw_data",
         tableType: "static",
         experimentId: experiment,
@@ -1570,24 +1568,10 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         metadataSheets,
         ...params,
       });
-      assertSuccess(query);
-      const data = await readerAdapter.executeQuery(query.value);
-      assertSuccess(data);
-      return data.value.rows;
+      return data.rows;
     }
 
     beforeAll(async () => {
-      // The store's profiles keep a dotted key as one key; this reader stands in for them.
-      await admin.command({
-        query: `CREATE USER IF NOT EXISTS metadata_reader IDENTIFIED BY '${STORE_PASSWORD}' SETTINGS json_type_escape_dots_in_keys = 1`,
-      });
-      await admin.command({ query: "GRANT SELECT ON store.* TO metadata_reader" });
-      const config = new ConfigService({
-        servingStore: { url: STORE_URL, username: "metadata_reader", password: STORE_PASSWORD },
-      });
-      reader = new ServingStoreClientService(new ServingStoreConfigService(config));
-      readerAdapter = new ServingStoreAdapter(reader);
-
       await admin.insert({
         table: "measurements",
         values: [
@@ -1624,11 +1608,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         ],
         format: "JSONEachRow",
       });
-    });
-
-    afterAll(async () => {
-      await reader.onModuleDestroy();
-      await admin.command({ query: "DROP USER IF EXISTS metadata_reader" });
     });
 
     it("folds the sheets oldest first, writes decimals at their scale and leaves an unmatched row null", async () => {
@@ -1677,6 +1656,175 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ].map((row) => JSON.stringify(row));
 
       expect(VariantSchema.ofJson(rows)).toBe(schema);
+    });
+
+    it("reads integers past the 64-bit ranges as the warehouse does, with the rest of their row", async () => {
+      const codes = "codes-e";
+      const rows = [
+        { plot: "C1", soil: "clay", code: 2 ** 64 },
+        { plot: "C2", soil: "sand", code: 1e20 },
+        { plot: "C3", soil: "silt", code: -(2 ** 63) },
+        {
+          plot: "C4",
+          soil: "loam",
+          code: Number("-1234567890123456800"),
+          small: Number("-1234567890123456800"),
+        },
+      ];
+      const codesSchema = VariantSchema.ofJson(
+        rows.map(({ plot: _plot, ...fields }) => JSON.stringify(fields)),
+      );
+      await admin.insert({
+        table: "measurements",
+        values: rows.map(({ plot }, index) => ({
+          ...reading(41 + index, plot, null),
+          experiment_id: codes,
+        })),
+        format: "JSONEachRow",
+      });
+      // Spark writes these integers as plain digits.
+      await admin.insert({
+        table: "metadata_rows",
+        values: rows.map(({ plot, ...fields }) => ({
+          ...sheetRow("s-codes", "2026-09-01 08:00:00", "plot", plot, fields),
+          experiment_id: codes,
+        })),
+        format: "JSONEachRow",
+      });
+
+      const data = await rowsOf({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: codes,
+        variants: [{ columnName: "custom_metadata", schema: codesSchema ?? "", suffix: "x" }],
+        metadataSheets: [{ id: "s-codes", matchOn: "plot" }],
+        columns: ["id", "soil", "code", "small"],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(codesSchema).toBe("OBJECT<code: DECIMAL(21,0), small: BIGINT, soil: STRING>");
+      expect(data.rows).toEqual([
+        ["41", "clay", "18446744073709552000", null],
+        ["42", "sand", "100000000000000000000", null],
+        ["43", "silt", "-9223372036854776000", null],
+        ["44", "loam", "-1234567890123456800", "-1234567890123456800"],
+      ]);
+    });
+
+    describe("a wide sheet under the reader's limits", () => {
+      const wide = "wide-e";
+      const readings = 100_000;
+      const plots = 5_000;
+      const columns = Array.from({ length: 60 }, (_, n) => `c${String(n).padStart(2, "0")}`);
+      const plotFields = Array.from({ length: plots }, (_, plot) => ({
+        area: plot / 4,
+        ...Object.fromEntries(columns.map((column) => [column, `v${plot % 50}-${column}`])),
+      }));
+      const wideSchema =
+        VariantSchema.ofJson(plotFields.map((fields) => JSON.stringify(fields))) ?? "";
+      let capped: ServingStoreClientService;
+      let cappedAdapter: ServingStoreAdapter;
+
+      function wideQuery(
+        params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+      ) {
+        const query = cappedAdapter.buildExperimentQuery({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: wide,
+          variants: [{ columnName: "custom_metadata", schema: wideSchema, suffix: "metadata" }],
+          metadataSheets: [{ id: "s-wide", matchOn: "plot" }],
+          ...params,
+        });
+        assertSuccess(query);
+        return query.value;
+      }
+
+      async function wideRows(
+        params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+      ) {
+        const data = await cappedAdapter.executeQuery(wideQuery(params));
+        assertSuccess(data);
+        return data.value.rows;
+      }
+
+      beforeAll(async () => {
+        // The reader profile's per-query memory and the dev store's two cores.
+        await admin.command({
+          query: `CREATE USER IF NOT EXISTS capped_reader IDENTIFIED BY '${STORE_PASSWORD}' SETTINGS max_memory_usage = 4294967296, max_threads = 2`,
+        });
+        await admin.command({ query: "GRANT SELECT ON store.* TO capped_reader" });
+        const config = new ConfigService({
+          servingStore: { url: STORE_URL, username: "capped_reader", password: STORE_PASSWORD },
+        });
+        capped = new ServingStoreClientService(new ServingStoreConfigService(config));
+        cappedAdapter = new ServingStoreAdapter(capped);
+
+        const start = Date.UTC(2026, 8, 1);
+        await admin.insert({
+          table: "measurements",
+          values: Array.from({ length: readings }, (_, id) => ({
+            experiment_id: wide,
+            id,
+            device_id: "d1",
+            timestamp: new Date(start + id * 1000).toISOString().replace("T", " ").slice(0, 19),
+            questions_data: { plot: `P${id % plots}` },
+            annotations: [],
+            _commit_version: 1,
+            _commit_timestamp: "2026-09-14 10:01:00",
+          })),
+          format: "JSONEachRow",
+        });
+        await admin.insert({
+          table: "metadata_rows",
+          values: plotFields.map((fields, plot) => ({
+            ...sheetRow("s-wide", "2026-09-01 08:00:00", "plot", `P${plot}`, fields),
+            experiment_id: wide,
+          })),
+          format: "JSONEachRow",
+        });
+      }, 120_000);
+
+      afterAll(async () => {
+        await capped.onModuleDestroy();
+        await admin.command({ query: "DROP USER IF EXISTS capped_reader" });
+      });
+
+      it("sorts and filters a page by a metadata field", async () => {
+        const byArea = await wideRows({
+          columns: ["id", "area"],
+          ordering: { column: "area", direction: "DESC" },
+          limit: 10,
+        });
+        const filtered = await wideRows({
+          columns: ["id", "c07"],
+          filters: [{ column: "c07", operator: "equals", value: "v3-c07" }],
+          ordering: { column: "id", direction: "ASC" },
+          limit: 3,
+        });
+
+        expect(byArea).toHaveLength(10);
+        expect(new Set(byArea.map(([, area]) => area))).toEqual(new Set(["1249.75"]));
+        expect(filtered).toEqual([
+          ["3", "v3-c07"],
+          ["53", "v3-c07"],
+          ["103", "v3-c07"],
+        ]);
+      }, 60_000);
+
+      it("lists a metadata field's distinct values and counts a filtered page", async () => {
+        const values = await wideRows({ columns: ["c07"], distinct: true, limit: 100 });
+        const count = await cappedAdapter.executeQuery(
+          cappedAdapter.countQuery(
+            wideQuery({ filters: [{ column: "c07", operator: "equals", value: "v3-c07" }] }),
+          ),
+        );
+
+        expect(values).toHaveLength(50);
+        assertSuccess(count);
+        expect(count.value.rows).toEqual([[String(readings / 50)]]);
+      }, 60_000);
     });
   });
 });
