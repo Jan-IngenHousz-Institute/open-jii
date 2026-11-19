@@ -11,6 +11,7 @@ import {
 } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import type { ExperimentTableMetadata } from "../../../core/models/experiment-data.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import { SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
@@ -269,9 +270,9 @@ describe("GetExperimentTablesUseCase", () => {
         name: "Store Experiment",
         userId: testUserId,
       });
-      const rawData = {
+      const rawData: ExperimentTableMetadata = {
         identifier: ExperimentTableName.RAW_DATA,
-        tableType: "static" as const,
+        tableType: "static",
         displayName: null,
         rowCount: 10,
         latestRowAt: "2026-09-22T10:05:00.000Z",
