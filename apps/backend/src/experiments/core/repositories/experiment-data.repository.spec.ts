@@ -3336,9 +3336,26 @@ describe("ExperimentDataRepository", () => {
     );
 
     it("takes a join to the warehouse when the store does not hold its second table", async () => {
-      const warehouseMetadata = vi
-        .spyOn(databricksPort, "getExperimentTableMetadata")
-        .mockResolvedValue(success([]));
+      const deviceTable: ExperimentTableMetadata = {
+        ...largeTable,
+        identifier: "device",
+        rowCount: 2,
+        questionsSchema: null,
+      };
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, deviceTable]),
+      );
+      const tableColumns = [
+        { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 1 },
+        { name: "device_id", type_name: "STRING", type_text: "STRING", position: 2 },
+      ];
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      const store = vi.spyOn(servingStore, "executeQuery");
 
       const result = await repository.getTableData({
         experimentId,
@@ -3355,8 +3372,9 @@ describe("ExperimentDataRepository", () => {
         source: "store",
       });
 
-      assertFailure(result);
-      expect(warehouseMetadata).toHaveBeenCalled();
+      assertSuccess(result);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("joined_data"))).toBe(true);
+      expect(store).not.toHaveBeenCalled();
     });
 
     it("reads a table the store does not hold from the warehouse", async () => {
