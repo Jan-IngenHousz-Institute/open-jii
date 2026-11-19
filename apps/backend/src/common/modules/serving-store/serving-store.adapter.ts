@@ -137,7 +137,7 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     if (params.flagged !== undefined) {
-      builder.flagged(params.flagged, params.flaggedRowIds ?? []);
+      builder.flagged(params.flagged.kind, params.flagged.addedRowIds);
     }
 
     try {

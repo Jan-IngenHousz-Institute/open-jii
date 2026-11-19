@@ -197,9 +197,9 @@ describe("ExperimentStoreReadsService", () => {
     expect(flagged).toHaveBeenCalledExactlyOnceWith(page.experimentId, "raw_data");
     expect(build).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ flagged: "only", flaggedRowIds: ["7", "9"] }),
+      expect.objectContaining({ flagged: { kind: "only", addedRowIds: ["7", "9"] } }),
     );
-    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ flaggedRowIds: undefined }));
+    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ flagged: undefined }));
   });
 
   it("leaves an anonymized contributor sort to the pseudonym the store computes", async () => {

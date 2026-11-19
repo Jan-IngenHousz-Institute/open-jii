@@ -49,11 +49,11 @@ const STORE_SCALARS: Record<string, string> = {
  * field names and schema parsing a page depends on stay one implementation for both reads.
  */
 export class StoreQueryBuilder extends BaseQueryBuilder {
-  private table?: StoreTable;
   private fromClause = "";
   private columns: StoreColumn[] = [];
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
+  private phoneAnnotations?: string;
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
@@ -66,10 +66,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private offsetValue?: number;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
-    this.table = table;
     this.columns = table.columns;
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
+    this.phoneAnnotations = table.phoneAnnotations;
     this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS, FLAGGED_ROW_IDS);
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
@@ -123,12 +123,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   flagged(kind: ExperimentDataFlagged, addedRowIds: string[]): this {
     this.flaggedRowIds = addedRowIds;
     const added = `has(${FLAGGED_ROW_IDS}, toString(id))`;
-    const phoneColumn = this.table?.phoneAnnotations;
-    const isFlagged =
-      phoneColumn === undefined
+    const flaggedCondition =
+      this.phoneAnnotations === undefined
         ? added
-        : `(${added} OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', ${phoneColumn}))`;
-    return this.where(kind === "only" ? isFlagged : `NOT ${isFlagged}`);
+        : `(${added} OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', ${this.phoneAnnotations}))`;
+    return this.where(kind === "only" ? flaggedCondition : `NOT ${flaggedCondition}`);
   }
 
   /**

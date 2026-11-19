@@ -1,3 +1,5 @@
+import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type {
@@ -28,14 +30,16 @@ export interface StoreQuery {
   columns: StoreQueryColumn[];
 }
 
-export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
+export interface StoreQueryParams
+  extends Omit<ExperimentQueryParams, "aggregation" | "join" | "flagged"> {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
   /** Each client id whose device has a serial number to show, with it, for the labels a read
    *  filters, sorts or lists by. */
   deviceSerials?: [string, string][];
-  /** For a read filtered by flags, the rows flagged after they were measured, from Postgres. */
-  flaggedRowIds?: string[];
+  /** For a read filtered by flags, which rows it keeps, and the rows flagged after they were
+   *  measured, from Postgres. */
+  flagged?: { kind: ExperimentDataFlagged; addedRowIds: string[] };
 }
 
 /** Reads of experiment data from the serving store, in the shapes warehouse reads come in. */

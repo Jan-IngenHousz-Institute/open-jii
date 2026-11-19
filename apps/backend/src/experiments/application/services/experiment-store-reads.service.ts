@@ -16,7 +16,11 @@ import type {
   TableQuery,
 } from "../../core/ports/experiment-table-reads.port";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
-import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
+import type {
+  ServingStorePort,
+  StoreQueryColumn,
+  StoreQueryParams,
+} from "../../core/ports/serving-store.port";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
 import { NumberAnswersService } from "./number-answers.service";
@@ -112,10 +116,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return orderResult;
     }
 
-    const flaggedResult =
-      params.flagged === undefined
-        ? success(undefined)
-        : await this.annotationsRepository.findFlaggedRowIds(params.experimentId, params.tableName);
+    const flaggedResult = await this.flagFilter(params);
     if (flaggedResult.isFailure()) {
       return flaggedResult;
     }
@@ -130,7 +131,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
       deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
-      flaggedRowIds: flaggedResult.value,
+      flagged: flaggedResult.value,
     });
     if (built.isFailure()) {
       return built;
@@ -198,6 +199,18 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       (a, b) => this.compareText(a.name, b.name) || this.compareText(a.id, b.id),
     );
     return success(byName.map(({ id }) => id));
+  }
+
+  private async flagFilter({
+    flagged,
+    experimentId,
+    tableName,
+  }: ExperimentQueryParams): Promise<Result<StoreQueryParams["flagged"]>> {
+    if (flagged === undefined) {
+      return success(undefined);
+    }
+    const added = await this.annotationsRepository.findFlaggedRowIds(experimentId, tableName);
+    return added.isFailure() ? added : success({ kind: flagged, addedRowIds: added.value });
   }
 
   /**

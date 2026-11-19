@@ -1405,8 +1405,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       tableType: "static",
       experimentId: experiment,
       columns: ["id"],
-      flagged,
-      flaggedRowIds: added,
+      flagged: { kind: flagged, addedRowIds: added },
     });
     const sortedPage = async (flagged: "only" | "exclude", added: string[]) =>
       (await rowsOf({ ...params(flagged, added), ordering: { column: "id" } })).rows;
