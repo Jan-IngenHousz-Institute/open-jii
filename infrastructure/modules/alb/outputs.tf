@@ -4,6 +4,7 @@ output "alb_arn" {
 
 output "target_group_arn" {
   value = aws_lb_target_group.app_tg.arn
+  depends_on = [aws_lb_listener.https_listener, aws_lb_listener_rule.cloudfront_header_rule]
 }
 
 output "alb_dns_name" {
