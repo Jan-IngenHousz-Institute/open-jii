@@ -240,6 +240,13 @@ locals {
         "cloudfront:UpdateOriginRequestPolicy",
         "cloudfront:DeleteOriginRequestPolicy",
         "cloudfront:GetOriginRequestPolicy",
+        # VPC origins for internal load balancers (Terraform); a distribution that uses one
+        # also needs GetVpcOrigin to create or update.
+        "cloudfront:CreateVpcOrigin",
+        "cloudfront:UpdateVpcOrigin",
+        "cloudfront:DeleteVpcOrigin",
+        "cloudfront:GetVpcOrigin",
+        "cloudfront:ListVpcOrigins",
         # Tags (Terraform)
         "cloudfront:TagResource",
         "cloudfront:UntagResource",
@@ -1128,6 +1135,14 @@ locals {
         "iam:CreateServiceLinkedRole",
       ]
       resource = "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication"
+    }
+
+    # ── CloudFront VPC origins: service-linked role creation (first VPC origin in the account) ──
+    cloudfront-vpc-origin-slr = {
+      actions = [
+        "iam:CreateServiceLinkedRole",
+      ]
+      resource = "arn:aws:iam::*:role/aws-service-role/vpcorigin.cloudfront.amazonaws.com/AWSServiceRoleForCloudFrontVPCOrigin"
     }
   }
 

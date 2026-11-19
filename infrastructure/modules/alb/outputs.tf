@@ -14,3 +14,8 @@ output "alb_zone_id" {
   description = "The zone ID of the ALB"
   value       = aws_lb.app_alb.zone_id
 }
+
+output "vpc_origin_id" {
+  description = "ID of the CloudFront VPC origin for an internal ALB, null otherwise"
+  value       = one(aws_cloudfront_vpc_origin.this[*].id)
+}
