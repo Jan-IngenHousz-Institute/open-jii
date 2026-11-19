@@ -1,5 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { componentsWithout } from "~/test/component-of";
 import { NOW, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
 
 import type {
@@ -117,12 +118,13 @@ describe("the headline", () => {
       }
       await renderPage({
         ...operationalStatusDocument,
-        incidents: [{ ...open, components: ["sign-in"], impact: "outage" }],
+        components: componentsWithout(operationalStatusDocument, "macro-processing"),
+        incidents: [{ ...open, components: ["macro-processing"], impact: "outage" }],
       });
 
       const { card, region } = headline();
 
-      expect(region).toHaveTextContent("Sign-in is down.");
+      expect(region).toHaveTextContent("Macro processing is down.");
       expect(region).not.toHaveTextContent("All systems operational");
       expect(iconOf(card)).toContain("lucide-octagon-x");
     });
@@ -141,16 +143,13 @@ describe("the headline", () => {
       await renderPage(incidentStatusDocument);
 
       expect(
-        headline().inCard.getByText(
-          "Website, Platform, and Macro processing are working normally.",
-        ),
+        headline().inCard.getByText("Platform and Macro processing are working normally."),
       ).toBeInTheDocument();
     });
 
     it("leaves out the description when nothing is working", async () => {
       await renderPage(
         withStates(operationalStatusDocument, {
-          website: "outage",
           platform: "outage",
           "data-intake": "outage",
           "data-delivery": "outage",
@@ -162,7 +161,7 @@ describe("the headline", () => {
 
       expect(paragraphs).toHaveLength(1);
       expect(paragraphs[0]).toHaveTextContent(
-        "Website, Platform, Data intake, Data delivery, and Macro processing are down.",
+        "Platform, Data intake, Data delivery, and Macro processing are down.",
       );
     });
   });
@@ -173,9 +172,7 @@ describe("the headline", () => {
 
       const { card, region } = headline();
 
-      expect(region).toHaveTextContent(
-        "Website and Platform are under planned maintenance until 13:00 UTC.",
-      );
+      expect(region).toHaveTextContent("Platform is under planned maintenance until 13:00 UTC.");
       expect(region).toHaveTextContent(
         "Data intake, Data delivery, and Macro processing are working normally.",
       );
@@ -187,10 +184,11 @@ describe("the headline", () => {
     it("names a component the checks do not cover yet when a window covers it", async () => {
       await renderPage({
         ...operationalStatusDocument,
-        incidents: [{ ...maintenanceInProgress, components: ["exports"] }],
+        components: componentsWithout(operationalStatusDocument, "macro-processing"),
+        incidents: [{ ...maintenanceInProgress, components: ["macro-processing"] }],
       });
 
-      expect(headline().region).toHaveTextContent("Exports is under planned maintenance");
+      expect(headline().region).toHaveTextContent("Macro processing is under planned maintenance");
     });
 
     it("gives the date as well when the window ends on a later day", async () => {
@@ -199,7 +197,7 @@ describe("the headline", () => {
       await renderPage({ ...maintenanceStatusDocument, incidents: [overnight] });
 
       expect(headline().region).toHaveTextContent(
-        "Website and Platform are under planned maintenance until Nov 4, 2026, 02:00 UTC.",
+        "Platform is under planned maintenance until Nov 4, 2026, 02:00 UTC.",
       );
     });
 
@@ -210,7 +208,7 @@ describe("the headline", () => {
       await renderPage({ ...maintenanceStatusDocument, incidents: [openEnded] });
 
       expect(headline().region).toHaveTextContent(
-        /^Website and Platform are under planned maintenance\.Data intake/,
+        /^Platform is under planned maintenance\.Data intake/,
       );
     });
 
@@ -228,10 +226,8 @@ describe("the headline", () => {
     it("shows the maintenance badge on the components under maintenance, not an outage", async () => {
       await renderPage(maintenanceStatusDocument);
 
-      for (const name of ["Website", "Platform"]) {
-        expect(rowOf(name).getByText("Maintenance")).toBeInTheDocument();
-        expect(rowOf(name).queryByText("Outage")).not.toBeInTheDocument();
-      }
+      expect(rowOf("Platform").getByText("Maintenance")).toBeInTheDocument();
+      expect(rowOf("Platform").queryByText("Outage")).not.toBeInTheDocument();
       expect(rowOf("Data intake").getByText("Operational")).toBeInTheDocument();
     });
 

@@ -115,20 +115,10 @@
   },
   "component": {
     "delayNow": "Die langsamsten jüngsten Messungen brauchten etwa {{minutes}} Minuten.",
-    "website": {
-      "name": "Website",
-      "description": "Die openJII-Website, die Sie im Browser öffnen.",
-      "details": "Jede Minute laden wir eine Seite der openJII-Website von außerhalb unseres Netzwerks und prüfen, ob sie antwortet und den Produktnamen enthält. Die Website gilt als beeinträchtigt nach zwei langsamen oder fehlgeschlagenen Prüfungen in Folge. Eine Prüfung ist langsam, wenn sie länger als 3 Sekunden dauert. Die Website gilt als ausgefallen nach drei fehlgeschlagenen Prüfungen in Folge oder wenn in den letzten 15 Minuten mindestens 20 Anfragen eingingen und mehr als die Hälfte davon fehlschlug."
-    },
-    "sign-in": {
-      "name": "Anmeldung",
-      "description": "Die Anmeldung bei Ihrem openJII-Konto.",
-      "details": "Die Anmeldung mit einem E-Mail-Code braucht unseren E-Mail-Dienst. Alle fünf Minuten testet die Plattform ihre Verbindung zu diesem Dienst. Die Anmeldung gilt als beeinträchtigt, wenn in den letzten 10 Minuten jeder Test fehlschlägt oder in den letzten 15 Minuten eine E-Mail mit einem Anmeldecode nicht versendet werden konnte."
-    },
     "platform": {
       "name": "Plattform",
-      "description": "Der openJII-Dienst hinter der Website und der Feld-App.",
-      "details": "Jede Minute senden wir eine Testanfrage an die Plattform und messen, wie schnell sie antwortet. Alle fünf Minuten prüft die Plattform außerdem ihre Verbindungen zur Datenbank und zu Databricks, unserem Anbieter für die Datenverarbeitung. Die Plattform gilt als beeinträchtigt nach zwei langsamen oder fehlgeschlagenen Testanfragen in Folge oder wenn die Verbindung zu Databricks in den letzten 10 Minuten bei jeder Prüfung fehlschlug. Eine Testanfrage ist langsam, wenn sie länger als 2 Sekunden dauert. Die Plattform gilt als ausgefallen nach drei fehlgeschlagenen Testanfragen in Folge, wenn die Verbindung zur Datenbank in den letzten 10 Minuten bei jeder Prüfung fehlschlug oder wenn in den letzten 15 Minuten mindestens 10 Anfragen mit einem Serverfehler endeten und diese mehr als die Hälfte aller Anfragen ausmachten."
+      "description": "Die openJII-Website und die Feld-App, einschließlich Anmeldung und Datenexport.",
+      "details": "Jede Minute laden wir eine Seite der openJII-Website von außerhalb unseres Netzwerks und prüfen, ob sie antwortet und den Produktnamen enthält, und wir senden eine Testanfrage an den Dienst hinter der Website und der Feld-App. Alle fünf Minuten prüft die Plattform außerdem ihre eigenen Verbindungen zur Datenbank, zu Databricks, unserem Anbieter für die Datenverarbeitung, und zum E-Mail-Dienst, der Anmeldecodes versendet. Die Plattform gilt als beeinträchtigt nach zwei langsamen oder fehlgeschlagenen Prüfungen in Folge, wenn ihre Verbindung zu Databricks in den letzten 10 Minuten bei jeder Prüfung fehlschlug, wenn ihre Verbindung zum E-Mail-Dienst in den letzten 10 Minuten bei jeder Prüfung fehlschlug, wenn in den letzten 15 Minuten mindestens drei E-Mails mit einem Anmeldecode nicht versendet werden konnten oder wenn in der letzten Stunde mindestens drei Exporte wegen eines Problems auf unserer Seite fehlschlugen. Eine Prüfung der Website ist langsam, wenn sie länger als 3 Sekunden dauert, eine Testanfrage, wenn sie länger als 2 Sekunden dauert. Die Plattform gilt als ausgefallen nach drei fehlgeschlagenen Prüfungen in Folge, wenn ihre Verbindung zur Datenbank in den letzten 10 Minuten bei jeder Prüfung fehlschlug oder wenn in den letzten 15 Minuten mindestens 20 Anfragen an die Website eingingen und mehr als die Hälfte davon fehlschlug. Sie gilt auch als ausgefallen, wenn in den letzten 15 Minuten mindestens 10 Anfragen mit einem Serverfehler endeten und diese mehr als die Hälfte aller Anfragen ausmachten."
     },
     "data-intake": {
       "name": "Dateneingang",
@@ -144,11 +134,6 @@
       "name": "Makro-Verarbeitung",
       "description": "Makros, die auf Ihren Messungen laufen.",
       "details": "Die Makro-Verarbeitung gilt als beeinträchtigt, wenn in der letzten Stunde ein Makro wegen eines Problems auf unserer Seite fehlgeschlagen ist, wenn noch ein Rückstau von Messungen auf Makro-Ergebnisse wartet oder wenn die langsamsten Ergebnisse mehr als 5 Minuten nach ihren Messungen eintrafen. Sie gilt als ausgefallen, wenn die langsamsten mehr als 30 Minuten nach ihren Messungen eintrafen. Fehler im eigenen Makro-Code einer Forscherin oder eines Forschers zählen nicht."
-    },
-    "exports": {
-      "name": "Exporte",
-      "description": "Das Herunterladen von Experimentdaten.",
-      "details": "Gezählt werden Exporte, die wegen eines Problems auf unserer Seite fehlschlagen, nicht wegen der Daten oder der Anfrage. Exporte gelten als beeinträchtigt, wenn in der letzten Stunde ein Export auf diese Weise fehlgeschlagen ist."
     }
   },
   "day": {

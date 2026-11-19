@@ -38,7 +38,7 @@ function rawIncident(change: Partial<RawIncident> = {}): RawIncident {
     title: "Sign-in is slow",
     kind: "incident",
     impact: "degraded",
-    components: ["sign-in"],
+    components: ["data-intake"],
     startsAt: "2026-11-03T11:00:00.000Z",
     endsAt: null,
     resolvedAt: null,
@@ -243,7 +243,7 @@ describe("toStatusContent incidents", () => {
       incidentsOf(
         rawIncident({
           impact: "outage",
-          components: ["sign-in", "platform"],
+          components: ["data-intake", "platform"],
           resolvedAt: "2026-11-03T12:00:00.000Z",
           updatesCollection: {
             items: [rawUpdate({ nextUpdateBy: "2026-11-03T11:35:00.000Z" })],
@@ -258,7 +258,7 @@ describe("toStatusContent incidents", () => {
         kind: "incident",
         title: "Sign-in is slow",
         impact: "outage",
-        components: ["sign-in", "platform"],
+        components: ["data-intake", "platform"],
         startsAt: "2026-11-03T11:00:00.000Z",
         resolvedAt: "2026-11-03T12:00:00.000Z",
         updates: [

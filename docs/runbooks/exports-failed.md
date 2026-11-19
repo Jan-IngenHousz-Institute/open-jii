@@ -4,8 +4,8 @@
 failure that was not about their data or request. The backend follows each export's Databricks job
 run and records a failure with an error code (`apps/backend/src/experiments/application/services/export-run-reconciler.service.ts`).
 `no_data` and `too_many_rows_for_format` are the data's and are not counted. `unknown` is ours and is
-counted once, by the backend task that finished the export. The status page shows Exports degraded
-for an hour after one.
+counted once, by the backend task that finished the export. The status page shows Platform degraded
+while three or more failed in the last hour, so one failure alerts here before the page changes.
 
 ## See which exports
 

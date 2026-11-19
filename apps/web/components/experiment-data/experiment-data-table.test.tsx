@@ -63,9 +63,16 @@ vi.mock("~/components/data-table/data-table-utils", () => ({
       </tr>
     </thead>
   ),
-  DataTableRows: ({ rows }: { rows: unknown[] }) => (
+  DataTableRows: ({
+    rows,
+    landedRowIds,
+  }: {
+    rows: unknown[];
+    landedRowIds?: ReadonlySet<string>;
+  }) => (
     <tr>
       <td>{rows.length} data rows</td>
+      <td data-testid="landed-rows">{[...(landedRowIds ?? [])].join(",")}</td>
     </tr>
   ),
   LoadingRows: () => (
@@ -287,6 +294,37 @@ describe("ExperimentDataTable", () => {
       expect(mockUseExperimentData).toHaveBeenLastCalledWith(
         expect.objectContaining({ filters: [] }),
       );
+    });
+  });
+
+  describe("landed rows", () => {
+    const arrived = { id: "3", name: "Row 3", value: 30 };
+    const secondPage = [
+      { id: "4", name: "Row 4", value: 40 },
+      { id: "5", name: "Row 5", value: 50 },
+    ];
+
+    it("tints the rows a refetch of the open page adds", () => {
+      setupHook();
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} />);
+
+      setupHook({ tableRows: [arrived, ...mockTableRows] });
+      rerender(<ExperimentDataTable {...defaultProps} />);
+
+      expect(screen.getByTestId("landed-rows")).toHaveTextContent("3");
+    });
+
+    it("tints nothing when the next page replaces the page standing in for it", async () => {
+      setupHook();
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} />);
+
+      setupHook({ isRefreshing: true });
+      await userEvent.setup().click(screen.getByTitle("dataTable.next"));
+
+      setupHook({ tableRows: secondPage });
+      rerender(<ExperimentDataTable {...defaultProps} />);
+
+      expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
     });
   });
 });

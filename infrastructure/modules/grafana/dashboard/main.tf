@@ -4159,7 +4159,7 @@ resource "grafana_rule_group" "sign_in_and_exports" {
     for            = "5m"
 
     annotations = {
-      description      = "An export failed for a reason on our side in the last hour, so the status page shows Exports degraded."
+      description      = "An export failed for a reason on our side in the last hour. Three in an hour show Platform degraded on the status page."
       summary          = "Exports are failing on our side"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/exports-failed.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -4241,7 +4241,7 @@ resource "grafana_rule_group" "sign_in_and_exports" {
     for            = "5m"
 
     annotations = {
-      description      = "A sign-in code email failed to send in the last 15 minutes, so the status page shows Sign-in degraded."
+      description      = "A sign-in code email failed to send in the last 15 minutes. Three in 15 minutes show Platform degraded on the status page."
       summary          = "Sign-in code emails are failing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/sign-in-emails-failed.md"
       __dashboardUid__ = local.heartbeat_daily_uid

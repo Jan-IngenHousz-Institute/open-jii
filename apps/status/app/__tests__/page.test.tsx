@@ -1,5 +1,6 @@
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { componentsWithout } from "~/test/component-of";
 import { NOW, renderWithProviders, stubStatusFetch } from "~/test/test-utils";
 
 import type { StatusDocument } from "@repo/monitoring/status-document";
@@ -113,19 +114,18 @@ describe("Page", () => {
       await renderPage(operationalStatusDocument);
 
       expect(componentNames()).toEqual([
-        "Website",
         "Platform",
         "Data intake",
         "Data delivery",
         "Macro processing",
       ]);
-      expect(rowOf("Website").getByText("Operational")).toBeInTheDocument();
+      expect(rowOf("Platform").getByText("Operational")).toBeInTheDocument();
       expect(
-        rowOf("Website").getByText("99.97% available in the last 90 days"),
+        rowOf("Platform").getByText("99.96% available in the last 90 days"),
       ).toBeInTheDocument();
-      expect(rowOf("Website").getByText(/· 27 min degraded/)).toBeInTheDocument();
-      expect(rowOf("Website").getByText("90 days ago")).toBeInTheDocument();
-      expect(rowOf("Website").getByText("Today")).toBeInTheDocument();
+      expect(rowOf("Platform").getByText(/· 2 h 26 min degraded/)).toBeInTheDocument();
+      expect(rowOf("Platform").getByText("90 days ago")).toBeInTheDocument();
+      expect(rowOf("Platform").getByText("Today")).toBeInTheDocument();
     });
 
     it("shows the legend, how we measure, the footer and no past incidents", async () => {
@@ -156,7 +156,6 @@ describe("Page", () => {
       });
 
       expect(componentNames()).toEqual([
-        "Website",
         "Platform",
         "Data intake",
         "Data delivery",
@@ -165,34 +164,12 @@ describe("Page", () => {
     });
 
     it("leaves out the components the document does not hold", async () => {
-      await renderPage(operationalStatusDocument);
-
-      expect(screen.queryByRole("heading", { name: "Sign-in" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("heading", { name: "Exports" })).not.toBeInTheDocument();
-    });
-
-    it("shows a component the document does hold, in its place in the order", async () => {
-      const website = operationalStatusDocument.components[0];
-      const platform = operationalStatusDocument.components[1];
-
       await renderPage({
         ...operationalStatusDocument,
-        components: [
-          ...operationalStatusDocument.components,
-          { ...website, id: "exports" },
-          { ...platform, id: "sign-in" },
-        ],
+        components: componentsWithout(operationalStatusDocument, "macro-processing"),
       });
 
-      expect(componentNames()).toEqual([
-        "Website",
-        "Sign-in",
-        "Platform",
-        "Data intake",
-        "Data delivery",
-        "Macro processing",
-        "Exports",
-      ]);
+      expect(screen.queryByRole("heading", { name: "Macro processing" })).not.toBeInTheDocument();
     });
 
     it("keeps the details closed until the name is pressed", async () => {
@@ -214,7 +191,7 @@ describe("Page", () => {
         screen.getByText("Data intake is down. Data delivery is degraded."),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("Website, Platform, and Macro processing are working normally."),
+        screen.getByText("Platform and Macro processing are working normally."),
       ).toBeInTheDocument();
       expect(rowOf("Data intake").getByText("Outage")).toBeInTheDocument();
       expect(rowOf("Data delivery").getByText("Degraded")).toBeInTheDocument();
@@ -230,7 +207,8 @@ describe("Page", () => {
       }
       await renderPage({
         ...operationalStatusDocument,
-        incidents: [{ ...open, components: ["sign-in"], impact: "outage" }],
+        components: componentsWithout(operationalStatusDocument, "macro-processing"),
+        incidents: [{ ...open, components: ["macro-processing"], impact: "outage" }],
       });
 
       expect(screen.queryByText("All systems operational")).not.toBeInTheDocument();
@@ -289,7 +267,7 @@ describe("Page", () => {
       expect(
         inCard.getByText(/If you need to export data, do it before 07:00 UTC/),
       ).toBeInTheDocument();
-      expect(inCard.getByText("Affects Website and Platform.")).toBeInTheDocument();
+      expect(inCard.getByText("Affects Platform.")).toBeInTheDocument();
     });
 
     it("marks maintenance that has started as in progress", async () => {

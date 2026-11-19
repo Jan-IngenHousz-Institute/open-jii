@@ -60,15 +60,7 @@
         "type": "Symbol",
         "validations": [
           {
-            "in": [
-              "website",
-              "sign-in",
-              "platform",
-              "data-intake",
-              "data-delivery",
-              "macro-processing",
-              "exports"
-            ]
+            "in": ["platform", "data-intake", "data-delivery", "macro-processing"]
           }
         ]
       }

@@ -115,20 +115,10 @@
   },
   "component": {
     "delayNow": "The slowest recent measurements took about {{minutes}} minutes.",
-    "website": {
-      "name": "Website",
-      "description": "The openJII website you open in a browser.",
-      "details": "Every minute we load a page of the openJII website from outside our network and check that it answers and contains the product name. The website is degraded after two slow or failed checks in a row. A check is slow if it takes more than 3 seconds. The website is down after three failed checks in a row, or when, in the last 15 minutes, at least 20 requests came in and more than half of them failed."
-    },
-    "sign-in": {
-      "name": "Sign-in",
-      "description": "Signing in to your openJII account.",
-      "details": "Signing in with an email code needs our email service. Every five minutes the platform tests its connection to that service. Sign-in is degraded when every test in the last 10 minutes fails, or when an email with a sign-in code failed to send in the last 15 minutes."
-    },
     "platform": {
       "name": "Platform",
-      "description": "The openJII service behind the website and the field app.",
-      "details": "Every minute we send a test request to the platform and time the answer. Every five minutes the platform also checks its own connections to the database and to Databricks, our data processing provider. The platform is degraded after two slow or failed test requests in a row, or when its connection to Databricks failed every check in the last 10 minutes. A test request is slow if it takes more than 2 seconds. The platform is down after three failed test requests in a row, when its connection to the database failed every check in the last 10 minutes, or when, in the last 15 minutes, at least 10 requests ended in a server error and those were more than half of all requests."
+      "description": "The openJII website and field app, including signing in and exporting data.",
+      "details": "Every minute we load a page of the openJII website from outside our network and check that it answers and contains the product name, and we send a test request to the service behind the website and the field app. Every five minutes the platform also checks its own connections to the database, to Databricks, our data processing provider, and to the email service that sends sign-in codes. The platform is degraded after two slow or failed checks in a row, when its connection to Databricks failed every check in the last 10 minutes, when its connection to the email service failed every check in the last 10 minutes, when at least three emails with a sign-in code failed to send in the last 15 minutes, or when at least three exports failed in the last hour because of a problem on our side. A website check is slow if it takes more than 3 seconds, and a test request is slow if it takes more than 2 seconds. The platform is down after three failed checks in a row, when its connection to the database failed every check in the last 10 minutes, or when, in the last 15 minutes, at least 20 requests came in to the website and more than half of them failed. It is also down when, in the last 15 minutes, at least 10 requests ended in a server error and those were more than half of all requests."
     },
     "data-intake": {
       "name": "Data intake",
@@ -144,11 +134,6 @@
       "name": "Macro processing",
       "description": "Macros running on your measurements.",
       "details": "Macro processing is degraded when a macro failed in the last hour because of a problem on our side, when a backlog of measurements is still waiting for macro results, or when the slowest few results arrived more than 5 minutes after their measurements. It is down when the slowest few arrived more than 30 minutes after their measurements. Errors in a researcher's own macro code do not count."
-    },
-    "exports": {
-      "name": "Exports",
-      "description": "Downloading experiment data.",
-      "details": "This counts exports that fail because of a problem on our side, not because of the data or the request. Exports are degraded when any export failed that way in the last hour."
     }
   },
   "day": {
