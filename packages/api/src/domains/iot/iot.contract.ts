@@ -13,7 +13,8 @@ import {
   zIotDeviceActivity,
   zIotDeviceDetail,
   zMonitoringRangeQuery,
-  zIotDeviceList,
+  zIotDeviceFilterQuery,
+  zIotDeviceListResponse,
   zIotDevicePathParam,
   zIotFleetMonitoring,
   zIotFleetMonitoringQuery,
@@ -55,7 +56,8 @@ export const iotContract = {
     .output(zIotDevice),
   listIotDevices: oc
     .route({ method: "GET", path: "/api/v1/devices", successStatus: 200 })
-    .output(zIotDeviceList),
+    .input(zIotDeviceFilterQuery)
+    .output(zIotDeviceListResponse),
   // Fleet-scoped warehouse facts for the devices overview. The static path
   // segment must be registered before GET /devices/{deviceId} so it can never
   // be read as a device id.

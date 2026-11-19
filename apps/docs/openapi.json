@@ -16015,164 +16015,516 @@
     "/api/v1/devices": {
       "get": {
         "operationId": "iot.listIotDevices",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "registered",
+                    "provisioned",
+                    "onboarded",
+                    "revoked",
+                    "retired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "registered",
+                      "provisioned",
+                      "onboarded",
+                      "revoked",
+                      "retired"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "family",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "multispeq",
+                    "ambyte",
+                    "minipar",
+                    "generic",
+                    "ambit",
+                    "mobile"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "multispeq",
+                      "ambyte",
+                      "minipar",
+                      "generic",
+                      "ambit",
+                      "mobile"
+                    ],
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "name",
+                      "status",
+                      "family",
+                      "registered"
+                    ],
+                    "type": "string"
+                  },
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field",
+                  "direction"
+                ]
+              }
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true,
+            "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
+            "example": "sort[0][field]=registered&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991,
+              "description": "1-based page number"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Rows per page"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "thingName": {
-                        "type": "string"
-                      },
-                      "thingArn": {
-                        "type": "string"
-                      },
-                      "serialNumber": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "deviceType": {
-                        "enum": [
-                          "multispeq",
-                          "ambyte",
-                          "minipar",
-                          "generic",
-                          "ambit",
-                          "mobile"
-                        ],
-                        "type": "string"
-                      },
-                      "status": {
-                        "enum": [
-                          "registered",
-                          "active",
-                          "revoked",
-                          "retired"
-                        ],
-                        "type": "string"
-                      },
-                      "certificateId": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "certificateArn": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      },
-                      "createdBy": {
-                        "type": "string",
-                        "format": "uuid"
-                      },
-                      "organizationId": {
-                        "anyOf": [
-                          {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
                             "type": "string",
                             "format": "uuid"
                           },
-                          {
-                            "type": "null"
+                          "thingName": {
+                            "type": "string"
+                          },
+                          "thingArn": {
+                            "type": "string"
+                          },
+                          "serialNumber": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "deviceType": {
+                            "enum": [
+                              "multispeq",
+                              "ambyte",
+                              "minipar",
+                              "generic",
+                              "ambit",
+                              "mobile"
+                            ],
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "registered",
+                              "active",
+                              "revoked",
+                              "retired"
+                            ],
+                            "type": "string"
+                          },
+                          "certificateId": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "certificateArn": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdBy": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "visibility": {
+                            "enum": [
+                              "private",
+                              "public"
+                            ],
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "connectivity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "connected": {
+                                    "type": "boolean"
+                                  },
+                                  "lastSeenAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "connected",
+                                  "lastSeenAt"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "boundExperimentCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
                           }
+                        },
+                        "required": [
+                          "id",
+                          "thingName",
+                          "thingArn",
+                          "serialNumber",
+                          "name",
+                          "deviceType",
+                          "status",
+                          "certificateId",
+                          "certificateArn",
+                          "createdBy",
+                          "organizationId",
+                          "visibility",
+                          "createdAt",
+                          "updatedAt",
+                          "connectivity",
+                          "boundExperimentCount"
                         ]
-                      },
-                      "visibility": {
-                        "enum": [
-                          "private",
-                          "public"
-                        ],
-                        "type": "string"
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "updatedAt": {
-                        "type": "string",
-                        "format": "date-time"
-                      },
-                      "connectivity": {
-                        "anyOf": [
-                          {
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
                             "type": "object",
                             "properties": {
-                              "connected": {
-                                "type": "boolean"
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
                               },
-                              "lastSeenAt": {
+                              "thingName": {
+                                "type": "string"
+                              },
+                              "thingArn": {
+                                "type": "string"
+                              },
+                              "serialNumber": {
+                                "type": "string"
+                              },
+                              "name": {
                                 "anyOf": [
                                   {
-                                    "type": "string",
-                                    "format": "date-time"
+                                    "type": "string"
                                   },
                                   {
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "deviceType": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit",
+                                  "mobile"
+                                ],
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": [
+                                  "registered",
+                                  "active",
+                                  "revoked",
+                                  "retired"
+                                ],
+                                "type": "string"
+                              },
+                              "certificateId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "certificateArn": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "createdBy": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "organizationId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "connectivity": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "connected": {
+                                        "type": "boolean"
+                                      },
+                                      "lastSeenAt": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "format": "date-time"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "connected",
+                                      "lastSeenAt"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "boundExperimentCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
                               }
                             },
                             "required": [
-                              "connected",
-                              "lastSeenAt"
+                              "id",
+                              "thingName",
+                              "thingArn",
+                              "serialNumber",
+                              "name",
+                              "deviceType",
+                              "status",
+                              "certificateId",
+                              "certificateArn",
+                              "createdBy",
+                              "organizationId",
+                              "visibility",
+                              "createdAt",
+                              "updatedAt",
+                              "connectivity",
+                              "boundExperimentCount"
                             ]
-                          },
-                          {
-                            "type": "null"
                           }
-                        ]
+                        },
+                        "page": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "totalCount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "statusCounts": {
+                          "type": "object",
+                          "propertyNames": {
+                            "enum": [
+                              "registered",
+                              "provisioned",
+                              "onboarded",
+                              "revoked",
+                              "retired"
+                            ],
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        }
                       },
-                      "boundExperimentCount": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 9007199254740991
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "thingName",
-                      "thingArn",
-                      "serialNumber",
-                      "name",
-                      "deviceType",
-                      "status",
-                      "certificateId",
-                      "certificateArn",
-                      "createdBy",
-                      "organizationId",
-                      "visibility",
-                      "createdAt",
-                      "updatedAt",
-                      "connectivity",
-                      "boundExperimentCount"
-                    ]
-                  }
+                      "required": [
+                        "items",
+                        "page",
+                        "pageSize",
+                        "totalPages",
+                        "totalCount",
+                        "statusCounts"
+                      ]
+                    }
+                  ]
                 }
               }
             }

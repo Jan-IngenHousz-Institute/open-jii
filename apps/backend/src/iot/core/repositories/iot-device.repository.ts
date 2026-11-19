@@ -1,7 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { IotDeviceFilterQuery, IotDeviceRung } from "@repo/api/domains/iot/iot.schema";
 import {
   and,
+  asc,
   desc,
   deleteResourceGrants,
   eq,
@@ -10,13 +12,30 @@ import {
   isNull,
   or,
   ensurePersonalOrganization,
+  experimentDevices,
+  ilike,
+  sql,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { escapeLike } from "../../../common/utils/fts";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/iot-device.model";
+
+type DeviceListingParams = Omit<IotDeviceFilterQuery, "page" | "pageSize"> & { userId: string };
+
+export function deviceRungSql() {
+  const status = sql`${iotDevices}.${sql.identifier(iotDevices.status.name)}`;
+  const deviceId = sql`${iotDevices}.${sql.identifier(iotDevices.id.name)}`;
+  const boundDeviceId = sql`${experimentDevices}.${sql.identifier(experimentDevices.deviceId.name)}`;
+  return sql<IotDeviceRung>`case when ${status} = 'active' then
+    (case when exists (select 1 from ${experimentDevices}
+      where ${boundDeviceId} = ${deviceId})
+      then 'onboarded' else 'provisioned' end)
+    else ${status}::text end`;
+}
 
 @Injectable()
 export class IotDeviceRepository {
@@ -24,6 +43,94 @@ export class IotDeviceRepository {
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
   ) {}
+
+  private visibleCondition(userId: string) {
+    const scope = accessibleResourceCondition({
+      database: this.database,
+      resourceType: "device",
+      resourceIdColumn: iotDevices.id,
+      organizationIdColumn: iotDevices.organizationId,
+      visibilityColumn: iotDevices.visibility,
+      userId,
+    });
+    return or(and(isNull(iotDevices.organizationId), eq(iotDevices.createdBy, userId)), scope);
+  }
+
+  private buildListing({ userId, search, status, family, sort }: DeviceListingParams) {
+    const term = search?.trim();
+    const like = term ? `%${escapeLike(term)}%` : undefined;
+    const where = and(
+      this.visibleCondition(userId),
+      like ? or(ilike(iotDevices.name, like), ilike(iotDevices.serialNumber, like)) : undefined,
+      family?.length ? inArray(iotDevices.deviceType, family) : undefined,
+      status?.length ? inArray(deviceRungSql(), status) : undefined,
+    );
+    const rung = deviceRungSql();
+    const fields = {
+      name: sql`coalesce(${iotDevices.name}, ${iotDevices.serialNumber})`,
+      status: sql`case ${rung} when 'registered' then 0 when 'provisioned' then 1
+        when 'onboarded' then 2 when 'revoked' then 3 when 'retired' then 4 end`,
+      family: sql`${iotDevices.deviceType}::text`,
+      registered: iotDevices.createdAt,
+    };
+    const orderBy = [
+      ...(sort?.length
+        ? sort.map(
+            ({ field, direction }) =>
+              sql`${direction === "asc" ? asc(fields[field]) : desc(fields[field])} nulls last`,
+          )
+        : [sql`${desc(iotDevices.createdAt)} nulls last`]),
+      asc(iotDevices.id),
+    ];
+    return { where, orderBy };
+  }
+
+  async findAll(params: DeviceListingParams): Promise<Result<IotDeviceDto[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy } = this.buildListing(params);
+      return this.database
+        .select()
+        .from(iotDevices)
+        .where(where)
+        .orderBy(...orderBy);
+    });
+  }
+
+  async findPage(params: DeviceListingParams, page: number, pageSize: number) {
+    return tryCatch(async () => {
+      const { where, orderBy } = this.buildListing(params);
+      const countsWhere = this.buildListing({ ...params, status: undefined }).where;
+      const rung = deviceRungSql();
+      const [items, counts] = await Promise.all([
+        this.database
+          .select()
+          .from(iotDevices)
+          .where(where)
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        this.database
+          .select({ rung, count: sql<number>`count(*)::int` })
+          .from(iotDevices)
+          .where(countsWhere)
+          .groupBy(sql`1`),
+      ]);
+      const statusCounts: Record<IotDeviceRung, number> = {
+        registered: 0,
+        provisioned: 0,
+        onboarded: 0,
+        revoked: 0,
+        retired: 0,
+      };
+      for (const { rung, count } of counts) statusCounts[rung] = count;
+      const totalCount = counts.reduce(
+        (total, { rung, count }) =>
+          total + (!params.status?.length || params.status.includes(rung) ? count : 0),
+        0,
+      );
+      return { items, totalCount, statusCounts };
+    });
+  }
 
   async create(
     createIotDeviceDto: CreateIotDeviceDto,
@@ -67,14 +174,6 @@ export class IotDeviceRepository {
     options?: { organizationId?: string },
   ): Promise<Result<IotDeviceDto[]>> {
     return tryCatch(async () => {
-      const scope = accessibleResourceCondition({
-        database: this.database,
-        resourceType: "device",
-        resourceIdColumn: iotDevices.id,
-        organizationIdColumn: iotDevices.organizationId,
-        visibilityColumn: iotDevices.visibility,
-        userId,
-      });
       // Mobile self-registration stores no organization (`ensure-mobile-device` passes
       // null), so the access predicate cannot reach a self-registered phone at all: no
       // organization to be a member of, private by default, and nobody grants themselves
@@ -82,10 +181,7 @@ export class IotDeviceRepository {
       // organization, because `created_by` is deliberately not an access source here:
       // once a device belongs to an organization, leaving that organization ends the
       // creator's access to it like anyone else's.
-      const visible = or(
-        and(isNull(iotDevices.organizationId), eq(iotDevices.createdBy, userId)),
-        scope,
-      );
+      const visible = this.visibleCondition(userId);
       const organizationId = options?.organizationId;
       return this.database
         .select()
