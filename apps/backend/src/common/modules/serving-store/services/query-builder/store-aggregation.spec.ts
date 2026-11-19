@@ -940,7 +940,10 @@ function readerAccess(): { views: string[]; tables: string[]; rowFilter: string 
     }
     return value;
   };
-  const names = (list: string) => (list.match(/"[^"]+"/g) ?? []).map((name) => name.slice(1, -1));
+  const names = (list: string) => {
+    const quoted: string[] = list.match(/"[^"]+"/g) ?? [];
+    return quoted.map((name) => name.slice(1, -1));
+  };
   return {
     views: names(local("reader_views")),
     tables: names(local("reader_tables")),
