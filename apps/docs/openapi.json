@@ -3289,7 +3289,7 @@
                 "exclude"
               ],
               "type": "string",
-              "description": "Only rows with a flag, or only rows without one, counting flags recorded on the phone and those added afterwards. Only a page, with page and pageSize set, of a table the serving store holds can be filtered by flags, and only while the serving store serves the caller's reads; any other read, such as a chart, a joined read or a read through the warehouse, answers 400 FLAGGED_READ_UNSUPPORTED"
+              "description": "Only rows with a flag, or only rows without one, counting flags recorded on the phone and those added afterwards. Only a page, with page and pageSize set, of a table the serving store holds can be filtered by flags, and only while the serving store serves the caller's reads; any other read, such as a chart, a joined read or a read through the warehouse, answers 400 FLAGGED_READ_UNSUPPORTED. A table with more flagged rows than one read can name, from about 15,000 depending on the length of their ids, answers 400 FLAGGED_READ_TOO_LARGE"
             },
             "allowEmptyValue": true,
             "allowReserved": true

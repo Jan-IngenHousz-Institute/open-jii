@@ -235,6 +235,25 @@ describe("ServingStoreAdapter", () => {
     expect(sent.handed).toBe(2);
   });
 
+  it("refuses a flagged read whose ids would pass the store's query size, before it reaches the store", () => {
+    const flaggedRead = (rows: number) =>
+      adapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "e1",
+        columns: ["id"],
+        flagged: {
+          kind: "only",
+          addedRowIds: Array.from({ length: rows }, (_, index) => `${"r".repeat(58)}${index}`),
+        },
+      });
+
+    assertSuccess(flaggedRead(1_000));
+    const refused = flaggedRead(20_000);
+    assertFailure(refused);
+    expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+  });
+
   it("counts a read as text", () => {
     const count = adapter.countQuery({ sql: "SELECT 1", columns: [] });
 
@@ -1429,6 +1448,43 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(await unsortedIds("only", [])).toEqual(["21"]);
     expect(await count("only", [])).toEqual([["1"]]);
     expect(await count("exclude", [])).toEqual([["2"]]);
+  });
+
+  it("runs the largest flagged read it takes, whose count fills the store's query size to the byte", async () => {
+    const ids = Array.from(
+      { length: 14_000 },
+      (_, index) => `flagged-${String(index).padStart(56, "0")}`,
+    );
+    const read = (last: string) =>
+      adapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: EXPERIMENT,
+        columns: ["id"],
+        ordering: { column: "id" },
+        flagged: { kind: "only", addedRowIds: [...ids, last] },
+      });
+    let [fits, passes] = [0, 200_000];
+    while (passes - fits > 1) {
+      const middle = Math.floor((fits + passes) / 2);
+      if (read("x".repeat(middle)).isSuccess()) {
+        fits = middle;
+      } else {
+        passes = middle;
+      }
+    }
+
+    const largest = read("x".repeat(fits));
+    assertSuccess(largest);
+    const countSql = adapter.countQuery(largest.value).sql;
+    assertSuccess(await adapter.executeQuery(largest.value));
+    assertSuccess(await adapter.executeQuery(adapter.countQuery(largest.value)));
+
+    const refused = read("x".repeat(passes));
+    assertFailure(refused);
+    expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+    // One byte more, sent anyway, is a statement the store refuses too.
+    assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
   });
 });
 
