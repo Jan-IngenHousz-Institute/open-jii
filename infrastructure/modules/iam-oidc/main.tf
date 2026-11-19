@@ -1517,6 +1517,25 @@ resource "aws_iam_role_policy" "oidc_role_ci_access_guard" {
         ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
       },
+      {
+        # The foundation state's digest item. A wrong digest makes OpenTofu refuse to read the
+        # state, and a rerun does not repair it. The lock item stays writable: the deploy role
+        # takes the lock when it plans the foundation root.
+        Sid    = "NoChangesToFoundationStateDigest"
+        Effect = "Deny"
+        Action = [
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
+        Condition = {
+          "ForAnyValue:StringLike" = {
+            "dynamodb:LeadingKeys" = ["open-jii-terraform-state-${var.environment}/foundation/*-md5"]
+          }
+        }
+      },
     ]
   })
 }

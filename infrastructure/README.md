@@ -43,7 +43,7 @@ A release runs the Foundation workflow before the infrastructure deploy whenever
 
 `GithubActionsFoundationAccess` can change only the roles and policies named `GithubActions*`, the OIDC trust and the state backend. It may edit its own policy, so the permissions boundary `CiFoundationBoundary` caps what that policy can grant. A `GithubActions*` role it creates can still carry any policy, so the foundation role is admin by delegation, and the real gate is who may run its apply: the reviewers of `foundation-prod`, and a merge to `main` in dev. An admin created the role and the boundary by hand once in each account; the root then imported the role, and no root CI applies manages the boundary.
 
-The deploy role keeps its broad IAM, S3 and DynamoDB rights for the environment roots, so the foundation root gives it an explicit deny on the CI access that exists today: the existing `GithubActions*` roles and policies, the boundary, the OIDC trust, the state bucket's and lock table's settings, and the foundation root's own state. An environment root cannot change those. It can still create new IAM users and roles; limiting that is OJD-2011's work.
+The deploy role keeps its broad IAM, S3 and DynamoDB rights for the environment roots, so the foundation root gives it an explicit deny on the CI access that exists today: the existing `GithubActions*` roles and policies, the boundary, the OIDC trust, the state bucket's and lock table's settings, and the foundation root's own state and its digest in the lock table. An environment root cannot change those. It can still create new IAM users and roles; limiting that is OJD-2011's work.
 
 ## Review a change
 
