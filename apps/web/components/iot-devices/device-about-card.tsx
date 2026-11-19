@@ -13,6 +13,7 @@ import { Card } from "@repo/ui/components/card";
 
 import { VisibilityBadge } from "../visibility/visibility-badge";
 import { useFormatLastSeen } from "./device-connectivity";
+import { DeviceEquipmentLink } from "./device-equipment-link";
 
 /**
  * The device's identity facts as the overview's sidebar, in the organization
@@ -65,6 +66,9 @@ export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
           enabled={device.capabilities.canShare}
         />
       </dl>
+      <div className="mt-4 empty:hidden">
+        <DeviceEquipmentLink device={device} />
+      </div>
     </Card>
   );
 }
