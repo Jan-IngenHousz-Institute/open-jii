@@ -32,7 +32,9 @@ export class StoreAggregation {
       throw new QueryBuilderInputError("The store does not expand arrays into rows");
     }
 
-    const inner = this.rows.outputColumns().map(({ name, type, idOf }) => ({ name, type, idOf }));
+    const inner = this.rows
+      .outputColumns()
+      .map(({ name, type, idOf, isPairText }) => ({ name, type, idOf, isPairText }));
     // The store finds a capped read's rows by key first, so it never extracts every row's payload
     // to choose them.
     const firstRows = this.firstRows(inner, page.ordering);
@@ -168,7 +170,7 @@ export class StoreAggregation {
   private columnOf(inner: StoreOutputColumn[], name: string): StoreOutputColumn {
     const column = inner.find((candidate) => candidate.name === name);
     if (column !== undefined) {
-      return { name, type: column.type, idOf: column.idOf };
+      return { name, type: column.type, idOf: column.idOf, isPairText: column.isPairText };
     }
     const owner = inner.find(({ name: candidate }) => name.startsWith(`${candidate}.`));
     if (owner?.idOf === undefined) {

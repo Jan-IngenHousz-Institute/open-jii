@@ -16,12 +16,17 @@ export interface StoreColumn {
   /** An as-of read's second device, already the JSON text of its client id and label. */
   isPairText?: boolean;
   /** That device's client id and label, which its own table computes from its own names. */
-  matchedDevice?: DeviceParts;
+  matchedDevice?: MatchedDevice;
 }
 
 export interface DeviceParts {
   clientId: string;
   label: string;
+}
+
+export interface MatchedDevice extends DeviceParts {
+  /** The condition under which a row matched one; the warehouse's device is null where none did. */
+  isMatched: string;
 }
 
 export interface StoreTable {

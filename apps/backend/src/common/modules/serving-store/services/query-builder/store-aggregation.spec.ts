@@ -350,6 +350,26 @@ describe("StoreAggregation", () => {
     expect(query.value.columns[0]).toMatchObject({ name: "device", idOf: "device" });
   });
 
+  it("groups a second table's device by its key's text, which a row with no match leaves null", () => {
+    const query = adapter.buildExperimentQuery(
+      joinedRead({
+        aggregation: {
+          groupBy: [{ column: "second__device" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+        ordering: undefined,
+      }),
+    );
+
+    assertSuccess(query);
+    expect(query.value.sql).toContain("toJSONString(tuple(if(");
+    expect(query.value.columns[0]).toMatchObject({
+      name: "second__device",
+      idOf: "device",
+      isPairText: true,
+    });
+  });
+
   it("reads a second table's contributor as the id it holds, never as JSON text", () => {
     const query = adapter.buildExperimentQuery(joinedRead({ columns: ["second__contributor"] }));
 
@@ -847,6 +867,25 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
         [null, "1"],
         ["Ambit (d2)", "1"],
         ["SN1", "1"],
+      ]);
+    });
+
+    it("groups by the second table's device as null where no row matched, as the warehouse does", async () => {
+      const data = await rowsOf(
+        joinedRead({
+          aggregation: {
+            groupBy: [{ column: "second__device" }],
+            functions: [{ column: "*", function: "count" }],
+          },
+          ordering: { column: "second__device", direction: "ASC" },
+          orderByIds: ["reg-1"],
+        }),
+      );
+
+      expect(data.rows).toEqual([
+        [null, "1"],
+        ['[null,"Ambit (d2)"]', "1"],
+        ['["reg-1","SN1"]', "1"],
       ]);
     });
   });

@@ -130,6 +130,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private rowTypes = new Map<string, string>();
   private outputTypeOf?: (output: NamedOutput) => string | undefined;
   private rowIds = new Map<string, "contributor" | "device">();
+  /** The rows' devices held as their key's JSON text, a matched table's. */
+  private rowPairTexts = new Set<string>();
   /** Kept until a payload, a reserved name or a sheet changes them. */
   private fields?: Map<string, FlattenedField>;
   private expressions?: Map<string, string>;
@@ -238,6 +240,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.rowIds = new Map(
       columns.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
     );
+    this.rowPairTexts = new Set(
+      columns.flatMap(({ name, isPairText }) => (isPairText === true ? [name] : [])),
+    );
     return this;
   }
 
@@ -252,9 +257,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
     const isSerialNumber = idOf === "device" && path === "serial_number";
     if (isSerialNumber) {
-      return `tupleElement(${this.quoteName(name)}, 2)`;
+      return this.rowDevicePart(name, this.quoteName(name), 2);
     }
     return super.escapeIdentifier(identifier);
+  }
+
+  /** A row's device key, its first part, or its label, its second, from its tuple or JSON text. */
+  private rowDevicePart(name: string, sql: string, part: 1 | 2): string {
+    return this.rowPairTexts.has(name)
+      ? `JSONExtract(${sql}, ${part}, 'Nullable(String)')`
+      : `tupleElement(${sql}, ${part})`;
   }
 
   where(condition: string): this {
@@ -576,8 +588,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
     const isWholeDevice = idOrder !== undefined && idOf === "device" && path === undefined;
     if (isWholeDevice) {
-      const place = `indexOf(${ORDER_IDS}, tupleElement(${target}, 1)) ${direction} ${nulls}`;
-      return `${place}, tupleElement(${target}, 2) ${direction} ${nulls}`;
+      const key = this.rowDevicePart(name, target, 1);
+      const label = this.rowDevicePart(name, target, 2);
+      return `indexOf(${ORDER_IDS}, ${key}) ${direction} ${nulls}, ${label} ${direction} ${nulls}`;
     }
     const isContributorName = idOrder !== undefined && idOf === "contributor" && path === "name";
     if (isContributorName) {
@@ -735,7 +748,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
           idOf,
           isPairText: true,
           expression: `if(${isRecent}, toJSONString(tuple(${device.clientId}, ${device.label})), NULL)`,
-          matchedDevice: device,
+          matchedDevice: { ...device, isMatched: isRecent },
         };
       }),
     ];
@@ -762,13 +775,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return `${ASOF_LABEL}${name}`;
   }
 
+  /** A matched device is its key's JSON text, since only text can be null where no row matched. */
   private valueOf({ name, idOf }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
     if (idOf !== "device") {
       return expression;
     }
+
     const [base] = this.structPath(name);
-    return this.deviceKeyOf(this.devicePartsOf(this.baseColumn(base)));
+    const column = this.baseColumn(base);
+    const key = this.deviceKeyOf(this.devicePartsOf(column));
+    const matched = column.matchedDevice;
+    return matched === undefined ? key : `if(${matched.isMatched}, toJSONString(${key}), NULL)`;
   }
 
   /**
