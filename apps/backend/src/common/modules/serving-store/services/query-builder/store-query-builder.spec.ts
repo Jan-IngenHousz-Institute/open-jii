@@ -660,6 +660,38 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
+  /** A chart's read of m1 matched to m2 by device and time, reading the second table's `columns`. */
+  const joined = (columns: { name: string; alias: string }[]) =>
+    new StoreQueryBuilder()
+      .readForChart(MACRO_RESULTS_TABLE, "e1", "m1")
+      .serialNumbers([["reg-1", "SN1"]])
+      .joinAsOf(
+        new StoreQueryBuilder()
+          .readForChart(MACRO_RESULTS_TABLE, "e1", "m2")
+          .serialNumbers([["reg-1", "SN1"]])
+          .buildAsOfSecondary({ column: "device_id", time: "timestamp", columns }),
+        { column: "device_id", time: "timestamp", toleranceMinutes: 60 },
+      );
+
+  it("reads a second table's contributor as the id it holds, never as JSON text", () => {
+    const sql = joined([{ name: "contributor", alias: "second__contributor" }])
+      .select(["second__contributor"])
+      .build();
+
+    expect(sql).toContain("user_id AS `second__contributor`");
+    expect(sql).not.toContain("toJSONString(user_id)");
+  });
+
+  it("filters by a second table's device label from that table's label column", () => {
+    const sql = joined([{ name: "device", alias: "second__device" }])
+      .select(["id"])
+      .filter({ column: "second__device.serial_number", operator: "equals", value: "SN1" })
+      .build();
+
+    const where = sql.slice(sql.lastIndexOf("WHERE"));
+    expect(where).toContain("__asof_secondary.`__asof_label_second__device`");
+  });
+
   it("refuses a column the table does not have, and a struct field it cannot read", () => {
     expect(() => measurements().select(["nope"]).build()).toThrow(QueryBuilderInputError);
     expect(() =>

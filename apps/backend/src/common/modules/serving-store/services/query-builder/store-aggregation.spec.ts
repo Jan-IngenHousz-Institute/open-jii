@@ -16,7 +16,7 @@ import type { StoreQueryParams } from "../../../../../experiments/core/ports/ser
 import { storeMigrationStatements } from "../../../../../test/store-migrations";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { QueryBuilderService } from "../../../databricks/services/query-builder/query-builder.service";
-import { EXPERIMENT_SETTING, ServingStoreAdapter } from "../../serving-store.adapter";
+import { ServingStoreAdapter } from "../../serving-store.adapter";
 import { ServingStoreClientService } from "../client/client.service";
 import { ServingStoreConfigService } from "../config/config.service";
 import { MACRO_RESULTS_TABLE } from "./store-tables";
@@ -240,29 +240,6 @@ describe("StoreAggregation", () => {
     }
   });
 
-  it("sends the experiment with every statement that reads a table, a page's or a chart's", () => {
-    const table = /\b(?:measurements|macro_results|uploads)\b/;
-    const pagesOfTables: string[] = [];
-    for (const name of Object.keys(FIXTURE.cases)) {
-      for (const isChartRead of [true, false]) {
-        const query = adapter.buildExperimentQuery({ ...storeRead(name), isChartRead });
-        assertSuccess(query);
-
-        const readsTable = table.test(query.value.sql);
-        const sends = query.value.experiment !== undefined;
-        expect({ name, isChartRead, sends }).toEqual({ name, isChartRead, sends: readsTable });
-        if (!isChartRead && readsTable) {
-          pagesOfTables.push(name);
-        }
-      }
-    }
-    expect(pagesOfTables).toContain("timeMatchedRows");
-  });
-
-  it("sends the experiment as the setting the module's row policies read", () => {
-    expect(READER_ACCESS.rowFilter).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
-  });
-
   it("writes integer outputs as text, since a sum or an id may pass 2^53", () => {
     const query = adapter.buildExperimentQuery(storeRead("groupedStats"));
 
@@ -370,35 +347,6 @@ describe("StoreAggregation", () => {
     });
   });
 
-  it("reads a second table's contributor as the id it holds, never as JSON text", () => {
-    const query = adapter.buildExperimentQuery(joinedRead({ columns: ["second__contributor"] }));
-
-    assertSuccess(query);
-    expect(query.value.sql).toContain("user_id AS `second__contributor`");
-    expect(query.value.sql).not.toContain("toJSONString(user_id)");
-  });
-
-  it("filters by a second table's device label from that table's label column", () => {
-    const query = adapter.buildExperimentQuery(
-      joinedRead({
-        columns: ["id"],
-        filters: [{ column: "second__device.serial_number", operator: "equals", value: "SN1" }],
-      }),
-    );
-
-    assertSuccess(query);
-    const where = query.value.sql.slice(query.value.sql.lastIndexOf("WHERE"));
-    expect(where).toContain("__asof_secondary.`__asof_label_second__device`");
-  });
-
-  it("sends the second table only the columns the read names", () => {
-    const query = adapter.buildExperimentQuery(joinedRead({ columns: ["id", "w"] }));
-
-    assertSuccess(query);
-    expect(query.value.sql).not.toContain("second__contributor");
-    expect(query.value.sql).not.toContain("second__device");
-  });
-
   it("refuses to expand an array into rows, which no chart asks of the store", () => {
     const query = adapter.buildExperimentQuery({
       ...storeRead("groupedStats"),
@@ -488,106 +436,6 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
     await client.onModuleDestroy();
     await dropReader(admin);
     await admin.close();
-  });
-
-  describe("the reader's row policies", () => {
-    it("fail a chart read that sends no experiment, which reads with it", async () => {
-      const query = adapter.buildExperimentQuery(storeRead("groupedStats"));
-      assertSuccess(query);
-      const reader = createClient({
-        url: STORE_URL,
-        username: READER,
-        password: READER_PASSWORD,
-        database: "store",
-      });
-
-      const refusal = await reader
-        .query({ query: query.value.sql, format: "JSONCompactEachRow" })
-        .then(
-          () => undefined,
-          (error: unknown) => error,
-        );
-      await reader.close();
-      const rows: unknown[][] = [];
-      const read = await client.stream(
-        query.value.sql,
-        { [EXPERIMENT_SETTING]: "charts" },
-        (row) => rows.push(row) > 0,
-      );
-
-      expect(refusal).toMatchObject({ type: "UNKNOWN_SETTING" });
-      assertSuccess(read);
-      expect(rows.length).toBeGreaterThan(0);
-    });
-
-    it("leave a read of the views open without the setting, as pages read", async () => {
-      const rows: unknown[][] = [];
-      const read = await client.stream(
-        "SELECT count() FROM experiment_macro_results(experiment = 'charts') WHERE macro_id = 'm1'",
-        {},
-        (row) => rows.push(row) > 0,
-      );
-
-      assertSuccess(read);
-      expect(rows).toEqual([[FIXTURE.rows.filter((row) => row.experiment === undefined).length]]);
-    });
-
-    it("keep a read to the experiment it sends, whatever its statement names", async () => {
-      const rows: unknown[][] = [];
-      const read = await client.stream(
-        "SELECT DISTINCT experiment_id FROM macro_results FINAL",
-        { [EXPERIMENT_SETTING]: "charts" },
-        (row) => rows.push(row) > 0,
-      );
-      assertSuccess(read);
-      expect(rows).toEqual([["charts"]]);
-
-      const query = adapter.buildExperimentQuery(storeRead("groupedStats", "joined"));
-      assertSuccess(query);
-      const crossed = await adapter.executeQuery({ ...query.value, experiment: "charts" });
-      assertSuccess(crossed);
-      expect(crossed.value.rows).toEqual([]);
-    });
-
-    it("leave the reader no table or view the module does not grant it", async () => {
-      const grants = await admin.query({
-        query: `SELECT DISTINCT table FROM system.grants WHERE user_name = '${READER}' AND database = 'store'`,
-        format: "JSONEachRow",
-      });
-      const granted = new Set(
-        z
-          .array(z.object({ table: z.string() }))
-          .parse(await grants.json())
-          .map(({ table }) => table),
-      );
-      expect([...granted].sort()).toEqual([
-        "experiment_client_ids",
-        "experiment_contributor_ids",
-        "experiment_macro_results",
-        "experiment_measurements",
-        "experiment_payload_schemas",
-        "experiment_uploads",
-        "macro_results",
-        "measurements",
-        "uploads",
-      ]);
-      const listed = await admin.query({
-        query: "SELECT name FROM system.tables WHERE database = 'store' ORDER BY name",
-        format: "JSONEachRow",
-      });
-      const names = z.array(z.object({ name: z.string() })).parse(await listed.json());
-      const others = names.map(({ name }) => name).filter((name) => !granted.has(name));
-      expect(others.length).toBeGreaterThan(0);
-
-      for (const name of others) {
-        const read = await client.stream(
-          `SELECT 1 FROM ${name} LIMIT 1`,
-          { [EXPERIMENT_SETTING]: "charts" },
-          () => true,
-        );
-        expect({ name, refused: read.isFailure() }).toEqual({ name, refused: true });
-      }
-    });
   });
 
   it.each(Object.keys(FIXTURE.cases))("returns Spark's series for %s", async (name) => {
@@ -831,14 +679,6 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
         ["2", BEN, '["phone-a","Ambit (d2)"]'],
         ["3", null, null],
       ]);
-    });
-
-    it("reads a joined page through the reader, its second table under the row policy", async () => {
-      const data = await rowsOf(
-        joinedRead({ isChartRead: false, columns: ["id", "w"], limit: 10, offset: 0 }),
-      );
-
-      expect(data.rows.map(([id]) => id)).toEqual(["1", "2", "3"]);
     });
 
     it("filters by the second table's device label, from that table's own names", async () => {

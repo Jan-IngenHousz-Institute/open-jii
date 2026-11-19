@@ -2,6 +2,9 @@ import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { z } from "zod";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
@@ -321,6 +324,43 @@ describe("ServingStoreAdapter", () => {
     expect(joinedCountCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
   });
 
+  it("sends the experiment as the setting the module's row policies read", () => {
+    expect(READER_ACCESS.rowFilter).toBe(`experiment_id = getSetting('${EXPERIMENT_SETTING}')`);
+  });
+
+  it("sends the second table only the columns the read names", () => {
+    const query = adapter.buildExperimentQuery({
+      tableName: "m1",
+      tableType: "macro",
+      experimentId: "e1",
+      columns: ["id", "w"],
+      isChartRead: true,
+      join: {
+        matchColumn: "device_id",
+        toleranceMinutes: 60,
+        secondary: {
+          tableName: "m2",
+          tableType: "macro",
+          variants: [{ columnName: "macro_output", schema: "OBJECT<w: DOUBLE>", suffix: "output" }],
+        },
+        primaryColumns: ["id", "device_id", "timestamp"],
+        secondaryColumns: [
+          { name: "contributor", alias: "second__contributor" },
+          { name: "device", alias: "second__device" },
+          { name: "w", alias: "w" },
+        ],
+        primaryTimeColumn: "timestamp",
+        primaryTimeType: "TIMESTAMP",
+        secondaryTimeColumn: "timestamp",
+        secondaryTimeType: "TIMESTAMP",
+      },
+    });
+
+    assertSuccess(query);
+    expect(query.value.sql).not.toContain("second__contributor");
+    expect(query.value.sql).not.toContain("second__device");
+  });
+
   it("sorts a payload read whole by its typed value, never its JSON", () => {
     const query = adapter.buildExperimentQuery({
       tableName: "mac3",
@@ -364,8 +404,8 @@ describe("ServingStoreAdapter", () => {
 
 /**
  * The adapter's reads against a real store of the version the store runs, through the migrations'
- * views. It rebuilds the `store` database, so it runs only against a throwaway store, and skips
- * without one:
+ * views, and the module's grants and row policy given to a reader. It rebuilds the `store`
+ * database and its own reader, so it runs only against a throwaway store, and skips without one:
  *
  *   docker run -d --name feed-test-clickhouse -p 127.0.0.1:18123:8123 \
  *     -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
@@ -2206,6 +2246,161 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       }, 60_000);
     });
   });
+
+  describe("the reader's row policies", () => {
+    let readerClient: ServingStoreClientService;
+    let readerAdapter: ServingStoreAdapter;
+    const chartRead: StoreQueryParams = {
+      tableName: "mac1",
+      tableType: "macro",
+      experimentId: EXPERIMENT,
+      columns: ["id"],
+      isChartRead: true,
+    };
+
+    beforeAll(async () => {
+      await createReader(admin);
+      const config = new ConfigService({
+        servingStore: { url: STORE_URL ?? "", username: READER, password: READER_PASSWORD },
+      });
+      readerClient = new ServingStoreClientService(new ServingStoreConfigService(config));
+      readerAdapter = new ServingStoreAdapter(readerClient);
+    });
+
+    afterAll(async () => {
+      await readerClient.onModuleDestroy();
+      await dropReader(admin);
+    });
+
+    it("fail a chart read that sends no experiment, which reads with it", async () => {
+      const query = readerAdapter.buildExperimentQuery(chartRead);
+      assertSuccess(query);
+      const reader = createClient({
+        url: STORE_URL,
+        username: READER,
+        password: READER_PASSWORD,
+        database: "store",
+      });
+
+      const refusal = await reader
+        .query({ query: query.value.sql, format: "JSONCompactEachRow" })
+        .then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+      await reader.close();
+      const rows: unknown[][] = [];
+      const read = await readerClient.stream(
+        query.value.sql,
+        { [EXPERIMENT_SETTING]: EXPERIMENT },
+        (row) => rows.push(row) > 0,
+      );
+
+      expect(refusal).toMatchObject({ type: "UNKNOWN_SETTING" });
+      assertSuccess(read);
+      expect(rows).toHaveLength(2);
+    });
+
+    it("leave a read of the views open without the setting, as pages read", async () => {
+      const rows: unknown[][] = [];
+      const read = await readerClient.stream(
+        `SELECT count() FROM experiment_macro_results(experiment = '${EXPERIMENT}') WHERE macro_id = 'mac1'`,
+        {},
+        (row) => rows.push(row) > 0,
+      );
+
+      assertSuccess(read);
+      expect(rows).toEqual([[2]]);
+    });
+
+    it("keep a read to the experiment it sends, whatever its statement names", async () => {
+      const rows: unknown[][] = [];
+      const read = await readerClient.stream(
+        "SELECT DISTINCT experiment_id FROM macro_results FINAL",
+        { [EXPERIMENT_SETTING]: EXPERIMENT },
+        (row) => rows.push(row) > 0,
+      );
+      assertSuccess(read);
+      expect(rows).toEqual([[EXPERIMENT]]);
+
+      const query = readerAdapter.buildExperimentQuery(chartRead);
+      assertSuccess(query);
+      const crossed = await readerAdapter.executeQuery({ ...query.value, experiment: "whole" });
+      assertSuccess(crossed);
+      expect(crossed.value.rows).toEqual([]);
+    });
+
+    it("read a joined page's second table under the policy too", async () => {
+      const query = readerAdapter.buildExperimentQuery({
+        tableName: "mac1",
+        tableType: "macro",
+        experimentId: EXPERIMENT,
+        columns: ["id", "matched_id"],
+        ordering: { column: "id" },
+        limit: 10,
+        offset: 0,
+        join: {
+          matchColumn: "raw_id",
+          toleranceMinutes: 60,
+          secondary: { tableName: "mac2", tableType: "macro" },
+          primaryColumns: ["id", "raw_id", "timestamp"],
+          secondaryColumns: [{ name: "id", alias: "matched_id" }],
+          primaryTimeColumn: "timestamp",
+          primaryTimeType: "TIMESTAMP",
+          secondaryTimeColumn: "timestamp",
+          secondaryTimeType: "TIMESTAMP",
+        },
+      });
+      assertSuccess(query);
+      const data = await readerAdapter.executeQuery(query.value);
+
+      assertSuccess(data);
+      expect(data.value.rows).toEqual([
+        ["11", "13"],
+        ["12", null],
+      ]);
+    });
+
+    it("leave the reader no table or view the module does not grant it", async () => {
+      const grants = await admin.query({
+        query: `SELECT DISTINCT table FROM system.grants WHERE user_name = '${READER}' AND database = 'store'`,
+        format: "JSONEachRow",
+      });
+      const granted = new Set(
+        z
+          .array(z.object({ table: z.string() }))
+          .parse(await grants.json())
+          .map(({ table }) => table),
+      );
+      expect([...granted].sort()).toEqual([
+        "experiment_client_ids",
+        "experiment_contributor_ids",
+        "experiment_macro_results",
+        "experiment_measurements",
+        "experiment_payload_schemas",
+        "experiment_uploads",
+        "macro_results",
+        "measurements",
+        "uploads",
+      ]);
+      const listed = await admin.query({
+        query: "SELECT name FROM system.tables WHERE database = 'store' ORDER BY name",
+        format: "JSONEachRow",
+      });
+      const names = z.array(z.object({ name: z.string() })).parse(await listed.json());
+      const others = names.map(({ name }) => name).filter((name) => !granted.has(name));
+      expect(others.length).toBeGreaterThan(0);
+
+      for (const name of others) {
+        const read = await readerClient.stream(
+          `SELECT 1 FROM ${name} LIMIT 1`,
+          { [EXPERIMENT_SETTING]: EXPERIMENT },
+          () => true,
+        );
+        expect({ name, refused: read.isFailure() }).toEqual({ name, refused: true });
+      }
+    });
+  });
 });
 
 describe("StoreTables against the migrations", () => {
@@ -2242,3 +2437,51 @@ describe("StoreTables against the migrations", () => {
     }
   });
 });
+
+const MODULE = resolve(__dirname, "../../../../../../infrastructure/modules/serving-store");
+
+/** A reader of this spec's own, given the grants and row policy the module gives the store's. */
+const READER = "adapter_spec_reader";
+const READER_PASSWORD = "adapter-spec";
+const READER_POLICY = "adapter_spec_reader_policy";
+
+/** The reader's access as the module's main.tf writes its locals. */
+const READER_ACCESS = readerAccess();
+
+function readerAccess(): { views: string[]; tables: string[]; rowFilter: string } {
+  const main = readFileSync(resolve(MODULE, "main.tf"), "utf-8");
+  const local = (name: string) => {
+    const value = new RegExp(`^\\s*${name}\\s*=\\s*(\\[[^\\]]*\\]|"[^"]*")`, "m").exec(main)?.[1];
+    if (value === undefined) {
+      throw new Error(`main.tf no longer sets ${name}`);
+    }
+    return value;
+  };
+  const names = (list: string) => {
+    const quoted: string[] = list.match(/"[^"]+"/g) ?? [];
+    return quoted.map((name) => name.slice(1, -1));
+  };
+  return {
+    views: names(local("reader_views")),
+    tables: names(local("reader_tables")),
+    rowFilter: local("reader_row_filter").slice(1, -1),
+  };
+}
+
+async function createReader(admin: ClickHouseClient): Promise<void> {
+  await dropReader(admin);
+  await admin.command({ query: `CREATE USER ${READER} IDENTIFIED BY '${READER_PASSWORD}'` });
+  for (const name of [...READER_ACCESS.views, ...READER_ACCESS.tables]) {
+    await admin.command({ query: `GRANT SELECT ON store.${name} TO ${READER}` });
+  }
+  const tables = READER_ACCESS.tables.map((table) => `store.${table}`).join(", ");
+  await admin.command({
+    query: `CREATE ROW POLICY ${READER_POLICY} ON ${tables} USING ${READER_ACCESS.rowFilter} TO ${READER}`,
+  });
+}
+
+async function dropReader(admin: ClickHouseClient): Promise<void> {
+  const tables = READER_ACCESS.tables.map((table) => `store.${table}`).join(", ");
+  await admin.command({ query: `DROP ROW POLICY IF EXISTS ${READER_POLICY} ON ${tables}` });
+  await admin.command({ query: `DROP USER IF EXISTS ${READER}` });
+}
