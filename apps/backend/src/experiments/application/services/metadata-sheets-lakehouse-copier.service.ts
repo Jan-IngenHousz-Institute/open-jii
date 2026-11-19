@@ -5,10 +5,10 @@ import type { CopyKey } from "../../core/models/experiment-data-outbox.model";
 import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
-import { ExperimentDataCopier } from "./experiment-data-copier";
+import { ExperimentDataCopierService } from "./experiment-data-copier.service";
 
 @Injectable()
-export class MetadataSheetsLakehouseCopier extends ExperimentDataCopier<MetadataSheetRecord> {
+export class MetadataSheetsLakehouseCopierService extends ExperimentDataCopierService<MetadataSheetRecord> {
   constructor(
     private readonly sheets: ExperimentMetadataRepository,
     private readonly warehouse: ExperimentMetadataWarehouseRepository,

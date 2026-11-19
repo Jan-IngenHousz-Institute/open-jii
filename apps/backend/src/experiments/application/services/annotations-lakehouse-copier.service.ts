@@ -5,11 +5,11 @@ import type { AnnotationCopy } from "../../core/models/experiment-data-annotatio
 import type { CopyKey } from "../../core/models/experiment-data-outbox.model";
 import { ExperimentAnnotationsWarehouseRepository } from "../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
-import { ExperimentDataCopier } from "./experiment-data-copier";
+import { ExperimentDataCopierService } from "./experiment-data-copier.service";
 
 /** Annotations go in one statement: a claim's worth stays well under the warehouse's parameters. */
 @Injectable()
-export class AnnotationsLakehouseCopier extends ExperimentDataCopier<AnnotationCopy> {
+export class AnnotationsLakehouseCopierService extends ExperimentDataCopierService<AnnotationCopy> {
   constructor(
     private readonly annotations: ExperimentAnnotationsRepository,
     private readonly warehouse: ExperimentAnnotationsWarehouseRepository,

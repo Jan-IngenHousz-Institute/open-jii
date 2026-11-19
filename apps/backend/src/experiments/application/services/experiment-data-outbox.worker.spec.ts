@@ -17,14 +17,14 @@ import { ExperimentDataOutboxRepository } from "../../core/repositories/experime
 import { ExperimentMetadataStoreRepository } from "../../core/repositories/experiment-metadata-store.repository";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
-import { AnnotationsLakehouseCopier } from "./annotations-lakehouse-copier";
-import { AnnotationsStoreCopier } from "./annotations-store-copier";
+import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
+import { AnnotationsStoreCopierService } from "./annotations-store-copier.service";
 import {
   EXPERIMENT_DATA_OUTBOX_INTERVAL,
   ExperimentDataOutboxWorker,
 } from "./experiment-data-outbox.worker";
-import { MetadataSheetsLakehouseCopier } from "./metadata-sheets-lakehouse-copier";
-import { MetadataSheetsStoreCopier } from "./metadata-sheets-store-copier";
+import { MetadataSheetsLakehouseCopierService } from "./metadata-sheets-lakehouse-copier.service";
+import { MetadataSheetsStoreCopierService } from "./metadata-sheets-store-copier.service";
 
 describe("ExperimentDataOutboxWorker", () => {
   const testApp = TestHarness.App;
@@ -88,10 +88,10 @@ describe("ExperimentDataOutboxWorker", () => {
   ): ExperimentDataOutboxWorker {
     return new ExperimentDataOutboxWorker(
       outbox,
-      testApp.module.get(AnnotationsLakehouseCopier),
-      testApp.module.get(MetadataSheetsLakehouseCopier),
-      testApp.module.get(AnnotationsStoreCopier),
-      testApp.module.get(MetadataSheetsStoreCopier),
+      testApp.module.get(AnnotationsLakehouseCopierService),
+      testApp.module.get(MetadataSheetsLakehouseCopierService),
+      testApp.module.get(AnnotationsStoreCopierService),
+      testApp.module.get(MetadataSheetsStoreCopierService),
     );
   }
 
@@ -292,10 +292,10 @@ describe("ExperimentDataOutboxWorker", () => {
     }
     return new HastyWorker(
       testApp.module.get(ExperimentDataOutboxRepository),
-      testApp.module.get(AnnotationsLakehouseCopier),
-      testApp.module.get(MetadataSheetsLakehouseCopier),
-      testApp.module.get(AnnotationsStoreCopier),
-      testApp.module.get(MetadataSheetsStoreCopier),
+      testApp.module.get(AnnotationsLakehouseCopierService),
+      testApp.module.get(MetadataSheetsLakehouseCopierService),
+      testApp.module.get(AnnotationsStoreCopierService),
+      testApp.module.get(MetadataSheetsStoreCopierService),
     );
   }
 

@@ -9,11 +9,11 @@ import type {
   ExperimentDataRecordType,
 } from "../../core/models/experiment-data-outbox.model";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
-import { AnnotationsLakehouseCopier } from "./annotations-lakehouse-copier";
-import { AnnotationsStoreCopier } from "./annotations-store-copier";
-import type { CopyOutcome, ExperimentDataCopier } from "./experiment-data-copier";
-import { MetadataSheetsLakehouseCopier } from "./metadata-sheets-lakehouse-copier";
-import { MetadataSheetsStoreCopier } from "./metadata-sheets-store-copier";
+import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
+import { AnnotationsStoreCopierService } from "./annotations-store-copier.service";
+import type { CopyOutcome, ExperimentDataCopierService } from "./experiment-data-copier.service";
+import { MetadataSheetsLakehouseCopierService } from "./metadata-sheets-lakehouse-copier.service";
+import { MetadataSheetsStoreCopierService } from "./metadata-sheets-store-copier.service";
 
 /** One kind of record and the copy it is owed, which a claim's rows are applied by. */
 interface CopyTarget {
@@ -70,15 +70,15 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
   private readonly copiers: Record<
     ExperimentDataRecordType,
-    Record<ExperimentDataDestination, ExperimentDataCopier<{ id: string }>>
+    Record<ExperimentDataDestination, ExperimentDataCopierService<{ id: string }>>
   >;
 
   constructor(
     private readonly outbox: ExperimentDataOutboxRepository,
-    annotationsLakehouse: AnnotationsLakehouseCopier,
-    sheetsLakehouse: MetadataSheetsLakehouseCopier,
-    annotationsStore: AnnotationsStoreCopier,
-    sheetsStore: MetadataSheetsStoreCopier,
+    annotationsLakehouse: AnnotationsLakehouseCopierService,
+    sheetsLakehouse: MetadataSheetsLakehouseCopierService,
+    annotationsStore: AnnotationsStoreCopierService,
+    sheetsStore: MetadataSheetsStoreCopierService,
   ) {
     this.copiers = {
       annotation: { lakehouse: annotationsLakehouse, serving_store: annotationsStore },

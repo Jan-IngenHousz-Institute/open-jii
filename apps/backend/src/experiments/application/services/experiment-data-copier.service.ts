@@ -10,7 +10,7 @@ export type CopyOutcome = "copied" | "stopped" | { failed: string };
  * the time of the copy: it writes the records that still exist and deletes the copies of the rest,
  * so several edits arrive as one and copying a record twice does no harm.
  */
-export abstract class ExperimentDataCopier<T extends { id: string }> {
+export abstract class ExperimentDataCopierService<T extends { id: string }> {
   /** The records each statement-sized group copies. */
   groupsOf(owed: CopyKey[]): Promise<Result<CopyKey[][]>> {
     return Promise.resolve(success([owed]));
