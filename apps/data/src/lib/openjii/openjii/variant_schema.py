@@ -9,7 +9,7 @@ over every row.
 
 from __future__ import annotations
 
-from pyspark.sql import Column
+from pyspark.sql import Column, DataFrame
 from pyspark.sql import functions as F
 
 # A type position, never a field name: the start of the schema, after a field's
@@ -29,3 +29,27 @@ def variant_schema_key(expression: str) -> Column:
 def merged_variant_schema(expression: str) -> Column:
     """The normalised merge of a group's VARIANT values, null when none has a type."""
     return _decimals_as_double(F.expr(f"nullif(schema_of_variant_agg({expression}), 'VOID')"))
+
+
+def custom_metadata_schemas(sheets: DataFrame, *keys: str) -> DataFrame:
+    """The schema of the custom metadata the sheets in ``sheets`` hold, per group of ``keys``, in
+    column ``custom_metadata_schema``, decimals kept. Each row leaves out its ``_id`` and its
+    identifier, so a read does not expand them into columns that repeat it."""
+    return (
+        sheets.select(
+            *keys,
+            F.expr("variant_get(metadata, '$.identifierColumnId', 'STRING')").alias("_id_col"),
+            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row"),
+        )
+        .withColumn(
+            "_row",
+            F.expr("""
+                parse_json(to_json(map_filter(
+                    cast(_row AS MAP<STRING, VARIANT>),
+                    (k, v) -> k != '_id' AND k != _id_col
+                )))
+            """),
+        )
+        .groupBy(*keys)
+        .agg(F.expr("nullif(schema_of_variant_agg(_row), 'VOID')").alias("custom_metadata_schema"))
+    )

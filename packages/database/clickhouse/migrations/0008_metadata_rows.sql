@@ -30,3 +30,24 @@ SETTINGS non_replicated_deduplication_window = 10000;
 
 CREATE VIEW IF NOT EXISTS experiment_metadata_rows DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
 SELECT sheet_id, sheet_created_at, match_on, identifier, fields FROM metadata_rows FINAL WHERE experiment_id = {experiment:String};
+
+-- Each metadata sheet once, which the feed sends after the sheet's rows: what it matches readings by,
+-- and the schema of its rows as gold's listing types custom metadata, decimals kept, NULL for a sheet
+-- without rows. An experiment's sheets' schemas merge into the one gold lists for it. A deleted sheet
+-- arrives with is_deleted = 1, as its rows do.
+CREATE TABLE IF NOT EXISTS metadata_sheets
+(
+    experiment_id String,
+    sheet_id String,
+    sheet_created_at DateTime64(6, 'UTC'),
+    match_on String,
+    schema Nullable(String),
+    is_deleted UInt8 DEFAULT 0,
+    _commit_version Int64
+)
+ENGINE = ReplacingMergeTree(_commit_version, is_deleted)
+ORDER BY (experiment_id, sheet_id)
+SETTINGS non_replicated_deduplication_window = 10000;
+
+CREATE VIEW IF NOT EXISTS experiment_metadata_sheets DEFINER = CURRENT_USER SQL SECURITY DEFINER AS
+SELECT sheet_id, sheet_created_at, match_on, schema, _commit_version FROM metadata_sheets FINAL WHERE experiment_id = {experiment:String};

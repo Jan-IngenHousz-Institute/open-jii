@@ -171,7 +171,7 @@ def test_the_sheet_rows_flow_reads_the_sheets_copy_outside_the_pipeline_from_its
     assert session.readStream.options["startingVersion"] == "latest"
 
 
-def test_a_batch_of_sheet_rows_goes_without_payload_schemas(
+def test_a_batch_of_sheet_rows_sends_each_sheet_with_its_schema_once_its_rows_have_gone(
     spark: SparkSession,
     fake_dp: types.ModuleType,
     start_versions: None,
@@ -189,7 +189,7 @@ def test_a_batch_of_sheet_rows_goes_without_payload_schemas(
     changes = spark.sql(
         """
         SELECT 'e1' AS experiment_id, 's1' AS metadata_id,
-          parse_json('{"identifierColumnId": "plot", "experimentQuestionId": "q", "rows": [{"plot": "A1"}]}') AS metadata,
+          parse_json('{"identifierColumnId": "plot", "experimentQuestionId": "q", "rows": [{"plot": "A1", "area": 1.5}]}') AS metadata,
           TIMESTAMP'2026-09-01 08:00:00' AS created_at, 'insert' AS _change_type, 1L AS _commit_version,
           TIMESTAMP'2026-09-02 10:00:00' AS _commit_timestamp
         """
@@ -198,7 +198,17 @@ def test_a_batch_of_sheet_rows_goes_without_payload_schemas(
     fake_dp.sinks["serving_store_metadata_rows"](changes, 0)
 
     assert sent == [("metadata_rows", 1)]
-    assert all(lines == [] for _, lines in schemas_sent)
+    [(table, [line])] = schemas_sent
+    assert table == "metadata_sheets"
+    assert json.loads(line) | {"sheet_created_at": None} == {
+        "experiment_id": "e1",
+        "sheet_id": "s1",
+        "sheet_created_at": None,
+        "match_on": "q",
+        "schema": "OBJECT<area: DECIMAL(2,1)>",
+        "is_deleted": 0,
+        "_commit_version": 1,
+    }
 
 
 def test_a_batch_goes_to_the_store_as_its_tables_lines_with_fresh_credentials(

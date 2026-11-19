@@ -5,8 +5,8 @@ of them in 105 minutes, or the store's feed timer has sent nothing for five minu
 feed moves again, the store holds data that stops at the stall.
 
 The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Centrum also sends the metadata sheets' rows, from the
-backend's copy of the sheets rather than from gold. Each pipeline's sinks exist only while the feed is switched
+macro results in the macro pipeline. Centrum also sends the metadata sheets and their rows, from
+the backend's copy of the sheets rather than from gold. Each pipeline's sinks exist only while the feed is switched
 on. A timer on the store's instance counts the rows each table took every minute and reports zero
 when none arrived, so its silence is the timer or ClickHouse stopping, not a quiet night.
 

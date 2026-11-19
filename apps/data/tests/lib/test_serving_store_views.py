@@ -33,6 +33,7 @@ _READER_VIEWS = (
     "experiment_client_ids",
     "experiment_payload_schemas",
     "experiment_metadata_rows",
+    "experiment_metadata_sheets",
 )
 
 _COMMIT = "_commit_version, _commit_timestamp"
@@ -294,6 +295,27 @@ def test_a_sheet_row_reads_at_its_newest_commit_and_not_once_an_edit_or_deletion
     )
 
     assert rows == [{"identifier": "plot-1", "fields": '{"soil":"loam"}'}]
+
+
+def test_a_sheet_reads_its_newest_schema_and_not_once_deleted(admin: _User, reader: _User) -> None:
+    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.metadata_sheets")
+    columns = "experiment_id, sheet_id, sheet_created_at, match_on, schema, is_deleted, _commit_version"
+    admin.ok(
+        f"INSERT INTO {_DATABASE}.metadata_sheets ({columns}) VALUES "
+        "('e1', 's1', '2026-10-19 08:00:00', 'q1', 'OBJECT<soil: STRING>', 0, 1), "
+        "('e1', 's1', '2026-10-19 08:00:00', 'q1', 'OBJECT<area: DECIMAL(2,1), soil: STRING>', 0, 2), "
+        "('e1', 's2', '2026-10-19 09:00:00', 'q1', 'OBJECT<ph: BIGINT>', 0, 3), "
+        "('e1', 's2', '2026-10-19 09:00:00', 'q1', NULL, 1, 4), "
+        "('e2', 's3', '2026-10-19 10:00:00', 'q1', 'OBJECT<ph: BIGINT>', 0, 5)"
+    )
+
+    rows = reader.rows(
+        f"SELECT sheet_id, schema, _commit_version FROM {_DATABASE}.experiment_metadata_sheets(experiment = 'e1')"
+    )
+
+    assert [(row["sheet_id"], row["schema"], int(row["_commit_version"])) for row in rows] == [
+        ("s1", "OBJECT<area: DECIMAL(2,1), soil: STRING>", 2)
+    ]
 
 
 def test_the_reader_reads_the_sheet_rows_only_through_their_view(reader: _User) -> None:

@@ -154,16 +154,17 @@ a small experiment only adds small parts, which reads handle.
 
 ## Metadata sheets
 
-The reload copies gold only. The store's `metadata_rows` come from the lakehouse's copy of the
-sheets, `centrum.experiment_custom_metadata`, which the backend's outbox keeps to Postgres: the
-Centrum feed reads that table's change feed and sends each sheet's rows, and the identifiers an edit
-dropped or a deletion removed as deleted rows. Its sink starts at the latest version
+The reload copies gold only. The store's `metadata_rows` and `metadata_sheets` come from the
+lakehouse's copy of the sheets, `centrum.experiment_custom_metadata`, which the backend's outbox keeps
+to Postgres: the Centrum feed reads that table's change feed and sends each sheet's rows, and the
+identifiers an edit dropped or a deletion removed as deleted rows, then the sheet itself with the
+schema of its rows to `metadata_sheets`. Its sink starts at the latest version
 (`SERVING_STORE_FEED_START_METADATA_ROWS`), so the sheets the copy held before it started are sent
 only once each changes.
 
-To fill the store the first time, or to repair it after `metadata_rows` was emptied, owe every sheet
-to the lakehouse once, after Centrum runs the feed's sink. Each copy rewrites its sheet, and the
-feed sends its rows. From a database session:
+To fill the store the first time, or to repair it after `metadata_rows` or `metadata_sheets` was
+emptied, owe every sheet to the lakehouse once, after Centrum runs the feed's sink. Each copy
+rewrites its sheet, and the feed sends the sheet and its rows. From a database session:
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
@@ -174,20 +175,19 @@ ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NO
 
 Wait until `SELECT count(*) FROM experiment_data_outbox WHERE record_type = 'metadata_sheet'` reads
 0, then until the feed has sent the last batch, and compare the sheets the store holds with the
-sheets Postgres holds:
+sheets Postgres holds. The two counts match unless a batch went without its schemas, which
+`store-feed-rejects` reports for `metadata_rows`:
 
 ```sql
 -- On the store
-SELECT count(DISTINCT sheet_id) FROM store.metadata_rows FINAL;
+SELECT count() FROM store.metadata_sheets FINAL;
 ```
 
 ```sql
--- On Postgres: the sheets with at least one row the store can match by
-SELECT count(*) FROM experiment_metadata_sheets
-WHERE jsonb_typeof(metadata -> 'rows') = 'array' AND metadata ? 'identifierColumnId';
+-- On Postgres
+SELECT count(*) FROM experiment_metadata_sheets;
 ```
 
-The store may count fewer: a sheet whose rows all lack their identifier has nothing to match by.
 Owing a sheet twice does no harm, since a copy writes each sheet's current state. The store keeps
 no copy of annotations: a read filtered by flags takes the flagged rows from Postgres.
 

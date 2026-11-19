@@ -229,6 +229,54 @@ def test_a_sheets_rows_go_one_per_identifier_and_the_ones_an_edit_or_deletion_re
     assert lines[0]["sheet_created_at"] == "2026-09-01 08:00:00.000000"
 
 
+_TYPED_PLOTS = (
+    '{"identifierColumnId": "plot", "experimentQuestionId": "q_plot", "rows": ['
+    '{"_id": "r1", "plot": "A1", "soil": "clay", "area": 1.5}, {"_id": "r2", "plot": "A1", "area": 12.25}, '
+    '{"_id": "r3", "plot": 7, "soil": null}]}'
+)
+
+_SHEET_SCHEMA_CHANGES = f"""
+    SELECT experiment_id, metadata_id, parse_json(doc) AS metadata, 'u1' AS created_by,
+      TIMESTAMP'2026-09-01 08:00:00' AS created_at, TIMESTAMP'2026-09-01 08:00:00' AS updated_at,
+      _change_type, _commit_version, TIMESTAMP'2026-09-02 10:00:00' AS _commit_timestamp
+    FROM VALUES
+      ('e1', 's1', '{_TYPED_PLOTS}', 'insert', 1L),
+      ('e1', 's1', '{_TYPED_PLOTS}', 'update_preimage', 2L),
+      ('e1', 's1', '{_PLOTS_EDITED}', 'update_postimage', 2L),
+      ('e1', 's2', '{_DEVICES}', 'delete', 3L),
+      ('e1', 's3', '{{"name": "Plots"}}', 'insert', 4L)
+    AS t(experiment_id, metadata_id, doc, _change_type, _commit_version)
+"""
+
+
+def test_each_sheet_goes_once_per_commit_with_the_schema_gold_types_its_rows_with(
+    spark: SparkSession,
+) -> None:
+    lines = [
+        json.loads(row.line) for row in METADATA_ROWS.schema_lines(spark.sql(_SHEET_SCHEMA_CHANGES)).collect()
+    ]
+
+    sent = {
+        (line["sheet_id"], line["_commit_version"]): (
+            line["is_deleted"],
+            line["match_on"],
+            line.get("schema"),
+        )
+        for line in lines
+    }
+    # Every row counts, an identifier's repeats and the identifier's own column left out; a sheet
+    # without rows has no schema.
+    assert sent == {
+        ("s1", 1): (0, "q_plot", "OBJECT<area: DECIMAL(4,2), soil: STRING>"),
+        ("s1", 2): (0, "q_plot", "OBJECT<soil: STRING>"),
+        ("s2", 3): (1, "column:device_id", None),
+        ("s3", 4): (0, "", None),
+    }
+    assert len(lines) == 4
+    assert {line["sheet_created_at"] for line in lines} == {"2026-09-01 08:00:00.000000"}
+    assert METADATA_ROWS.schema_table == "metadata_sheets"
+
+
 def test_each_table_reads_its_source_in_the_pipeline_or_the_sheets_copy_by_name() -> None:
     assert MEASUREMENTS.source("open_jii_dev") == "LIVE.experiment_raw_data"
     assert METADATA_ROWS.source("open_jii_dev") == "open_jii_dev.centrum.experiment_custom_metadata"

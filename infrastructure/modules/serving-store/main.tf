@@ -49,7 +49,7 @@ locals {
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
-    "experiment_metadata_rows",
+    "experiment_metadata_rows", "experiment_metadata_sheets",
   ]
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 

@@ -14,7 +14,7 @@ from openjii.centrum.constants import (
     EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_UPLOADED_DATA_TABLE,
 )
-from openjii.variant_schema import merged_variant_schema
+from openjii.variant_schema import custom_metadata_schemas, merged_variant_schema
 
 # The store parses microseconds without an offset. Spark's default writes milliseconds with the
 # session's offset, and pre-1900 zones carry offsets such as +00:17:30 that the store refuses.
@@ -32,6 +32,9 @@ _KEPT_CHANGES = ("insert", "update_postimage")
 
 # The store table that holds every table's payload schemas.
 PAYLOAD_SCHEMAS = "payload_schemas"
+
+# The store table that holds each metadata sheet's match and the schema its rows give.
+METADATA_SHEETS = "metadata_sheets"
 
 # The store's Float64 columns, which each line writes first so the writer can rewrite their digits
 # without reading the rest of the line (writer.exact_doubles).
@@ -84,6 +87,8 @@ class StoreTable:
     # holds, and the payload columns whose schemas it lists.
     table_type: str
     payloads: tuple[str, ...]
+    # The store table its schema lines go to, after its rows.
+    schema_table = PAYLOAD_SCHEMAS
 
     def source(self, catalog: str) -> str:
         """The table whose change feed the store table is fed from."""
@@ -282,13 +287,14 @@ class MetadataRows(StoreTable):
 
     A sheet's rows are matched as the warehouse's enriched views match them, so both read the same
     metadata: by the identifier column's value as text, the first row of each identifier winning,
-    and the rest of the row, without its ``_id``, as the fields."""
+    and the rest of the row, without its ``_id``, as the fields. Each sheet also goes to
+    ``metadata_sheets`` with the schema gold types its rows with."""
 
     name = "metadata_rows"
     source_table = EXPERIMENT_CUSTOM_METADATA_TABLE
     partitioned_by = "sheet_created_at"
     processed_at = None
-    payloads = ()
+    schema_table = METADATA_SHEETS
 
     def source(self, catalog: str) -> str:
         return f"{catalog}.centrum.{self.source_table}"
@@ -317,6 +323,41 @@ class MetadataRows(StoreTable):
         return stored.select(
             F.to_json(row, JSON_OPTIONS).alias("line"), F.col(self.partitioned_by).alias("partition_time")
         )
+
+    def schema_lines(self, changes: DataFrame) -> DataFrame:
+        """One JSON line per sheet in ``changes`` at each commit that changed it: its match and the
+        schema of its rows as gold types custom metadata, none for a sheet without rows. A deleted
+        sheet goes as deleted, as its rows do."""
+        sheets = changes.selectExpr(
+            "experiment_id",
+            "metadata_id AS sheet_id",
+            "created_at AS sheet_created_at",
+            "coalesce(variant_get(metadata, '$.experimentQuestionId', 'STRING'), '') AS match_on",
+            "metadata",
+            "_change_type",
+            "_commit_version",
+        )
+        keys = ["sheet_id", "_commit_version"]
+        current = sheets.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
+        removed = sheets.filter(F.col("_change_type").isin("update_preimage", "delete")).join(
+            current.select(*keys), keys, "left_anti"
+        )
+        typed = current.join(custom_metadata_schemas(current, *keys), keys, "left")
+        stored = typed.withColumn("is_deleted", F.lit(0)).unionByName(
+            removed.withColumn("custom_metadata_schema", F.lit(None).cast("string")).withColumn(
+                "is_deleted", F.lit(1)
+            )
+        )
+        row = F.struct(
+            "experiment_id",
+            "sheet_id",
+            "sheet_created_at",
+            "match_on",
+            F.col("custom_metadata_schema").alias("schema"),
+            "is_deleted",
+            "_commit_version",
+        )
+        return stored.select(F.to_json(row, JSON_OPTIONS).alias("line"))
 
     def _sheet_rows(self, changes: DataFrame) -> DataFrame:
         """Each sheet's rows in ``changes``, one per identifier, per change. A sheet saved before its

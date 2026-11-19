@@ -9,7 +9,7 @@ from typing import Any
 
 from pyspark.sql import DataFrame, SparkSession
 
-from .tables import PAYLOAD_SCHEMAS, StoreTable
+from .tables import StoreTable
 from .writer import StoreUnavailable, StoreWriter
 
 # Bounds a catch-up batch, so the feed cannot hold the cores ingestion needs for long. Delta reads a
@@ -80,8 +80,6 @@ class StoreFeed:
         """The batch's payload schemas, or none and why when Spark cannot work them out. The rows
         still go, and the reason goes to ``feed_rejects``, since an upload's rows arrive in one batch
         and no later one would bring its schemas."""
-        if not table.payloads:
-            return [], None
         try:
             return [row.line for row in table.schema_lines(changes).collect()], None
         except Exception as error:
@@ -107,11 +105,11 @@ class StoreFeed:
         written = writer.write(lines, table.name)
         if written.unfinished:
             return f"{written.unfinished} rows not sent"
-        schemas_written = writer.insert(PAYLOAD_SCHEMAS, schemas)
+        schemas_written = writer.insert(table.schema_table, schemas)
         if schemas_written.unfinished:
             return f"{schemas_written.unfinished} schemas not sent"
         # A refused schema is recorded under its own table too, whose rejects alert covers it; the
-        # refused line itself is filed under payload_schemas, which no alert reads.
+        # refused line itself is filed under the schema table, which no alert reads.
         refused = (
             f"batch {batch_id}: the store refused {schemas_written.rejected} of its payload schemas"
             if schemas_written.rejected

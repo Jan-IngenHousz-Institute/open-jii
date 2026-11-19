@@ -19,7 +19,7 @@ from openjii.centrum import (
     METADATA_SOURCE_TABLE,
 )
 from openjii.centrum.runtime import CATALOG_NAME
-from openjii.variant_schema import merged_variant_schema
+from openjii.variant_schema import custom_metadata_schemas, merged_variant_schema
 
 # COMMAND ----------
 
@@ -37,36 +37,15 @@ from openjii.variant_schema import merged_variant_schema
 def experiment_table_metadata():
     """Schemas for all experiment tables."""
 
-    # Pre-compute custom_metadata_schema per experiment from the metadata source.
-    # Each experiment's metadata blob has $.rows, an array of VARIANT objects
-    # whose keys are already human-readable (remapped at upload time).
-    # We drop internal keys (_id, identifier column) from each row before schema
-    # inference so the backend doesn't expand them into duplicate query columns.
-    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
-    custom_metadata_schemas = (
-        metadata_source
-        .select(
-            F.col("experiment_id"),
-            F.expr("variant_get(metadata, '$.identifierColumnId', 'STRING')").alias("_id_col"),
-            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row"),
-        )
-        .withColumn("_row", F.expr("""
-            parse_json(to_json(map_filter(
-                cast(_row AS MAP<STRING, VARIANT>),
-                (k, v) -> k != '_id' AND k != _id_col
-            )))
-        """))
-        .groupBy("experiment_id")
-        .agg(
-            F.expr("nullif(schema_of_variant_agg(_row), 'VOID')").alias("custom_metadata_schema")
-        )
-    )
+    # Each experiment's metadata sheets type its custom metadata. The serving store's feed types
+    # each sheet with the same function, and the backend merges them into this.
+    experiment_metadata_schemas = custom_metadata_schemas(dlt.read(METADATA_SOURCE_TABLE), "experiment_id")
 
     raw_data_metadata = (
         dlt.read(EXPERIMENT_RAW_DATA_SCHEMAS_TABLE)
         .groupBy("experiment_id")
         .agg(merged_variant_schema("sample").alias("questions_schema"))
-        .join(custom_metadata_schemas, "experiment_id", "left")
+        .join(experiment_metadata_schemas, "experiment_id", "left")
         .select(
             F.col("experiment_id"),
             F.lit("raw_data").alias("identifier"),
@@ -118,7 +97,7 @@ def experiment_table_metadata():
             merged_variant_schema("CASE WHEN column_name = 'macro_output' THEN sample END").alias("macro_schema"),
             merged_variant_schema("CASE WHEN column_name = 'questions_data' THEN sample END").alias("questions_schema"),
         )
-        .join(custom_metadata_schemas, "experiment_id", "left")
+        .join(experiment_metadata_schemas, "experiment_id", "left")
         .select(
             F.col("experiment_id"),
             F.col("macro_id").alias("identifier"),
