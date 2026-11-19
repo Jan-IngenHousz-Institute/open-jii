@@ -185,10 +185,16 @@ describe("ExperimentTableChangesService", () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
     const { listedTablesMetadata, listen } = setup();
     const { events } = listen();
+    await events.next();
 
-    const ended = drain(events);
-    await vi.advanceTimersByTimeAsync(STREAM_LIFETIME_MS);
-    await ended;
+    await vi.advanceTimersByTimeAsync(STREAM_LIFETIME_MS - HEARTBEAT_MS * 2);
+    const lastBeat = events.next();
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    expect(await lastBeat).toEqual({ value: { type: "heartbeat" }, done: false });
+
+    const end = events.next();
+    await vi.advanceTimersByTimeAsync(HEARTBEAT_MS);
+    expect(await end).toEqual({ value: undefined, done: true });
     const checks = listedTablesMetadata.mock.calls.length;
     await vi.advanceTimersByTimeAsync(CHECK_MS * 3);
 
