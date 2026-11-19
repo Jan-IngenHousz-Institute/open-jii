@@ -24,6 +24,14 @@ describe("ExperimentDataOutboxRepository", () => {
     };
   }
 
+  function sheet(): OwedRecord {
+    return {
+      recordType: "metadata_sheet",
+      recordId: faker.string.uuid(),
+      experimentId: faker.string.uuid(),
+    };
+  }
+
   function rows() {
     return testApp.database.select().from(experimentDataOutbox);
   }
@@ -109,7 +117,7 @@ describe("ExperimentDataOutboxRepository", () => {
 
     it("leaves a store copy unclaimed on a task without the copier", async () => {
       hasCopier(false);
-      const record = annotation();
+      const record = sheet();
       await owe(record);
       await testApp.database
         .insert(experimentDataOutbox)
@@ -122,7 +130,7 @@ describe("ExperimentDataOutboxRepository", () => {
     });
 
     it("claims a record's store copy while its lakehouse copy is held", async () => {
-      const record = annotation();
+      const record = sheet();
       hasCopier(false);
       await owe(record);
       expect(await claim()).toHaveLength(1);
@@ -131,6 +139,13 @@ describe("ExperimentDataOutboxRepository", () => {
       await owe(record);
 
       expect((await claim()).map(({ destination }) => destination)).toEqual(["serving_store"]);
+    });
+
+    it("owes an annotation to the lakehouse alone, since the store reads flags from Postgres", async () => {
+      hasCopier(true);
+      await owe(annotation());
+
+      expect((await rows()).map(({ destination }) => destination)).toEqual(["lakehouse"]);
     });
   });
 

@@ -152,28 +152,27 @@ Keep this to full and large reloads. ClickHouse advises against running `OPTIMIZ
 ([best practices](https://clickhouse.com/docs/best-practices/avoid-optimize-final)), and a reload of
 a small experiment only adds small parts, which reads handle.
 
-## Annotations and metadata sheets
+## Metadata sheets
 
-The reload copies gold only. The store's copies of annotations and metadata sheet rows come from
-Postgres through the backend's outbox, and only once the backend's task has the copier's login
+The reload copies gold only. The store's copy of metadata sheet rows comes from Postgres through
+the backend's outbox, and only once the backend's task has the copier's login
 (`SERVING_STORE_COPIER_USERNAME` and `SERVING_STORE_COPIER_PASSWORD`). From then on every change
-owes the store its copy, but the annotations and sheets already in Postgres are owed nothing. Once
-the backend runs with the copier, owe each of them once, from a database session:
+owes the store its copy, but the sheets already in Postgres are owed nothing. Once the backend
+runs with the copier, owe each of them once, from a database session:
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
-SELECT 'annotation'::experiment_data_record_type, id, experiment_id,
-       'serving_store'::experiment_data_destination FROM experiment_annotations
-UNION ALL
-SELECT 'metadata_sheet', id, experiment_id, 'serving_store' FROM experiment_metadata_sheets
+SELECT 'metadata_sheet'::experiment_data_record_type, id, experiment_id,
+       'serving_store'::experiment_data_destination FROM experiment_metadata_sheets
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
 ```
 
 Run it after the backend has the copier, never before: a task without it claims no store row, so
 the rows would wait and fire `experiment-data-outbox-waiting`. Then wait until
 `SELECT count(*) FROM experiment_data_outbox WHERE destination = 'serving_store'` reads 0. The same
-insert repairs the copies after the store's `annotations` or `metadata_rows` was emptied: a copy
-writes each record's current state, so owing one twice does no harm.
+insert repairs the copy after the store's `metadata_rows` was emptied: a copy writes each sheet's
+current state, so owing one twice does no harm. The store keeps no copy of annotations: a read
+filtered by flags takes the flagged rows from Postgres.
 
 ## When it fails
 

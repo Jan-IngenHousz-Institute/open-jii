@@ -36,6 +36,8 @@ export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregati
   /** Each client id whose device has a serial number to show, with it, for the labels a read
    *  filters, sorts or lists by. */
   deviceSerials?: [string, string][];
+  /** For a read filtered by flags, the rows flagged after they were measured, from Postgres. */
+  flaggedRowIds?: string[];
 }
 
 /** Reads of experiment data from the serving store, in the shapes warehouse reads come in. */

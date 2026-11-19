@@ -69,7 +69,7 @@ const DEVICE: StoreColumn = {
 };
 
 // A row's cells take the annotations added after the measurement from Postgres, after its own; the
-// store's copy of them serves only the flag filter. Custom metadata reads as none for now.
+// flag filter reads their row ids from Postgres too. Custom metadata reads as none for now.
 const CUSTOM_METADATA: StoreColumn = {
   name: "custom_metadata",
   type: "VARIANT",

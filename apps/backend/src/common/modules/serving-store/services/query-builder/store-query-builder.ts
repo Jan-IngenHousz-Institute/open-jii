@@ -31,6 +31,7 @@ interface StoreOrdering extends QueryOrdering {
 const ORDER_IDS = "__order_ids";
 const DEVICE_CLIENT_IDS = "__device_client_ids";
 const DEVICE_SERIALS = "__device_serials";
+const FLAGGED_ROW_IDS = "__flagged_row_ids";
 
 const STORE_SCALARS: Record<string, string> = {
   STRING: "String",
@@ -49,7 +50,6 @@ const STORE_SCALARS: Record<string, string> = {
  */
 export class StoreQueryBuilder extends BaseQueryBuilder {
   private table?: StoreTable;
-  private experiment = "";
   private fromClause = "";
   private columns: StoreColumn[] = [];
   private key: string[] = [];
@@ -60,18 +60,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private exceptColumns: string[] = [];
   private whereConditions: string[] = [];
   private deviceSerials: [string, string][] = [];
+  private flaggedRowIds?: string[];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
     this.table = table;
-    this.experiment = this.escapeValue(experimentId);
     this.columns = table.columns;
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
-    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS);
-    this.from(`${table.view}(experiment = ${this.experiment})`);
+    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS, FLAGGED_ROW_IDS);
+    this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
     }
@@ -118,11 +118,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /**
    * Keeps the rows with a flag, or the rows without one. A flag counts whether the phone recorded
-   * it with the measurement or someone added it afterwards, which the store copies from Postgres
-   * and finds by the row's id.
+   * it with the measurement or someone added it afterwards, as `addedRowIds` from Postgres say.
    */
-  flagged(kind: ExperimentDataFlagged, tableName: string): this {
-    const added = `toString(id) IN (SELECT row_id FROM experiment_annotations(experiment = ${this.experiment}) WHERE table_name = ${this.escapeValue(tableName)} AND type = 'flag')`;
+  flagged(kind: ExperimentDataFlagged, addedRowIds: string[]): this {
+    this.flaggedRowIds = addedRowIds;
+    const added = `has(${FLAGGED_ROW_IDS}, toString(id))`;
     const phoneColumn = this.table?.phoneAnnotations;
     const isFlagged =
       phoneColumn === undefined
@@ -464,6 +464,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
             `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS ${DEVICE_CLIENT_IDS}`,
             `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS ${DEVICE_SERIALS}`,
           ]),
+      ...(this.flaggedRowIds === undefined
+        ? []
+        : [`CAST([${quoted(this.flaggedRowIds)}] AS Array(String)) AS ${FLAGGED_ROW_IDS}`]),
     ];
     return lists.length === 0 ? "" : `WITH ${lists.join(", ")}`;
   }

@@ -38,7 +38,7 @@ export class ServingStoreClientService implements OnApplicationShutdown {
   private static readonly RESULT_BYTES_GUARD = 4 * PAGE_BYTE_LIMIT;
 
   private readonly client: ClickHouseClient | null;
-  // The copier may only insert into the copies of annotations and metadata sheet rows.
+  // The copier may only insert into and read the copy of metadata sheet rows.
   private readonly copier: ClickHouseClient | null;
 
   constructor(configService: ServingStoreConfigService) {

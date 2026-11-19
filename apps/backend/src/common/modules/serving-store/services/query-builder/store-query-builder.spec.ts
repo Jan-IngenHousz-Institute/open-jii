@@ -18,11 +18,12 @@ describe("StoreQueryBuilder", () => {
   });
 
   it("keeps the rows flagged on the phone or afterwards, or only the rows neither flagged", () => {
-    const only = measurements().select(["id"]).flagged("only", "raw_data").build();
-    const exclude = measurements().select(["id"]).flagged("exclude", "raw_data").build();
+    const only = measurements().select(["id"]).flagged("only", ["7", "9"]).build();
+    const exclude = measurements().select(["id"]).flagged("exclude", ["7", "9"]).build();
 
     const isFlagged =
-      "(toString(id) IN (SELECT row_id FROM experiment_annotations(experiment = 'e1') WHERE table_name = 'raw_data' AND type = 'flag') OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', annotations))";
+      "(has(__flagged_row_ids, toString(id)) OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', annotations))";
+    expect(only).toMatch(/^WITH CAST\(\['7', '9'\] AS Array\(String\)\) AS __flagged_row_ids\n/);
     expect(only).toContain(`WHERE ${isFlagged}`);
     expect(exclude).toContain(`WHERE NOT ${isFlagged}`);
   });
@@ -31,12 +32,11 @@ describe("StoreQueryBuilder", () => {
     const sql = new StoreQueryBuilder()
       .read(UPLOADS_TABLE, "e1", "t1")
       .select(["id"])
-      .flagged("only", "t1")
+      .flagged("only", [])
       .build();
 
-    expect(sql).toContain(
-      "AND toString(id) IN (SELECT row_id FROM experiment_annotations(experiment = 'e1') WHERE table_name = 't1' AND type = 'flag')",
-    );
+    expect(sql).toContain("WITH CAST([] AS Array(String)) AS __flagged_row_ids");
+    expect(sql).toContain("AND has(__flagged_row_ids, toString(id))");
     expect(sql).not.toContain("arrayExists");
   });
 

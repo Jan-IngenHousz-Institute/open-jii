@@ -105,7 +105,7 @@ export const envManifest: readonly EnvVar[] = [
   env("SERVING_STORE_URL", unset, undefined, backend),
   env("SERVING_STORE_USERNAME", unset, undefined, backend),
   env("SERVING_STORE_PASSWORD", unset, undefined, backend),
-  // Without the copier the outbox owes the store no copies of annotations or metadata sheets.
+  // Without the copier the outbox owes the store no copies of metadata sheets.
   env("SERVING_STORE_COPIER_USERNAME", unset, undefined, backend),
   env("SERVING_STORE_COPIER_PASSWORD", unset, undefined, backend),
 

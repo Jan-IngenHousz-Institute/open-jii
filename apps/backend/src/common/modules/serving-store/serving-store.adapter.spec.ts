@@ -5,11 +5,9 @@ import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 
-import type { AnnotationCopy } from "../../../experiments/core/models/experiment-data-annotation.model";
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { MetadataSheetRecord } from "../../../experiments/core/models/experiment-metadata.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
-import { ExperimentAnnotationsStoreRepository } from "../../../experiments/core/repositories/experiment-annotations-store.repository";
 import { ExperimentMetadataStoreRepository } from "../../../experiments/core/repositories/experiment-metadata-store.repository";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
@@ -1377,9 +1375,67 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(devices.value.sort()).toEqual(["PST-client", "thing-1"]);
   });
 
+  it("filters a page by its rows' flags, the phone's and those added afterwards alike", async () => {
+    const experiment = "flagged-e";
+    const reading = (id: number, annotations: unknown[]) => ({
+      experiment_id: experiment,
+      id,
+      timestamp: `2026-09-14 10:00:0${id % 10}`,
+      questions_data: {},
+      annotations,
+      _commit_version: 1,
+      _commit_timestamp: "2026-09-14 10:01:00",
+    });
+    const phoneFlag = {
+      id: "p1",
+      rowId: "21",
+      type: "flag",
+      content: { text: null, flagType: "outlier" },
+      createdBy: null,
+      createdByName: null,
+      createdAt: null,
+      updatedAt: null,
+    };
+    await admin.insert({
+      table: "measurements",
+      values: [reading(21, [phoneFlag]), reading(22, []), reading(23, [])],
+      format: "JSONEachRow",
+    });
+    // Row 23 carries a flag someone added afterwards, which Postgres holds.
+    const params = (flagged: "only" | "exclude", added: string[]): StoreQueryParams => ({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: experiment,
+      columns: ["id"],
+      flagged,
+      flaggedRowIds: added,
+    });
+    const sortedPage = async (flagged: "only" | "exclude", added: string[]) =>
+      (await rowsOf({ ...params(flagged, added), ordering: { column: "id" } })).rows;
+    const unsortedIds = async (flagged: "only" | "exclude", added: string[]) =>
+      (await rowsOf(params(flagged, added))).rows.flat().sort();
+    const count = async (flagged: "only" | "exclude", added: string[]) => {
+      const query = adapter.buildExperimentQuery(params(flagged, added));
+      assertSuccess(query);
+      const counted = await adapter.executeQuery(adapter.countQuery(query.value));
+      assertSuccess(counted);
+      return counted.value.rows;
+    };
+
+    expect(await sortedPage("only", ["23"])).toEqual([["21"], ["23"]]);
+    expect(await sortedPage("exclude", ["23"])).toEqual([["22"]]);
+    expect(await unsortedIds("only", ["23"])).toEqual(["21", "23"]);
+    expect(await count("only", ["23"])).toEqual([["2"]]);
+
+    // Once the flag added afterwards is removed, only the phone's flag keeps its row.
+    expect(await sortedPage("only", [])).toEqual([["21"]]);
+    expect(await unsortedIds("only", [])).toEqual(["21"]);
+    expect(await count("only", [])).toEqual([["1"]]);
+    expect(await count("exclude", [])).toEqual([["2"]]);
+  });
+
   describe("the outbox's copies", () => {
     let copier: ServingStoreClientService;
-    let annotations: ExperimentAnnotationsStoreRepository;
     let sheets: ExperimentMetadataStoreRepository;
 
     const sheet: MetadataSheetRecord = {
@@ -1421,7 +1477,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       });
       copier = new ServingStoreClientService(new ServingStoreConfigService(config));
       const store = new ServingStoreAdapter(copier);
-      annotations = new ExperimentAnnotationsStoreRepository(store);
       sheets = new ExperimentMetadataStoreRepository(store);
     });
 
@@ -1456,113 +1511,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
       assertSuccess(await sheets.delete([{ id: sheet.id, experimentId: EXPERIMENT }], claim(3)));
       expect(await viewRows("experiment_metadata_rows", "identifier")).toEqual([]);
-    });
-
-    it("reads an annotation at its newest claim's copy, however late an older one lands", async () => {
-      const annotation: AnnotationCopy = {
-        id: "a1",
-        experimentId: EXPERIMENT,
-        tableName: "raw_data",
-        rowId: "1",
-        type: "flag",
-        contentText: "Outlier",
-        flagType: "outlier",
-        createdBy: ADA,
-        createdAt: new Date("2026-09-01T08:00:00Z"),
-        updatedAt: new Date("2026-09-01T08:00:00Z"),
-        userName: "Ada Lovelace",
-      };
-      assertSuccess(
-        await annotations.merge([{ ...annotation, flagType: "needs_review" }], claim(2)),
-      );
-      // A claim taken back after its lease lands its older state last.
-      assertSuccess(await annotations.merge([annotation], claim(1)));
-
-      expect(await viewRows("experiment_annotations", "id, row_id, flag_type")).toEqual([
-        { id: "a1", row_id: "1", flag_type: "needs_review" },
-      ]);
-
-      assertSuccess(await annotations.delete([{ id: "a1", experimentId: EXPERIMENT }], claim(3)));
-      expect(await viewRows("experiment_annotations", "id")).toEqual([]);
-    });
-
-    it("filters a page by its rows' flags, the phone's and those added afterwards alike", async () => {
-      const experiment = "flagged-e";
-      const reading = (id: number, annotations: unknown[]) => ({
-        experiment_id: experiment,
-        id,
-        timestamp: `2026-09-14 10:00:0${id % 10}`,
-        questions_data: {},
-        annotations,
-        _commit_version: 1,
-        _commit_timestamp: "2026-09-14 10:01:00",
-      });
-      const phoneFlag = {
-        id: "p1",
-        rowId: "21",
-        type: "flag",
-        content: { text: null, flagType: "outlier" },
-        createdBy: null,
-        createdByName: null,
-        createdAt: null,
-        updatedAt: null,
-      };
-      await admin.insert({
-        table: "measurements",
-        values: [reading(21, [phoneFlag]), reading(22, []), reading(23, [])],
-        format: "JSONEachRow",
-      });
-      assertSuccess(
-        await annotations.merge(
-          [
-            {
-              id: "a23",
-              experimentId: experiment,
-              tableName: "raw_data",
-              rowId: "23",
-              type: "flag",
-              contentText: null,
-              flagType: "outlier",
-              createdBy: ADA,
-              createdAt: new Date("2026-09-14T10:02:00Z"),
-              updatedAt: new Date("2026-09-14T10:02:00Z"),
-              userName: "Ada Lovelace",
-            },
-          ],
-          claim(1),
-        ),
-      );
-
-      const params = (flagged: "only" | "exclude"): StoreQueryParams => ({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId: experiment,
-        columns: ["id"],
-        flagged,
-      });
-      const sortedPage = async (flagged: "only" | "exclude") =>
-        (await rowsOf({ ...params(flagged), ordering: { column: "id" } })).rows;
-      const unsortedIds = async (flagged: "only" | "exclude") =>
-        (await rowsOf(params(flagged))).rows.flat().sort();
-      const count = async (flagged: "only" | "exclude") => {
-        const query = adapter.buildExperimentQuery(params(flagged));
-        assertSuccess(query);
-        const counted = await adapter.executeQuery(adapter.countQuery(query.value));
-        assertSuccess(counted);
-        return counted.value.rows;
-      };
-
-      expect(await sortedPage("only")).toEqual([["21"], ["23"]]);
-      expect(await sortedPage("exclude")).toEqual([["22"]]);
-      expect(await unsortedIds("only")).toEqual(["21", "23"]);
-      expect(await count("only")).toEqual([["2"]]);
-
-      // Once the flag added afterwards is removed, only the phone's flag keeps its row.
-      assertSuccess(await annotations.delete([{ id: "a23", experimentId: experiment }], claim(2)));
-      expect(await sortedPage("only")).toEqual([["21"]]);
-      expect(await unsortedIds("only")).toEqual(["21"]);
-      expect(await count("only")).toEqual([["1"]]);
-      expect(await count("exclude")).toEqual([["2"]]);
     });
   });
 });

@@ -2,8 +2,8 @@
 
 **A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes.** Postgres
 holds annotations and metadata sheets, and every change to one owes its current state to each copy
-the environment keeps: the lakehouse, which exports, charts and the warehouse views read, and the
-serving store, where the environment has its copier. Each owed copy is a row in
+the environment keeps: the lakehouse, which exports, charts and the warehouse views read, and, for
+sheets, the serving store, where the environment has its copier. Each owed copy is a row in
 `experiment_data_outbox`, and the worker on every backend task applies them. Every five minutes each
 task publishes `ExperimentDataCopiesWaiting`, how many rows are owed, and
 `ExperimentDataCopyOldestWaitingSeconds`, how long since the oldest was first owed (its `created_at`,

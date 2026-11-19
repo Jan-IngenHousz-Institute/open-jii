@@ -32,7 +32,6 @@ _READER_VIEWS = (
     "experiment_contributor_ids",
     "experiment_client_ids",
     "experiment_payload_schemas",
-    "experiment_annotations",
     "experiment_metadata_rows",
 )
 
@@ -274,29 +273,6 @@ def test_a_row_sent_again_reads_once_at_its_newest_commit_before_any_merge(
     assert [(int(row["id"]), int(row["_commit_version"])) for row in rows] == [(1, 4), (2, 3)]
 
 
-def test_an_annotation_reads_at_its_newest_claims_copy_and_a_deleted_one_not_at_all(
-    admin: _User, reader: _User
-) -> None:
-    admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.annotations")
-    columns = "experiment_id, id, table_name, row_id, type, flag_type, is_deleted, claimed_at"
-    admin.ok(
-        f"INSERT INTO {_DATABASE}.annotations ({columns}) VALUES "
-        "('e1', 'a1', 'raw_data', '1', 'flag', 'needs_review', 0, '2026-10-19 10:02:00'), "
-        "('e1', 'a2', 'raw_data', '2', 'comment', NULL, 0, '2026-10-19 10:01:00'), "
-        "('e2', 'a3', 'raw_data', '3', 'flag', 'outlier', 0, '2026-10-19 10:01:00')"
-    )
-    # An older claim's copy that lands late, and a deletion's newer one.
-    admin.ok(
-        f"INSERT INTO {_DATABASE}.annotations ({columns}) VALUES "
-        "('e1', 'a1', 'raw_data', '1', 'flag', 'outlier', 0, '2026-10-19 10:01:00'), "
-        "('e1', 'a2', '', '', '', NULL, 1, '2026-10-19 10:03:00')"
-    )
-
-    rows = reader.rows(f"SELECT id, flag_type FROM {_DATABASE}.experiment_annotations(experiment = 'e1')")
-
-    assert rows == [{"id": "a1", "flag_type": "needs_review"}]
-
-
 def test_a_sheet_row_an_edit_removed_no_longer_reads(admin: _User, reader: _User) -> None:
     admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.metadata_rows")
     columns = (
@@ -319,21 +295,16 @@ def test_a_sheet_row_an_edit_removed_no_longer_reads(admin: _User, reader: _User
     assert rows == [{"identifier": "plot-1", "fields": '{"soil":"clay"}'}]
 
 
-@pytest.mark.parametrize("table", ["annotations", "metadata_rows"])
-def test_the_reader_reads_the_copies_only_through_their_views(reader: _User, table: str) -> None:
-    response = reader.run(f"SELECT count() FROM {_DATABASE}.{table}")
+def test_the_reader_reads_the_sheet_rows_only_through_their_view(reader: _User) -> None:
+    response = reader.run(f"SELECT count() FROM {_DATABASE}.metadata_rows")
 
     assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
 
 
 # The copier's and the feed writer's grants in infrastructure/modules/serving-store/main.tf.
-_COPIER_GRANTS = (
-    "GRANT INSERT ON {db}.annotations",
-    "GRANT SELECT, INSERT ON {db}.metadata_rows",
-)
+_COPIER_GRANTS = ("GRANT SELECT, INSERT ON {db}.metadata_rows",)
 _WRITER_GRANTS = (
     "GRANT SELECT, INSERT ON {db}.*",
-    "REVOKE INSERT ON {db}.annotations",
     "REVOKE INSERT ON {db}.metadata_rows",
 )
 
@@ -358,15 +329,11 @@ def user_with_grants(admin: _User) -> Iterator[Callable[[str, tuple[str, ...]], 
         admin.ok(f"DROP USER {name}")
 
 
-def test_the_copier_writes_its_two_tables_and_reads_only_the_sheet_rows(
+def test_the_copier_writes_and_reads_the_sheet_rows_alone(
     user_with_grants: Callable[[str, tuple[str, ...]], _User],
 ) -> None:
     copier = user_with_grants("views_test_copier", _COPIER_GRANTS)
 
-    copier.ok(
-        f"INSERT INTO {_DATABASE}.annotations (experiment_id, id, claimed_at) "
-        "VALUES ('e1', 'a9', '2026-10-19 10:00:00')"
-    )
     copier.ok(
         f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id, sheet_id, identifier, claimed_at) "
         "VALUES ('e1', 's9', 'plot-9', '2026-10-19 10:00:00')"
@@ -375,19 +342,17 @@ def test_the_copier_writes_its_two_tables_and_reads_only_the_sheet_rows(
 
     assert held == [{"identifier": "plot-9"}]
     for refused in (
-        f"SELECT count() FROM {_DATABASE}.annotations",
         f"SELECT count() FROM {_DATABASE}.measurements",
         f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp) VALUES ('e1', 99, now())",
     ):
         assert copier.run(refused).headers.get("X-ClickHouse-Exception-Code") == "497", refused
 
 
-@pytest.mark.parametrize("table", ["annotations", "metadata_rows"])
-def test_the_feed_writer_cannot_write_the_copies(
-    user_with_grants: Callable[[str, tuple[str, ...]], _User], table: str
+def test_the_feed_writer_cannot_write_the_sheet_rows(
+    user_with_grants: Callable[[str, tuple[str, ...]], _User],
 ) -> None:
     writer = user_with_grants("views_test_writer", _WRITER_GRANTS)
 
-    response = writer.run(f"INSERT INTO {_DATABASE}.{table} (experiment_id) VALUES ('e1')")
+    response = writer.run(f"INSERT INTO {_DATABASE}.metadata_rows (experiment_id) VALUES ('e1')")
 
     assert response.headers.get("X-ClickHouse-Exception-Code") == "497"

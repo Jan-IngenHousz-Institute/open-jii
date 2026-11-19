@@ -2954,8 +2954,8 @@ module "backend_ecs" {
       name      = "SERVING_STORE_PASSWORD"
       valueFrom = "${module.serving_store.credentials_secret_arns["reader"]}:password::"
     },
-    # The user the outbox copies annotations and metadata sheets with, which may only insert into
-    # those two tables and read the sheet rows.
+    # The user the outbox copies metadata sheet rows with, which may only insert into and read their
+    # table.
     {
       name      = "SERVING_STORE_COPIER_USERNAME"
       valueFrom = "${module.serving_store.credentials_secret_arns["copier"]}:username::"

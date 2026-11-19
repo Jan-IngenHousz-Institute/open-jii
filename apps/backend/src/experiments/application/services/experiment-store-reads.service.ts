@@ -17,6 +17,7 @@ import type {
 } from "../../core/ports/experiment-table-reads.port";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
+import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
 import { NumberAnswersService } from "./number-answers.service";
 
@@ -63,6 +64,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     private readonly userRepository: UserRepository,
     private readonly deviceRepository: ExperimentDeviceRegistryRepository,
     private readonly numberAnswers: NumberAnswersService,
+    private readonly annotationsRepository: ExperimentAnnotationsRepository,
   ) {}
 
   readsTable(tableName: string): boolean {
@@ -110,6 +112,14 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return orderResult;
     }
 
+    const flaggedResult =
+      params.flagged === undefined
+        ? success(undefined)
+        : await this.annotationsRepository.findFlaggedRowIds(params.experimentId, params.tableName);
+    if (flaggedResult.isFailure()) {
+      return flaggedResult;
+    }
+
     // Devices can fill in alike, such as a registered one under two names, so a limit on what the
     // store returns would stop short of the distinct devices behind it.
     const isDistinctDevice =
@@ -120,6 +130,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
       deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
+      flaggedRowIds: flaggedResult.value,
     });
     if (built.isFailure()) {
       return built;

@@ -7,10 +7,10 @@ import type {
   ClaimedOutboxRow,
   ExperimentDataDestination,
   ExperimentDataRecordType,
+  OwedDestination,
 } from "../../core/models/experiment-data-outbox.model";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
-import { AnnotationsStoreCopierService } from "./annotations-store-copier.service";
 import type { CopyOutcome, ExperimentDataCopierService } from "./experiment-data-copier.service";
 import { MetadataSheetsLakehouseCopierService } from "./metadata-sheets-lakehouse-copier.service";
 import { MetadataSheetsStoreCopierService } from "./metadata-sheets-store-copier.service";
@@ -20,6 +20,8 @@ interface CopyTarget {
   recordType: ExperimentDataRecordType;
   destination: ExperimentDataDestination;
 }
+
+type Copier = ExperimentDataCopierService<{ id: string }>;
 
 /** A claim older than this was abandoned by a task that died, and is taken back. */
 export const LEASE_MS = 5 * 60_000;
@@ -68,20 +70,19 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
   private nudged = false;
   /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
-  private readonly copiers: Record<
-    ExperimentDataRecordType,
-    Record<ExperimentDataDestination, ExperimentDataCopierService<{ id: string }>>
-  >;
+  /** Exactly the copies `OWED_COPIES` lists, so a copy owed without a copier does not compile. */
+  private readonly copiers: {
+    [R in ExperimentDataRecordType]: Record<OwedDestination<R>, Copier>;
+  };
 
   constructor(
     private readonly outbox: ExperimentDataOutboxRepository,
     annotationsLakehouse: AnnotationsLakehouseCopierService,
     sheetsLakehouse: MetadataSheetsLakehouseCopierService,
-    annotationsStore: AnnotationsStoreCopierService,
     sheetsStore: MetadataSheetsStoreCopierService,
   ) {
     this.copiers = {
-      annotation: { lakehouse: annotationsLakehouse, serving_store: annotationsStore },
+      annotation: { lakehouse: annotationsLakehouse },
       metadata_sheet: { lakehouse: sheetsLakehouse, serving_store: sheetsStore },
     };
   }
@@ -194,7 +195,7 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
    * Copies one kind of record to one copy a statement's worth at a time, clearing each group's rows
    * once it landed. A failed group sends its own rows back to wait, and the groups it kept from
    * being tried go back as they were; a claim past its deadline, or a task shutting down, puts what
-   * is left back as it was.
+   * is left back as it was. A copy no copier makes waits, with that as its error.
    */
   private async apply(
     target: CopyTarget,
@@ -202,7 +203,19 @@ export class ExperimentDataOutboxWorker implements BeforeApplicationShutdown {
     deadlineAt: number,
   ): Promise<OutboxDrainCounts> {
     const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-    const copier = this.copiers[target.recordType][target.destination];
+    const copiers: Partial<Record<ExperimentDataDestination, Copier>> =
+      this.copiers[target.recordType];
+    const copier = copiers[target.destination];
+    if (copier === undefined) {
+      await this.retry(
+        target,
+        rows,
+        `No copier copies ${target.recordType} records to ${target.destination}`,
+      );
+      counts.retried = rows.length;
+      return counts;
+    }
+
     const groups = await copier.groupsOf(
       rows.map((row) => ({ id: row.recordId, experimentId: row.experimentId })),
     );

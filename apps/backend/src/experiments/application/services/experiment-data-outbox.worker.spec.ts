@@ -10,7 +10,6 @@ import type { AnnotationRecord } from "../../core/models/experiment-data-annotat
 import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
-import { ExperimentAnnotationsStoreRepository } from "../../core/repositories/experiment-annotations-store.repository";
 import { ExperimentAnnotationsWarehouseRepository } from "../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
@@ -18,7 +17,6 @@ import { ExperimentMetadataStoreRepository } from "../../core/repositories/exper
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
 import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
-import { AnnotationsStoreCopierService } from "./annotations-store-copier.service";
 import {
   EXPERIMENT_DATA_OUTBOX_INTERVAL,
   ExperimentDataOutboxWorker,
@@ -90,7 +88,6 @@ describe("ExperimentDataOutboxWorker", () => {
       outbox,
       testApp.module.get(AnnotationsLakehouseCopierService),
       testApp.module.get(MetadataSheetsLakehouseCopierService),
-      testApp.module.get(AnnotationsStoreCopierService),
       testApp.module.get(MetadataSheetsStoreCopierService),
     );
   }
@@ -169,14 +166,13 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(await outboxRows()).toEqual([]);
   });
 
-  it("owes the store no copy where the environment has no copier", async () => {
-    await annotate("1");
+  it("owes the store no copy of a sheet where the environment has no copier", async () => {
+    await saveSheets(1, 10);
 
     expect((await outboxRows()).map((row) => row.destination)).toEqual(["lakehouse"]);
   });
 
   describe("where the environment has the store's copier", () => {
-    const annotationsStore = () => testApp.module.get(ExperimentAnnotationsStoreRepository);
     const sheetsStore = () => testApp.module.get(ExperimentMetadataStoreRepository);
 
     beforeEach(() => {
@@ -186,21 +182,10 @@ describe("ExperimentDataOutboxWorker", () => {
       ).mockReturnValue(true);
     });
 
-    it("owes each record to the lakehouse and the store, and copies each to its own", async () => {
-      const merge = mergeAnnotations();
-      const write = vi.spyOn(annotationsStore(), "merge").mockResolvedValue(success(undefined));
-      const remove = vi.spyOn(annotationsStore(), "delete").mockResolvedValue(success(undefined));
-      const [kept] = await annotate("1");
-      const gone = await oweGone("annotation");
+    it("owes an annotation to the lakehouse alone, since the store reads flags from Postgres", async () => {
+      await annotate("1");
 
-      const destinations = (await outboxRows()).map((row) => row.destination).sort();
-      expect(destinations).toEqual(["lakehouse", "lakehouse", "serving_store", "serving_store"]);
-      expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
-
-      expect(merge).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
-      expect(write).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }], expect.any(Date));
-      expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }], expect.any(Date));
-      expect(await outboxRows()).toEqual([]);
+      expect((await outboxRows()).map((row) => row.destination)).toEqual(["lakehouse"]);
     });
 
     it("copies a sheet to the store and removes the store's copy of a gone one", async () => {
@@ -209,38 +194,27 @@ describe("ExperimentDataOutboxWorker", () => {
       vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
       const write = vi.spyOn(sheetsStore(), "merge").mockResolvedValue(success("merged"));
       const remove = vi.spyOn(sheetsStore(), "delete").mockResolvedValue(success(undefined));
-      const sheet: MetadataSheetRecord = {
-        id: faker.string.uuid(),
-        experimentId,
-        metadata: { name: "Plots" },
-        createdBy: userId,
-        createdAt: created,
-        updatedAt: created,
-      };
-      const sheets = testApp.module.get(ExperimentMetadataRepository);
-      const outbox = testApp.module.get(ExperimentDataOutboxRepository);
-      assertSuccess(
-        await sheets.transaction(async (tx) => {
-          await sheets.insert(tx, sheet);
-          await outbox.owe(tx, [
-            { recordType: "metadata_sheet", recordId: sheet.id, experimentId },
-          ]);
-        }),
-      );
+      const [sheet] = await saveSheets(1, 10);
       const gone = await oweGone("metadata_sheet");
 
+      const destinations = (await outboxRows()).map((row) => row.destination).sort();
+      expect(destinations).toEqual(["lakehouse", "lakehouse", "serving_store", "serving_store"]);
       expect(await worker.drain()).toEqual({ applied: 4, retried: 0, released: 0 });
 
       expect(write).toHaveBeenCalledWith([sheet], expect.any(Function), expect.any(Date));
       expect(remove).toHaveBeenCalledWith([{ id: gone, experimentId }], expect.any(Date));
+      expect(await outboxRows()).toEqual([]);
     });
 
     it("keeps the lakehouse's copy landing when the store refuses its own", async () => {
-      mergeAnnotations();
-      vi.spyOn(annotationsStore(), "merge").mockResolvedValue(
+      vi.spyOn(
+        testApp.module.get(ExperimentMetadataWarehouseRepository),
+        "merge",
+      ).mockResolvedValue(success("merged"));
+      vi.spyOn(sheetsStore(), "merge").mockResolvedValue(
         failure(AppError.internal("The serving store could not take the copy")),
       );
-      await annotate("1");
+      await saveSheets(1, 10);
 
       expect(await worker.drain()).toEqual({ applied: 1, retried: 1, released: 0 });
 
@@ -294,7 +268,6 @@ describe("ExperimentDataOutboxWorker", () => {
       testApp.module.get(ExperimentDataOutboxRepository),
       testApp.module.get(AnnotationsLakehouseCopierService),
       testApp.module.get(MetadataSheetsLakehouseCopierService),
-      testApp.module.get(AnnotationsStoreCopierService),
       testApp.module.get(MetadataSheetsStoreCopierService),
     );
   }

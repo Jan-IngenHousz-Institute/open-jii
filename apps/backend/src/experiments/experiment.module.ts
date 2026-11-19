@@ -25,7 +25,6 @@ import { WorkbookModule } from "../workbooks/workbook.module";
 import { AnnotationMergerService } from "./application/services/annotation-merger.service";
 // Services
 import { AnnotationsLakehouseCopierService } from "./application/services/annotations-lakehouse-copier.service";
-import { AnnotationsStoreCopierService } from "./application/services/annotations-store-copier.service";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExperimentDataOutboxMetricsService } from "./application/services/experiment-data-outbox-metrics.service";
@@ -108,7 +107,6 @@ import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EXPERIMENT_METRICS_PORT } from "./core/ports/metrics.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 // Repositories
-import { ExperimentAnnotationsStoreRepository } from "./core/repositories/experiment-annotations-store.repository";
 import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "./core/repositories/experiment-annotations.repository";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
@@ -235,7 +233,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentMetadataRepository,
     ExperimentDataOutboxRepository,
     ExperimentAnnotationsWarehouseRepository,
-    ExperimentAnnotationsStoreRepository,
     ExperimentAnnotationsRepository,
     ExperimentVisualizationRepository,
     ExperimentDashboardRepository,
@@ -259,7 +256,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentDataOutboxWorker,
     AnnotationsLakehouseCopierService,
     MetadataSheetsLakehouseCopierService,
-    AnnotationsStoreCopierService,
     MetadataSheetsStoreCopierService,
     ExperimentDataOutboxMetricsService,
     AnnotationMergerService,

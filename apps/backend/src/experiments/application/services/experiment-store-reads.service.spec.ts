@@ -11,6 +11,7 @@ import type {
 import type { FlowGraphDto } from "../../core/models/flow.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
+import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { FlowRepository } from "../../core/repositories/flow.repository";
 import { ExperimentStoreReadsService } from "./experiment-store-reads.service";
 
@@ -182,6 +183,23 @@ describe("ExperimentStoreReadsService", () => {
     assertSuccess(query);
     expect(build).toHaveBeenCalledWith(expect.objectContaining({ orderByIds: [ada, zoe] }));
     expect(query.value.sql).not.toContain("Lovelace");
+  });
+
+  it("hands the store the rows flagged in Postgres for a read filtered by flags, and asks for none otherwise", async () => {
+    const flagged = vi
+      .spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findFlaggedRowIds")
+      .mockResolvedValue(success(["7", "9"]));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    assertSuccess(await reads.buildQuery({ ...page, flagged: "only" }));
+    assertSuccess(await reads.buildQuery(page));
+
+    expect(flagged).toHaveBeenCalledExactlyOnceWith("e1", "raw_data");
+    expect(build).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ flagged: "only", flaggedRowIds: ["7", "9"] }),
+    );
+    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ flaggedRowIds: undefined }));
   });
 
   it("leaves an anonymized contributor sort to the pseudonym the store computes", async () => {
