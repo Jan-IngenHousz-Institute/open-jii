@@ -131,11 +131,12 @@ describe("ExperimentDataController", () => {
 
       expect(response.headers["content-type"]).toContain("text/event-stream");
       expect(response.text).toContain(JSON.stringify({ type: "changed", tables }));
-      expect(execute.mock.lastCall?.slice(0, 3)).toEqual([
+      expect(execute).toHaveBeenCalledWith(
         readableExperimentId,
         testUserId,
         "store",
-      ]);
+        expect.any(AbortSignal),
+      );
     });
 
     it("gives a warehouse reader no stream", async () => {
