@@ -1022,7 +1022,7 @@ resource "grafana_rule_group" "experiment_data_copies" {
     for            = "5m"
 
     annotations = {
-      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse refuses every copy, or one record fails on every attempt. Exports, charts and the custom metadata on store pages miss the latest edits until it lands. It also fires when the backend has stopped reporting the outbox."
+      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse refuses every copy, or one record fails on every attempt. Exports, charts and the custom metadata on warehouse pages miss the latest edits until it lands, and so do the store's sheet rows, which the feed takes from the same copy. It also fires when the backend has stopped reporting the outbox."
       summary          = "Annotation and sheet copies are not landing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid

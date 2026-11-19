@@ -10,7 +10,8 @@ how long since the oldest was first owed (its `created_at`, on the database's cl
 when the age stays above 1,800 seconds for 5 minutes. A copy usually lands within seconds.
 
 Pages read annotations from Postgres, so nobody sees a stale annotation. What waits is the copy: an
-export, a chart, or the custom metadata a page shows, may be missing the latest edits.
+export, a chart, or the custom metadata a page read through the warehouse shows, may be missing the
+latest edits, and so may the store's sheet rows.
 
 ## Which copy, and why
 
