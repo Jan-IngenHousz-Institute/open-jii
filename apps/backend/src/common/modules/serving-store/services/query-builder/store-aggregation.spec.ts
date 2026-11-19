@@ -282,6 +282,20 @@ describe("StoreAggregation", () => {
     expect(query.value.sql).toContain("ORDER BY `device_name` ASC NULLS FIRST");
   });
 
+  it("ranks NaN above every number in a double's min, max, latest and earliest, as Spark does", () => {
+    const extremes = adapter.buildExperimentQuery(storeRead("extremesNaN"));
+    const picks = adapter.buildExperimentQuery(storeRead("latestAndEarliestByNaN"));
+
+    assertSuccess(extremes);
+    assertSuccess(picks);
+    expect(extremes.value.sql).toContain("if(countIf(isNaN(`v`)) > 0, nan, maxIf(toNullable(`v`)");
+    expect(extremes.value.sql).toContain("ifNull(minIf(toNullable(`v`), NOT isNaN(`v`)), if(");
+    expect(picks.value.sql).toContain(
+      "argMaxIf(tuple(toNullable(`id`)), tuple(isNaN(`v`), `v`, `id`)",
+    );
+    expect(picks.value.sql).toContain("argMinIf(tuple(toNullable(`id`)), tuple(isNaN(`v`), `v`)");
+  });
+
   it("finds a capped read's rows by key in the read's own order before reading their payloads", () => {
     const windows = adapter.buildExperimentQuery(storeRead("rowWindowsCappedAlongTheirOrder"));
     const sum = adapter.buildExperimentQuery(storeRead("rowCumsumCapped"));

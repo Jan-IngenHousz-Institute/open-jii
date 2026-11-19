@@ -231,6 +231,45 @@
       ]
     ]
   },
+  "extremesNaN": {
+    "columns": [
+      "device_name",
+      "v_min",
+      "v_max"
+    ],
+    "types": [
+      "STRING",
+      "DOUBLE",
+      "DOUBLE"
+    ],
+    "rows": [
+      [
+        "A",
+        1.0,
+        "NaN"
+      ],
+      [
+        "B",
+        3.0,
+        "NaN"
+      ],
+      [
+        "C",
+        5.0,
+        "NaN"
+      ],
+      [
+        "D",
+        7.0,
+        7.0
+      ],
+      [
+        "E",
+        "NaN",
+        "NaN"
+      ]
+    ]
+  },
   "filteredByPayload": {
     "columns": [
       "device_name",
@@ -705,6 +744,45 @@
         52.10004,
         52.1,
         25
+      ]
+    ]
+  },
+  "latestAndEarliestByNaN": {
+    "columns": [
+      "device_name",
+      "id_latest",
+      "id_earliest"
+    ],
+    "types": [
+      "STRING",
+      "BIGINT",
+      "BIGINT"
+    ],
+    "rows": [
+      [
+        "A",
+        1,
+        2
+      ],
+      [
+        "B",
+        5,
+        4
+      ],
+      [
+        "C",
+        9,
+        7
+      ],
+      [
+        "D",
+        10,
+        10
+      ],
+      [
+        "E",
+        12,
+        12
       ]
     ]
   },

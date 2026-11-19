@@ -447,9 +447,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     switch (agg.function) {
       case "sum":
       case "avg":
-      case "min":
-      case "max":
         return { sql: `${agg.function}(${value})`, alias };
+      case "min":
+      case "max": {
+        const isDouble = this.rowTypes.get(agg.column) === "DOUBLE";
+        return {
+          sql: isDouble ? this.extremeOfDoubles(agg.function, column) : `${agg.function}(${value})`,
+          alias,
+        };
+      }
       case "count":
         return { sql: agg.column === "*" ? "count()" : `count(${column})`, alias };
       case "count_distinct":
@@ -475,10 +481,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       case "earliest": {
         // The value rides in a tuple, which is never null, so a null value at the newest key is
         // the answer as it is for Spark's MAX_BY, instead of a row the store skips.
-        const order = this.escapeIdentifier(this.orderColumnOf(agg));
-        const key = agg.tieBreaker
-          ? `tuple(${order}, ${this.escapeIdentifier(agg.tieBreaker)})`
-          : order;
+        const orderColumn = this.orderColumnOf(agg);
+        const order = this.escapeIdentifier(orderColumn);
+        // Spark ranks NaN above every number, where the store's comparison ranks it nowhere.
+        const ranks =
+          this.rowTypes.get(orderColumn) === "DOUBLE" ? [`isNaN(${order})`, order] : [order];
+        const keys = agg.tieBreaker ? [...ranks, this.escapeIdentifier(agg.tieBreaker)] : ranks;
+        const key = keys.length === 1 ? order : `tuple(${keys.join(", ")})`;
         const pick = agg.function === "latest" ? "argMaxIf" : "argMinIf";
         return {
           sql: `tupleElement(${pick}(tuple(${value}), ${key}, ${order} IS NOT NULL), 1)`,
@@ -582,6 +591,18 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   typesOutputs(typeOf: (output: NamedOutput) => string | undefined): this {
     this.outputTypeOf = typeOf;
     return this;
+  }
+
+  /**
+   * Spark ranks NaN above every number, so a max over any NaN is NaN and a min is NaN only where
+   * every value is; the store's own would depend on the order the rows come in.
+   */
+  private extremeOfDoubles(fn: "min" | "max", column: string): string {
+    const numbers = `${fn}If(toNullable(${column}), NOT isNaN(${column}))`;
+    const hasNaN = `countIf(isNaN(${column})) > 0`;
+    return fn === "max"
+      ? `if(${hasNaN}, nan, ${numbers})`
+      : `ifNull(${numbers}, if(${hasNaN}, nan, NULL))`;
   }
 
   /** Spark sorts NaN above every number; the store would put it beside the nulls. */

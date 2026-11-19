@@ -291,6 +291,102 @@
       "device_name": "P",
       "latitude": 1.0,
       "output": "{\"n\":5,\"v\":70.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":1.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":2.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":3.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":4.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 7,
+      "timestamp": "2026-09-07 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":5.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 8,
+      "timestamp": "2026-09-08 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":6.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 9,
+      "timestamp": "2026-09-09 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 10,
+      "timestamp": "2026-09-10 08:00:00.000",
+      "device_name": "D",
+      "latitude": 1.0,
+      "output": "{\"v\":7.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 11,
+      "timestamp": "2026-09-11 08:00:00.000",
+      "device_name": "D",
+      "latitude": 1.0,
+      "output": "{\"v\":null}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 12,
+      "timestamp": "2026-09-12 08:00:00.000",
+      "device_name": "E",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
     }
   ],
   "matchSchema": "OBJECT<w: DOUBLE>",
@@ -1283,6 +1379,57 @@
       },
       "ordering": {
         "column": "v_bucket",
+        "direction": "ASC"
+      }
+    },
+    "extremesNaN": {
+      "experiment": "nanOrders",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "min"
+          },
+          {
+            "column": "v",
+            "function": "max"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "latestAndEarliestByNaN": {
+      "experiment": "nanOrders",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "id",
+            "function": "latest",
+            "orderColumn": "v",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "id",
+            "function": "earliest",
+            "orderColumn": "v"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
         "direction": "ASC"
       }
     }
