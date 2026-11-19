@@ -44,6 +44,15 @@ The first view with an exception is the cause. The ones after it show `WaitingFo
   `SYSTEM REFRESH VIEW store.<view>` then `SYSTEM WAIT VIEW store.<view>`.
 - **The store busy or out of memory,** as `store-memory` covers, when other store alerts fire too.
 
+## Medians against the pipeline's
+
+A change to `metrics_parameter_stats` keeps its median within these bounds of the pipeline's. Up to
+5,000 readings of a parameter, both are its lower middle value, so they are equal. Past that, each
+side's Greenwald-Khanna sketch at accuracy 10,000 picks a value within n/10,000 ranks of it for n
+readings, rounded up, and each splits the readings its own way, so the two may differ by twice that.
+The store ranks every NaN reading above every number. Spark does so within a partition, but compares
+with `<` when it merges partitions, which can rank a NaN among the numbers.
+
 ## Closing
 
 Name the view, its error and the change that fixed it, or the restart that explains the gap.

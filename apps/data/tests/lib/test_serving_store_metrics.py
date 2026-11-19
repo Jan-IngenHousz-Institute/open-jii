@@ -5,8 +5,11 @@ test_serving_store_tables.py describes. Every figure is equal but for these tole
 - A row silver holds twice, or a macro result gold recomputed, counts once in the store.
 - Volume is the bytes of each payload's JSON as gold writes it out, not as the device sent it.
 - A bare NaN or Infinity token, which gold reads as null, is no reading in the store.
-- Medians are Greenwald-Khanna sketches at accuracy 10,000 on both sides, which may pick different
-  neighbouring values beyond 10,000 values.
+- Up to 5,000 readings of a parameter, both medians are its lower middle value. Past that, each
+  side's Greenwald-Khanna sketch at accuracy 10,000 picks a value within n/10,000 ranks of it for n
+  readings, rounded up, from its own split of the readings, so the two may differ by twice that.
+- The store ranks every NaN reading above every number. Spark does so within a partition, but
+  compares with < when it merges partitions, which can rank a NaN among the numbers.
 - Zones are gold's, so a zone Spark rejects counts as none, where the pipeline counts it.
 - Family totals are per client, and the backend names each client's family from the registry.
 """
