@@ -44,8 +44,9 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
-  # The views that name an experiment (packages/database/clickhouse/migrations), which the reader
-  # reads beside the three tables below, and the tables a reload replaces rows of or removes ids from.
+  # The reader reads experiment data through the views, which name one experiment per read
+  # (packages/database/clickhouse/migrations), and from the base tables below, under its row
+  # policy. A reload replaces rows of the reloaded tables or removes ids from them.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
