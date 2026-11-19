@@ -61,15 +61,13 @@ export class IotDeviceRepository {
   }
 
   /**
-   * Devices the caller may read — every one of them, or one organization's.
+   * Devices the caller may read, across organizations or within one organization.
    *
-   * `accessibleResourceCondition` and nothing else, which is what makes the two callers
-   * one method. Authorship was an extra arm here until it was cut: it dated from when
-   * the registry shipped standalone and `created_by` was the access model, and left
-   * devices as the only type where creating something granted a permanent read.
+   * Organization membership and grants determine access to organization-owned devices.
+   * Legacy rows without an organization remain accessible to their creator.
    *
-   * The predicate's public arm is unreachable for devices — `zPublishableResourceType`
-   * excludes them, so a non-member sees one only through a grant.
+   * The predicate's public arm is unreachable for devices. `zPublishableResourceType`
+   * excludes them, so a non-member sees an organization-owned device only through a grant.
    */
   async listAccessible(
     userId: string,
@@ -156,13 +154,10 @@ export class IotDeviceRepository {
       visibilityColumn: iotDevices.visibility,
       userId,
     });
-    // Mobile self-registration stores no organization (`ensure-mobile-device` passes
-    // null), so the access predicate cannot reach a self-registered phone at all: no
-    // organization to be a member of, private by default, and nobody grants themselves
-    // their own device. Hence the creator arm — narrowed to devices that have no
-    // organization, because `created_by` is deliberately not an access source here:
-    // once a device belongs to an organization, leaving that organization ends the
-    // creator's access to it like anyone else's.
+    // Legacy devices may have no owning organization, so their creators retain access
+    // through this fallback. New mobile self-registrations belong to the creator's
+    // personal organization. Once a device has an organization, access follows its
+    // membership and grants rather than authorship.
     return or(and(isNull(iotDevices.organizationId), eq(iotDevices.createdBy, userId)), scope);
   }
 
