@@ -240,6 +240,13 @@ locals {
         "cloudfront:UpdateOriginRequestPolicy",
         "cloudfront:DeleteOriginRequestPolicy",
         "cloudfront:GetOriginRequestPolicy",
+        # VPC origins for internal load balancers (Terraform); a distribution that uses one
+        # also needs GetVpcOrigin to create or update.
+        "cloudfront:CreateVpcOrigin",
+        "cloudfront:UpdateVpcOrigin",
+        "cloudfront:DeleteVpcOrigin",
+        "cloudfront:GetVpcOrigin",
+        "cloudfront:ListVpcOrigins",
         # Tags (Terraform)
         "cloudfront:TagResource",
         "cloudfront:UntagResource",
@@ -1123,11 +1130,17 @@ locals {
     }
 
     # ── ECR replication: service-linked role creation (first-time enablement) ──
+    # Also CloudFront's VPC origin role, needed by the first VPC origin in an account. A key of its
+    # own would shift every later statement into another managed policy, and the deploy role would
+    # briefly lose grants while it rewrites them.
     ecr-replication-slr = {
       actions = [
         "iam:CreateServiceLinkedRole",
       ]
-      resource = "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication"
+      resource = [
+        "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication",
+        "arn:aws:iam::*:role/aws-service-role/vpcorigin.cloudfront.amazonaws.com/AWSServiceRoleForCloudFrontVPCOrigin",
+      ]
     }
   }
 

@@ -80,7 +80,7 @@ module "logs_bucket" {
   enable_versioning = false
 
   # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
-  elb_log_delivery_prefixes = ["backend-alb-logs"]
+  elb_log_delivery_prefixes = ["backend-alb-logs", "backend-private-alb-logs"]
 
   lifecycle_rules = [{
     id                                 = "expire-cloudfront-access-logs"
@@ -2741,12 +2741,12 @@ module "backend_ecr" {
 module "backend_alb" {
   source = "../../modules/alb"
 
-  service_name      = "backend"
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnets
-  container_port    = var.backend_container_port
-  security_groups   = [module.vpc.alb_security_group_id]
-  environment       = var.environment
+  service_name    = "backend"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.public_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
 
   # Health check configuration
   health_check_path                = "/health"
@@ -2770,6 +2770,42 @@ module "backend_alb" {
     ManagedBy   = "terraform"
     Component   = "backend"
   }
+}
+
+module "backend_alb_private" {
+  source = "../../modules/alb"
+
+  service_name    = "backend-private"
+  internal        = true
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
+
+  health_check_path                = "/health"
+  health_check_timeout             = 5
+  health_check_interval            = 90
+  health_check_healthy_threshold   = 3
+  health_check_unhealthy_threshold = 3
+  health_check_matcher             = "200-299"
+
+  certificate_arn = module.route53.regional_services_certificate_arn
+
+  enable_access_logs = true
+  access_logs_bucket = module.logs_bucket.bucket_id
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+
+  # The deploy role gains its VPC origin permissions in the same apply, and the logs bucket's
+  # policy admits the new prefix before access logging is switched on. Drop module.iam_oidc once
+  # CI's roles are applied from their own root.
+  depends_on = [module.iam_oidc, module.logs_bucket]
 }
 
 module "backend_ecs" {
@@ -2802,6 +2838,8 @@ module "backend_ecs" {
 
   # Load balancer integration
   target_group_arn = module.backend_alb.target_group_arn
+  # Registers the tasks with the private ALB too, so it is healthy before CloudFront switches.
+  additional_target_group_arns = [module.backend_alb_private.target_group_arn]
 
   # Auto-scaling settings
   enable_autoscaling = true

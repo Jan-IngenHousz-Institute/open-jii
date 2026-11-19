@@ -99,6 +99,12 @@ variable "target_group_arn" {
   default     = null
 }
 
+variable "additional_target_group_arns" {
+  description = "Further target groups the tasks register with, such as a second ALB during a move between load balancers. Used only with target_group_arn."
+  type        = list(string)
+  default     = []
+}
+
 variable "vpc_id" {
   description = "VPC ID where ECS is deployed"
   type        = string

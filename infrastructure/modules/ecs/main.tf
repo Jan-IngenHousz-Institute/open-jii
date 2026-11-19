@@ -389,9 +389,9 @@ resource "aws_ecs_service" "app_service" {
 
   # Load balancer configuration - only created if target_group_arn and container_port are provided
   dynamic "load_balancer" {
-    for_each = (var.target_group_arn != null && var.container_port != null) ? [1] : []
+    for_each = (var.target_group_arn != null && var.container_port != null) ? concat([var.target_group_arn], var.additional_target_group_arns) : []
     content {
-      target_group_arn = var.target_group_arn
+      target_group_arn = load_balancer.value
       container_name   = var.service_name
       container_port   = var.container_port
     }
