@@ -1130,19 +1130,17 @@ locals {
     }
 
     # ── ECR replication: service-linked role creation (first-time enablement) ──
+    # Also CloudFront's VPC origin role, needed by the first VPC origin in an account. A key of its
+    # own would shift every later statement into another managed policy, and the deploy role would
+    # briefly lose grants while it rewrites them.
     ecr-replication-slr = {
       actions = [
         "iam:CreateServiceLinkedRole",
       ]
-      resource = "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication"
-    }
-
-    # ── CloudFront VPC origins: service-linked role creation (first VPC origin in the account) ──
-    cloudfront-vpc-origin-slr = {
-      actions = [
-        "iam:CreateServiceLinkedRole",
+      resource = [
+        "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication",
+        "arn:aws:iam::*:role/aws-service-role/vpcorigin.cloudfront.amazonaws.com/AWSServiceRoleForCloudFrontVPCOrigin",
       ]
-      resource = "arn:aws:iam::*:role/aws-service-role/vpcorigin.cloudfront.amazonaws.com/AWSServiceRoleForCloudFrontVPCOrigin"
     }
   }
 
