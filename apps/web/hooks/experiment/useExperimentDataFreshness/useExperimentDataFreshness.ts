@@ -14,8 +14,15 @@ const POLL_MS = 30_000;
 /** The backend holds a warehouse listing this long, so an earlier refetch gets the same answer. */
 const BACKEND_CACHE_MS = 15_000;
 const BEHIND_AFTER_MS = 2 * 60_000;
+/** Keeps a page under steady ingest inside the backend's per-address request limit. */
+const REFRESH_GAP_MS = 5_000;
 
 export type DataFreshnessStatus = "live" | "paused" | "behind";
+
+interface RefreshedTable {
+  table: ExperimentTableMetadata;
+  at: number;
+}
 
 function newestOf(
   tables: ExperimentTableMetadata[],
@@ -29,6 +36,37 @@ function newestOf(
 
 function versionOf(table: ExperimentTableVersion): string {
   return `${table.totalRows}|${table.latestRowAt}|${table.schemaRevision}`;
+}
+
+function refreshTable(
+  queryClient: QueryClient,
+  experimentId: string,
+  table: ExperimentTableMetadata,
+  before: ExperimentTableMetadata | undefined,
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: orpc.experiments.getExperimentData.key({
+      input: { id: experimentId, tableName: table.identifier },
+    }),
+  });
+
+  void queryClient.invalidateQueries({
+    queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
+    predicate: (query) => query.meta?.secondaryTableName === table.identifier,
+  });
+
+  const hasNewSchema = before?.schemaRevision !== table.schemaRevision;
+  if (hasNewSchema) {
+    void queryClient.invalidateQueries({
+      queryKey: orpc.experiments.getExperimentTableColumns.key({
+        input: { id: experimentId, tableName: table.identifier },
+      }),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: orpc.experiments.getExperimentTableColumns.key({ input: { id: experimentId } }),
+      predicate: (query) => query.meta?.secondaryTableName === table.identifier,
+    });
+  }
 }
 
 function retryFailedRows(queryClient: QueryClient, experimentId: string): void {
@@ -100,50 +138,44 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
       queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
     }) > 0;
 
-  const seen = useRef<Map<string, ExperimentTableMetadata> | null>(null);
+  const refreshed = useRef<Map<string, RefreshedTable> | null>(null);
   useEffect(() => {
     if (!tables || isPaused) {
       return;
     }
-    const previous = seen.current;
-    seen.current = new Map(tables.map((table) => [table.identifier, table]));
-    if (previous === null) {
+    const refreshedTables = refreshed.current;
+    if (refreshedTables === null) {
+      refreshed.current = new Map(tables.map((table) => [table.identifier, { table, at: 0 }]));
       return;
     }
 
+    const refresh = (table: ExperimentTableMetadata) => {
+      refreshTable(queryClient, experimentId, table, refreshedTables.get(table.identifier)?.table);
+      refreshedTables.set(table.identifier, { table, at: Date.now() });
+    };
+
+    // A change inside the gap is held to its end rather than dropped, so a burst's last one lands.
+    const held: ReturnType<typeof setTimeout>[] = [];
     for (const table of tables) {
-      const before = previous.get(table.identifier);
-      if (before !== undefined && versionOf(before) === versionOf(table)) {
+      const last = refreshedTables.get(table.identifier);
+      const hasMoved = last === undefined || versionOf(last.table) !== versionOf(table);
+      if (!hasMoved) {
         continue;
       }
-      void queryClient.invalidateQueries({
-        queryKey: orpc.experiments.getExperimentData.key({
-          input: { id: experimentId, tableName: table.identifier },
-        }),
-      });
 
-      void queryClient.invalidateQueries({
-        queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
-        predicate: (query) => query.meta?.secondaryTableName === table.identifier,
-      });
-
-      const hasNewSchema = before?.schemaRevision !== table.schemaRevision;
-      if (hasNewSchema) {
-        void queryClient.invalidateQueries({
-          queryKey: orpc.experiments.getExperimentTableColumns.key({
-            input: { id: experimentId, tableName: table.identifier },
-          }),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: orpc.experiments.getExperimentTableColumns.key({ input: { id: experimentId } }),
-          predicate: (query) => query.meta?.secondaryTableName === table.identifier,
-        });
+      const waitMs = (last?.at ?? 0) + REFRESH_GAP_MS - Date.now();
+      const isTooSoon = waitMs > 0;
+      if (isTooSoon) {
+        held.push(setTimeout(() => refresh(table), waitMs));
+      } else {
+        refresh(table);
       }
     }
 
-    // A version counts as seen once listed, so rows whose refresh failed are retried at
-    // every poll and stream event until they load, whether or not anything moved.
+    // A version counts as refreshed once asked for, so rows whose refresh failed are retried
+    // at every poll and stream event until they load, whether or not anything moved.
     retryFailedRows(queryClient, experimentId);
+    return () => held.forEach((timer) => clearTimeout(timer));
     // An unchanged listing keeps its reference, so each poll is told apart by its time.
   }, [tables, dataUpdatedAt, isPaused, experimentId, queryClient]);
 

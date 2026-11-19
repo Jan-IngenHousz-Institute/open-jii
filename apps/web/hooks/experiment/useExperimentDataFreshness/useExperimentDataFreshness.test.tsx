@@ -388,6 +388,40 @@ describe("useExperimentDataFreshness", () => {
       expect(listing.callCount).toBe(listingCalls);
     });
 
+    it("refetches a table's rows at most once every 5 s, and the last change of a burst at its end", async () => {
+      mountStoreListing([RAW]);
+      const rowReads = server.mount(contract.experiments.getExperimentData, { body: [] });
+      const stream = mountChangeStream();
+      renderHook(() => {
+        useExperimentDataFreshness("exp-1");
+        useQuery(
+          orpc.experiments.getExperimentData.queryOptions({
+            input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
+          }),
+        );
+      });
+      await goLive(stream);
+      await waitFor(() => expect(rowReads.callCount).toBe(1));
+
+      await act(() =>
+        stream.send({ type: "changed", tables: [{ ...RAW_VERSION, totalRows: 11 }] }),
+      );
+      await waitFor(() => expect(rowReads.callCount).toBe(2));
+      await act(() =>
+        stream.send({ type: "changed", tables: [{ ...RAW_VERSION, totalRows: 12 }] }),
+      );
+      await act(() =>
+        stream.send({ type: "changed", tables: [{ ...RAW_VERSION, totalRows: 13 }] }),
+      );
+      await act(() => vi.advanceTimersByTimeAsync(4_800));
+      expect(rowReads.callCount).toBe(2);
+
+      await act(() => vi.advanceTimersByTimeAsync(200));
+      await waitFor(() => expect(rowReads.callCount).toBe(3));
+      await act(() => vi.advanceTimersByTimeAsync(10_000));
+      expect(rowReads.callCount).toBe(3);
+    });
+
     it("fetches the listing once for a change that names a new table", async () => {
       const listing = mountStoreListing([RAW]);
       const stream = mountChangeStream();
