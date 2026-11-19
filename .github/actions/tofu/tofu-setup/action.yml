@@ -1,10 +1,6 @@
 name: "Setup OpenTofu"
 description: "Sets up OpenTofu and configures AWS credentials via OIDC"
 inputs:
-  tofu_version:
-    description: "OpenTofu version to use"
-    required: false
-    default: "1.12.9"
   aws_role_arn:
     description: "AWS Role ARN"
     required: true
@@ -15,16 +11,24 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Read the OpenTofu version
+      id: version
+      shell: bash
+      run: |
+        echo "tofu=$(tr -d '[:space:]' < .opentofu-version)" >> "$GITHUB_OUTPUT"
+        mkdir -p "$HOME/.terraform.d/plugin-cache"
+        echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+
     - name: Setup OpenTofu
       uses: opentofu/setup-opentofu@fc711fa910b93cba0f3fbecaafc9f42fd0c411cb # v2.0.0
       with:
-        tofu_version: ${{ inputs.tofu_version }}
+        tofu_version: ${{ steps.version.outputs.tofu }}
 
     - name: Cache OpenTofu Plugins
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.terraform.d/plugin-cache
-        key: ${{ runner.os }}-tofu-${{ hashFiles('**/*.tf') }}
+        key: ${{ runner.os }}-tofu-${{ hashFiles('infrastructure/**/.terraform.lock.hcl') }}
         restore-keys: |
           ${{ runner.os }}-tofu-
 

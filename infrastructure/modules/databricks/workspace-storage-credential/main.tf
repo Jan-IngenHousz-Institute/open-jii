@@ -9,6 +9,10 @@ terraform {
       version               = ">= 1.13.0"
       configuration_aliases = [databricks.workspace]
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.9"
+    }
   }
 }
 
@@ -125,4 +129,24 @@ resource "aws_iam_role_policy_attachment" "additional_bucket_access" {
 
   role       = aws_iam_role.storage_access.name
   policy_arn = aws_iam_policy.additional_bucket_access[each.key].arn
+}
+
+# Unity Catalog checks the role the moment an external location is created, and an IAM change
+# takes seconds to reach it. A location created in the same apply as its bucket's policy failed
+# on READ until a rerun, so the credential's name is handed out only after this wait, which
+# starts again whenever a policy or attachment changes.
+resource "time_sleep" "iam_propagation" {
+  create_duration = "30s"
+
+  triggers = {
+    policy_arns = join(",", sort(concat(
+      [aws_iam_role_policy_attachment.storage_access.policy_arn],
+      aws_iam_role_policy_attachment.additional[*].policy_arn,
+      [for attachment in aws_iam_role_policy_attachment.additional_bucket_access : attachment.policy_arn],
+    )))
+    policies = sha1(join("", concat(
+      [aws_iam_policy.storage_access.policy],
+      [for policy in aws_iam_policy.additional_bucket_access : policy.policy],
+    )))
+  }
 }

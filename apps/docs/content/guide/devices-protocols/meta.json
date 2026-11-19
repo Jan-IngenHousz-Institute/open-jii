@@ -2,6 +2,7 @@
   "title": "Devices & Protocols",
   "pages": [
     "index",
+    "borrowing-instruments",
     "multispeq",
     "calibration",
     "continuous-sensors",

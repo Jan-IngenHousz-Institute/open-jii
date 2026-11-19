@@ -4,8 +4,9 @@ output "storage_credential_id" {
 }
 
 output "storage_credential_name" {
-  description = "Name of the created storage credential"
+  description = "Name of the created storage credential, once its IAM policies have propagated"
   value       = databricks_storage_credential.this.name
+  depends_on  = [time_sleep.iam_propagation]
 }
 
 output "iam_role_arn" {

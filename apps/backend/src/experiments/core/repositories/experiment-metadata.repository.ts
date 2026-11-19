@@ -1,287 +1,126 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
-import { randomUUID } from "crypto";
-import { z } from "zod";
+import { Inject, Injectable } from "@nestjs/common";
 
-import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
-import { Result, failure, success, AppError } from "../../../common/utils/fp-utils";
-import type {
-  ExperimentMetadataDto,
-  CreateExperimentMetadataDto,
-  UpdateExperimentMetadataDto,
-} from "../models/experiment-metadata.model";
-import { DATABRICKS_PORT } from "../ports/databricks.port";
-import type { DatabricksPort } from "../ports/databricks.port";
+import { and, desc, eq, experimentMetadataSheets, inArray, sql } from "@repo/database";
+import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
-/**
- * Repository for experiment metadata operations.
- * Values are bound as statement parameters, never written into the SQL text.
- *
- * Databricks table schema:
- *   metadata_id   STRING   (PK, UUID)
- *   experiment_id STRING
- *   metadata      VARIANT  (arbitrary JSON blob)
- *   created_by    STRING
- *   created_at    TIMESTAMP
- *   updated_at    TIMESTAMP
- */
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
+import type { MetadataSheetRecord } from "../models/experiment-metadata.model";
+
+/** Researchers' custom metadata sheets in Postgres. */
 @Injectable()
 export class ExperimentMetadataRepository {
-  private readonly logger = new Logger(ExperimentMetadataRepository.name);
+  constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
 
-  constructor(@Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort) {}
-
-  private get metadataTable(): string {
-    return `${this.databricksPort.CATALOG_NAME}.${this.databricksPort.CENTRUM_SCHEMA_NAME}.experiment_custom_metadata`;
-  }
-
-  // --- Validation ---
-
-  private readonly schemas = {
-    uuid: z.string().guid(),
-    jsonString: z.string().max(5_000_000), // 5 MB cap on serialized metadata
-  };
-
-  private validate = {
-    uuid: (value: string) => this.schemas.uuid.safeParse(value),
-  };
-
-  // --- Repository methods ---
-
-  async findAllByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto[]>> {
-    this.logger.log({
-      msg: "Finding all metadata by experiment ID",
-      operation: "findAllByExperimentId",
-      experimentId,
-    });
-
-    if (!this.validate.uuid(experimentId).success) {
-      return failure(AppError.validationError("Invalid experiment ID format"));
-    }
-
-    const query = `
-      SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
-      FROM ${this.metadataTable}
-      WHERE experiment_id = :experiment_id
-      ORDER BY created_at DESC
-    `;
-
-    const result = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-      [{ name: "experiment_id", value: experimentId }],
+  /** Runs `work` as one transaction, so a write and the copies it owes land together or not at all. */
+  async transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<Result<T>> {
+    return tryCatch(
+      () => this.database.transaction(work),
+      (error) => this.queryError(error),
     );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(`Failed to find metadata: ${result.error.message}`));
-    }
-
-    return success(result.value.rows.map((row) => this.mapRowToDto(result.value.columns, row)));
   }
 
-  async create(
-    experimentId: string,
-    dto: CreateExperimentMetadataDto,
-    userId: string,
-  ): Promise<Result<ExperimentMetadataDto>> {
-    this.logger.log({
-      msg: "Creating metadata",
-      operation: "create",
-      experimentId,
-    });
-
-    if (!this.validate.uuid(experimentId).success || !this.validate.uuid(userId).success) {
-      return failure(AppError.validationError("Invalid experiment ID or user ID format"));
-    }
-
-    const now = new Date();
-    const isoNow = now.toISOString();
-    const metadataJson = JSON.stringify(dto.metadata);
-
-    if (!this.schemas.jsonString.safeParse(metadataJson).success) {
-      return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
-    }
-
-    const metadataId = randomUUID();
-
-    const insertQuery = `
-      INSERT INTO ${this.metadataTable}
-        (metadata_id, experiment_id, metadata, created_by, created_at, updated_at)
-      VALUES (:metadata_id, :experiment_id, PARSE_JSON(:metadata), :created_by, :now, :now)
-    `;
-    const parameters: StatementParameter[] = [
-      { name: "metadata_id", value: metadataId },
-      { name: "experiment_id", value: experimentId },
-      { name: "metadata", value: metadataJson },
-      { name: "created_by", value: userId },
-      { name: "now", value: isoNow, type: "TIMESTAMP" },
-    ];
-
-    const insertResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      insertQuery,
-      parameters,
-    );
-
-    if (insertResult.isFailure()) {
-      return failure(AppError.internal(`Failed to create metadata: ${insertResult.error.message}`));
-    }
-
-    return success({
-      metadataId,
-      experimentId,
-      metadata: dto.metadata,
-      createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
-    });
+  async insert(tx: DbOrTx, sheet: MetadataSheetRecord): Promise<void> {
+    await tx.insert(experimentMetadataSheets).values(sheet);
   }
 
-  async deleteByMetadataId(metadataId: string, experimentId: string): Promise<Result<boolean>> {
-    this.logger.log({
-      msg: "Deleting metadata by metadata ID",
-      operation: "deleteByMetadataId",
-      metadataId,
-      experimentId,
-    });
-
-    if (!this.validate.uuid(metadataId).success || !this.validate.uuid(experimentId).success) {
-      return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
-    }
-
-    const query = `
-      DELETE FROM ${this.metadataTable}
-      WHERE metadata_id = :metadata_id
-        AND experiment_id = :experiment_id
-    `;
-
-    const result = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-      [
-        { name: "metadata_id", value: metadataId },
-        { name: "experiment_id", value: experimentId },
-      ],
-    );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(`Failed to delete metadata: ${result.error.message}`));
-    }
-
-    return success(true);
-  }
-
-  async deleteAllByExperimentId(experimentId: string): Promise<Result<boolean>> {
-    this.logger.log({
-      msg: "Deleting all metadata by experiment ID",
-      operation: "deleteAllByExperimentId",
-      experimentId,
-    });
-
-    if (!this.validate.uuid(experimentId).success) {
-      return failure(AppError.validationError("Invalid experiment ID format"));
-    }
-
-    const query = `
-      DELETE FROM ${this.metadataTable}
-      WHERE experiment_id = :experiment_id
-    `;
-
-    const result = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      query,
-      [{ name: "experiment_id", value: experimentId }],
-    );
-
-    if (result.isFailure()) {
-      return failure(AppError.internal(`Failed to delete metadata: ${result.error.message}`));
-    }
-
-    return success(true);
-  }
-
+  /** The sheet as it reads after the update, or null when it was not there. */
   async update(
-    metadataId: string,
-    dto: UpdateExperimentMetadataDto,
-    _userId: string,
+    tx: DbOrTx,
     experimentId: string,
-  ): Promise<Result<ExperimentMetadataDto>> {
-    this.logger.log({
-      msg: "Updating metadata",
-      operation: "update",
-      metadataId,
-      experimentId,
-    });
+    metadataId: string,
+    metadata: Record<string, unknown>,
+    updatedAt: Date,
+  ): Promise<MetadataSheetRecord | null> {
+    const updated = await tx
+      .update(experimentMetadataSheets)
+      .set({ metadata, updatedAt })
+      .where(
+        and(
+          eq(experimentMetadataSheets.id, metadataId),
+          eq(experimentMetadataSheets.experimentId, experimentId),
+        ),
+      )
+      .returning();
 
-    if (!this.validate.uuid(metadataId).success || !this.validate.uuid(experimentId).success) {
-      return failure(AppError.validationError("Invalid metadata ID or experiment ID format"));
-    }
-
-    const now = new Date();
-    const isoNow = now.toISOString();
-    const metadataJson = JSON.stringify(dto.metadata);
-
-    if (!this.schemas.jsonString.safeParse(metadataJson).success) {
-      return failure(AppError.validationError("Metadata payload exceeds the 5 MB size limit"));
-    }
-
-    const updateQuery = `
-      UPDATE ${this.metadataTable}
-      SET metadata = PARSE_JSON(:metadata),
-          updated_at = :now
-      WHERE metadata_id = :metadata_id
-        AND experiment_id = :experiment_id
-    `;
-    const parameters: StatementParameter[] = [
-      { name: "metadata", value: metadataJson },
-      { name: "now", value: isoNow, type: "TIMESTAMP" },
-      { name: "metadata_id", value: metadataId },
-      { name: "experiment_id", value: experimentId },
-    ];
-
-    const updateResult = await this.databricksPort.executeSqlQuery(
-      this.databricksPort.CENTRUM_SCHEMA_NAME,
-      updateQuery,
-      parameters,
-    );
-
-    if (updateResult.isFailure()) {
-      return failure(AppError.internal(`Failed to update metadata: ${updateResult.error.message}`));
-    }
-
-    return success({
-      metadataId,
-      experimentId,
-      metadata: dto.metadata,
-      createdBy: _userId,
-      createdAt: now, // approximate; true value lives in DB
-      updatedAt: now,
-    });
+    return updated.at(0) ?? null;
   }
 
-  /** Map a raw Databricks row to ExperimentMetadataDto */
-  private mapRowToDto(columns: { name: string }[], row: (string | null)[]): ExperimentMetadataDto {
-    const colIndex = (name: string) => columns.findIndex((c) => c.name === name);
+  /** Whether the sheet was there to delete. */
+  async delete(tx: DbOrTx, experimentId: string, metadataId: string): Promise<boolean> {
+    const deleted = await tx
+      .delete(experimentMetadataSheets)
+      .where(
+        and(
+          eq(experimentMetadataSheets.id, metadataId),
+          eq(experimentMetadataSheets.experimentId, experimentId),
+        ),
+      )
+      .returning({ id: experimentMetadataSheets.id });
 
-    const rawMetadata = row[colIndex("metadata")];
-    let metadata: Record<string, unknown> = {};
-    if (rawMetadata) {
-      try {
-        metadata = JSON.parse(rawMetadata) as Record<string, unknown>;
-      } catch {
-        this.logger.warn({ msg: "Failed to parse metadata JSON", rawMetadata });
-      }
-    }
+    return deleted.length > 0;
+  }
 
-    const createdAtRaw = row[colIndex("created_at")];
-    const updatedAtRaw = row[colIndex("updated_at")];
+  /** An experiment's sheets, newest first. */
+  async findByExperimentId(experimentId: string): Promise<Result<MetadataSheetRecord[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select()
+          .from(experimentMetadataSheets)
+          .where(eq(experimentMetadataSheets.experimentId, experimentId))
+          .orderBy(desc(experimentMetadataSheets.createdAt), desc(experimentMetadataSheets.id)),
+      (error) => this.queryError(error),
+    );
+  }
 
-    return {
-      metadataId: row[colIndex("metadata_id")] ?? "",
-      experimentId: row[colIndex("experiment_id")] ?? "",
-      metadata,
-      createdBy: row[colIndex("created_by")] ?? "",
-      createdAt: createdAtRaw ? new Date(createdAtRaw) : new Date(0),
-      updatedAt: updatedAtRaw ? new Date(updatedAtRaw) : new Date(0),
-    };
+  /** Each sheet's size as text, which sizes a copy before its documents are read. */
+  async findSizes(ids: string[]): Promise<Result<{ id: string; bytes: number }[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select({
+            id: experimentMetadataSheets.id,
+            bytes: sql<number>`octet_length(${experimentMetadataSheets.metadata}::text)`.mapWith(
+              Number,
+            ),
+          })
+          .from(experimentMetadataSheets)
+          .where(inArray(experimentMetadataSheets.id, ids)),
+      (error) => this.queryError(error),
+    );
+  }
+
+  /** The sheets among `ids` that still exist. */
+  async findByIds(ids: string[]): Promise<Result<MetadataSheetRecord[]>> {
+    return tryCatch(
+      () =>
+        this.database
+          .select()
+          .from(experimentMetadataSheets)
+          .where(inArray(experimentMetadataSheets.id, ids)),
+      (error) => this.queryError(error),
+    );
+  }
+
+  /**
+   * Drizzle's message repeats the statement with its parameters, the sheet's contents, which would
+   * reach the logs; Postgres's SQLSTATE says what went wrong. The driver puts its own failures, such
+   * as CONNECT_TIMEOUT, in the same field, and those are no SQLSTATE.
+   */
+  private queryError(error: unknown): AppError {
+    const cause = error instanceof Error ? error.cause : undefined;
+    const code =
+      typeof cause === "object" &&
+      cause !== null &&
+      "code" in cause &&
+      typeof cause.code === "string" &&
+      /^[0-9A-Z]{5}$/.test(cause.code)
+        ? cause.code
+        : null;
+    return AppError.internal(
+      code === null
+        ? "Postgres did not answer the metadata sheets query"
+        : `Postgres refused the metadata sheets query with SQLSTATE ${code}`,
+    );
   }
 }

@@ -13,9 +13,9 @@ The schemas, migrations and clients of openJII's two databases:
 ClickHouse is configured, that its migrations are numbered as the runner expects, and that it
 answers to the runner's credentials, then migrates ClickHouse, then Postgres, so a failed store
 migration leaves Postgres as it was. An environment without a serving store, such as DR, leaves
-`CLICKHOUSE_URL` unset and migrates Postgres only. While the store is down, the Database
-Migrations workflow's `skip_store_migrations` input migrates Postgres alone
-(`docs/runbooks/store-answers.md`).
+`CLICKHOUSE_URL` unset and migrates Postgres only. While the store is down, the
+`skip_store_migrations` input migrates Postgres alone: on the Database Migrations workflow in dev,
+and on the PROD Release workflow in prod (`docs/runbooks/store-answers.md`).
 
 Common commands (run from the repo root):
 

@@ -70,14 +70,16 @@ agent is the break. Its errors are in `/opt/aws/amazon-cloudwatch-agent/logs/ama
 
 ## Shipping a Postgres change while the store is down
 
-1. Run the **Database Migrations Workflow** for the environment and ref with
-   `skip_store_migrations` ticked. It migrates Postgres alone and logs
+1. Migrate Postgres alone, with `skip_store_migrations` ticked. The run logs
    `ClickHouse migrations skipped on request`.
+   - Dev: run the **Database Migrations Workflow** for the ref.
+   - Prod: run the **PROD Release Workflow** from the release branch with `deploy_app` set to
+     `migration` and `deploy_infrastructure` off. It waits for an approval in `prod-approval`.
 2. Run the environment's release workflow with `deploy_app` set to `backend,web`, which deploys
    both without running the migrations again.
 
-Once the store answers again, run the Database Migrations Workflow once more without the tick, so
-the store catches up. A later deploy migrates only when `@repo/database` changed, so it may not.
+Once the store answers again, migrate once more the same way without the tick, so the store
+catches up. A later deploy migrates only when `@repo/database` changed, so it may not.
 
 ## Closing
 

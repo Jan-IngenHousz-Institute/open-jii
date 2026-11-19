@@ -5,6 +5,7 @@ import type {
   FilterCondition,
   QueryOrdering,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
+import { INLINE_RESULT_BYTE_LIMIT } from "../../../common/modules/databricks/services/sql/sql.types";
 
 export type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
 
@@ -24,12 +25,20 @@ export type ExperimentDataSource = "warehouse" | "store";
 export const PAGE_TOO_LARGE_MESSAGE =
   "This page holds more data than one read can return. Choose a smaller page size.";
 
+/**
+ * The most one read may return, the warehouse's inline limit. A store read counts it on its cells'
+ * JSON text, which approximates the warehouse's own count; the two have not been measured apart.
+ */
+export const PAGE_BYTE_LIMIT = INLINE_RESULT_BYTE_LIMIT;
+
 export interface TableConfig {
   displayName: string;
   defaultSortColumn?: string;
   errorColumn?: string;
   exceptColumns: string[];
   variantColumns: VariantColumn[];
+  /** The warehouse view's column holding the phone's annotations alone, beside the merged ones. */
+  phoneAnnotationsColumn?: string;
 }
 
 /** Full configuration for known static tables (display + query). */
@@ -39,6 +48,7 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
     defaultSortColumn: "timestamp",
     exceptColumns: ["experiment_id", "client_id"],
     variantColumns: ["questions_data", "custom_metadata"],
+    phoneAnnotationsColumn: "payload_annotations",
   },
   [ExperimentTableName.DEVICE]: {
     displayName: "Device Metadata",
@@ -63,6 +73,7 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
     "date",
   ],
   variantColumns: ["macro_output", "questions_data", "custom_metadata"],
+  phoneAnnotationsColumn: "payload_annotations",
 };
 
 /** Full configuration for user-uploaded tables (display + query). */

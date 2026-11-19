@@ -1,4 +1,10 @@
 /**
+ * The most an INLINE result may hold, which the statement API counts on its own representation
+ * of the result rather than on the JSON it sends.
+ */
+export const INLINE_RESULT_BYTE_LIMIT = 26_214_400;
+
+/**
  * Value for a `:name` marker in the statement. The warehouse binds it, so it never becomes SQL
  * text. An omitted `value` binds NULL.
  */

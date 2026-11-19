@@ -41,6 +41,7 @@ import {
   accounts,
   experimentDashboards,
   experimentVisualizations,
+  experimentDataOutbox,
   experimentExports,
   experimentUploads,
   experimentJoinCodes,
@@ -54,10 +55,12 @@ import {
 
 import { AppModule } from "../app.module";
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { ExperimentDataOutboxWorker } from "../experiments/application/services/experiment-data-outbox.worker";
 import { ExportRunReconcilerService } from "../experiments/application/services/export-run-reconciler.service";
 import { UploadRunReconcilerService } from "../experiments/application/services/upload-run-reconciler.service";
 import { NotificationOutboxWorker } from "../notifications/application/services/notification-outbox.worker";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
+import { QuietExperimentDataOutboxWorker } from "./quiet-experiment-data-outbox.worker";
 import { QuietExportRunReconcilerService } from "./quiet-export-run-reconciler";
 import { QuietNotificationOutboxWorker } from "./quiet-notification-outbox.worker";
 import { QuietUploadRunReconcilerService } from "./quiet-upload-run-reconciler";
@@ -121,7 +124,9 @@ export class TestHarness {
       // otherwise drain rows the spec under test had only queued. `drain()` stays real.
       moduleBuilder
         .overrideProvider(NotificationOutboxWorker)
-        .useClass(QuietNotificationOutboxWorker);
+        .useClass(QuietNotificationOutboxWorker)
+        .overrideProvider(ExperimentDataOutboxWorker)
+        .useClass(QuietExperimentDataOutboxWorker);
       moduleBuilder
         .overrideProvider(ExportRunReconcilerService)
         .useClass(QuietExportRunReconcilerService);
@@ -231,6 +236,8 @@ export class TestHarness {
     // Cascades with experiments, but the `code` unique index spans every row, so a
     // leftover would collide with a later test rather than merely linger.
     await this.database.delete(experimentJoinCodes).execute();
+    // No foreign key, so nothing cascades to it.
+    await this.database.delete(experimentDataOutbox).execute();
     await this.database.delete(experimentExports).execute();
     await this.database.delete(experimentUploads).execute();
     await this.database.delete(experimentMembers).execute();

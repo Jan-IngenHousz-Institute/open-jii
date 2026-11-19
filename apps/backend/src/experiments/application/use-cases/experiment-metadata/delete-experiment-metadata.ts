@@ -3,8 +3,10 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../../core/models/experiment.model";
+import { ExperimentDataOutboxRepository } from "../../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataRepository } from "../../../core/repositories/experiment-metadata.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import { ExperimentDataOutboxWorker } from "../../services/experiment-data-outbox.worker";
 
 @Injectable()
 export class DeleteExperimentMetadataUseCase {
@@ -12,7 +14,9 @@ export class DeleteExperimentMetadataUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    private readonly experimentMetadataRepository: ExperimentMetadataRepository,
+    private readonly metadataRepository: ExperimentMetadataRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(experimentId: string, metadataId: string, userId: string): Promise<Result<void>> {
@@ -46,12 +50,17 @@ export class DeleteExperimentMetadataUseCase {
         return failure(AppError.forbidden("Cannot modify an archived experiment"));
       }
 
-      const deleteResult = await this.experimentMetadataRepository.deleteByMetadataId(
-        metadataId,
-        experimentId,
-      );
+      const written = await this.metadataRepository.transaction(async (tx) => {
+        const deleted = await this.metadataRepository.delete(tx, experimentId, metadataId);
+        if (deleted) {
+          await this.outboxRepository.owe(tx, [
+            { recordType: "metadata_sheet", recordId: metadataId, experimentId },
+          ]);
+        }
+        return deleted;
+      });
 
-      if (deleteResult.isFailure()) {
+      if (written.isFailure()) {
         this.logger.error({
           msg: "Failed to delete experiment metadata",
           errorCode: ErrorCodes.EXPERIMENT_METADATA_DELETE_FAILED,
@@ -59,9 +68,13 @@ export class DeleteExperimentMetadataUseCase {
           experimentId,
           metadataId,
           userId,
-          error: deleteResult.error.message,
+          error: written.error.message,
         });
         return failure(AppError.internal("Failed to delete metadata"));
+      }
+
+      if (!written.value) {
+        return failure(AppError.notFound(`Metadata with ID ${metadataId} not found`));
       }
 
       this.logger.log({
@@ -72,6 +85,7 @@ export class DeleteExperimentMetadataUseCase {
         userId,
         status: "success",
       });
+      this.outboxWorker.nudge();
 
       return success(undefined);
     });

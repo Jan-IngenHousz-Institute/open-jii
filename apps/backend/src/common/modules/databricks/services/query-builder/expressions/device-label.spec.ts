@@ -1,7 +1,10 @@
+import { fromPartial } from "@total-typescript/shoehorn";
 import { resolve } from "node:path";
 
+import { ExperimentWarehouseReadsService } from "../../../../../../experiments/application/services/experiment-warehouse-reads.service";
+import type { NumberAnswersService } from "../../../../../../experiments/application/services/number-answers.service";
+import type { DatabricksPort } from "../../../../../../experiments/core/ports/databricks.port";
 import { assertSuccess } from "../../../../../utils/fp-utils";
-import { SqlQueryBuilder } from "../query-builder.base";
 import { QueryBuilderService } from "../query-builder.service";
 import type { QueryParams } from "../query-builder.types";
 import { deviceDisplaySource } from "./device-label";
@@ -62,21 +65,21 @@ it("keeps the Spark device-display fixture in sync with generated queries", asyn
       filters: [{ column: "device.serial_number", operator: "equals", value: "Ambit (d2)" }],
     }),
     sorted: query({ columns: ["id", "device"], ordering: { column: "device.serial_number" } }),
+    sortedWhole: query({ columns: ["id", "device"], ordering: { column: "device" } }),
+    sortedWholeDescending: query({
+      columns: ["id", "device"],
+      ordering: { column: "device", direction: "DESC" },
+    }),
     grouped: query({
       aggregation: {
         groupBy: [{ column: "device" }],
         functions: [{ column: "id", function: "count", alias: "rows" }],
       },
     }),
-    distinct: new SqlQueryBuilder()
-      .select(["serial_number"])
-      .distinct()
-      .from(`(${serials}) AS device_names`)
-      .where("`serial_number` IS NOT NULL AND trim(`serial_number`) <> ''")
-      .orderByRaw("lower(`serial_number`) ASC, `serial_number` ASC")
-      .limit(1001)
-      .offset(0)
-      .build(),
+    distinct: new ExperimentWarehouseReadsService(
+      fromPartial<DatabricksPort>({}),
+      fromPartial<NumberAnswersService>({}),
+    ).deviceLabelsQuery({ sql: serials, columns: [], distinct: false }, 1001, 0).sql,
     hiddenClient: query({
       exceptColumns: ["client_id"],
       variants: [{ columnName: "payload", schema: "OBJECT<client_id: STRING>", suffix: "output" }],

@@ -1,3 +1,4 @@
+import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
 import { StoreQueryBuilder } from "./store-query-builder";
 import { MACRO_RESULTS_TABLE, MEASUREMENTS_TABLE, UPLOADS_TABLE } from "./store-tables";
@@ -54,12 +55,12 @@ describe("StoreQueryBuilder", () => {
       expect.objectContaining({ name: "contributor", idOf: "contributor" }),
       expect.objectContaining({ name: "device", idOf: "device" }),
     ]);
-    expect(measurements().select(["contributor", "device"]).build()).toContain(
-      "SELECT user_id AS `contributor`, client_id AS `device`",
-    );
+    const sql = measurements().select(["contributor", "device"]).build();
+    expect(sql).toContain("SELECT user_id AS `contributor`, tuple(client_id, CASE WHEN ");
+    expect(sql).toContain("nullif(trim(device_name), ''), nullif(trim(client_id), '')");
   });
 
-  it("reads a scalar field by type, anything else as JSON, and an empty object as null", () => {
+  it("reads a field from the JSON column by type for a distinct read, anything else as JSON", () => {
     const sql = new StoreQueryBuilder()
       .read(MACRO_RESULTS_TABLE, "e1", "m1")
       .parseVariant(
@@ -68,6 +69,7 @@ describe("StoreQueryBuilder", () => {
         "output",
       )
       .select(["PAR", "Plot no.", "nested", "trace", "mixed", "dead"])
+      .distinct()
       .build();
 
     expect(sql).toContain("toString(accurateCastOrNull(macro_output.`PAR`, 'Int64')) AS `PAR`");
@@ -82,11 +84,35 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("accurateCastOrNull(macro_output.`dead`, 'String') AS `dead`");
   });
 
+  it("shows a payload's fields from its text, carried once, and filters and sorts by its JSON column", () => {
+    const builder = new StoreQueryBuilder()
+      .read(MACRO_RESULTS_TABLE, "e1", "m1")
+      .parseVariant("macro_output", "OBJECT<`vH+`: VARIANT, PAR: DOUBLE>", "output")
+      .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")
+      .select(["id", "vH+", "PAR", "plot"])
+      .filter({ column: "PAR", operator: "greater_than", value: 1 })
+      .orderBy({ column: "vH+", direction: "ASC" });
+    const sql = builder.build();
+
+    expect(builder.outputColumns().map(({ text }) => text)).toEqual([
+      undefined,
+      { column: "macro_output_text", key: "vH+" },
+      { column: "macro_output_text", key: "PAR" },
+      undefined,
+    ]);
+    expect(sql).toContain(
+      "SELECT toString(id) AS `id`, macro_output_text AS `vH+`, NULL AS `PAR`, questions_data['plot'] AS `plot`",
+    );
+    expect(sql).toContain("accurateCastOrNull(macro_output.`PAR`, 'Float64') > 1");
+    expect(sql).toContain("ORDER BY if(dynamicType(macro_output.`vH+`) != 'None'");
+  });
+
   it("escapes backslashes in a quoted name, which the store reads as escapes", () => {
     const sql = new StoreQueryBuilder()
       .read(UPLOADS_TABLE, "e1", "t1")
       .parseVariant("uploaded_data", "OBJECT<`Temp\\`: BIGINT, `a``b`: STRING>", "upload")
       .select(["Temp\\", "a`b"])
+      .distinct()
       .build();
 
     expect(sql).toContain("uploaded_data.`Temp\\\\`, 'Int64')) AS `Temp\\\\`");
@@ -98,6 +124,7 @@ describe("StoreQueryBuilder", () => {
       .read(MACRO_RESULTS_TABLE, "e1", "m2")
       .parseVariant("macro_output", "ARRAY<OBJECT<k: DOUBLE>>", "output")
       .select(["macro_output"])
+      .distinct()
       .build();
 
     expect(sql).toContain("toJSONString(macro_output._items) AS `macro_output`");
@@ -138,21 +165,61 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
-  it("filters and sorts a device's serial number through the serials it is given", () => {
-    const sql = measurements()
-      .select(["id"])
+  it("filters, sorts and lists a device by the warehouse's label, from the serials it is given", () => {
+    const builder = measurements()
+      .select(["device.serial_number"])
       .serialNumbers([
         ["thing-1", "SN-1"],
-        ["thing-2", null],
+        ["thing-2", "SN-2"],
       ])
       .filter({ column: "device.serial_number", operator: "equals", value: "SN-1" })
-      .orderBy({ column: "device.serial_number", direction: "DESC" })
+      .orderBy({ column: "device.serial_number", direction: "DESC" });
+    const sql = builder.build();
+
+    const label = deviceLabel({
+      serialNumber: "arrayElement(__device_serials, indexOf(__device_client_ids, client_id))",
+      deviceName: "device_name",
+      deviceId: "device_id",
+      clientId: "client_id",
+    });
+    expect(sql).toMatch(
+      /^WITH \['thing-1', 'thing-2'\] AS __device_client_ids, CAST\(\['SN-1', 'SN-2'\] AS Array\(Nullable\(String\)\)\) AS __device_serials\n/,
+    );
+    expect(sql).toContain(`SELECT ${label} AS \`device.serial_number\``);
+    expect(sql).toContain(`WHERE ${label} = 'SN-1'`);
+    expect(sql).toContain(`ORDER BY ${label} DESC NULLS LAST`);
+    expect(builder.outputColumns()).toEqual([{ name: "device.serial_number", type: "STRING" }]);
+  });
+
+  it("sorts a whole device by the registry's order of the ids it is given, then by its label", () => {
+    const sql = measurements()
+      .select(["id"])
+      .orderBy({ column: "device", direction: "ASC" }, ["thing-2", "thing-1"])
       .build();
 
-    const serial =
-      "arrayElement(CAST(['SN-1', NULL] AS Array(Nullable(String))), indexOf(['thing-1', 'thing-2'], client_id))";
-    expect(sql).toContain(`WHERE ${serial} = 'SN-1'`);
-    expect(sql).toContain(`ORDER BY ${serial} DESC NULLS LAST`);
+    expect(sql).toMatch(/^WITH \['thing-2', 'thing-1'\] AS __order_ids\n/);
+    expect(sql).toContain("ORDER BY indexOf(__order_ids, client_id) ASC NULLS FIRST, CASE WHEN ");
+    expect(sql).toMatch(/ END ASC NULLS FIRST$/);
+  });
+
+  it("writes each list a sorted page reads once, so 2,500 registered devices stay under 1 MiB", () => {
+    const devices = Array.from({ length: 2_500 }, (_, index): [string, string] => [
+      `mobile_${String(index).padStart(36, "0")}`,
+      `MSQ-${String(index).padStart(10, "0")}`,
+    ]);
+    const sql = measurements()
+      .serialNumbers(devices)
+      .filter({ column: "device.serial_number", operator: "contains", value: "MSQ" })
+      .orderBy(
+        { column: "device", direction: "DESC" },
+        devices.map(([clientId]) => clientId),
+      )
+      .limit(100)
+      .offset(200)
+      .build();
+
+    expect(sql.split(devices[1234][0])).toHaveLength(3);
+    expect(Buffer.byteLength(sql)).toBeLessThan(1_048_576);
   });
 
   it("sorts text that holds a number by its value, then by the text and the row id", () => {
@@ -167,13 +234,79 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain(`FROM ${answer}), 18) END) DESC, ${answer} DESC NULLS LAST, id ASC`);
   });
 
+  it("reads, sorts and filters a Number question's answers as numbers, as the warehouse does", () => {
+    const sql = measurements()
+      .parseVariant("questions_data", "OBJECT<height: DOUBLE, plot: STRING>", "answer")
+      .select(["height"])
+      .filter({ column: "height", operator: "equals", value: "n/a" })
+      .filter({ column: "height", operator: "greater_than", value: 10 })
+      .filter({ column: "plot", operator: "equals", value: "007" })
+      .orderBy({ column: "height", direction: "DESC", mode: { kind: "number", rowId: "id" } })
+      .build();
+
+    const answer = "questions_data['height']";
+    const height = `toFloat64OrNull(replaceRegexpOne(replaceRegexpAll(${answer}, `;
+    expect(sql).toContain(`SELECT ${height}`);
+    expect(sql).toContain("toFloat64OrNull(replaceRegexpOne(replaceRegexpAll('n/a', ");
+    expect(sql).toContain(") > 10");
+    expect(sql).toContain("questions_data['plot'] = '007'");
+    expect(sql).toMatch(
+      /ORDER BY isNaN\(toFloat64OrNull\(.*\)\) DESC NULLS LAST, toFloat64OrNull\(.*\) DESC NULLS LAST, id ASC$/,
+    );
+  });
+
+  it("sorts a double with NaN above every number, as Spark does, and text without", () => {
+    const sorted = (column: string) =>
+      new StoreQueryBuilder()
+        .read(UPLOADS_TABLE, "e1", "t1")
+        .parseVariant("uploaded_data", "OBJECT<h: DOUBLE, plot: STRING>", "upload")
+        .select([column])
+        .orderBy({ column, direction: "ASC" })
+        .build();
+
+    const h = "accurateCastOrNull(uploaded_data.`h`, 'Float64')";
+    expect(sorted("h")).toContain(`ORDER BY isNaN(${h}) ASC NULLS FIRST, ${h} ASC NULLS FIRST`);
+    expect(sorted("plot")).not.toContain("isNaN");
+  });
+
+  it("compares a payload's BIGINT with text as two doubles, as Spark does", () => {
+    const sql = new StoreQueryBuilder()
+      .read(UPLOADS_TABLE, "e1", "t1")
+      .parseVariant("uploaded_data", "OBJECT<plot: BIGINT>", "upload")
+      .select(["plot"])
+      .filter({ column: "plot", operator: "in", value: ["9007199254740993"] })
+      .filter({ column: "plot", operator: "greater_than", value: 5 })
+      .filter({ column: "plot", operator: "contains", value: "900" })
+      .build();
+
+    const plot = "accurateCastOrNull(uploaded_data.`plot`, 'Int64')";
+    expect(sql).toContain(`toFloat64(${plot}) IN (toFloat64OrNull(`);
+    expect(sql).toContain(`${plot} > 5`);
+    expect(sql).not.toContain(`toFloat64(${plot}) > 5`);
+    expect(sql).toContain(`toString(${plot}) LIKE '%900%'`);
+  });
+
   it("sorts a contributor's name by the place of each row's id, with Spark's null order", () => {
     const sql = measurements()
       .select(["id"])
       .orderBy({ column: "contributor.name", direction: "ASC" }, ["u2", "u1"])
       .build();
 
-    expect(sql).toContain("ORDER BY indexOf(['u2', 'u1'], user_id) ASC NULLS FIRST");
+    expect(sql).toMatch(/^WITH \['u2', 'u1'\] AS __order_ids\n/);
+    expect(sql).toContain("ORDER BY indexOf(__order_ids, user_id) ASC NULLS FIRST");
+  });
+
+  it("renames a payload field that takes the name of a list the statement holds", () => {
+    const builder = new StoreQueryBuilder()
+      .read(UPLOADS_TABLE, "e1", "t1")
+      .parseVariant("uploaded_data", "OBJECT<__order_ids: STRING>", "upload")
+      .select(["id", "__order_ids_upload"])
+      .orderBy({ column: "contributor.name", direction: "ASC" }, ["u1"]);
+    const sql = builder.build();
+
+    expect(builder.outputColumns().map(({ name }) => name)).toEqual(["id", "__order_ids_upload"]);
+    expect(sql).toMatch(/^WITH \['u1'\] AS __order_ids\n/);
+    expect(sql).toContain("uploaded_data_text AS `__order_ids_upload`");
   });
 
   it("sorts and filters a field by its extraction, never by its output name", () => {
