@@ -5480,7 +5480,8 @@ resource "grafana_notification_policy" "policy" {
 
   # A spend step fires for about a week, until it has become the usual day, so it posts when it
   # fires and when it clears, with one reminder after five days: Grafana repeats at most that far
-  # apart, the notification log's default retention.
+  # apart, the notification log's default retention. Written as Grafana stores it, so the plan
+  # stays quiet.
   policy {
     matcher {
       label = "metric_id"
@@ -5488,7 +5489,7 @@ resource "grafana_notification_policy" "policy" {
       value = "aws-spend-limit|databricks-spend-limit"
     }
     contact_point   = grafana_contact_point.slack.name
-    repeat_interval = "120h"
+    repeat_interval = "5d"
   }
 
   policy {
