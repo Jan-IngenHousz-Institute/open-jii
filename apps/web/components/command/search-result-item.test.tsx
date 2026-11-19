@@ -47,3 +47,17 @@ describe("SearchResultItem translation namespaces", () => {
     expect(screen.getByText("organizations.types.research_institute")).toBeInTheDocument();
   });
 });
+
+describe("SearchResultItem", () => {
+  it("renders an unknown result type with its title and metadata", () => {
+    renderResult(
+      createSearchResult({
+        type: "future_resource" as unknown as SearchResult["type"],
+        title: "Future result",
+        meta: "future metadata",
+      }),
+    );
+    expect(screen.getByText("Future result")).toBeInTheDocument();
+    expect(screen.getByText("Future metadata")).toBeInTheDocument();
+  });
+});

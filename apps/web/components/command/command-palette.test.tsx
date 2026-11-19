@@ -56,6 +56,25 @@ beforeEach(() => {
 });
 
 describe("CommandPalette", () => {
+  it("renders an unknown result type and does nothing when it is selected", async () => {
+    mockSearch({
+      results: [
+        createSearchResult({
+          type: "future_resource" as unknown as SearchResult["type"],
+          title: "Future result",
+          meta: "future metadata",
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    const { router } = render(<CommandPalette locale="en-US" />);
+    openPalette();
+    await user.type(await screen.findByPlaceholderText("commandPalette.placeholder"), "future");
+    await user.click(await screen.findByText("Future result"));
+    expect(router.push).not.toHaveBeenCalled();
+    expect(screen.getByText("Future result")).toBeInTheDocument();
+  });
+
   it("opens on the command-palette event and lists pages and actions", async () => {
     render(<CommandPalette locale="en-US" />);
     openPalette();

@@ -13,8 +13,9 @@ import {
   LayoutDashboard,
   Leaf,
   Microscope,
+  Search,
 } from "lucide-react";
-import * as React from "react";
+import type { LucideIcon } from "lucide-react";
 
 import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
 import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
@@ -22,7 +23,7 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { CommandItem } from "@repo/ui/components/command";
 
-const ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }>> = {
+const ICONS: Partial<Record<string, LucideIcon>> = {
   experiment: Leaf,
   protocol: FileSliders,
   macro: Code,
@@ -32,7 +33,7 @@ const ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }
   device: Cpu,
   dashboard: LayoutDashboard,
   visualization: ChartNoAxesCombined,
-};
+} satisfies Record<SearchResultType, LucideIcon>;
 
 const LANGUAGE_LABELS: Record<string, string> = {
   python: "Python",
@@ -67,7 +68,7 @@ export function SearchResultItem({
 }) {
   const { t } = useTranslation();
   const { t: tNavigation } = useTranslation("navigation");
-  const Icon = ICONS[result.type];
+  const Icon = ICONS[result.type] ?? Search;
   // Descriptions can contain rich-text markup (experiments), so strip tags for a clean one-liner.
   const subtitle = result.subtitle ? stripHtml(result.subtitle) : "";
   return (
