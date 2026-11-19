@@ -14,7 +14,7 @@ import type {
   DailyActivityRow,
   PlatformTotalsRow,
   PoolFactsRow,
-} from "../../../core/ports/databricks.port";
+} from "../../../core/ports/metrics-reads.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 import { MetricsDataSourceService } from "../../services/metrics-data-source.service";
 
@@ -37,14 +37,14 @@ export class GetPublicMetricsUseCase {
   private readonly logger = new Logger(GetPublicMetricsUseCase.name);
 
   constructor(
-    private readonly metricsSource: MetricsDataSourceService,
+    private readonly dataSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
   ) {}
 
   async execute(): Promise<Result<PublicMetricsResponse>> {
-    const source = await this.metricsSource.sourceFor();
+    const source = await this.dataSource.sourceFor();
     const snapshot = await this.cachePort.tryCache(publicMetricsCacheKey(source), () =>
       this.load(source),
     );
@@ -74,7 +74,7 @@ export class GetPublicMetricsUseCase {
   }
 
   private async load(source: MetricsDataSource): Promise<PublicMetricsResponse | null> {
-    const reads = this.metricsSource.readsFor(source);
+    const reads = this.dataSource.readsFor(source);
     const [
       totals,
       daily,

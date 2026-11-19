@@ -42,7 +42,7 @@ import type {
   PlatformTotalsRow,
   PoolFactsRow,
   ScopedDailyRow,
-} from "../../../metrics/core/ports/databricks.port";
+} from "../../../metrics/core/ports/metrics-reads.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";

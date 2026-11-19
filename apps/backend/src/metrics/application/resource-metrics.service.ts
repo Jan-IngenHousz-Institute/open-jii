@@ -4,7 +4,7 @@ import type { MetricsWindowDay, ResourceKind } from "@repo/api/domains/metrics/m
 
 import type { MetricsDataSource } from "../core/models/metrics-data.model";
 import { CACHE_PORT, CachePort } from "../core/ports/cache.port";
-import type { DatabricksPort, ResourceDailyRow } from "../core/ports/databricks.port";
+import type { MetricsReads, ResourceDailyRow } from "../core/ports/metrics-reads.port";
 import { MetricsRepository, UUID_PATTERN } from "../core/repositories/metrics.repository";
 import { MetricsDataSourceService } from "./services/metrics-data-source.service";
 
@@ -59,7 +59,7 @@ export class ResourceMetricsService {
   private readonly logger = new Logger(ResourceMetricsService.name);
 
   constructor(
-    private readonly metricsSource: MetricsDataSourceService,
+    private readonly dataSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
@@ -67,7 +67,7 @@ export class ResourceMetricsService {
 
   /** One cached read supplies both whole-kind totals and page series. */
   async activitySnapshot(kind: ResourceKind): Promise<ResourceActivitySnapshot | null> {
-    const source = await this.metricsSource.sourceFor();
+    const source = await this.dataSource.sourceFor();
     const attributed = await this.cachedRows(source, kind);
     if (attributed === null) {
       return null;
@@ -131,7 +131,7 @@ export class ResourceMetricsService {
       return this.emptyTotals();
     }
 
-    const source = await this.metricsSource.sourceFor();
+    const source = await this.dataSource.sourceFor();
     const attributed = await this.cachedRows(source, kind);
     if (attributed === null) {
       return this.emptyTotals();
@@ -210,7 +210,7 @@ export class ResourceMetricsService {
     source: MetricsDataSource,
     kind: ResourceKind,
   ): Promise<ResourceDailyRow[] | null> {
-    const reads = this.metricsSource.readsFor(source);
+    const reads = this.dataSource.readsFor(source);
     const rows =
       kind === "experiment"
         ? await this.experimentRows(reads)
@@ -230,7 +230,7 @@ export class ResourceMetricsService {
   }
 
   /** Experiments predate the per-resource table and keep their own. */
-  private async experimentRows(reads: DatabricksPort) {
+  private async experimentRows(reads: MetricsReads) {
     const scoped = await reads.getScopedDailyActivity(LOADED_DAYS);
     if (scoped.isFailure()) {
       return scoped;

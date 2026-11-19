@@ -9,7 +9,7 @@ import {
 } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import type { MetricsReads } from "../../core/ports/metrics-reads.port";
 import { MetricsStoreReadsService } from "./metrics-store-reads.service";
 
 /** A metrics table as the warehouse writes it: every cell text, in its own column order. */
@@ -195,7 +195,7 @@ const STORE: Record<string, StoreView> = {
   ],
 };
 
-const READS: [string, (reads: DatabricksPort) => Promise<Result<unknown>>, unknown][] = [
+const READS: [string, (reads: MetricsReads) => Promise<Result<unknown>>, unknown][] = [
   [
     "platform totals",
     (reads) => reads.getPublicPlatformTotals(),

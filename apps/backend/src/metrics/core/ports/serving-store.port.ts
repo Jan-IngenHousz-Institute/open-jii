@@ -1,5 +1,5 @@
 import type { Result } from "../../../common/utils/fp-utils";
-import type { DatabricksPort } from "./databricks.port";
+import type { MetricsReads } from "./metrics-reads.port";
 
 export const METRICS_SERVING_STORE_PORT = Symbol("METRICS_SERVING_STORE_PORT");
 
@@ -12,7 +12,7 @@ export interface ClientTotalsRow {
  * The platform metrics from the serving store's metrics views, in the warehouse tables' rows. The
  * store counts families per publishing client, since a device's family is the registry's.
  */
-export interface ServingStorePort extends Omit<DatabricksPort, "getPublicFamilyTotals"> {
+export interface ServingStorePort extends Omit<MetricsReads, "getPublicFamilyTotals"> {
   /** False in an environment without a store, which reads from the warehouse instead. */
   isConfigured(): boolean;
 

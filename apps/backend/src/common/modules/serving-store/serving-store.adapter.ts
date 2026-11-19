@@ -26,7 +26,7 @@ import type {
   PoolFactsRow,
   ResourceDailyRow,
   ScopedDailyRow,
-} from "../../../metrics/core/ports/databricks.port";
+} from "../../../metrics/core/ports/metrics-reads.port";
 import type {
   ClientTotalsRow,
   ServingStorePort as MetricsServingStorePort,

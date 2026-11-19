@@ -7,17 +7,17 @@ import type {
   ActivityWindowsRow,
   ContributorPairRow,
   DailyActivityRow,
-  DatabricksPort,
   DevicePairRow,
   FamilyTotalsRow,
   HourlyActivityRow,
+  MetricsReads,
   ParameterCategory,
   ParameterStatsRow,
   PlatformTotalsRow,
   PoolFactsRow,
   ResourceDailyRow,
   ScopedDailyRow,
-} from "../../core/ports/databricks.port";
+} from "../../core/ports/metrics-reads.port";
 import { METRICS_SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
 import { MetricsRepository } from "../../core/repositories/metrics.repository";
@@ -30,7 +30,7 @@ const UNATTRIBUTED_FAMILY = "unattributed";
  * families per publishing client, so each client's family is filled from the registry in Postgres.
  */
 @Injectable()
-export class MetricsStoreReadsService implements DatabricksPort {
+export class MetricsStoreReadsService implements MetricsReads {
   constructor(
     @Inject(METRICS_SERVING_STORE_PORT) private readonly store: ServingStorePort,
     private readonly metricsRepository: MetricsRepository,

@@ -12,7 +12,7 @@ import type {
   ContributorPairRow,
   DevicePairRow,
   ScopedDailyRow,
-} from "../../../core/ports/databricks.port";
+} from "../../../core/ports/metrics-reads.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 import { MetricsDataSourceService } from "../../services/metrics-data-source.service";
 
@@ -47,7 +47,7 @@ export class GetScopedMetricsUseCase {
   private readonly logger = new Logger(GetScopedMetricsUseCase.name);
 
   constructor(
-    private readonly metricsSource: MetricsDataSourceService,
+    private readonly dataSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
@@ -65,7 +65,7 @@ export class GetScopedMetricsUseCase {
       return failure(scopeIds.error);
     }
 
-    const source = await this.metricsSource.sourceFor();
+    const source = await this.dataSource.sourceFor();
     const inputs = await this.cachePort.tryCache(scopedInputsCacheKey(source), () =>
       this.loadInputs(source),
     );
@@ -127,7 +127,7 @@ export class GetScopedMetricsUseCase {
   }
 
   private async loadInputs(source: MetricsDataSource): Promise<ScopedInputs | null> {
-    const reads = this.metricsSource.readsFor(source);
+    const reads = this.dataSource.readsFor(source);
     const [scopedDaily, contributorPairs, devicePairs, windows] = await Promise.all([
       reads.getScopedDailyActivity(LOADED_DAYS),
       reads.getContributorPairs(),

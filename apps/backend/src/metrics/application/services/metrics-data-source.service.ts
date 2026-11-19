@@ -6,7 +6,7 @@ import type { MetricsDataSource } from "../../core/models/metrics-data.model";
 import { ANALYTICS_PORT } from "../../core/ports/analytics.port";
 import type { AnalyticsPort } from "../../core/ports/analytics.port";
 import { METRICS_DATABRICKS_PORT } from "../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../core/ports/databricks.port";
+import type { MetricsReads } from "../../core/ports/metrics-reads.port";
 import { METRICS_SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
 import { MetricsStoreReadsService } from "./metrics-store-reads.service";
@@ -16,7 +16,7 @@ export class MetricsDataSourceService {
   constructor(
     @Inject(ANALYTICS_PORT) private readonly analyticsPort: AnalyticsPort,
     @Inject(METRICS_SERVING_STORE_PORT) private readonly servingStore: ServingStorePort,
-    @Inject(METRICS_DATABRICKS_PORT) private readonly warehouseReads: DatabricksPort,
+    @Inject(METRICS_DATABRICKS_PORT) private readonly warehouseReads: MetricsReads,
     private readonly storeReads: MetricsStoreReadsService,
   ) {}
 
@@ -31,7 +31,7 @@ export class MetricsDataSourceService {
     return isStoreRead ? "store" : "warehouse";
   }
 
-  readsFor(source: MetricsDataSource): DatabricksPort {
+  readsFor(source: MetricsDataSource): MetricsReads {
     return source === "store" ? this.storeReads : this.warehouseReads;
   }
 }

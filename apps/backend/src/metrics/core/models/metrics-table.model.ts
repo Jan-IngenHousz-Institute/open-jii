@@ -15,7 +15,7 @@ import type {
   PoolFactsRow,
   ResourceDailyRow,
   ScopedDailyRow,
-} from "../ports/databricks.port";
+} from "../ports/metrics-reads.port";
 
 /**
  * A metrics table's rows as the warehouse writes its cells, each column found by its name, so
