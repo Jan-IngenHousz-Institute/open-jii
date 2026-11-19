@@ -133,7 +133,7 @@ describe("ExperimentDataOutboxWorker", () => {
     await testApp.teardown();
   });
 
-  it("copies the annotations Postgres holds with their author's name, deletes the copies of gone ones, and clears the rows", async () => {
+  it("copies the annotations Postgres holds, deletes the copies of gone ones, and clears the rows", async () => {
     const warehouse = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
     const remove = vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
@@ -143,7 +143,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const counts = await worker.drain();
 
     expect(counts).toEqual({ applied: 2, retried: 0, released: 0 });
-    expect(merge).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
+    expect(merge).toHaveBeenCalledWith([kept]);
     expect(remove).toHaveBeenCalledWith([gone]);
     expect(await outboxRows()).toEqual([]);
   });
@@ -373,13 +373,13 @@ describe("ExperimentDataOutboxWorker", () => {
       "findCopies",
     ).mockImplementationOnce(async () => {
       await new Promise((resolve) => setTimeout(resolve, 300));
-      return success([{ ...record, userName: "Ada Lovelace" }]);
+      return success([record]);
     });
 
     expect(await workerWithDeadline(200).drain()).toEqual({ applied: 1, retried: 0, released: 1 });
 
     expect(merge).toHaveBeenCalledTimes(1);
-    expect(merge).toHaveBeenCalledWith([{ ...record, userName: "Ada Lovelace" }]);
+    expect(merge).toHaveBeenCalledWith([record]);
     expect(await outboxRows()).toEqual([]);
   });
 

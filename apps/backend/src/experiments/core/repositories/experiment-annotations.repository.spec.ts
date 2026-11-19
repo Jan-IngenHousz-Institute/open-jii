@@ -211,21 +211,17 @@ describe("ExperimentAnnotationsRepository", () => {
     expect(await stored()).toEqual([]);
   }, 30_000);
 
-  it("finds the annotations that still exist, each with its author's name as it reads now", async () => {
+  it("finds the annotations that still exist, naming each author by id alone", async () => {
     const kept = record();
     await insert(kept);
-    await testApp.database
-      .update(profiles)
-      .set({ firstName: "Ada", lastName: "Lovelace" })
-      .where(eq(profiles.userId, userId));
 
     const found = await repository.findCopies([kept.id, faker.string.uuid()]);
 
     assertSuccess(found);
-    expect(found.value).toEqual([{ ...kept, userName: "Ada Lovelace" }]);
+    expect(found.value).toEqual([kept]);
   });
 
-  it("names an author who deactivated their profile as every other read does", async () => {
+  it("names an author who deactivated their profile on a page as every other read does", async () => {
     const kept = record();
     await insert(kept);
     await testApp.database
@@ -233,17 +229,17 @@ describe("ExperimentAnnotationsRepository", () => {
       .set({ firstName: "Ada", lastName: "Lovelace", activated: false })
       .where(eq(profiles.userId, userId));
 
-    const found = await repository.findCopies([kept.id]);
+    const found = await repository.findOnRows(experimentId, kept.tableName, [kept.rowId]);
 
     assertSuccess(found);
     expect(found.value).toEqual([{ ...kept, userName: "Unknown User" }]);
   });
 
-  it("finds no name for an author without a profile", async () => {
+  it("finds no name on a page for an author without a profile", async () => {
     const orphan = record({ createdBy: faker.string.uuid() });
     await insert(orphan);
 
-    const found = await repository.findCopies([orphan.id]);
+    const found = await repository.findOnRows(experimentId, orphan.tableName, [orphan.rowId]);
 
     assertSuccess(found);
     expect(found.value).toEqual([{ ...orphan, userName: null }]);

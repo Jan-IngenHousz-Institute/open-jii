@@ -1730,6 +1730,7 @@ module "experiment_annotations_table" {
     { name = "id", type = "STRING" },
     { name = "experiment_id", type = "STRING" },
     { name = "user_id", type = "STRING" },
+    # No longer written: the enriched views name an author from contributor_profiles.
     { name = "user_name", type = "STRING" },
     { name = "table_name", type = "STRING" },
     { name = "row_id", type = "STRING" },
@@ -1761,7 +1762,7 @@ module "contributor_profiles_table" {
   schema_name  = "centrum"
   name         = "contributor_profiles"
   table_type   = "MANAGED"
-  comment      = "Contributors' names and avatars as every page shows them, which the pipelines join to name an experiment's contributors. The backend's outbox keeps it to Postgres."
+  comment      = "Contributors' names and avatars as every page shows them, which the pipelines join to name an experiment's contributors and the enriched views its annotations' authors. The backend's outbox keeps it to Postgres."
 
   columns = [
     { name = "user_id", type = "STRING", nullable = false },
@@ -1957,7 +1958,11 @@ module "enriched_views" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+  depends_on = [
+    module.experiment_annotations_table,
+    module.experiment_custom_metadata_table,
+    module.contributor_profiles_table,
+  ]
 }
 
 # The device and experiment status, computed when someone reads, under the names of

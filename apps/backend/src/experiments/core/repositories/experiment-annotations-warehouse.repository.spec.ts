@@ -9,7 +9,7 @@ import {
   success,
 } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { AnnotationCopy } from "../models/experiment-data-annotation.model";
+import type { AnnotationRecord } from "../models/experiment-data-annotation.model";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import { ExperimentAnnotationsWarehouseRepository } from "./experiment-annotations-warehouse.repository";
@@ -23,7 +23,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
   const updated = new Date("2026-09-02T08:00:00.000Z");
   const nothing: SchemaData = { columns: [], rows: [], totalRows: 0, truncated: false };
 
-  function copy(overrides: Partial<AnnotationCopy> = {}): AnnotationCopy {
+  function copy(overrides: Partial<AnnotationRecord> = {}): AnnotationRecord {
     return {
       id: faker.string.uuid(),
       experimentId: faker.string.uuid(),
@@ -35,7 +35,6 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       createdBy: faker.string.uuid(),
       createdAt: created,
       updatedAt: updated,
-      userName: "Ada Lovelace",
       ...overrides,
     };
   }
@@ -64,7 +63,7 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
         .spyOn(databricksPort, "executeSqlQuery")
         .mockResolvedValue(success(nothing));
       const comment = copy();
-      const flag = copy({ type: "flag", flagType: "outlier", contentText: null, userName: null });
+      const flag = copy({ type: "flag", flagType: "outlier", contentText: null });
 
       assertSuccess(await repository.merge([comment, flag]));
 
@@ -74,17 +73,16 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
       expect(statement).toContain("ON target.id = source.id");
       expect(statement).toContain("WHEN MATCHED THEN UPDATE SET");
       expect(statement).toContain("WHEN NOT MATCHED THEN INSERT");
+      expect(statement).not.toContain("user_name");
       expect(parameters).toEqual(
         expect.arrayContaining([
           { name: "id_0", value: comment.id },
           { name: "user_id_0", value: comment.createdBy },
-          { name: "user_name_0", value: "Ada Lovelace" },
           { name: "content_text_0", value: "Leaf was wet" },
           { name: "created_at_0", value: created.toISOString(), type: "TIMESTAMP" },
           { name: "updated_at_0", value: updated.toISOString(), type: "TIMESTAMP" },
           { name: "id_1", value: flag.id },
           { name: "flag_type_1", value: "outlier" },
-          { name: "user_name_1", value: undefined },
           { name: "content_text_1", value: undefined },
         ]),
       );
@@ -98,13 +96,12 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
         contentText: "farmer's plot \\ north",
         rowId: "1'); DROP TABLE x; --",
         tableName: "raw_data' OR '1'='1",
-        userName: "O'Brien",
       });
 
       assertSuccess(await repository.merge([hostile]));
 
       const [, statement, parameters] = execute.mock.calls[0];
-      for (const value of ["farmer", "DROP TABLE", "OR '1'", "O'Brien"]) {
+      for (const value of ["farmer", "DROP TABLE", "OR '1'"]) {
         expect(statement).not.toContain(value);
       }
       expect(parameters).toEqual(
@@ -112,7 +109,6 @@ describe("ExperimentAnnotationsWarehouseRepository", () => {
           { name: "content_text_0", value: hostile.contentText },
           { name: "row_id_0", value: hostile.rowId },
           { name: "table_name_0", value: hostile.tableName },
-          { name: "user_name_0", value: hostile.userName },
         ]),
       );
     });

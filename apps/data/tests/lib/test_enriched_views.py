@@ -110,6 +110,12 @@ _TABLES = {
                                     'status', 'onboarded', 'device_type', 'multispeq'))
         AS t(experiment_id, client_id, device)
     """,
+    "contributor_profiles": """
+        SELECT * FROM VALUES
+          ('u1', 'Ann', 'Lee', CAST(NULL AS STRING))
+        AS t(user_id, first_name, last_name, avatar_url)
+    """,
+    # user_name is the name an older copy carried, which the views no longer read.
     "experiment_annotations": """
         SELECT * FROM VALUES
           ('a2', 'e1', 'u2', 'Bob', 'raw', '1', 'flag', 'recheck', 'outlier',
@@ -233,6 +239,23 @@ def test_annotations_from_the_device_come_before_those_added_in_the_app(
     # a3 has row id 1 too, but in e2.
     assert _annotation_ids(rows[3]) == ["a4"]
     assert rows[2]["annotations"] == []
+
+
+@pytest.mark.parametrize(
+    ("view", "row_id", "names"),
+    [
+        ("enriched_experiment_raw_data", 1, {"a1": "Ann Lee", "a2": None}),
+        ("enriched_experiment_macro_data", 101, {"a5": "Ann Lee"}),
+        ("enriched_experiment_uploaded_data", 1001, {"a6": "Ann Lee"}),
+    ],
+)
+def test_an_annotation_names_its_author_from_the_profiles_copy_and_none_without_a_profile(
+    spark: SparkSession, centrum: str, view: str, row_id: int, names: dict[str, str | None]
+) -> None:
+    rows = _rows(spark, view)
+
+    added = [annotation for annotation in rows[row_id]["annotations"] if annotation["id"] in names]
+    assert {annotation["id"]: annotation["createdByName"] for annotation in added} == names
 
 
 @pytest.mark.parametrize(
