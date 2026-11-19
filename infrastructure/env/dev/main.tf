@@ -2171,12 +2171,10 @@ locals {
   # before a release has deployed the notebook.
   centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed"] : []
   macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = local.serving_store_feed ? {
-    SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
-    SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
-    SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
-    SERVING_STORE_FEED_START_METADATA_ROWS = local.serving_store_feed_start_versions.metadata_rows
-  } : {}
+  serving_store_feed_settings = {
+    for table, version in local.serving_store_feed_start_versions :
+    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
+  }
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
