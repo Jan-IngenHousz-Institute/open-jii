@@ -48,9 +48,12 @@ export function useExperimentDevicesList({
             (view.filters.deviceFamily.length === 0 ||
               (entry.device !== null &&
                 view.filters.deviceFamily.includes(entry.device.deviceType))) &&
-            [entry.clientId, entry.device?.name, entry.device?.serialNumber].some((value) =>
-              value?.toLowerCase().includes(needle),
-            ),
+            [
+              entry.clientId,
+              entry.device?.name,
+              entry.device?.serialNumber,
+              entry.reported?.deviceName,
+            ].some((value) => value?.toLowerCase().includes(needle)),
         );
         if (view.sort.length === 0) return matching;
         return matching.sort((a, b) => {

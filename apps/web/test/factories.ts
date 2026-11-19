@@ -23,6 +23,7 @@ import type {
   ExperimentDataResponse,
   ExperimentTableMetadata,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import type {
   Experiment,
   ExperimentAccess,
@@ -1171,6 +1172,25 @@ export function createIotDevice(
     // Unknown by default: the fleet index is an enrichment, not a given.
     connectivity: null,
     boundExperimentCount: 0,
+    ...overrides,
+  };
+}
+
+let experimentDeviceEntrySeq = 0;
+
+export function createExperimentDeviceEntry(
+  overrides: Partial<ExperimentDeviceEntry> = {},
+): ExperimentDeviceEntry {
+  experimentDeviceEntrySeq++;
+  return {
+    device: createIotDevice(),
+    clientId: `publisher-${experimentDeviceEntrySeq}`,
+    binding: null,
+    connectivity: null,
+    lastDataAt: null,
+    recentData: null,
+    reported: null,
+    canView: true,
     ...overrides,
   };
 }

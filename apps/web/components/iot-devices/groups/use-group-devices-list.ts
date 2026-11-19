@@ -1,5 +1,6 @@
 "use client";
 
+import type { MonitoringRange } from "@/components/iot-devices/monitoring/monitoring-range";
 import { useResourceList } from "@/hooks/useResourceList";
 import { z } from "zod";
 
@@ -19,6 +20,7 @@ const EMPTY_MEMBERS: IotDeviceGroupMemberHealth[] = [];
 
 export function useGroupDevicesList({
   groupId,
+  range,
   dataUpdatedAt,
   members = EMPTY_MEMBERS,
   labelByDeviceId,
@@ -26,6 +28,7 @@ export function useGroupDevicesList({
   now,
 }: {
   groupId: string;
+  range: MonitoringRange;
   dataUpdatedAt: number;
   members?: IotDeviceGroupMemberHealth[];
   labelByDeviceId: Map<string, string>;
@@ -41,7 +44,7 @@ export function useGroupDevicesList({
     filters: FILTERS,
     sort: SORT,
     query: (view) => ({
-      queryKey: ["group-devices-list", groupId, dataUpdatedAt],
+      queryKey: ["group-devices-list", groupId, range.from, range.to, range.bucket, dataUpdatedAt],
       queryFn: () => members,
       initialData: members,
       staleTime: Infinity,

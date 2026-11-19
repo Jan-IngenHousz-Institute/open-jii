@@ -88,6 +88,7 @@ export function GroupMonitoringContent() {
 
   const list = useGroupDevicesList({
     groupId: params.groupId,
+    range: selection.range,
     dataUpdatedAt,
     members: monitoring?.members,
     labelByDeviceId: labels,

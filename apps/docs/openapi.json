@@ -16498,21 +16498,40 @@
                         },
                         "statusCounts": {
                           "type": "object",
-                          "propertyNames": {
-                            "enum": [
-                              "registered",
-                              "provisioned",
-                              "onboarded",
-                              "revoked",
-                              "retired"
-                            ],
-                            "type": "string"
+                          "properties": {
+                            "registered": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "provisioned": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "onboarded": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "revoked": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "retired": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
                           },
-                          "additionalProperties": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
-                          }
+                          "required": [
+                            "registered",
+                            "provisioned",
+                            "onboarded",
+                            "revoked",
+                            "retired"
+                          ]
                         }
                       },
                       "required": [

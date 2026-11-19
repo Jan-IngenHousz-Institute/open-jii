@@ -196,17 +196,35 @@ describe("GroupMonitoringContent", () => {
 
   it("pages and sorts only the roster while summary panels keep all matching members", async () => {
     const user = userEvent.setup();
+    const members = Array.from({ length: 21 }, (_, index) =>
+      createDeviceGroupMemberHealth({
+        name: `Gateway ${String(21 - index).padStart(2, "0")}`,
+        connectivity: null,
+      }),
+    );
+    const offPage = members[20];
     mountMonitoring({
-      members: Array.from({ length: 21 }, (_, index) =>
-        createDeviceGroupMemberHealth({
-          name: `Gateway ${String(21 - index).padStart(2, "0")}`,
-          connectivity: null,
-        }),
-      ),
+      members,
+      throughput: [{ bucketStart: new Date().toISOString(), deviceId: offPage.deviceId, count: 7 }],
+      firmware: [{ deviceId: offPage.deviceId, version: "7.0.0", lastSeen: STALE }],
+      events: [
+        {
+          deviceId: offPage.deviceId,
+          eventType: "disconnected",
+          eventTimestamp: STALE,
+          disconnectReason: "CONNECTION_LOST",
+        },
+      ],
     });
     render(<GroupMonitoringContent />);
     await screen.findByRole("link", { name: "Gateway 21" });
     expect(screen.queryByRole("link", { name: "Gateway 01" })).not.toBeInTheDocument();
+    expect(screen.getByTitle("7")).toBeInTheDocument();
+    expect(screen.getByText("Gateway 01 · CONNECTION_LOST")).toBeInTheDocument();
+    expect(screen.getByText("7.0.0")).toBeInTheDocument();
+    expect(vi.mocked(BarChart).mock.lastCall?.[0].data).toEqual([
+      expect.objectContaining({ name: "Gateway 01" }),
+    ]);
     await user.click(screen.getByRole("button", { name: "pagination.next" }));
     expect(screen.getByRole("link", { name: "Gateway 01" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Gateway 21" })).not.toBeInTheDocument();
@@ -214,6 +232,10 @@ describe("GroupMonitoringContent", () => {
     expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
     expect(screen.getAllByRole("link")[0]).toHaveTextContent("Gateway 01");
     expect(screen.queryByRole("link", { name: "Gateway 21" })).not.toBeInTheDocument();
+    expect(screen.getByTitle("7")).toBeInTheDocument();
+    expect(vi.mocked(BarChart).mock.lastCall?.[0].data).toEqual([
+      expect.objectContaining({ name: "Gateway 01" }),
+    ]);
     await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
     expect(screen.getAllByRole("link")[0]).toHaveTextContent("Gateway 21");
   });

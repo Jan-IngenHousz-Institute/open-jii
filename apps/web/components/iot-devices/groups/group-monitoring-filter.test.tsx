@@ -25,6 +25,11 @@ const labels = new Map(
 function Filter() {
   const list = useGroupDevicesList({
     groupId: "group-1",
+    range: {
+      from: "2026-11-18T00:00:00.000Z",
+      to: "2026-11-19T00:00:00.000Z",
+      bucket: "hour",
+    },
     dataUpdatedAt: 1,
     members,
     labelByDeviceId: labels,

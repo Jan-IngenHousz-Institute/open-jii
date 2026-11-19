@@ -1,4 +1,4 @@
-import { createIotDevice } from "@/test/factories";
+import { createExperimentDeviceEntry, createIotDevice } from "@/test/factories";
 import { openOnUrl } from "@/test/list-request";
 import { act, render, renderHook, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
@@ -9,36 +9,20 @@ import { ExperimentDevicesList } from "./experiment-devices-list";
 import { useExperimentDevicesList } from "./use-experiment-devices-list";
 
 const devices: ExperimentDeviceEntry[] = [
-  {
+  createExperimentDeviceEntry({
     device: createIotDevice({ name: "Zulu", deviceType: "ambyte", serialNumber: "AA:11" }),
     clientId: "zulu",
-    binding: null,
-    connectivity: null,
-    lastDataAt: null,
-    recentData: null,
-    reported: null,
-    canView: true,
-  },
-  {
+  }),
+  createExperimentDeviceEntry({
     device: createIotDevice({ name: "Alpha", deviceType: "mobile", serialNumber: "BB:22" }),
     clientId: "alpha",
-    binding: null,
-    connectivity: null,
-    lastDataAt: null,
-    recentData: null,
-    reported: null,
-    canView: true,
-  },
-  {
+  }),
+  createExperimentDeviceEntry({
     device: null,
     clientId: "unregistered-publisher",
-    binding: null,
-    connectivity: null,
-    lastDataAt: null,
     recentData: { measurementCount: 4, lastDataAt: null },
-    reported: null,
     canView: false,
-  },
+  }),
 ];
 const names = () =>
   within(screen.getByRole("list"))
@@ -79,6 +63,29 @@ describe("ExperimentDevicesList", () => {
     await waitFor(() => expect(names()).toHaveLength(1));
     await user.click(screen.getByRole("button", { name: /Alpha/ }));
     expect(onSelect).toHaveBeenCalledWith("alpha");
+  });
+
+  it("finds an unregistered publisher by its reported device name", async () => {
+    const user = userEvent.setup();
+    renderList([
+      createExperimentDeviceEntry({
+        device: null,
+        clientId: "cognito-abc",
+        reported: {
+          deviceName: "shed-logger",
+          firmware: null,
+          version: null,
+          battery: null,
+          totalMeasurements: 4,
+          lastReportedAt: null,
+        },
+        canView: false,
+      }),
+      devices[0],
+    ]);
+    await user.type(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"), "shed");
+    await waitFor(() => expect(names()).toHaveLength(1));
+    expect(names()[0]).toContain("shed-logger");
   });
 
   it("filters by family and clears the removable filter", async () => {

@@ -1,3 +1,4 @@
+import type { MonitoringRange } from "@/components/iot-devices/monitoring/monitoring-range";
 import { createDeviceGroupMemberHealth } from "@/test/factories";
 import { openOnUrl } from "@/test/list-request";
 import { act, render, renderHook, screen, userEvent, waitFor } from "@/test/test-utils";
@@ -13,6 +14,11 @@ import { GroupMonitoringFilter } from "./group-monitoring-filter";
 import { useGroupDevicesList } from "./use-group-devices-list";
 
 const NOW = Date.now();
+const RANGE: MonitoringRange = {
+  from: "2026-11-18T00:00:00.000Z",
+  to: "2026-11-19T00:00:00.000Z",
+  bucket: "hour",
+};
 const STALE = new Date(NOW - 3 * 3_600_000).toISOString();
 const RECENT = new Date(NOW - 30 * 60_000).toISOString();
 
@@ -38,6 +44,7 @@ interface TableSetup {
   versions?: Map<string, string>;
   pipelineUnavailable?: boolean;
   dataUpdatedAt?: number;
+  range?: MonitoringRange;
 }
 
 function DeviceTable({
@@ -46,9 +53,11 @@ function DeviceTable({
   versions = new Map(),
   pipelineUnavailable = false,
   dataUpdatedAt = 1,
+  range = RANGE,
 }: TableSetup) {
   const list = useGroupDevicesList({
     groupId: "group",
+    range,
     dataUpdatedAt,
     members,
     labelByDeviceId: labels,
@@ -270,11 +279,29 @@ describe("GroupDevicesTable", () => {
     expect(screen.getByRole("link", { name: "After" })).toBeInTheDocument();
   });
 
+  it("uses the new monitoring window when two requests share an update timestamp", async () => {
+    const { rerender } = renderTable({
+      members: [createDeviceGroupMemberHealth({ serialNumber: "Before" })],
+      range: RANGE,
+    });
+    expect(screen.getByRole("link", { name: "Before" })).toBeInTheDocument();
+
+    rerender(
+      <DeviceTable
+        members={[createDeviceGroupMemberHealth({ serialNumber: "After" })]}
+        range={{ ...RANGE, from: "2026-11-12T00:00:00.000Z", bucket: "day" }}
+      />,
+    );
+    await waitFor(() => expect(screen.getByRole("link", { name: "After" })).toBeInTheDocument());
+    expect(screen.queryByRole("link", { name: "Before" })).not.toBeInTheDocument();
+  });
+
   it("returns the loaded group members when explicitly refetched", async () => {
     const members = [createDeviceGroupMemberHealth({ serialNumber: "AA:11" })];
     const { result } = renderHook(() =>
       useGroupDevicesList({
         groupId: "group",
+        range: RANGE,
         dataUpdatedAt: 1,
         members,
         labelByDeviceId: new Map(),
