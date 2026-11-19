@@ -1,10 +1,14 @@
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ANALYTICS_PORT } from "../../../core/ports/analytics.port";
+import type { AnalyticsPort } from "../../../core/ports/analytics.port";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
+import { METRICS_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
-import { GetPublicMetricsUseCase, PUBLIC_METRICS_CACHE_KEY } from "./get-public-metrics";
+import { GetPublicMetricsUseCase, publicMetricsCacheKey } from "./get-public-metrics";
 
 const totals = {
   totalMeasurements: 1_000_000,
@@ -69,8 +73,10 @@ describe("GetPublicMetricsUseCase", () => {
     vi.useFakeTimers({ now: new Date("2026-08-28T12:00:00Z"), toFake: ["Date"] });
     await testApp.beforeEach();
 
-    // The snapshot key is shared, so each test starts from a cold cache.
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(PUBLIC_METRICS_CACHE_KEY);
+    // The snapshot keys are shared, so each test starts from a cold cache.
+    const cache = testApp.module.get<CachePort>(CACHE_PORT);
+    await cache.invalidate(publicMetricsCacheKey("warehouse"));
+    await cache.invalidate(publicMetricsCacheKey("store"));
 
     adapter = testApp.module.get(DatabricksAdapter);
     useCase = testApp.module.get(GetPublicMetricsUseCase);
@@ -199,6 +205,75 @@ describe("GetPublicMetricsUseCase", () => {
     const kinds = result.value.captions.map((caption) => caption.kind);
     expect(kinds).not.toContain("pace");
     expect(kinds).not.toContain("streak");
+  });
+
+  /** The store holding the same figures but a total of 2,000,000, flagged by `isOn`. */
+  function storeHolds(isOn: boolean) {
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    vi.spyOn(store, "isConfigured").mockReturnValue(true);
+    const reads = [
+      vi
+        .spyOn(store, "getPublicPlatformTotals")
+        .mockResolvedValue(success({ ...totals, totalMeasurements: 2_000_000 })),
+      vi.spyOn(store, "getPublicDailyActivity").mockResolvedValue(success(daily)),
+      vi
+        .spyOn(store, "getClientTotals")
+        .mockResolvedValue(success([{ clientId: null, measurements: 900 }])),
+      vi.spyOn(store, "getActivityWindows").mockResolvedValue(success(windows)),
+      vi.spyOn(store, "getHourlyActivity").mockResolvedValue(success([])),
+      vi.spyOn(store, "getTopParameter").mockResolvedValue(success(null)),
+      vi.spyOn(store, "getPoolFacts").mockResolvedValue(success(poolFacts)),
+      vi.spyOn(store, "getContributorPairs").mockResolvedValue(success([])),
+    ];
+    const flag = vi
+      .spyOn(testApp.module.get<AnalyticsPort>(ANALYTICS_PORT), "isEnvironmentFeatureFlagEnabled")
+      .mockResolvedValue(isOn);
+    return { reads, flag };
+  }
+
+  it("reads the snapshot from the store without a warehouse round trip once its flag is on", async () => {
+    storeHolds(true);
+    const warehouseRead = vi.spyOn(adapter, "executeSqlQuery");
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(result.value.hero?.totalMeasurements).toBe(2_000_000);
+    expect(result.value.families).toEqual([{ family: "unattributed", measurements: 900 }]);
+    expect(totalsSpy).not.toHaveBeenCalled();
+    expect(warehouseRead).not.toHaveBeenCalled();
+  });
+
+  it("chooses the source once per load, so every read of it comes from one source", async () => {
+    const { reads, flag } = storeHolds(false);
+    flag.mockResolvedValueOnce(true);
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(flag).toHaveBeenCalledTimes(1);
+    for (const read of reads) {
+      expect(read).toHaveBeenCalled();
+    }
+    expect(totalsSpy).not.toHaveBeenCalled();
+  });
+
+  it("serves the flipped source on the next read and the warehouse again after a rollback", async () => {
+    const { flag } = storeHolds(false);
+
+    const before = await useCase.execute();
+    flag.mockResolvedValue(true);
+    const flipped = await useCase.execute();
+    flag.mockResolvedValue(false);
+    const rolledBack = await useCase.execute();
+
+    assertSuccess(before);
+    assertSuccess(flipped);
+    assertSuccess(rolledBack);
+    expect(before.value.hero?.totalMeasurements).toBe(1_000_000);
+    expect(flipped.value.hero?.totalMeasurements).toBe(2_000_000);
+    expect(rolledBack.value.hero?.totalMeasurements).toBe(1_000_000);
+    expect(totalsSpy).toHaveBeenCalledTimes(1);
   });
 
   it("serves the cached snapshot without refetching", async () => {

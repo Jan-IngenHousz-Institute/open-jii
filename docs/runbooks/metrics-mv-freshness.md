@@ -30,6 +30,10 @@ returns an empty snapshot and the page renders with no numbers at all; there is 
 fallback. That is the point at which this stops being a data-freshness incident and becomes a
 visible outage, so escalate accordingly.
 
+Where `store-experiment-reads` has a group on this environment and the backend has a serving
+store, the page reads the store's metrics views instead of these tables, so this alert says nothing
+about what the public sees there; `store-metrics-age` watches those views.
+
 ## Closing
 
 Confirm `computed_at` has advanced, not merely that the pipeline reported success. A successful

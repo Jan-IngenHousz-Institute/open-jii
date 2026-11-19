@@ -2,10 +2,11 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { MetricsWindowDay, ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 
+import type { MetricsDataSource } from "../core/models/metrics-data.model";
 import { CACHE_PORT, CachePort } from "../core/ports/cache.port";
-import { METRICS_DATABRICKS_PORT } from "../core/ports/databricks.port";
 import type { DatabricksPort, ResourceDailyRow } from "../core/ports/databricks.port";
 import { MetricsRepository, UUID_PATTERN } from "../core/repositories/metrics.repository";
+import { MetricsDataSourceService } from "./services/metrics-data-source.service";
 
 export const RESOURCE_METRICS_WINDOW_DAYS = 30;
 
@@ -21,8 +22,10 @@ const WAREHOUSE_TYPE: Record<ResourceKind, string> = {
 };
 
 // Versioned because entries now hold attributed rows; a raw entry from before
-// would read workbook version ids as workbook ids.
-export const resourceMetricsCacheKey = (kind: ResourceKind) => `resource-metrics-v2-${kind}`;
+// would read workbook version ids as workbook ids. Keyed by source, so a switch
+// reads the other key at once.
+export const resourceMetricsCacheKey = (source: MetricsDataSource, kind: ResourceKind) =>
+  `resource-metrics-v2-${source}-${kind}`;
 
 export interface ResourceSeries {
   measurements: number;
@@ -56,8 +59,7 @@ export class ResourceMetricsService {
   private readonly logger = new Logger(ResourceMetricsService.name);
 
   constructor(
-    @Inject(METRICS_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly metricsSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
@@ -65,7 +67,8 @@ export class ResourceMetricsService {
 
   /** One cached read supplies both whole-kind totals and page series. */
   async activitySnapshot(kind: ResourceKind): Promise<ResourceActivitySnapshot | null> {
-    const attributed = await this.cachedRows(kind);
+    const source = await this.metricsSource.sourceFor();
+    const attributed = await this.cachedRows(source, kind);
     if (attributed === null) {
       return null;
     }
@@ -112,9 +115,12 @@ export class ResourceMetricsService {
   }
 
   /** Rows keyed by resource id, cached after attribution so it runs once per fill. */
-  private cachedRows(kind: ResourceKind): Promise<ResourceDailyRow[] | null> {
-    return this.cachePort.tryCache(resourceMetricsCacheKey(kind), async () => {
-      const rows = await this.loadRows(kind);
+  private cachedRows(
+    source: MetricsDataSource,
+    kind: ResourceKind,
+  ): Promise<ResourceDailyRow[] | null> {
+    return this.cachePort.tryCache(resourceMetricsCacheKey(source, kind), async () => {
+      const rows = await this.loadRows(source, kind);
       return rows === null ? null : this.attributeToResources(kind, rows);
     });
   }
@@ -125,7 +131,8 @@ export class ResourceMetricsService {
       return this.emptyTotals();
     }
 
-    const attributed = await this.cachedRows(kind);
+    const source = await this.metricsSource.sourceFor();
+    const attributed = await this.cachedRows(source, kind);
     if (attributed === null) {
       return this.emptyTotals();
     }
@@ -199,16 +206,21 @@ export class ResourceMetricsService {
     };
   }
 
-  private async loadRows(kind: ResourceKind): Promise<ResourceDailyRow[] | null> {
+  private async loadRows(
+    source: MetricsDataSource,
+    kind: ResourceKind,
+  ): Promise<ResourceDailyRow[] | null> {
+    const reads = this.metricsSource.readsFor(source);
     const rows =
       kind === "experiment"
-        ? await this.experimentRows()
-        : await this.databricksPort.getResourceDailyActivity(WAREHOUSE_TYPE[kind], LOADED_DAYS);
+        ? await this.experimentRows(reads)
+        : await reads.getResourceDailyActivity(WAREHOUSE_TYPE[kind], LOADED_DAYS);
 
     if (rows.isFailure()) {
       this.logger.warn({
-        msg: "Warehouse unavailable for resource metrics",
+        msg: "Metrics source unavailable for resource metrics",
         operation: "loadRows",
+        source,
         kind,
       });
       return null;
@@ -218,8 +230,8 @@ export class ResourceMetricsService {
   }
 
   /** Experiments predate the per-resource table and keep their own. */
-  private async experimentRows() {
-    const scoped = await this.databricksPort.getScopedDailyActivity(LOADED_DAYS);
+  private async experimentRows(reads: DatabricksPort) {
+    const scoped = await reads.getScopedDailyActivity(LOADED_DAYS);
     if (scoped.isFailure()) {
       return scoped;
     }

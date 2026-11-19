@@ -3,8 +3,12 @@ import { workbookVersions } from "@repo/database";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import { ANALYTICS_PORT } from "../core/ports/analytics.port";
+import type { AnalyticsPort } from "../core/ports/analytics.port";
 import { CACHE_PORT } from "../core/ports/cache.port";
 import type { CachePort } from "../core/ports/cache.port";
+import { METRICS_SERVING_STORE_PORT } from "../core/ports/serving-store.port";
+import type { ServingStorePort } from "../core/ports/serving-store.port";
 import { MetricsRepository } from "../core/repositories/metrics.repository";
 import { ResourceMetricsService, resourceMetricsCacheKey } from "./resource-metrics.service";
 
@@ -82,7 +86,9 @@ describe("ResourceMetricsService", () => {
 
     // The cached rows key on the previous test's resource ids, so the clear
     // has to follow the fixtures rather than precede them.
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    const cache = testApp.module.get<CachePort>(CACHE_PORT);
+    await cache.invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
+    await cache.invalidate(resourceMetricsCacheKey("store", "protocol"));
   });
 
   afterEach(() => {
@@ -130,7 +136,7 @@ describe("ResourceMetricsService", () => {
       ]),
     );
     const cache = testApp.module.get<CachePort>(CACHE_PORT);
-    await cache.invalidate(resourceMetricsCacheKey("protocol"));
+    await cache.invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
     const snapshot = await service.activitySnapshot("protocol");
 
@@ -141,7 +147,7 @@ describe("ResourceMetricsService", () => {
 
   it("reads the kind cache once for an activity snapshot", async () => {
     const cache = testApp.module.get<CachePort>(CACHE_PORT);
-    await cache.invalidate(resourceMetricsCacheKey("protocol"));
+    await cache.invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
     const tryCache = vi.spyOn(cache, "tryCache");
 
     const snapshot = await service.activitySnapshot("protocol");
@@ -149,7 +155,7 @@ describe("ResourceMetricsService", () => {
     expect(snapshot).not.toBeNull();
     expect(tryCache).toHaveBeenCalledTimes(1);
     expect(tryCache).toHaveBeenCalledWith(
-      resourceMetricsCacheKey("protocol"),
+      resourceMetricsCacheKey("warehouse", "protocol"),
       expect.any(Function),
     );
   });
@@ -166,7 +172,9 @@ describe("ResourceMetricsService", () => {
         },
       ]),
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
     const snapshot = await service.activitySnapshot("protocol");
 
@@ -178,7 +186,9 @@ describe("ResourceMetricsService", () => {
     vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
       failure(AppError.internal("warehouse down")),
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
     await expect(service.activitySnapshot("protocol")).resolves.toBeNull();
   });
@@ -221,6 +231,53 @@ describe("ResourceMetricsService", () => {
     expect(snapshot?.seriesFor([visibleProtocolId]).has(privateProtocolId)).toBe(false);
   });
 
+  /** The store holding 7 measurements of the visible protocol yesterday, flagged by `isOn`. */
+  function storeHolds(isOn: boolean) {
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    vi.spyOn(store, "isConfigured").mockReturnValue(true);
+    vi.spyOn(store, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: YESTERDAY,
+          resourceType: "protocol",
+          resourceId: visibleProtocolId,
+          measurements: 7,
+        },
+      ]),
+    );
+    return vi
+      .spyOn(testApp.module.get<AnalyticsPort>(ANALYTICS_PORT), "isEnvironmentFeatureFlagEnabled")
+      .mockResolvedValue(isOn);
+  }
+
+  it("draws the strips from the store without a warehouse round trip once its flag is on", async () => {
+    storeHolds(true);
+    const warehouseRows = vi.spyOn(adapter, "getResourceDailyActivity");
+    const warehouseRead = vi.spyOn(adapter, "executeSqlQuery");
+
+    const snapshot = await service.activitySnapshot("protocol");
+
+    expect(snapshot?.seriesFor([visibleProtocolId]).get(visibleProtocolId)?.measurements).toBe(7);
+    expect(warehouseRows).not.toHaveBeenCalled();
+    expect(warehouseRead).not.toHaveBeenCalled();
+  });
+
+  it("draws the flipped source's strips on the next read and the warehouse's after a rollback", async () => {
+    const flag = storeHolds(false);
+    const measurementsOf = async () =>
+      (await service.activitySnapshot("protocol"))
+        ?.seriesFor([visibleProtocolId])
+        .get(visibleProtocolId)?.measurements;
+
+    const before = await measurementsOf();
+    flag.mockResolvedValue(true);
+    const flipped = await measurementsOf();
+    flag.mockResolvedValue(false);
+    const rolledBack = await measurementsOf();
+
+    expect([before, flipped, rolledBack]).toEqual([102, 7, 102]);
+  });
+
   it("reads experiment activity from the scoped rows it already has", async () => {
     const { experiment } = await testApp.createExperiment({
       name: "Collecting experiment",
@@ -231,7 +288,7 @@ describe("ResourceMetricsService", () => {
     );
     await testApp.module
       .get<CachePort>(CACHE_PORT)
-      .invalidate(resourceMetricsCacheKey("experiment"));
+      .invalidate(resourceMetricsCacheKey("warehouse", "experiment"));
 
     const snapshot = await service.activitySnapshot("experiment");
 
@@ -262,7 +319,9 @@ describe("ResourceMetricsService", () => {
         },
       ]),
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "workbook"));
 
     const snapshot = await service.activitySnapshot("workbook");
     const totals = await service.totalsFor("workbook", [workbook.id]);
@@ -276,7 +335,9 @@ describe("ResourceMetricsService", () => {
       testApp.module.get(MetricsRepository),
       "getWorkbookVersionMapForVersions",
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "workbook"));
 
     await service.activitySnapshot("workbook");
     await service.activitySnapshot("workbook");
@@ -339,7 +400,9 @@ describe("ResourceMetricsService", () => {
         },
       ]),
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "workbook"));
 
     const snapshot = await service.activitySnapshot("workbook");
 
@@ -357,7 +420,9 @@ describe("ResourceMetricsService", () => {
       testApp.module.get(MetricsRepository),
       "getWorkbookVersionMapForVersions",
     ).mockResolvedValue(failure(AppError.internal("version map unavailable")));
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("workbook"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "workbook"));
 
     await expect(service.activitySnapshot("workbook")).resolves.toBeNull();
   });
@@ -381,7 +446,9 @@ describe("ResourceMetricsService", () => {
         },
       ]),
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
     const totals = await service.totalsFor("protocol", [visibleProtocolId]);
 
@@ -403,7 +470,9 @@ describe("ResourceMetricsService", () => {
         },
       ]),
     );
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
     const totals = await service.totalsFor("protocol", [visibleProtocolId]);
 

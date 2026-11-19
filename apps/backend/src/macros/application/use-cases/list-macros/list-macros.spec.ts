@@ -340,7 +340,9 @@ describe("ListMacrosUseCase", () => {
           statusCode: 500,
         }),
       );
-      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("macro"));
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("warehouse", "macro"));
     }
 
     it("falls back to name order and reports unavailable when activity is paired with name and there is no snapshot", async () => {
@@ -411,7 +413,9 @@ describe("ListMacrosUseCase", () => {
           { date: today, resourceType: "macro", resourceId: quiet.id, measurements: 1 },
         ]),
       );
-      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("macro"));
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("warehouse", "macro"));
 
       const result = await useCase.executePaginated(1, 20, {
         userId: testUserId,
@@ -452,7 +456,9 @@ describe("ListMacrosUseCase", () => {
           { date: today, resourceType: "macro", resourceId: quiet.id, measurements: 1 },
         ]),
       );
-      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("macro"));
+      await testApp.module
+        .get<CachePort>(CACHE_PORT)
+        .invalidate(resourceMetricsCacheKey("warehouse", "macro"));
 
       const result = await useCase.execute({
         userId: testUserId,

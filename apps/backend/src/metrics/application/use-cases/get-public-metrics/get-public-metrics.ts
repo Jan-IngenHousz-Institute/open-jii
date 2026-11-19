@@ -7,18 +7,19 @@ import type {
 
 import { success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
+import type { MetricsDataSource } from "../../../core/models/metrics-data.model";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
-import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type {
   ActivityWindowsRow,
   DailyActivityRow,
-  DatabricksPort,
   PlatformTotalsRow,
   PoolFactsRow,
 } from "../../../core/ports/databricks.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
+import { MetricsDataSourceService } from "../../services/metrics-data-source.service";
 
-export const PUBLIC_METRICS_CACHE_KEY = "public-snapshot";
+// Keyed by source, so a snapshot never mixes sources and a switch reads the other key at once.
+export const publicMetricsCacheKey = (source: MetricsDataSource) => `public-snapshot:${source}`;
 
 const DAILY_ACTIVITY_DAYS = 366;
 
@@ -36,15 +37,17 @@ export class GetPublicMetricsUseCase {
   private readonly logger = new Logger(GetPublicMetricsUseCase.name);
 
   constructor(
-    @Inject(METRICS_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly metricsSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
   ) {}
 
   async execute(): Promise<Result<PublicMetricsResponse>> {
-    const snapshot = await this.cachePort.tryCache(PUBLIC_METRICS_CACHE_KEY, () => this.load());
+    const source = await this.metricsSource.sourceFor();
+    const snapshot = await this.cachePort.tryCache(publicMetricsCacheKey(source), () =>
+      this.load(source),
+    );
 
     if (snapshot === null) {
       // A fully-failed refresh serves empty slots and is never cached, so a
@@ -70,7 +73,8 @@ export class GetPublicMetricsUseCase {
     };
   }
 
-  private async load(): Promise<PublicMetricsResponse | null> {
+  private async load(source: MetricsDataSource): Promise<PublicMetricsResponse | null> {
+    const reads = this.metricsSource.readsFor(source);
     const [
       totals,
       daily,
@@ -82,19 +86,23 @@ export class GetPublicMetricsUseCase {
       poolFacts,
       contributorPairs,
     ] = await Promise.all([
-      this.databricksPort.getPublicPlatformTotals(),
-      this.databricksPort.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
-      this.databricksPort.getPublicFamilyTotals(),
-      this.databricksPort.getActivityWindows(),
-      this.databricksPort.getHourlyActivity(),
-      this.databricksPort.getTopParameter("derived"),
-      this.databricksPort.getTopParameter("sensor"),
-      this.databricksPort.getPoolFacts(),
-      this.databricksPort.getContributorPairs(),
+      reads.getPublicPlatformTotals(),
+      reads.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
+      reads.getPublicFamilyTotals(),
+      reads.getActivityWindows(),
+      reads.getHourlyActivity(),
+      reads.getTopParameter("derived"),
+      reads.getTopParameter("sensor"),
+      reads.getPoolFacts(),
+      reads.getContributorPairs(),
     ]);
 
     if (totals.isFailure() && daily.isFailure() && windows.isFailure()) {
-      this.logger.warn({ msg: "Warehouse unavailable for public metrics", operation: "load" });
+      this.logger.warn({
+        msg: "Metrics source unavailable for public metrics",
+        operation: "load",
+        source,
+      });
       return null;
     }
 
@@ -111,8 +119,9 @@ export class GetPublicMetricsUseCase {
     ].filter((result) => result.isFailure());
     if (failures.length > 0) {
       this.logger.warn({
-        msg: "Some warehouse metrics are unavailable, serving a partial snapshot",
+        msg: "Some metrics are unavailable, serving a partial snapshot",
         operation: "load",
+        source,
         unavailable: failures.length,
       });
     }

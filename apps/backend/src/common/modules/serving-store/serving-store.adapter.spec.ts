@@ -2,11 +2,12 @@ import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { resolve } from "path";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
+import { storeMigrationStatements } from "../../../test/store-migrations";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
@@ -302,7 +303,172 @@ describe("ServingStoreAdapter", () => {
       "SELECT client_id FROM experiment_client_ids(experiment = 'e1')",
     );
   });
+
+  describe("platform metrics", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function storeQuery() {
+      return vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+    }
+
+    it("reads the newest days of the daily view and gives them oldest first", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["2026-08-28", 120, 1000, 2400],
+            ["2026-08-27", 80, 880, 1600],
+          ],
+        }),
+      );
+
+      const result = await adapter.getPublicDailyActivity(366);
+
+      assertSuccess(result);
+      expect(result.value.map(({ date }) => date)).toEqual(["2026-08-27", "2026-08-28"]);
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT date, measurements, cumulative_measurements, volume_bytes FROM metrics_daily_activity ORDER BY date DESC LIMIT 366",
+      );
+    });
+
+    it("bounds the experiment and resource days as the warehouse reads do, today included", async () => {
+      vi.useFakeTimers({ now: new Date("2026-08-28T12:00:00Z"), toFake: ["Date"] });
+      const query = storeQuery();
+
+      await adapter.getScopedDailyActivity(60);
+      await adapter.getResourceDailyActivity("workbook_version", 30);
+
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT date, experiment_id, measurements FROM metrics_daily_activity_by_experiment WHERE date BETWEEN '2026-06-30' AND '2026-08-28' ORDER BY date ASC",
+      );
+      expect(query.mock.calls[1][0]).toBe(
+        "SELECT date, resource_type, resource_id, measurements FROM metrics_daily_activity_by_resource WHERE resource_type = 'workbook_version' AND date BETWEEN '2026-07-30' AND '2026-08-28' ORDER BY date ASC",
+      );
+    });
+
+    it("reads the whole category, which the rows' order cannot decide a tie in", async () => {
+      const query = storeQuery();
+
+      const result = await adapter.getTopParameter("sensor");
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT parameter, label, observations, median_value FROM metrics_parameter_stats WHERE category = 'sensor'",
+      );
+    });
+
+    it("reads a client without an id as no client", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["thing-1", 500],
+            [null, 15],
+          ],
+        }),
+      );
+
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "thing-1", measurements: 500 },
+        { clientId: null, measurements: 15 },
+      ]);
+    });
+
+    it("passes a failed read through", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        failure(AppError.internal("The serving store could not answer the read")),
+      );
+
+      assertFailure(await adapter.getPoolFacts());
+      assertFailure(await adapter.getClientTotals());
+    });
+
+    it("reads metrics views the module grants the reader", () => {
+      const views = localList("metrics_views");
+      const read = new Set(storeUser("reader").grants);
+
+      expect(views).toHaveLength(11);
+      for (const view of views) {
+        expect(read).toContain(`GRANT SELECT ON store.${view}`);
+      }
+    });
+  });
 });
+
+/** The serving store module's infrastructure, which says what each store user may do. */
+const SERVING_STORE_MODULE = resolve(
+  __dirname,
+  "../../../../../../infrastructure/modules/serving-store",
+);
+
+function moduleFile(path: string): string {
+  return readFileSync(resolve(SERVING_STORE_MODULE, path), "utf-8");
+}
+
+/** A list of names from the serving store module's locals. */
+function localList(name: string): string[] {
+  const listing =
+    new RegExp(`\\n {2}${name} = \\[([^\\]]*)\\]`).exec(moduleFile("main.tf"))?.[1] ?? "";
+  return [...listing.matchAll(/"(\w+)"/g)].map(([, item]) => item);
+}
+
+/** A store user's profile and grants as the serving store module writes them into users.xml. */
+function storeUser(role: string): { profile: string; grants: string[] } {
+  const block =
+    new RegExp(`\\n {4}${role} = \\{([\\s\\S]*?)\\n {4}\\}`).exec(moduleFile("main.tf"))?.[1] ?? "";
+  const profile = /profile\s*=\s*"(\w+)"/.exec(block)?.[1] ?? "";
+  const grants = [
+    ...block.matchAll(
+      /\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"((?:GRANT|REVOKE) [^"]+)"/g,
+    ),
+  ].flatMap((match) => {
+    const plain = match.at(4);
+    if (plain !== undefined) {
+      return [plain];
+    }
+    const [, name, listings, template] = match;
+    return [...listings.matchAll(/local\.(\w+)/g)].flatMap(([, listing]) =>
+      localList(listing).map((value) => template.replace(`\${${name}}`, value)),
+    );
+  });
+  return { profile, grants };
+}
+
+/** A profile's settings as users.xml sets them, its parent's first, and the ones it fixes. */
+function profileSettings(name: string): { settings: Map<string, string>; fixed: string[] } {
+  const profiles = moduleFile("templates/users.xml.tftpl").replace(/<!--[\s\S]*?-->/g, "");
+  const body =
+    new RegExp(`<profiles>[\\s\\S]*?<${name}>([\\s\\S]*?)</${name}>`).exec(profiles)?.[1] ?? "";
+  const constraints = /<constraints>([\s\S]*?)<\/constraints>/.exec(body)?.[1] ?? "";
+  const parent = /<profile>(\w+)<\/profile>/.exec(body)?.[1];
+
+  const settings = new Map(parent === undefined ? [] : profileSettings(parent).settings);
+  const own = body.replace(/<constraints>[\s\S]*?<\/constraints>/, "");
+  for (const [, setting, value] of own.matchAll(/<(\w+)>([^<]*)<\/\1>/g)) {
+    if (setting !== "profile") {
+      settings.set(setting, value);
+    }
+  }
+
+  const fixed = [...constraints.matchAll(/<(\w+)><const\/><\/\1>/g)].map(([, setting]) => setting);
+  return { settings, fixed };
+}
+
+/** The profile as a settings profile the store can be given over SQL, every constraint kept. */
+function settingsProfileClause(name: string): string {
+  const { settings, fixed } = profileSettings(name);
+  const valued = [...settings].map(
+    ([setting, value]) => `${setting} = ${value}${fixed.includes(setting) ? " CONST" : ""}`,
+  );
+  const unvalued = fixed
+    .filter((setting) => !settings.has(setting))
+    .map((setting) => `${setting} CONST`);
+  return [...valued, ...unvalued].join(", ");
+}
 
 /**
  * The adapter's reads against a real store of the version the store runs, through the migrations'
@@ -318,8 +484,6 @@ describe("ServingStoreAdapter", () => {
 const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
 const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
 const STORE_PASSWORD = process.env.CLICKHOUSE_TEST_PASSWORD ?? "";
-
-const MIGRATIONS = resolve(__dirname, "../../../../../../packages/database/clickhouse/migrations");
 
 const EXPERIMENT = "e1";
 const ADA = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01";
@@ -490,7 +654,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       database: "store",
       clickhouse_settings: { json_type_escape_dots_in_keys: 1 },
     });
-    for (const statement of migrationStatements()) {
+    for (const statement of storeMigrationStatements()) {
       await admin.command({ query: statement });
     }
     await admin.insert({ table: "measurements", values: MEASUREMENTS, format: "JSONEachRow" });
@@ -2119,6 +2283,349 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
   });
 });
 
+/** Waits out the refresh each view runs when it is made, which would miss rows inserted during it. */
+async function firstRefreshes(admin: ClickHouseClient): Promise<void> {
+  const views = localList("metrics_views").length;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const result = await admin.query({
+      query:
+        "SELECT countIf(last_success_time IS NOT NULL) AS refreshed FROM system.view_refreshes WHERE database = 'store'",
+      format: "JSONEachRow",
+    });
+    const [{ refreshed }] = await result.json<{ refreshed: number }>();
+    if (Number(refreshed) === views) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("The metrics views never finished their first refresh");
+}
+
+/** A time as the store takes and gives it, in UTC. */
+function storeTime(time: Date): string {
+  return time.toISOString().replace("T", " ").replace("Z", "");
+}
+
+const READER = "metrics_backend_test_reader";
+const READER_PASSWORD = "metrics-backend-test";
+const READER_PROFILE = "metrics_backend_test_profile";
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+/** The platform metrics read as the backend's reader, with the grants and profile the module gives it. */
+describe.skipIf(STORE_URL === undefined)(
+  "ServingStoreAdapter's platform metrics against a store",
+  () => {
+    // Far enough apart that their dates differ wherever the clock is.
+    const now = Date.now();
+    const recent = new Date(now - HOUR);
+    const earlier = new Date(now - 3 * DAY);
+    const older = new Date(now - 40 * DAY);
+    const dateOf = (time: Date) => time.toISOString().slice(0, 10);
+
+    let admin: ClickHouseClient;
+    let client: ServingStoreClientService;
+    let adapter: ServingStoreAdapter;
+
+    beforeAll(async () => {
+      const url = STORE_URL ?? "";
+      const server = createClient({ url, username: STORE_USER, password: STORE_PASSWORD });
+      await server.command({ query: `DROP USER IF EXISTS ${READER}` });
+      await server.command({ query: `DROP SETTINGS PROFILE IF EXISTS ${READER_PROFILE}` });
+      await server.command({ query: "DROP DATABASE IF EXISTS store SYNC" });
+      await server.command({ query: "CREATE DATABASE store" });
+      await server.close();
+
+      admin = createClient({
+        url,
+        username: STORE_USER,
+        password: STORE_PASSWORD,
+        database: "store",
+        clickhouse_settings: { json_type_escape_dots_in_keys: 1 },
+      });
+      for (const statement of storeMigrationStatements()) {
+        await admin.command({ query: statement });
+      }
+      await firstRefreshes(admin);
+
+      const committed = { _commit_version: 1, _commit_timestamp: storeTime(new Date(now)) };
+      const unannotated = { questions_data: {}, annotations: [] };
+      await admin.insert({
+        table: "measurements",
+        format: "JSONEachRow",
+        values: [
+          {
+            ...committed,
+            ...unannotated,
+            experiment_id: "e1",
+            id: 1,
+            device_id: "d1",
+            client_id: "c1",
+            user_id: "u1",
+            timestamp: storeTime(recent),
+            timezone: "Europe/Amsterdam",
+            hour_local: 14,
+            protocol_id: "p1",
+            workbook_run_id: "r1",
+            data: '{"a":1}',
+            par_readings: [150, 160],
+          },
+          {
+            ...committed,
+            ...unannotated,
+            experiment_id: "e1",
+            id: 2,
+            device_id: "d2",
+            client_id: "c2",
+            user_id: "u2",
+            timestamp: storeTime(earlier),
+            timezone: "UTC",
+            hour_local: 3,
+            protocol_id: "p1",
+            workbook_run_id: "r1",
+            data: '{"bb":22}',
+            temperature_readings: [21.5],
+          },
+          {
+            ...committed,
+            ...unannotated,
+            experiment_id: "e2",
+            id: 3,
+            device_id: "d1",
+            timestamp: storeTime(older),
+            timezone: "UTC",
+            hour_local: 3,
+          },
+        ],
+      });
+      await admin.insert({
+        table: "macro_results",
+        format: "JSONEachRow",
+        values: [
+          { id: 11, rawId: 1, time: recent, phi2: 0.7 },
+          { id: 12, rawId: 2, time: earlier, phi2: 0.5 },
+          { id: 13, rawId: 3, time: older, phi2: 0.6 },
+        ].map(({ id, rawId, time, phi2 }) => ({
+          ...committed,
+          ...unannotated,
+          experiment_id: "e1",
+          id,
+          raw_id: rawId,
+          macro_id: "mac1",
+          timestamp: storeTime(time),
+          macro_output: { Phi2: phi2 },
+        })),
+      });
+      await admin.insert({
+        table: "uploads",
+        format: "JSONEachRow",
+        values: [
+          {
+            ...committed,
+            experiment_id: "e1",
+            id: 21,
+            upload_table_id: "t1",
+            uploaded_at: storeTime(recent),
+            uploaded_data: { h: 1 },
+          },
+        ],
+      });
+
+      for (const view of localList("metrics_views")) {
+        await admin.command({ query: `SYSTEM REFRESH VIEW ${view}` });
+        await admin.command({ query: `SYSTEM WAIT VIEW ${view}` });
+      }
+
+      const reader = storeUser("reader");
+      await admin.command({
+        query: `CREATE SETTINGS PROFILE ${READER_PROFILE} SETTINGS ${settingsProfileClause(reader.profile)}`,
+      });
+      await admin.command({
+        query: `CREATE USER ${READER} IDENTIFIED BY '${READER_PASSWORD}' SETTINGS PROFILE '${READER_PROFILE}'`,
+      });
+      for (const grant of reader.grants) {
+        await admin.command({ query: `${grant} TO ${READER}` });
+      }
+
+      const config = new ConfigService({
+        servingStore: { url, username: READER, password: READER_PASSWORD },
+      });
+      client = new ServingStoreClientService(new ServingStoreConfigService(config));
+      adapter = new ServingStoreAdapter(client);
+    });
+
+    afterAll(async () => {
+      await client.onModuleDestroy();
+      await admin.command({ query: `DROP USER IF EXISTS ${READER}` });
+      await admin.command({ query: `DROP SETTINGS PROFILE IF EXISTS ${READER_PROFILE}` });
+      await admin.close();
+    });
+
+    it.each([
+      ["the measurements", "SELECT count() FROM measurements"],
+      ["the macro results", "SELECT count() FROM macro_results"],
+      ["the views' refresh state", "SELECT count() FROM system.view_refreshes"],
+      ["a longer time limit than its profile's", "SELECT 1 SETTINGS max_execution_time = 60"],
+    ])("is refused %s", async (_name, sql) => {
+      assertFailure(await client.query(sql));
+    });
+
+    it("reads the platform totals", async () => {
+      const result = await adapter.getPublicPlatformTotals();
+
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        totalMeasurements: 3,
+        totalVolumeBytes: 16,
+        totalUploadedRows: 1,
+        totalMacroExecutions: 3,
+        devicesAllTime: 2,
+        experimentsWithData: 2,
+        firstMeasurementAt: older.toISOString(),
+        lastMeasurementAt: recent.toISOString(),
+      });
+      expect(result.value?.computedAt).not.toBeNull();
+    });
+
+    it("reads the daily activity oldest first", async () => {
+      const result = await adapter.getPublicDailyActivity(366);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { date: dateOf(older), measurements: 1, cumulativeMeasurements: 1, volumeBytes: 0 },
+        { date: dateOf(earlier), measurements: 1, cumulativeMeasurements: 2, volumeBytes: 9 },
+        { date: dateOf(recent), measurements: 1, cumulativeMeasurements: 3, volumeBytes: 7 },
+      ]);
+    });
+
+    it("reads each client's total", async () => {
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { clientId: "c1", measurements: 1 },
+          { clientId: "c2", measurements: 1 },
+          { clientId: null, measurements: 1 },
+        ]),
+      );
+      expect(result.value).toHaveLength(3);
+    });
+
+    it("reads the activity windows", async () => {
+      const result = await adapter.getActivityWindows();
+
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        measurements24h: 1,
+        measurements30d: 2,
+        experiments30d: 1,
+        contributors30d: 2,
+        devices30d: 2,
+        lastMeasurementAt: recent.toISOString(),
+      });
+    });
+
+    it("reads the measurements by their local hour", async () => {
+      const result = await adapter.getHourlyActivity();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { hourLocal: 3, measurements: 2 },
+        { hourLocal: 14, measurements: 1 },
+      ]);
+    });
+
+    it("reads the most observed parameter of each category", async () => {
+      const derived = await adapter.getTopParameter("derived");
+      const sensor = await adapter.getTopParameter("sensor");
+
+      assertSuccess(derived);
+      assertSuccess(sensor);
+      expect(derived.value).toEqual({
+        label: "Photosystem II efficiency (Phi2)",
+        name: "Phi2",
+        observations: 3,
+        median: 0.6,
+      });
+      expect(sensor.value).toEqual({
+        label: "Light intensity, PAR",
+        name: "par",
+        observations: 2,
+        median: 150,
+      });
+    });
+
+    it("reads the pool facts", async () => {
+      const result = await adapter.getPoolFacts();
+
+      assertSuccess(result);
+      expect(result.value).toMatchObject({
+        sessionMedianMeasurements: 2,
+        currentStreakDays: 1,
+        deviceEnduranceDays: 1,
+        simultaneityPeakDevices: 1,
+        timezonesAllTime: 2,
+        timezonesPeakDay: 1,
+      });
+      expect(result.value?.meanArrivalGapSeconds).toBeCloseTo(
+        (recent.getTime() - earlier.getTime()) / 1000,
+        3,
+      );
+    });
+
+    it("reads an experiment's days within the window", async () => {
+      const result = await adapter.getScopedDailyActivity(60);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { date: dateOf(older), experimentId: "e2", measurements: 1 },
+        { date: dateOf(earlier), experimentId: "e1", measurements: 1 },
+        { date: dateOf(recent), experimentId: "e1", measurements: 1 },
+      ]);
+    });
+
+    it("reads one kind of resource's days within the window", async () => {
+      const protocols = await adapter.getResourceDailyActivity("protocol", 60);
+      const macros = await adapter.getResourceDailyActivity("macro", 30);
+
+      assertSuccess(protocols);
+      assertSuccess(macros);
+      expect(protocols.value).toEqual([
+        { date: dateOf(earlier), resourceType: "protocol", resourceId: "p1", measurements: 1 },
+        { date: dateOf(recent), resourceType: "protocol", resourceId: "p1", measurements: 1 },
+      ]);
+      expect(macros.value).toEqual([
+        { date: dateOf(earlier), resourceType: "macro", resourceId: "mac1", measurements: 1 },
+        { date: dateOf(recent), resourceType: "macro", resourceId: "mac1", measurements: 1 },
+      ]);
+    });
+
+    it("reads the last 30 days' contributors and publishers per experiment", async () => {
+      const contributors = await adapter.getContributorPairs();
+      const devices = await adapter.getDevicePairs();
+
+      assertSuccess(contributors);
+      assertSuccess(devices);
+      expect(contributors.value).toEqual(
+        expect.arrayContaining([
+          { experimentId: "e1", userId: "u1" },
+          { experimentId: "e1", userId: "u2" },
+        ]),
+      );
+      expect(contributors.value).toHaveLength(2);
+      expect(devices.value).toEqual(
+        expect.arrayContaining([
+          { experimentId: "e1", clientId: "c1" },
+          { experimentId: "e1", clientId: "c2" },
+        ]),
+      );
+      expect(devices.value).toHaveLength(2);
+    });
+  },
+);
+
 describe("StoreTables against the migrations", () => {
   // A sorted page picks its rows by the key, so it must be the table's whole sorting key; and the
   // client folds each month on its own, which holds only while a row's month is part of its key.
@@ -2130,7 +2637,7 @@ describe("StoreTables against the migrations", () => {
     "%s is read by its migration's sorting key, which holds its partition's time",
     (name, table) => {
       const create =
-        migrationStatements().find((statement) =>
+        storeMigrationStatements().find((statement) =>
           statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
         ) ?? "";
 
@@ -2149,27 +2656,7 @@ describe("StoreTables against the migrations", () => {
     expect(texts).toHaveLength(1);
     for (const text of texts) {
       const added = `ALTER TABLE ${name} ADD COLUMN IF NOT EXISTS ${text} Nullable(String)`;
-      expect(migrationStatements().some((statement) => statement.includes(added))).toBe(true);
+      expect(storeMigrationStatements().some((statement) => statement.includes(added))).toBe(true);
     }
   });
 });
-
-/** The migrations as their runner applies them, one statement at a time. */
-function migrationStatements(): string[] {
-  const files = readdirSync(MIGRATIONS)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-  return files.flatMap((file) => {
-    const statements: string[] = [];
-    let lines: string[] = [];
-    for (const line of readFileSync(resolve(MIGRATIONS, file), "utf-8").split("\n")) {
-      lines.push(line);
-      if (line.trimEnd().endsWith(";")) {
-        statements.push(lines.join("\n").trimEnd().replace(/;$/, ""));
-        lines = [];
-      }
-    }
-    const rest = lines.filter((line) => line.trim() !== "" && !line.trim().startsWith("--"));
-    return rest.length > 0 ? [...statements, lines.join("\n")] : statements;
-  });
-}
