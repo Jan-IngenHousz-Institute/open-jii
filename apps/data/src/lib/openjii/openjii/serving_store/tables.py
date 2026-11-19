@@ -1,4 +1,5 @@
-"""What each store table holds, built from its gold table's change feed."""
+"""What each store table holds, built from the change feed of the table it reads: a gold table, or
+the lakehouse's copy of the metadata sheets."""
 
 from __future__ import annotations
 
@@ -69,7 +70,7 @@ def or_empty(column: str) -> Column:
 
 
 class StoreTable:
-    """A store table fed from one gold table."""
+    """A store table fed from one table's change feed: a gold table's, unless ``source`` names another."""
 
     name: str
     gold_table: str
@@ -283,13 +284,12 @@ class MetadataRows(StoreTable):
     and the rest of the row, without its ``_id``, as the fields."""
 
     name = "metadata_rows"
-    gold_table = EXPERIMENT_CUSTOM_METADATA_TABLE
     partitioned_by = "sheet_created_at"
     processed_at = None
     payloads = ()
 
     def source(self, catalog: str) -> str:
-        return f"{catalog}.centrum.{self.gold_table}"
+        return f"{catalog}.centrum.{EXPERIMENT_CUSTOM_METADATA_TABLE}"
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         rows = self._sheet_rows(changes)
