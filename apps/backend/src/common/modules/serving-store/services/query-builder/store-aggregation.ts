@@ -45,8 +45,8 @@ export class StoreAggregation {
 
     const names = inner.map(({ name }) => name);
     const dialect = new StoreQueryBuilder(names).over(inner);
-    dialect.followIds(page.idOrder);
-    dialect.typesOutputs(
+    dialect.idOrder(page.idOrder);
+    dialect.outputTypes(
       (output) => this.outputColumns(output, inner).find(({ name }) => name === output.name)?.type,
     );
 

@@ -122,7 +122,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     nestsObjects: boolean;
   })[] = [];
   private ordering?: QueryOrdering;
-  private idOrder?: string[];
+  private orderIds?: string[];
   private limitValue?: number;
   private offsetValue?: number;
   private plotsValues = false;
@@ -300,11 +300,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   orderBy(ordering: QueryOrdering, idOrder?: string[]): this {
     this.ordering = ordering;
-    return this.followIds(idOrder);
+    return this.idOrder(idOrder);
   }
 
-  followIds(idOrder: string[] | undefined): this {
-    this.idOrder = idOrder;
+  idOrder(ids: string[] | undefined): this {
+    this.orderIds = ids;
     return this;
   }
 
@@ -582,7 +582,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     output?: NamedOutput,
   ): string {
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
-    const idOrder = this.idOrder;
+    const idOrder = this.orderIds;
     const [name, path] = this.structPath(column);
     const idOf = this.rowIdOf(column);
 
@@ -601,7 +601,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** The type each output of a statement over these rows takes, which its sort depends on. */
-  typesOutputs(typeOf: (output: NamedOutput) => string | undefined): this {
+  outputTypes(typeOf: (output: NamedOutput) => string | undefined): this {
     this.outputTypeOf = typeOf;
     return this;
   }
@@ -1085,7 +1085,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
   private sortClause({ column, direction = "ASC", mode }: QueryOrdering): string {
-    const idOrder = this.idOrder;
+    const idOrder = this.orderIds;
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
@@ -1159,7 +1159,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   private withClause(): string {
     const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
-    const idOrder = this.idOrder;
+    const idOrder = this.orderIds;
     const lists = [
       ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS ${ORDER_IDS}`]),
       ...(this.deviceSerials.length === 0
