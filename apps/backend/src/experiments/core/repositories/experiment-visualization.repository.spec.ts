@@ -163,6 +163,28 @@ describe("ExperimentVisualizationRepository", () => {
   });
 
   describe("create", () => {
+    it("returns the created visualization when its creator has no profile", async () => {
+      await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
+      const createDto: CreateExperimentVisualizationDto = {
+        name: "Profile-less chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      const created = await repository.create(testExperimentId, createDto, testUserId);
+      assertSuccess(created);
+      expect(created.value).toEqual([
+        expect.objectContaining({
+          name: "Profile-less chart",
+          experimentId: testExperimentId,
+          createdBy: testUserId,
+          createdByName: undefined,
+        }),
+      ]);
+    });
+
     it("should create a new experiment visualization", async () => {
       // Arrange
       const createDto: CreateExperimentVisualizationDto = {

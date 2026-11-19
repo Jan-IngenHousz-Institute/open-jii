@@ -120,17 +120,18 @@ export class ExperimentVisualizationRepository {
       const results = await this.database
         .select({
           experiment_visualizations: visualizationColumns,
+          profileUserId: profiles.userId,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })
         .from(experimentVisualizations)
-        .innerJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
+        .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
         .where(eq(experimentVisualizations.id, insertResults[0].id));
 
       return results.map((result) => {
         const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
         augmentedResult.createdByName =
-          result.firstName && result.lastName
+          result.profileUserId && result.firstName && result.lastName
             ? `${result.firstName} ${result.lastName}`
             : undefined;
         return augmentedResult;
