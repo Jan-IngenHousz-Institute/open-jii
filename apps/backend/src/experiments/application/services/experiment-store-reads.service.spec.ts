@@ -194,7 +194,7 @@ describe("ExperimentStoreReadsService", () => {
     assertSuccess(await reads.buildQuery({ ...page, flagged: "only" }));
     assertSuccess(await reads.buildQuery(page));
 
-    expect(flagged).toHaveBeenCalledExactlyOnceWith("e1", "raw_data");
+    expect(flagged).toHaveBeenCalledExactlyOnceWith(page.experimentId, "raw_data");
     expect(build).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ flagged: "only", flaggedRowIds: ["7", "9"] }),
