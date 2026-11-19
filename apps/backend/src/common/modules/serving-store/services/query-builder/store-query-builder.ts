@@ -691,6 +691,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       const { type, idOf } = this.outputColumn(name);
       return { name, column: { name: alias, type, idOf } };
     });
+
     const projection = [
       `${key} AS ${ASOF_KEY}`,
       `${at} AS ${ASOF_TIME}`,
@@ -706,6 +707,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       `ORDER BY ${ASOF_KEY}, ${ASOF_TIME}, ${this.columnExpression("id")} ASC`,
       `LIMIT 1 BY ${ASOF_KEY}, ${ASOF_TIME}`,
     ]);
+
     return {
       sql,
       columns: values.map(({ column }) => column),
@@ -729,6 +731,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       this.finalTable === undefined
         ? `${this.fromClause} AS ${ASOF_PRIMARY}`
         : `${this.finalTable} AS ${ASOF_PRIMARY} FINAL`;
+
     this.fromClause = `${primary} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
     this.joinsTable = secondary.readsTable;
     this.columns = [
@@ -738,6 +741,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         if (idOf !== "device") {
           return { name, type, idOf, expression: matched(this.quoteName(name)) };
         }
+
         const device = {
           clientId: matched(this.quoteName(name)),
           label: matched(this.quoteName(this.matchedLabelName(name))),
@@ -752,6 +756,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         };
       }),
     ];
+
     return this;
   }
 

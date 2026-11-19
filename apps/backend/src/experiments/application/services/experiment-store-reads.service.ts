@@ -293,11 +293,13 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     if (aggregation === undefined || !hasAggregationContent(aggregation)) {
       return false;
     }
+
     const groups = aggregation.groupBy ?? [];
     const functions = aggregation.functions ?? [];
     const keepsRows =
       groups.length === 0 &&
       functions.every(({ function: fn }) => fn === "cumsum" || aggregateKind(fn) === "rowWindow");
+
     const named = [
       ...groups.map(({ column }) => column),
       ...functions.flatMap((item) => [
@@ -311,6 +313,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       (name) => name !== undefined && idColumns.get(this.structPath(name)[0]) === "device",
     );
     const hasDevices = [...idColumns.values()].includes("device");
+
     return hasDevices && (keepsRows || namesDevice);
   }
 

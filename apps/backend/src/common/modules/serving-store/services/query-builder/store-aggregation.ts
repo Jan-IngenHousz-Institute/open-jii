@@ -35,12 +35,14 @@ export class StoreAggregation {
     const inner = this.rows
       .outputColumns()
       .map(({ name, type, idOf, isPairText }) => ({ name, type, idOf, isPairText }));
+
     // The store finds a capped read's rows by key first, so it never extracts every row's payload
     // to choose them.
     const firstRows = this.firstRows(inner, page.ordering);
     if (firstRows !== undefined && page.limit !== undefined) {
       this.rows.keepFirst(firstRows, page.limit + (page.offset ?? 0));
     }
+
     const names = inner.map(({ name }) => name);
     const dialect = new StoreQueryBuilder(names).over(inner);
     dialect.followIds(page.idOrder);
@@ -53,6 +55,7 @@ export class StoreAggregation {
       { columnNames: names, aggregation: this.aggregation, ...page },
       dialect,
     );
+
     const columns = outputs.flatMap((output) => this.outputColumns(output, inner));
     const cells = columns.map(({ name, type }) => {
       const quoted = dialect.quoteName(name);
