@@ -1847,8 +1847,11 @@ module "experiment_custom_metadata_table" {
     { name = "updated_at", type = "TIMESTAMP", nullable = false },
   ]
 
+  # The change feed carries each sheet's edits and deletions to the serving store
+  # (apps/data/src/lib/openjii/openjii/serving_store/tables.py, MetadataRows).
   properties = {
     "delta.feature.variantType-preview" = "supported"
+    "delta.enableChangeDataFeed"        = "true"
   }
 
   grants = {
@@ -2158,6 +2161,9 @@ locals {
     measurements  = "58430"
     uploads       = "44"
     macro_results = "57120"
+    # The sheets' copy needs no history: the first load owes every sheet to it once
+    # (docs/runbooks/procedures/serving-store-reload.md).
+    metadata_rows = "latest"
   }
   serving_store_feed = length(local.serving_store_feed_start_versions) > 0
 
@@ -2169,6 +2175,7 @@ locals {
     SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
     SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
     SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
+    SERVING_STORE_FEED_START_METADATA_ROWS = local.serving_store_feed_start_versions.metadata_rows
   } : {}
 }
 
@@ -2953,16 +2960,6 @@ module "backend_ecs" {
     {
       name      = "SERVING_STORE_PASSWORD"
       valueFrom = "${module.serving_store.credentials_secret_arns["reader"]}:password::"
-    },
-    # The user the outbox copies metadata sheet rows with, which may only insert into and read their
-    # table.
-    {
-      name      = "SERVING_STORE_COPIER_USERNAME"
-      valueFrom = "${module.serving_store.credentials_secret_arns["copier"]}:username::"
-    },
-    {
-      name      = "SERVING_STORE_COPIER_PASSWORD"
-      valueFrom = "${module.serving_store.credentials_secret_arns["copier"]}:password::"
     },
     {
       name      = "DB_CREDENTIALS"

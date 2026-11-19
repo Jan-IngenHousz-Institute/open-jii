@@ -1,4 +1,4 @@
-"""The sinks that send a pipeline's gold changes to the serving store."""
+"""The sinks that send a pipeline's changes to the serving store."""
 
 from __future__ import annotations
 
@@ -30,16 +30,18 @@ class StoreFeed:
     its own).
     """
 
-    def __init__(self, dp: ModuleType, spark: SparkSession, dbutils: Any, environment: str):
+    def __init__(self, dp: ModuleType, spark: SparkSession, dbutils: Any, environment: str, catalog: str):
         self.dp = dp
         self.spark = spark
         self.dbutils = dbutils
         self.scope = f"serving-store-{environment}"
+        self.catalog = catalog
 
     def define(self, table: StoreTable) -> None:
         start_version = self.spark.conf.get(f"SERVING_STORE_FEED_START_{table.name.upper()}")
         sink = f"serving_store_{table.name}"
         spark = self.spark
+        source = table.source(self.catalog)
 
         @self.dp.foreach_batch_sink(name=sink)
         def write_batch(changes: DataFrame, batch_id: int) -> None:
@@ -51,7 +53,7 @@ class StoreFeed:
                 spark.readStream.option("readChangeFeed", "true")
                 .option("startingVersion", start_version)
                 .option("maxBytesPerTrigger", MAX_BYTES_PER_TRIGGER)
-                .table(f"LIVE.{table.gold_table}")
+                .table(source)
             )
 
     def write(self, table: StoreTable, changes: DataFrame, batch_id: int) -> None:
@@ -77,6 +79,8 @@ class StoreFeed:
         """The batch's payload schemas, or none and why when Spark cannot work them out. The rows
         still go, and the reason goes to ``feed_rejects``, since an upload's rows arrive in one batch
         and no later one would bring its schemas."""
+        if not table.payloads:
+            return [], None
         try:
             return [row.line for row in table.schema_lines(changes).collect()], None
         except Exception as error:

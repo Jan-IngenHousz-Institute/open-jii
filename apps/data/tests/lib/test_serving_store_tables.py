@@ -18,7 +18,7 @@ from collections.abc import Iterator
 
 import pytest
 import requests
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS, StoreTable
+from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
 from openjii.serving_store.writer import StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -185,6 +185,53 @@ def test_an_upload_row_wraps_its_data(spark: SparkSession) -> None:
     assert row["uploaded_data_text"] == '[{"ph":6.5}]'
     assert "upload_table_id" not in row
     assert row["uploaded_at"] == "2026-10-19 09:00:00.000000"
+
+
+_PLOTS = (
+    '{"identifierColumnId": "plot", "experimentQuestionId": "q_plot", "rows": ['
+    '{"_id": "r1", "plot": "A1", "soil": "clay", "area": 1.5}, {"_id": "r2", "plot": "A1", "soil": "sand"}, '
+    '{"_id": "r3", "plot": 7, "soil": "loam"}, {"_id": "r4", "soil": "peat"}, "not a row"]}'
+)
+_PLOTS_EDITED = '{"identifierColumnId": "plot", "experimentQuestionId": "q_plot", "rows": [{"_id": "r1", "plot": "A1", "soil": "loam"}]}'
+_DEVICES = '{"identifierColumnId": "serial", "experimentQuestionId": "column:device_id", "rows": [{"_id": "r1", "serial": "d1", "soil": "sand"}]}'
+
+_SHEET_CHANGES = f"""
+    SELECT experiment_id, metadata_id, parse_json(doc) AS metadata, 'u1' AS created_by,
+      TIMESTAMP'2026-09-01 08:00:00' AS created_at, TIMESTAMP'2026-09-01 08:00:00' AS updated_at,
+      _change_type, _commit_version, TIMESTAMP'2026-09-02 10:00:00' AS _commit_timestamp
+    FROM VALUES
+      ('e1', 's1', '{_PLOTS}', 'insert', 1L),
+      ('e1', 's1', '{_PLOTS}', 'update_preimage', 2L),
+      ('e1', 's1', '{_PLOTS_EDITED}', 'update_postimage', 2L),
+      ('e1', 's2', '{_DEVICES}', 'delete', 3L),
+      ('e1', 's3', '{{"name": "Plots"}}', 'insert', 4L)
+    AS t(experiment_id, metadata_id, doc, _change_type, _commit_version)
+"""
+
+
+def test_a_sheets_rows_go_one_per_identifier_and_the_ones_an_edit_or_deletion_removed_go_as_deleted(
+    spark: SparkSession,
+) -> None:
+    lines = [json.loads(row.line) for row in METADATA_ROWS.lines(spark.sql(_SHEET_CHANGES)).collect()]
+
+    sent = {
+        (line["sheet_id"], line["identifier"], line["_commit_version"]): (line["is_deleted"], line["fields"])
+        for line in lines
+    }
+    assert sent == {
+        ("s1", "A1", 1): (0, '{"area":1.5,"soil":"clay"}'),
+        ("s1", "7", 1): (0, '{"soil":"loam"}'),
+        ("s1", "A1", 2): (0, '{"soil":"loam"}'),
+        ("s1", "7", 2): (1, '{"soil":"loam"}'),
+        ("s2", "d1", 3): (1, '{"soil":"sand"}'),
+    }
+    assert {line["match_on"] for line in lines} == {"q_plot", "column:device_id"}
+    assert lines[0]["sheet_created_at"] == "2026-09-01 08:00:00.000000"
+
+
+def test_each_table_reads_its_source_in_the_pipeline_or_the_sheets_copy_by_name() -> None:
+    assert MEASUREMENTS.source("open_jii_dev") == "LIVE.experiment_raw_data"
+    assert METADATA_ROWS.source("open_jii_dev") == "open_jii_dev.centrum.experiment_custom_metadata"
 
 
 def _schemas(table: StoreTable, changes: DataFrame) -> list[dict]:

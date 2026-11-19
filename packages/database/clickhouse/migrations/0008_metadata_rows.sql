@@ -1,13 +1,12 @@
--- The rows of the experiment's metadata sheets, copied from Postgres by the backend's outbox so a
--- store read can join custom metadata. A copy writes a sheet's current rows, and a deleted sheet,
--- or a row an edit removed, arrives as a row with is_deleted = 1, which FINAL leaves out. So the
--- copier only ever inserts. Each copy carries the time its outbox claim was taken, on Postgres's
--- clock, as its version: a claim taken back after its lease is older than the claim that took it,
--- so a copy it lands late loses to the newer one.
+-- The rows of the experiments' metadata sheets, which the feed sends from the lakehouse's copy of the
+-- sheets (centrum.experiment_custom_metadata) so a store read can join custom metadata. One row per
+-- identifier a sheet matches readings by, the first of the sheet's rows that holds it. match_on is
+-- the question whose answer is the identifier, or column:device_id; fields holds the row's other
+-- values as a JSON object, as Spark writes them.
 --
--- One row per identifier a sheet matches readings by, the first of the sheet's rows that holds it.
--- match_on is the question whose answer is the identifier, or column:device_id; fields holds the
--- row's other values as a JSON object, numbers written as the sheet wrote them.
+-- The copy changes and deletes sheets in place, so unlike gold's rows these can go: an identifier an
+-- edit dropped, or every identifier of a deleted sheet, arrives as a row with is_deleted = 1 at the
+-- commit that removed it, which FINAL leaves out.
 CREATE TABLE IF NOT EXISTS metadata_rows
 (
     experiment_id String,
@@ -17,9 +16,11 @@ CREATE TABLE IF NOT EXISTS metadata_rows
     identifier String,
     fields String,
     is_deleted UInt8 DEFAULT 0,
-    claimed_at DateTime64(3, 'UTC')
+    _commit_version Int64,
+    _commit_timestamp DateTime64(6, 'UTC'),
+    inserted_at DateTime64(6, 'UTC') DEFAULT now64(6)
 )
-ENGINE = ReplacingMergeTree(claimed_at, is_deleted)
+ENGINE = ReplacingMergeTree(_commit_version, is_deleted)
 ORDER BY (experiment_id, sheet_id, identifier);
 
 CREATE VIEW IF NOT EXISTS experiment_metadata_rows DEFINER = CURRENT_USER SQL SECURITY DEFINER AS

@@ -154,25 +154,42 @@ a small experiment only adds small parts, which reads handle.
 
 ## Metadata sheets
 
-The reload copies gold only. The store's copy of metadata sheet rows comes from Postgres through
-the backend's outbox, and only once the backend's task has the copier's login
-(`SERVING_STORE_COPIER_USERNAME` and `SERVING_STORE_COPIER_PASSWORD`). From then on every change
-owes the store its copy, but the sheets already in Postgres are owed nothing. Once the backend
-runs with the copier, owe each of them once, from a database session:
+The reload copies gold only. The store's `metadata_rows` come from the lakehouse's copy of the
+sheets, `centrum.experiment_custom_metadata`, which the backend's outbox keeps to Postgres: the
+Centrum feed reads that table's change feed and sends each sheet's rows, and the identifiers an edit
+dropped or a deletion removed as deleted rows. Its sink starts at the latest version
+(`SERVING_STORE_FEED_START_METADATA_ROWS`), so the sheets the copy held before it started are sent
+only once each changes.
+
+To fill the store the first time, or to repair it after `metadata_rows` was emptied, owe every sheet
+to the lakehouse once, after Centrum runs the feed's sink. Each copy rewrites its sheet, and the
+feed sends its rows. From a database session:
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
 SELECT 'metadata_sheet'::experiment_data_record_type, id, experiment_id,
-       'serving_store'::experiment_data_destination FROM experiment_metadata_sheets
+       'lakehouse'::experiment_data_destination FROM experiment_metadata_sheets
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
 ```
 
-Run it after the backend has the copier, never before: a task without it claims no store row, so
-the rows would wait and fire `experiment-data-outbox-waiting`. Then wait until
-`SELECT count(*) FROM experiment_data_outbox WHERE destination = 'serving_store'` reads 0. The same
-insert repairs the copy after the store's `metadata_rows` was emptied: a copy writes each sheet's
-current state, so owing one twice does no harm. The store keeps no copy of annotations: a read
-filtered by flags takes the flagged rows from Postgres.
+Wait until `SELECT count(*) FROM experiment_data_outbox WHERE record_type = 'metadata_sheet'` reads
+0, then until the feed has sent the last batch, and compare the sheets the store holds with the
+sheets Postgres holds:
+
+```sql
+-- On the store
+SELECT count(DISTINCT sheet_id) FROM store.metadata_rows FINAL;
+```
+
+```sql
+-- On Postgres: the sheets with at least one row the store can match by
+SELECT count(*) FROM experiment_metadata_sheets
+WHERE jsonb_typeof(metadata -> 'rows') = 'array' AND metadata ? 'identifierColumnId';
+```
+
+The store may count fewer: a sheet whose rows all lack their identifier has nothing to match by.
+Owing a sheet twice does no harm, since a copy writes each sheet's current state. The store keeps
+no copy of annotations: a read filtered by flags takes the flagged rows from Postgres.
 
 ## When it fails
 

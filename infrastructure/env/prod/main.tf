@@ -1837,8 +1837,11 @@ module "experiment_custom_metadata_table" {
     { name = "updated_at", type = "TIMESTAMP", nullable = false },
   ]
 
+  # The change feed carries each sheet's edits and deletions to the serving store
+  # (apps/data/src/lib/openjii/openjii/serving_store/tables.py, MetadataRows).
   properties = {
     "delta.feature.variantType-preview" = "supported"
+    "delta.enableChangeDataFeed"        = "true"
   }
 
   grants = {
@@ -2153,6 +2156,7 @@ locals {
     SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
     SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
     SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
+    SERVING_STORE_FEED_START_METADATA_ROWS = local.serving_store_feed_start_versions.metadata_rows
   } : {}
 }
 

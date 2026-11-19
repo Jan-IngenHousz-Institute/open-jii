@@ -5,11 +5,11 @@
 # COMMAND ----------
 from pyspark import pipelines as dp
 
-from openjii.macros.runtime import ENVIRONMENT
+from openjii.macros.runtime import CATALOG_NAME, ENVIRONMENT
 from openjii.serving_store.feed import StoreFeed
 from openjii.serving_store.tables import MACRO_RESULTS
 
 # COMMAND ----------
 
-feed = StoreFeed(dp, spark, dbutils, ENVIRONMENT)
+feed = StoreFeed(dp, spark, dbutils, ENVIRONMENT, CATALOG_NAME)
 feed.define(MACRO_RESULTS)

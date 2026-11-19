@@ -1022,7 +1022,7 @@ resource "grafana_rule_group" "experiment_data_copies" {
     for            = "5m"
 
     annotations = {
-      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse or the serving store refuses every copy, or one record fails on every attempt. Exports, charts and store filters miss the latest edits until it lands. It also fires when the backend has stopped reporting the outbox."
+      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse refuses every copy, or one record fails on every attempt. Exports, charts and the custom metadata on store pages miss the latest edits until it lands. It also fires when the backend has stopped reporting the outbox."
       summary          = "Annotation and sheet copies are not landing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -2118,7 +2118,7 @@ resource "grafana_rule_group" "serving_store_health" {
 
 # Serving store feed alerts, only where the pipelines feed the store
 locals {
-  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads"])
+  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows"])
 
   # The heartbeat metric counting the gold rows each table is fed from. Uploads have none, so a stall
   # there shows only as a slow feed once rows arrive.

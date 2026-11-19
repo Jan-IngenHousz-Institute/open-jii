@@ -5,7 +5,8 @@ of them in 105 minutes, or the store's feed timer has sent nothing for five minu
 feed moves again, the store holds data that stops at the stall.
 
 The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Each pipeline's sinks exist only while the feed is switched
+macro results in the macro pipeline. Centrum also sends the metadata sheets' rows, from the
+backend's copy of the sheets rather than from gold. Each pipeline's sinks exist only while the feed is switched
 on. A timer on the store's instance counts the rows each table took every minute and reports zero
 when none arrived, so its silence is the timer or ClickHouse stopping, not a quiet night.
 
@@ -75,7 +76,9 @@ DESCRIBE HISTORY open_jii_<env>.centrum.experiment_raw_data LIMIT 1
 ```
 
 Repeat for `experiment_uploaded_data` and `experiment_macro_data`, and set `measurements`,
-`uploads` and `macro_results` in the map to those versions. After switching on, watch the first
+`uploads` and `macro_results` in the map to those versions. `metadata_rows` starts at `latest`:
+the sheets' rows are filled by owing every sheet to the lakehouse once
+([reload](procedures/serving-store-reload.md#metadata-sheets)). After switching on, watch the first
 batches in each pipeline's driver log (`[serving store] measurements batch 0: ... inserted`). A
 first batch numbered 0 means the sink started at its start version, and rows gold gained while the
 feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number

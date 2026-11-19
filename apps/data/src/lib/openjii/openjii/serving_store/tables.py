@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from pyspark.sql import Column, DataFrame
+from pyspark.sql import Column, DataFrame, Window
 from pyspark.sql import functions as F
 
 from openjii.centrum.constants import (
+    EXPERIMENT_CUSTOM_METADATA_TABLE,
     EXPERIMENT_MACRO_DATA_TABLE,
     EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_UPLOADED_DATA_TABLE,
@@ -81,6 +82,10 @@ class StoreTable:
     # holds, and the payload columns whose schemas it lists.
     table_type: str
     payloads: tuple[str, ...]
+
+    def source(self, catalog: str) -> str:
+        """The table whose change feed the store table is fed from."""
+        return f"LIVE.{self.gold_table}"
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
@@ -267,6 +272,94 @@ class Uploads(StoreTable):
         ]
 
 
+class MetadataRows(StoreTable):
+    """The rows of the experiments' metadata sheets, from the lakehouse's copy of the sheets, which
+    the backend keeps to Postgres. That copy, unlike gold, edits and deletes a sheet in place, so this
+    table takes deletions: an identifier an edit dropped, or every identifier of a deleted sheet, goes
+    to the store as a row with ``is_deleted`` set at the commit that removed it.
+
+    A sheet's rows are matched as the warehouse's enriched views match them, so both read the same
+    metadata: by the identifier column's value as text, the first row of each identifier winning,
+    and the rest of the row, without its ``_id``, as the fields."""
+
+    name = "metadata_rows"
+    gold_table = EXPERIMENT_CUSTOM_METADATA_TABLE
+    partitioned_by = "sheet_created_at"
+    processed_at = None
+    payloads = ()
+
+    def source(self, catalog: str) -> str:
+        return f"{catalog}.centrum.{self.gold_table}"
+
+    def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
+        rows = self._sheet_rows(changes)
+        keys = ["sheet_id", "identifier", "_commit_version"]
+        current = rows.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
+        removed = rows.filter(F.col("_change_type").isin("update_preimage", "delete")).join(
+            current.select(*keys), keys, "left_anti"
+        )
+        stored = current.withColumn("is_deleted", F.lit(0)).unionByName(
+            removed.withColumn("is_deleted", F.lit(1))
+        )
+        row = F.struct(
+            "experiment_id",
+            "sheet_id",
+            "sheet_created_at",
+            "match_on",
+            "identifier",
+            "fields",
+            "is_deleted",
+            "_commit_version",
+            "_commit_timestamp",
+        )
+        return stored.select(
+            F.to_json(row, JSON_OPTIONS).alias("line"), F.col(self.partitioned_by).alias("partition_time")
+        )
+
+    def _sheet_rows(self, changes: DataFrame) -> DataFrame:
+        """Each sheet's rows in ``changes``, one per identifier, per change. A sheet saved before its
+        shape was checked, or a row that is no object, has none."""
+        rows = (
+            changes.selectExpr(
+                "experiment_id",
+                "metadata_id AS sheet_id",
+                "created_at AS sheet_created_at",
+                "variant_get(metadata, '$.experimentQuestionId', 'STRING') AS match_on",
+                "variant_get(metadata, '$.identifierColumnId', 'STRING') AS identifier_column",
+                "_change_type",
+                "_commit_version",
+                "_commit_timestamp",
+                "posexplode(try_variant_get(metadata, '$.rows', 'ARRAY<VARIANT>')) AS (position, row)",
+            )
+            .selectExpr(
+                "*",
+                "try_variant_get(row, '$', 'MAP<STRING, VARIANT>') AS row_map",
+            )
+            .selectExpr(
+                "experiment_id",
+                "sheet_id",
+                "sheet_created_at",
+                "coalesce(match_on, '') AS match_on",
+                "variant_get(element_at(row_map, identifier_column), '$', 'STRING') AS identifier",
+                "to_json(map_filter(row_map, (k, v) -> k != '_id' AND k != identifier_column)) AS fields",
+                "_change_type",
+                "_commit_version",
+                "_commit_timestamp",
+                "position",
+            )
+            .filter(F.col("identifier").isNotNull())
+        )
+        first = Window.partitionBy("sheet_id", "identifier", "_commit_version", "_change_type").orderBy(
+            "position"
+        )
+        return (
+            rows.withColumn("_nth", F.row_number().over(first))
+            .filter(F.col("_nth") == 1)
+            .drop("_nth", "position")
+        )
+
+
 MEASUREMENTS = Measurements()
 MACRO_RESULTS = MacroResults()
 UPLOADS = Uploads()
+METADATA_ROWS = MetadataRows()

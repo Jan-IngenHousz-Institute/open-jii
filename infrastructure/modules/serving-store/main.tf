@@ -53,26 +53,20 @@ locals {
   ]
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
-  # The copies the backend's outbox writes from Postgres, which never come from gold.
-  copied_tables = ["metadata_rows"]
-
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
   # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
-  # there is no narrower grant. Neither may write the copies, which only the backend's outbox keeps.
-  # The copier writes a deletion as a row FINAL leaves out, so it needs no more than inserts into the
-  # sheet rows, and reads of them to find the ones an edit dropped. The profiles are in
-  # templates/users.xml.tftpl.
+  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
   users = {
     admin = { name = "openjii_admin", profile = "default", grants = [] }
     writer = {
       name    = "openjii_writer"
       profile = "ingest"
-      grants = concat(
-        ["GRANT SELECT, INSERT ON store.*", "REVOKE INSERT ON store._migrations"],
-        [for table in local.copied_tables : "REVOKE INSERT ON store.${table}"],
-      )
+      grants = [
+        "GRANT SELECT, INSERT ON store.*",
+        "REVOKE INSERT ON store._migrations",
+      ]
     }
     reloader = {
       name    = "openjii_reloader"
@@ -81,18 +75,12 @@ locals {
         ["GRANT SELECT, INSERT ON store.*"],
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
         ["REVOKE INSERT ON store._migrations"],
-        [for table in local.copied_tables : "REVOKE INSERT ON store.${table}"],
       )
     }
     reader = {
       name    = "openjii_reader"
       profile = "reader"
       grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
-    }
-    copier = {
-      name    = "openjii_copier"
-      profile = "ingest"
-      grants  = ["GRANT SELECT, INSERT ON store.metadata_rows"]
     }
   }
 

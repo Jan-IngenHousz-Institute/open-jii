@@ -24,6 +24,7 @@ _START_VERSIONS = {
     "SERVING_STORE_FEED_START_MEASUREMENTS": "40",
     "SERVING_STORE_FEED_START_UPLOADS": "41",
     "SERVING_STORE_FEED_START_MACRO_RESULTS": "42",
+    "SERVING_STORE_FEED_START_METADATA_ROWS": "latest",
 }
 
 _UPLOAD_CHANGES = """
@@ -77,6 +78,7 @@ def runtimes(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("openjii.centrum.runtime", "openjii.macros.runtime"):
         runtime = types.ModuleType(name)
         runtime.ENVIRONMENT = "dev"  # type: ignore[attr-defined]
+        runtime.CATALOG_NAME = "open_jii_dev"  # type: ignore[attr-defined]
         monkeypatch.setitem(sys.modules, name, runtime)
     monkeypatch.setattr(feed, "DRIVER_RETRY_DELAYS", (0,))
 
@@ -127,11 +129,12 @@ def test_each_pipeline_feeds_the_gold_tables_it_writes_without_reading_secrets_y
     centrum = set(fake_dp.sinks)
     _load("macros/serving_store_feed.py", spark, secrets)
 
-    assert centrum == {"serving_store_measurements", "serving_store_uploads"}
+    assert centrum == {"serving_store_measurements", "serving_store_uploads", "serving_store_metadata_rows"}
     assert set(fake_dp.sinks) - centrum == {"serving_store_macro_results"}
     assert {name: target for name, (target, _) in fake_dp.flows.items()} == {
         "serving_store_measurements_changes": "serving_store_measurements",
         "serving_store_uploads_changes": "serving_store_uploads",
+        "serving_store_metadata_rows_changes": "serving_store_metadata_rows",
         "serving_store_macro_results_changes": "serving_store_macro_results",
     }
     # A missing scope cannot fail the pipeline's graph, because nothing reads it before a batch.
@@ -153,6 +156,49 @@ def test_a_flow_reads_its_gold_tables_change_feed_from_the_start_version(
         "startingVersion": "40",
         "maxBytesPerTrigger": "128m",
     }
+
+
+def test_the_sheet_rows_flow_reads_the_sheets_copy_outside_the_pipeline_from_its_start_version(
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
+) -> None:
+    session = _Spark(spark)
+    _load("centrum/serving_store_feed.py", session, _Secrets())
+
+    _, read = fake_dp.flows["serving_store_metadata_rows_changes"]
+    read()
+
+    assert session.readStream.table_name == "open_jii_dev.centrum.experiment_custom_metadata"
+    assert session.readStream.options["startingVersion"] == "latest"
+
+
+def test_a_batch_of_sheet_rows_goes_without_payload_schemas(
+    spark: SparkSession,
+    fake_dp: types.ModuleType,
+    start_versions: None,
+    schemas_sent: list[tuple[str, list[str]]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent: list[tuple[str, int]] = []
+
+    def write(self: StoreWriter, lines: DataFrame, table: str) -> Written:
+        sent.append((table, lines.count()))
+        return Written(inserted=lines.count())
+
+    monkeypatch.setattr(StoreWriter, "write", write)
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+    changes = spark.sql(
+        """
+        SELECT 'e1' AS experiment_id, 's1' AS metadata_id,
+          parse_json('{"identifierColumnId": "plot", "experimentQuestionId": "q", "rows": [{"plot": "A1"}]}') AS metadata,
+          TIMESTAMP'2026-09-01 08:00:00' AS created_at, 'insert' AS _change_type, 1L AS _commit_version,
+          TIMESTAMP'2026-09-02 10:00:00' AS _commit_timestamp
+        """
+    )
+
+    fake_dp.sinks["serving_store_metadata_rows"](changes, 0)
+
+    assert sent == [("metadata_rows", 1)]
+    assert all(lines == [] for _, lines in schemas_sent)
 
 
 def test_a_batch_goes_to_the_store_as_its_tables_lines_with_fresh_credentials(
