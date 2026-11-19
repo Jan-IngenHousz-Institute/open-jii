@@ -221,11 +221,13 @@ def _role_grants(role: str) -> list[str]:
     assert users is not None
     grants = []
     for match in re.finditer(
-        r'\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"((?:GRANT|REVOKE) [^"]+)"', users[1]
+        r'\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"(GRANT [^"]+)"', users[1]
     ):
         name, listings, template, plain = match.groups()
         values = [
-            value for listing in re.findall(r"local\.(\w+)", listings or "") for value in _local_list(listing)
+            value
+            for listing, literal in re.findall(r'local\.(\w+)|"(\w+)"', listings or "")
+            for value in (_local_list(listing) if listing else [literal])
         ]
         grants += [plain] if plain else [template.replace(f"${{{name}}}", value) for value in values]
     return grants
@@ -424,16 +426,27 @@ def test_neither_feed_user_can_write_a_figure(admin: _Store, role: str) -> None:
     user = f"{_DATABASE}_{role}"
     admin.ok(f"CREATE USER {user} IDENTIFIED BY '{_PASSWORD}'")
     for grant in _role_grants(role):
-        target = "TO" if grant.startswith("GRANT") else "FROM"
-        admin.ok(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} {target} {user}")
+        admin.ok(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {user}")
     as_user = _Store(admin.url, user, _PASSWORD)
+
+    views = _local_list("metrics_views")
+    # A view without TO keeps its rows in a table named after its uuid.
+    inner_tables = [
+        row["name"]
+        for row in admin.rows(
+            f"SELECT name FROM system.tables WHERE database = '{_DATABASE}' AND name IN ("
+            "SELECT concat('.inner_id.', toString(uuid)) FROM system.tables "
+            f"WHERE database = '{_DATABASE}' AND startsWith(name, 'metrics_'))"
+        )
+    ]
 
     as_user.ok(
         f"INSERT INTO {_DATABASE}.feed_rejects (source_table, code, message, row) VALUES ('{role}', 0, '', '')"
     )
-    for view in _local_list("metrics_views"):
-        refused = as_user.run(f"INSERT INTO {_DATABASE}.{view} SELECT * FROM {_DATABASE}.{view}")
-        assert refused.headers.get("X-ClickHouse-Exception-Code") == "497", view
+    assert len(inner_tables) == len(views)
+    for table in [*views, *inner_tables]:
+        refused = as_user.run(f"INSERT INTO {_DATABASE}.`{table}` SELECT * FROM {_DATABASE}.`{table}`")
+        assert refused.headers.get("X-ClickHouse-Exception-Code") == "497", table
 
 
 def test_the_reader_reads_no_table_the_views_count(store: _Store) -> None:

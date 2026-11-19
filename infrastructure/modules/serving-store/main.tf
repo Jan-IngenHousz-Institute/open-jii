@@ -54,7 +54,7 @@ locals {
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
   # The platform metrics' hourly views (packages/database/clickhouse/migrations), in the order they
-  # refresh. The reader reads aggregates and id pairs from them, and no other user may write to them.
+  # refresh. The reader reads aggregates and id pairs from them, and only their refreshes write them.
   metrics_views = [
     "metrics_platform_totals", "metrics_daily_activity", "metrics_client_totals",
     "metrics_hourly_activity", "metrics_activity_windows", "metrics_daily_activity_by_experiment",
@@ -62,29 +62,30 @@ locals {
     "metrics_experiment_devices_window", "metrics_pool_facts", "metrics_parameter_stats",
   ]
 
-  # No grants means the admin, which manages access and applies the schema. The writer only inserts,
-  # and keeps out of the migration ledger, which records what the schema already holds. The reloader
-  # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
-  # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
-  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
+  # No grants means the admin, which manages access and applies the schema. The writer and the
+  # reloader insert only into the tables the feed fills, by name: an insert grant on store.* would
+  # reach the migration ledger and the inner tables the metrics views keep their rows in, which a
+  # revoke on a view's name does not cover. The reloader also deletes from the tables it reloads; a
+  # lightweight delete updates their rows' mask column, which a grant can name only table by table.
+  # ALTER DELETE also allows dropping a partition, and there is no narrower grant. The profiles are
+  # in templates/users.xml.tftpl.
   users = {
     admin = { name = "openjii_admin", profile = "default", grants = [] }
     writer = {
       name    = "openjii_writer"
       profile = "ingest"
       grants = concat(
-        ["GRANT SELECT, INSERT ON store.*", "REVOKE INSERT ON store._migrations"],
-        [for view in local.metrics_views : "REVOKE INSERT ON store.${view}"],
+        ["GRANT SELECT ON store.*"],
+        [for table in concat(local.reloaded_tables, ["feed_rejects"]) : "GRANT INSERT ON store.${table}"],
       )
     }
     reloader = {
       name    = "openjii_reloader"
       profile = "ingest"
       grants = concat(
-        ["GRANT SELECT, INSERT ON store.*"],
+        ["GRANT SELECT ON store.*"],
+        [for table in concat(local.reloaded_tables, ["feed_rejects"]) : "GRANT INSERT ON store.${table}"],
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
-        ["REVOKE INSERT ON store._migrations"],
-        [for view in local.metrics_views : "REVOKE INSERT ON store.${view}"],
       )
     }
     reader = {
