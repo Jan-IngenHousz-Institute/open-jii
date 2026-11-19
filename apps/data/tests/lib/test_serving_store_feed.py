@@ -120,7 +120,7 @@ def _load(notebook: str, spark: SparkSession | _Spark, secrets: _Secrets) -> Non
     spec.loader.exec_module(module)
 
 
-def test_each_pipeline_feeds_the_gold_tables_it_writes_without_reading_secrets_yet(
+def test_each_pipeline_feeds_the_tables_it_reads_without_reading_secrets_yet(
     spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
 ) -> None:
     secrets = _Secrets()
@@ -141,7 +141,7 @@ def test_each_pipeline_feeds_the_gold_tables_it_writes_without_reading_secrets_y
     assert secrets.read == []
 
 
-def test_a_flow_reads_its_gold_tables_change_feed_from_the_start_version(
+def test_a_flow_reads_its_source_tables_change_feed_from_the_start_version(
     spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
 ) -> None:
     session = _Spark(spark)

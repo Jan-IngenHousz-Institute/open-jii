@@ -70,10 +70,11 @@ def or_empty(column: str) -> Column:
 
 
 class StoreTable:
-    """A store table fed from one table's change feed: a gold table's, unless ``source`` names another."""
+    """A store table fed from the change feed of ``source_table``: a gold table, unless ``source``
+    names another."""
 
     name: str
-    gold_table: str
+    source_table: str
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
     # The time gold processed a row at, later on a recomputed copy than on the row it replaces.
@@ -86,7 +87,7 @@ class StoreTable:
 
     def source(self, catalog: str) -> str:
         """The table whose change feed the store table is fed from."""
-        return f"LIVE.{self.gold_table}"
+        return f"LIVE.{self.source_table}"
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
@@ -152,7 +153,7 @@ class StoreTable:
 
 class Measurements(StoreTable):
     name = "measurements"
-    gold_table = EXPERIMENT_RAW_DATA_TABLE
+    source_table = EXPERIMENT_RAW_DATA_TABLE
     table_type = "static"
     payloads = ("questions_data",)
 
@@ -201,7 +202,7 @@ class Measurements(StoreTable):
 
 class MacroResults(StoreTable):
     name = "macro_results"
-    gold_table = EXPERIMENT_MACRO_DATA_TABLE
+    source_table = EXPERIMENT_MACRO_DATA_TABLE
     table_type = "macro"
     payloads = ("macro_output", "questions_data")
 
@@ -247,7 +248,7 @@ class MacroResults(StoreTable):
 
 class Uploads(StoreTable):
     name = "uploads"
-    gold_table = EXPERIMENT_UPLOADED_DATA_TABLE
+    source_table = EXPERIMENT_UPLOADED_DATA_TABLE
     partitioned_by = "uploaded_at"
     processed_at = None
     table_type = "upload"
@@ -284,12 +285,13 @@ class MetadataRows(StoreTable):
     and the rest of the row, without its ``_id``, as the fields."""
 
     name = "metadata_rows"
+    source_table = EXPERIMENT_CUSTOM_METADATA_TABLE
     partitioned_by = "sheet_created_at"
     processed_at = None
     payloads = ()
 
     def source(self, catalog: str) -> str:
-        return f"{catalog}.centrum.{EXPERIMENT_CUSTOM_METADATA_TABLE}"
+        return f"{catalog}.centrum.{self.source_table}"
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         rows = self._sheet_rows(changes)
