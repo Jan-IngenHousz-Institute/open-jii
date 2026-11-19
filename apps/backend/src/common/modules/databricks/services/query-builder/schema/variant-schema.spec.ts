@@ -1,14 +1,11 @@
 import { readFileSync } from "fs";
-import { resolve } from "path";
 import { z } from "zod";
 
+import { dataFixture } from "../../../../../../test/data-fixtures";
 import { VariantSchema } from "./variant-schema";
 
 // Worked out by Spark in the data tests, so both sides read one set of merges.
-const MERGE_CASES = resolve(
-  __dirname,
-  "../../../../../../../../data/tests/fixtures/variant_schema_merges.json",
-);
+const MERGE_CASES = dataFixture("variant_schema_merges.json");
 
 const zMergeCases = z.array(
   z.object({
