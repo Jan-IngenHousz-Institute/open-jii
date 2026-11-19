@@ -59,7 +59,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   private nudged = false;
   /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
-  private readonly recordOutboxes: Record<
+  private readonly outboxServices: Record<
     ExperimentDataRecordType,
     ExperimentDataOutboxService<{ id: string }>
   >;
@@ -69,7 +69,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     annotations: AnnotationsOutboxService,
     sheets: MetadataSheetsOutboxService,
   ) {
-    this.recordOutboxes = { annotation: annotations, metadata_sheet: sheets };
+    this.outboxServices = { annotation: annotations, metadata_sheet: sheets };
   }
 
   @Interval(EXPERIMENT_DATA_OUTBOX_INTERVAL, INTERVAL_MS)
@@ -187,8 +187,8 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     deadlineAt: number,
   ): Promise<OutboxDrainCounts> {
     const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-    const recordOutbox = this.recordOutboxes[recordType];
-    const groups = await recordOutbox.groupsOf(rows.map((row) => row.recordId));
+    const outboxService = this.outboxServices[recordType];
+    const groups = await outboxService.groupsOf(rows.map((row) => row.recordId));
     if (groups.isFailure()) {
       await this.retry(recordType, rows, groups.error.message);
       counts.retried = rows.length;
@@ -198,7 +198,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     const canContinue = () => Date.now() < deadlineAt && !this.stopping;
     let left = rows;
     for (const ids of groups.value) {
-      const outcome = await recordOutbox.copy(ids, canContinue).catch(
+      const outcome = await outboxService.copy(ids, canContinue).catch(
         (error: unknown): CopyOutcome => ({
           failed: error instanceof Error ? error.message : String(error),
         }),
