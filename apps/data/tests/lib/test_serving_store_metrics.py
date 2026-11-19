@@ -41,7 +41,7 @@ from pyspark.sql.types import DateType, TimestampType
 pytestmark = [pytest.mark.spark, pytest.mark.clickhouse]
 
 _DATABASE = "metrics_test"
-_METRICS_USER = "metrics_test_reader"
+_READER = "metrics_test_reader"
 _PASSWORD = "metrics-test"
 _SCHEMA = "spark_catalog.metrics_store_parity"
 
@@ -220,12 +220,13 @@ def _role_grants(role: str) -> list[str]:
     assert users is not None
     grants = []
     for match in re.finditer(
-        r'\[for (\w+) in local\.(\w+) : "([^"]+)"\]|"((?:GRANT|REVOKE) [^"]+)"', users[1]
+        r'\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"((?:GRANT|REVOKE) [^"]+)"', users[1]
     ):
-        name, listing, template, plain = match.groups()
-        grants += (
-            [plain] if plain else [template.replace(f"${{{name}}}", value) for value in _local_list(listing)]
-        )
+        name, listings, template, plain = match.groups()
+        values = [
+            value for listing in re.findall(r"local\.(\w+)", listings or "") for value in _local_list(listing)
+        ]
+        grants += [plain] if plain else [template.replace(f"${{{name}}}", value) for value in values]
     return grants
 
 
@@ -263,7 +264,7 @@ def admin(store_migrations: list[str]) -> Iterator[_Store]:
     if not url:
         pytest.skip("CLICKHOUSE_TEST_URL is not set")
     admin = _Store(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
-    users = [_METRICS_USER, *(f"{_DATABASE}_{role}" for role in ("writer", "reloader"))]
+    users = [_READER, *(f"{_DATABASE}_{role}" for role in ("writer", "reloader"))]
     for user in users:
         admin.ok(f"DROP USER IF EXISTS {user}")
     admin.ok(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
@@ -310,7 +311,7 @@ def _send(writer: StoreWriter, table: StoreTable, changes: DataFrame) -> None:
 @pytest.fixture(scope="module")
 def store(spark: SparkSession, tables: None, admin: _Store, first_refreshes: list[dict]) -> _Store:
     """The same rows sent through the feed after older copies of two of them, left unmerged, every
-    view refreshed, and the metrics user granted the views as the store's users.xml grants them."""
+    view refreshed, and a reader granted what the store's users.xml grants the backend's reader."""
     for table in ("measurements", "macro_results", "uploads"):
         admin.ok(f"SYSTEM STOP MERGES {_DATABASE}.{table}")
 
@@ -322,13 +323,15 @@ def store(spark: SparkSession, tables: None, admin: _Store, first_refreshes: lis
     for table, gold in golds.items():
         _send(writer, table, spark.sql(gold))
 
-    admin.ok(f"CREATE USER {_METRICS_USER} IDENTIFIED BY '{_PASSWORD}'")
     for view in _local_list("metrics_views"):
         admin.ok(f"SYSTEM REFRESH VIEW {_DATABASE}.{view}")
         admin.ok(f"SYSTEM WAIT VIEW {_DATABASE}.{view}")
-        admin.ok(f"GRANT SELECT ON {_DATABASE}.{view} TO {_METRICS_USER}")
 
-    return _Store(admin.url, _METRICS_USER, _PASSWORD)
+    admin.ok(f"CREATE USER {_READER} IDENTIFIED BY '{_PASSWORD}'")
+    for grant in _role_grants("reader"):
+        admin.ok(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {_READER}")
+
+    return _Store(admin.url, _READER, _PASSWORD)
 
 
 @pytest.fixture
@@ -374,7 +377,7 @@ def _sorted(rows: list[dict], *key: str) -> list[dict]:
     return sorted(rows, key=lambda row: tuple(str(row[column]) for column in key))
 
 
-def test_the_metrics_user_is_granted_every_view_the_migrations_make() -> None:
+def test_the_reader_is_granted_every_metrics_view_the_migrations_make() -> None:
     made = {
         name
         for migration in _MIGRATIONS.glob("*.sql")
@@ -382,6 +385,7 @@ def test_the_metrics_user_is_granted_every_view_the_migrations_make() -> None:
     }
 
     assert sorted(_local_list("metrics_views")) == sorted(made)
+    assert {f"GRANT SELECT ON store.{view}" for view in made} <= set(_role_grants("reader"))
 
 
 def test_every_vetted_parameter_is_counted_under_its_label_from_its_own_field() -> None:
@@ -431,12 +435,10 @@ def test_neither_feed_user_can_write_a_figure(admin: _Store, role: str) -> None:
         assert refused.headers.get("X-ClickHouse-Exception-Code") == "497", view
 
 
-def test_the_metrics_user_reads_no_rows(store: _Store) -> None:
-    for statement in (
-        f"SELECT count() FROM {_DATABASE}.measurements",
-        f"SELECT count() FROM {_DATABASE}.experiment_measurements(experiment = 'e1')",
-    ):
-        assert store.run(statement).headers.get("X-ClickHouse-Exception-Code") == "497"
+def test_the_reader_reads_no_table_the_views_count(store: _Store) -> None:
+    for table in ("measurements", "macro_results", "uploads"):
+        refused = store.run(f"SELECT count() FROM {_DATABASE}.{table}")
+        assert refused.headers.get("X-ClickHouse-Exception-Code") == "497", table
 
 
 def test_the_store_timer_reads_how_old_the_views_are_and_which_failed(admin: _Store) -> None:

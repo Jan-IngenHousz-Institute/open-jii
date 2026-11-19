@@ -54,7 +54,7 @@ locals {
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
   # The platform metrics' hourly views (packages/database/clickhouse/migrations), in the order they
-  # refresh: the metrics user's only grants, and views no other user may write to.
+  # refresh. The reader reads aggregates and id pairs from them, and no other user may write to them.
   metrics_views = [
     "metrics_platform_totals", "metrics_daily_activity", "metrics_client_totals",
     "metrics_hourly_activity", "metrics_activity_windows", "metrics_daily_activity_by_experiment",
@@ -90,12 +90,7 @@ locals {
     reader = {
       name    = "openjii_reader"
       profile = "reader"
-      grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
-    }
-    metrics = {
-      name    = "openjii_metrics"
-      profile = "reader"
-      grants  = [for view in local.metrics_views : "GRANT SELECT ON store.${view}"]
+      grants  = [for view in concat(local.reader_views, local.metrics_views) : "GRANT SELECT ON store.${view}"]
     }
   }
 

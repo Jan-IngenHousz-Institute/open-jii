@@ -13,8 +13,8 @@ ALTER TABLE measurements
     ADD COLUMN IF NOT EXISTS light_intensity_readings Array(Float64) AFTER pressure_readings,
     ADD COLUMN IF NOT EXISTS thickness_readings Array(Float64) AFTER light_intensity_readings;
 
--- The platform metrics, recounted every hour from each row's newest commit. The metrics user is
--- granted these views and not the tables, so it reads aggregates and id pairs, never measurements.
+-- The platform metrics, recounted every hour from each row's newest commit. The reader is granted
+-- these views beside the experiment views, and they hold aggregates and id pairs, never measurements.
 -- A measurement counts when its clock was plausible: not before 2000, as an unset clock reads, and
 -- not in the future. Each view refreshes once the one it depends on has, so one refresh runs at a
 -- time; a failed refresh holds back every view after it, so the ones that hold the most go last.

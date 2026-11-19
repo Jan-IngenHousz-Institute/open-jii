@@ -21,7 +21,7 @@ output "reloader_credentials" {
 }
 
 output "credentials_secret_arns" {
-  description = "Secrets Manager secret per role (admin, writer, reloader, reader, metrics), each holding username and password"
+  description = "Secrets Manager secret per role (admin, writer, reloader, reader), each holding username and password"
   value       = { for role, credentials in module.credentials : role => credentials.secret_arn }
   sensitive   = true
 }
