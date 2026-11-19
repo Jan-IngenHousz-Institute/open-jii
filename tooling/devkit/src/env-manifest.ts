@@ -133,6 +133,8 @@ export const envManifest: readonly EnvVar[] = [
 
   env("NEXT_PUBLIC_DOCS_URL", set, "http://localhost:3010", web),
   env("NEXT_PUBLIC_STATUS_URL", set, "http://localhost:3030", web),
+  env("NEXT_PUBLIC_EQUIPMENT_URL", set, "http://localhost:3100", web),
+  env("NEXT_PUBLIC_JII_ORGANIZATION_ID", set, undefined, web),
   env("NEXT_PUBLIC_ENABLE_DEVTOOLS", set, "true", web),
   env("NEXT_PUBLIC_ENABLE_MOCK_DEVICES", set, "false", web),
   env("CONTENTFUL_SPACE_ID", set, undefined, web),
