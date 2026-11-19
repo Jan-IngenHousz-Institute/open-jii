@@ -9,6 +9,10 @@ deactivation, reactivation and account closing owes its contributor's copy, and 
 registration, status change and deletion owes its device's copy. The profiles and devices already
 in Postgres are owed nothing until step 2 runs.
 
+The enriched views name an annotation's author from `centrum.contributor_profiles` too, as soon as
+the release redefines them, so they read names from it once it is filled. Until step 3 drains, an
+annotation added on the platform shows no author's name in the views or in an export.
+
 The bundle deploy does not switch the code. Centrum runs continuously and keeps running the
 notebooks it started with until it restarts, so after the release it still asks the backend for
 names. This release keeps the two routes it asks, `POST /api/v1/users/metadata` and
@@ -121,7 +125,7 @@ SELECT count_if(device.id IS NULL AND startswith(client_id, 'ambyte_')) AS unreg
 FROM centrum.experiment_devices;
 ```
 
-Run both before the release as well and compare: each reads the same before and after the
+Run both before you stop Centrum, and again once it runs: each reads the same before and after the
 restart. A user without a profile reads blank in both, as the backend's lookup left them.
 
 Centrum may also restart before step 5 on its own, after a recoverable failure, once the bundle
