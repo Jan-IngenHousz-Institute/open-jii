@@ -70,16 +70,11 @@ const DEVICE: StoreColumn = {
   idOf: "device",
 };
 
-// The builder joins a row's custom metadata on as a JSON column of this name, which holds no paths
-// when no sheet matched the row.
+// A page shows custom metadata as its fields, which the builder reads from the sheets a read joins;
+// whole, it reads as none.
 const CUSTOM_METADATA: StoreColumn = {
   name: "custom_metadata",
   type: "VARIANT",
-  expression: "if(length(JSONAllPaths(custom_metadata)) = 0, NULL, toJSONString(custom_metadata))",
-};
-
-const NO_CUSTOM_METADATA: StoreColumn = {
-  ...CUSTOM_METADATA,
   expression: "CAST(NULL AS Nullable(String))",
 };
 
@@ -162,7 +157,7 @@ export const UPLOADS_TABLE: StoreTable = {
     { name: "uploaded_data", type: "VARIANT", expression: "uploaded_data" },
     { ...CONTRIBUTOR, expression: "created_by" },
     { name: "annotations", type: WellKnownColumnTypes.ANNOTATIONS, expression: "[]" },
-    NO_CUSTOM_METADATA,
+    CUSTOM_METADATA,
   ],
   payloadTexts: { uploaded_data: "uploaded_data_text" },
 };

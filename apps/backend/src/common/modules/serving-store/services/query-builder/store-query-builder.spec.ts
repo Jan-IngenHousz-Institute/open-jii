@@ -394,11 +394,37 @@ describe("StoreQueryBuilder", () => {
         .metadataSheets(sheets);
     const key = "timestamp, id, ifNull(device_id, '')";
 
-    it("reads a decimal field from its text and writes it at its scale", () => {
+    it("reads a field's text from the newest sheet holding it, a decimal at its scale", () => {
       const sql = withMetadata().select(["area"]).build();
 
+      const text =
+        "multiIf(simpleJSONHas(sheet_1_fields, 'area'), simpleJSONExtractRaw(sheet_1_fields, 'area'), simpleJSONHas(sheet_0_fields, 'area'), simpleJSONExtractRaw(sheet_0_fields, 'area'), NULL)";
       expect(sql).toContain(
-        "toDecimalString(accurateCastOrNull(toString(custom_metadata.`area`), 'Decimal(4, 2)'), 2) AS `area`",
+        `toDecimalString(accurateCastOrNull(${text}, 'Decimal(4, 2)'), 2) AS \`area\``,
+      );
+    });
+
+    it("compares a decimal field with a plain number as Spark does, as a decimal of its own scale", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "equals", value: 1.155 })
+        .build();
+
+      expect(sql).toContain("= toDecimal256('1.155', 3)");
+    });
+
+    it("unquotes a text field, and keeps a mix of kinds as its JSON", () => {
+      const sql = measurements()
+        .parseVariant("custom_metadata", "OBJECT<mixed: VARIANT, soil: STRING>", "metadata")
+        .metadataSheets(sheets.slice(0, 1))
+        .select(["soil", "mixed"])
+        .build();
+
+      expect(sql).toContain(
+        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+      expect(sql).toContain(
+        "nullIf(multiIf(simpleJSONHas(sheet_0_fields, 'mixed'), simpleJSONExtractRaw(sheet_0_fields, 'mixed'), NULL), 'null') AS `mixed`",
       );
     });
 
@@ -410,29 +436,19 @@ describe("StoreQueryBuilder", () => {
         .build();
 
       const lines = sql.split("\n");
-      expect(lines.slice(0, 4)).toEqual([
-        "SELECT toString(id) AS `id`, accurateCastOrNull(custom_metadata.`soil`, 'String') AS `soil`",
-        expect.stringMatching(/^FROM \(SELECT base\.\*, CAST\(concat\('\{'/),
+      expect(lines.slice(1, 4)).toEqual([
+        "FROM (SELECT base.*, sheet_0.fields AS sheet_0_fields, sheet_1.fields AS sheet_1_fields",
         "FROM (SELECT * FROM experiment_measurements(experiment = 'e1')",
         `WHERE (${key}) IN (SELECT ${key}`,
       ]);
       expect(lines[4]).toBe("FROM experiment_measurements(experiment = 'e1')");
       expect(sql).toContain(
-        "LEFT JOIN (SELECT identifier, fields, 1 AS matched FROM experiment_metadata_rows(experiment = 'e1') WHERE sheet_id = 's1') AS sheet_0 ON sheet_0.identifier = base.questions_data['plot']",
+        "LEFT JOIN (SELECT identifier, fields FROM experiment_metadata_rows(experiment = 'e1') WHERE sheet_id = 's1') AS sheet_0 ON sheet_0.identifier = base.questions_data['plot']",
       );
       expect(sql).toContain(
         "WHERE sheet_id = 's2') AS sheet_1 ON sheet_1.identifier = base.device_id",
       );
       expect(sql).not.toContain("'s3'");
-    });
-
-    it("merges the sheets and writes their JSON in time linear in a row's keys", () => {
-      const sql = withMetadata().select(["soil"]).build();
-
-      expect(sql).toMatch(/CAST\(concat\('\{', arrayStringConcat\(arrayMap\(\(k, v\) -> /);
-      expect(sql).toContain("mapKeys(mapUpdate(CAST(");
-      expect(sql).not.toContain("arraySort(");
-      expect(sql).not.toContain("mapFilter(");
     });
 
     it("joins the whole table's metadata to pick a page by a metadata field", () => {
@@ -444,7 +460,7 @@ describe("StoreQueryBuilder", () => {
         .build();
 
       const page = sql.slice(sql.indexOf(`IN (SELECT ${key}`));
-      expect(page).toMatch(/^IN \(SELECT [^\n]+\nFROM \(SELECT base\.\*/);
+      expect(page).toMatch(/^IN \(SELECT [^\n]+\nFROM \(SELECT base\.\*, sheet_0\.fields/);
       expect(page).toContain(
         "FROM (SELECT * FROM experiment_measurements(experiment = 'e1')) AS base",
       );

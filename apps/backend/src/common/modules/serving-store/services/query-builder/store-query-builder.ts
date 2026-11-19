@@ -35,6 +35,8 @@ const DEVICE_CLIENT_IDS = "__device_client_ids";
 const DEVICE_SERIALS = "__device_serials";
 const FLAGGED_ROW_IDS = "__flagged_row_ids";
 
+const CUSTOM_METADATA = "custom_metadata";
+
 const STORE_SCALARS: Record<string, string> = {
   STRING: "String",
   BIGINT: "Int64",
@@ -218,6 +220,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (typeof value !== "string" && type === "STRING") {
       return this.escapeValue(String(value));
     }
+
+    // Spark reads a plain number as a decimal literal, which it compares with a decimal exactly;
+    // the store would read a Float64 and compare the decimal through an inexact conversion.
+    const text = typeof value === "number" ? String(value) : "";
+    const isDecimalAgainstPlainNumber =
+      VariantSchema.decimalOf(type) !== null && /^-?\d+(\.\d+)?$/.test(text);
+    if (isDecimalAgainstPlainNumber) {
+      const [, fraction = ""] = text.split(".");
+      return `toDecimal256(${this.escapeValue(text)}, ${fraction.length})`;
+    }
     return this.escapeScalarValue(value);
   }
 
@@ -296,9 +308,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const offsetClause = this.offsetValue === undefined ? "" : `OFFSET ${this.offsetValue}`;
 
     const sortColumns = this.ordering === undefined ? [] : [this.ordering.column];
-    const isMetadataPicked = this.readsMetadata([...this.filterColumns, ...sortColumns]);
+    const isMetadataFilteredOrSorted = this.readsMetadata([...this.filterColumns, ...sortColumns]);
     const isMetadataShown = this.readsMetadata(this.outputColumns().map(({ name }) => name));
-    const isMetadataRead = isMetadataPicked || isMetadataShown;
+    const isMetadataRead = isMetadataFilteredOrSorted || isMetadataShown;
 
     // Through FINAL, the store reads every column of every matching row before it applies LIMIT.
     // A sorted page therefore finds its rows' keys first, reading only the key columns, and then
@@ -311,7 +323,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       // on two pages or on none. The key, unique per row, fixes the order.
       const page = this.joinClauses([
         `SELECT ${key}`,
-        `FROM ${isMetadataPicked ? this.withMetadata("") : this.fromClause}`,
+        `FROM ${isMetadataFilteredOrSorted ? this.withMetadata("") : this.fromClause}`,
         where,
         `${order}, ${key}`,
         limitClause,
@@ -358,49 +370,49 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       .join(", ");
   }
 
-  /** Whether a name is custom metadata, whole or one of its fields, on a table that takes it. */
   private readsMetadata(names: string[]): boolean {
     if (!this.takesCustomMetadata) {
       return false;
     }
     const fields = new Set(
       this.flattenedFields()
-        .filter(({ column }) => column === "custom_metadata")
+        .filter(({ column }) => column === CUSTOM_METADATA)
         .map(({ key }) => key),
     );
-    return names.some((name) => name === "custom_metadata" || fields.has(name));
+    return names.some((name) => fields.has(name));
   }
 
   /**
-   * The view's rows with their custom metadata: one LEFT JOIN per sheet, oldest first, a later
-   * sheet's value replacing an earlier one's, null ones included. The joins see only the rows
-   * `rowFilter` keeps, written on the left side rather than left to the store to push down.
+   * The view's rows with the fields of the row each sheet matches, one LEFT JOIN per sheet. The
+   * joins see only the rows `rowFilter` keeps, written on the left side rather than left to the
+   * store to push down.
    */
   private withMetadata(rowFilter: string): string {
-    const sheets = this.sheets.flatMap(({ id, matchOn }, index) => {
-      const match = this.sheetMatch(matchOn);
-      return match === null ? [] : [{ id, match, alias: `sheet_${index}` }];
-    });
+    const sheets = this.matchedSheets();
     const joins = sheets.map(
       ({ id, match, alias }) =>
-        `LEFT JOIN (SELECT identifier, fields, 1 AS matched FROM experiment_metadata_rows(experiment = ${this.experiment}) WHERE sheet_id = ${this.escapeValue(id)}) AS ${alias} ON ${alias}.identifier = ${match}`,
+        `LEFT JOIN (SELECT identifier, fields FROM experiment_metadata_rows(experiment = ${this.experiment}) WHERE sheet_id = ${this.escapeValue(id)}) AS ${alias} ON ${alias}.identifier = ${match}`,
     );
-    const fields = sheets.map(({ alias }) => this.sheetFields(alias));
-    const json =
-      fields.length === 0
-        ? "'{}'"
-        : this.jsonObject(fields.reduce((earlier, later) => `mapUpdate(${earlier}, ${later})`));
+    const fields = sheets.map(({ alias }) => `${alias}.fields AS ${alias}_fields`);
 
     const rows = this.joinClauses([`SELECT * FROM ${this.fromClause}`, rowFilter]);
     const joined = this.joinClauses([
-      `SELECT base.*, CAST(${json} AS JSON) AS custom_metadata`,
+      `SELECT ${["base.*", ...fields].join(", ")}`,
       `FROM (${rows}) AS base`,
       ...joins,
     ]);
     return `(${joined})`;
   }
 
-  /** A sheet matches a question's answer or the device; any other column matches no row. */
+  /** The sheets, oldest first, that match a question's answer or the device; a sheet matching any
+   *  other column matches no row. */
+  private matchedSheets(): { id: string; match: string; alias: string }[] {
+    return this.sheets.flatMap(({ id, matchOn }, index) => {
+      const match = this.sheetMatch(matchOn);
+      return match === null ? [] : [{ id, match, alias: `sheet_${index}` }];
+    });
+  }
+
   private sheetMatch(matchOn: string): string | null {
     if (matchOn === "column:device_id") {
       return "base.device_id";
@@ -410,19 +422,21 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       : `base.questions_data[${this.escapeValue(matchOn)}]`;
   }
 
-  /** A matched sheet row's fields as JSON text by key. */
-  private sheetFields(alias: string): string {
-    const pairs = `JSONExtractKeysAndValuesRaw(if(${alias}.matched = 1, ${alias}.fields, '{}'))`;
-    return `CAST(${pairs}, 'Map(String, String)')`;
-  }
-
   /**
-   * A map of JSON values as one JSON object, built from its pairs: a lambda that looks keys up in
-   * the map copies it once per key, and the JSON type keeps no order a sort would buy.
+   * A field's JSON text in the newest sheet whose matched row holds it, null ones included. It is
+   * copied as written, since a parsed number passes through a double, which loses digits a sheet's
+   * decimals keep. Sheet rows are flat, as simpleJSON needs: it finds a key at any depth.
    */
-  private jsonObject(map: string): string {
-    const members = `arrayMap((k, v) -> concat(toJSONString(k), ':', v), mapKeys(${map}), mapValues(${map}))`;
-    return `concat('{', arrayStringConcat(${members}, ','), '}')`;
+  private metadataText(name: string): string {
+    const key = this.escapeValue(name);
+    const newestFirst = this.matchedSheets().reverse();
+    const branches = newestFirst.flatMap(({ alias }) => [
+      `simpleJSONHas(${alias}_fields, ${key})`,
+      `simpleJSONExtractRaw(${alias}_fields, ${key})`,
+    ]);
+    return branches.length === 0
+      ? "CAST(NULL AS Nullable(String))"
+      : `multiIf(${branches.join(", ")}, NULL)`;
   }
 
   private outputColumn(name: string): StoreOutputColumn {
@@ -621,6 +635,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       }
       return type === "STRING" ? answer : this.typedScalar(answer, type);
     }
+    if (column === CUSTOM_METADATA) {
+      return this.metadataValue(this.metadataText(field.name), type);
+    }
 
     // Quoted, the payload column would read as a table name before its subcolumn.
     const path = `${column}.${this.subcolumn(field.name)}`;
@@ -680,15 +697,25 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return `toFloat64OrNull(${unsuffixed})`;
   }
 
-  private typedScalar(sql: string, type: string): string {
-    // From the value's text: the store holds a JSON fraction as a double, whose cast cuts 1.15 to
-    // 1.14 at scale 2.
+  /** A sheet value's JSON text typed as an answer's text is, a decimal at the schema's scale; an
+   *  object, an array or a mix of kinds shows as its JSON. */
+  private metadataValue(text: string, type: string): string {
     const decimal = VariantSchema.decimalOf(type);
     if (decimal !== null) {
       const storeType = `Decimal(${decimal.precision}, ${decimal.scale})`;
-      return `accurateCastOrNull(toString(${sql}), ${this.escapeValue(storeType)})`;
+      return `accurateCastOrNull(${text}, ${this.escapeValue(storeType)})`;
     }
+    if (type === "DOUBLE") {
+      return this.textAsDouble(text);
+    }
+    if (type === "STRING") {
+      return `JSONExtract(${text}, 'Nullable(String)')`;
+    }
+    const isScalar = type in STORE_SCALARS;
+    return isScalar ? this.typedScalar(text, type) : `nullIf(${text}, 'null')`;
+  }
 
+  private typedScalar(sql: string, type: string): string {
     const storeType = STORE_SCALARS[type] ?? "String";
     return `accurateCastOrNull(${sql}, ${this.escapeValue(storeType)})`;
   }

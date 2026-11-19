@@ -1728,6 +1728,69 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ]);
     });
 
+    it("reads a sheet's numbers as written, past a double's digits, and finds a row by its exact value", async () => {
+      const digits = "digits-e";
+      const rows = [
+        { plot: "D1", v: 9284706.999413481, "Plot no.": 1, note: null },
+        { plot: "D2", v: 29667.680253587514, "Plot no.": 2, note: "dry" },
+      ];
+      await admin.insert({
+        table: "measurements",
+        values: rows.map(({ plot }, index) => ({
+          ...reading(51 + index, plot, null),
+          experiment_id: digits,
+        })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: rows.map(({ plot, ...fields }) => ({
+          ...sheetRow("s-digits", "2026-09-01 08:00:00", "plot", plot, fields),
+          experiment_id: digits,
+        })),
+        format: "JSONEachRow",
+      });
+      // As custom_metadata_schemas.json has gold type the two fractions, with the rest of the row.
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet(
+              "s-digits",
+              "2026-09-01 08:00:00",
+              "plot",
+              "OBJECT<`Plot no.`: BIGINT, note: STRING, v: DECIMAL(19,12)>",
+            ),
+            experiment_id: digits,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const shown = await page(
+        {
+          columns: ["id", "v", "Plot no.", "note"],
+          ordering: { column: "id", direction: "ASC" },
+          limit: 10,
+        },
+        digits,
+      );
+      const found = await page(
+        {
+          columns: ["id"],
+          filters: [{ column: "v", operator: "equals", value: 29667.680253587514 }],
+          limit: 10,
+        },
+        digits,
+      );
+
+      expect(shown).toEqual([
+        ["51", "9284706.999413481000", "1", null],
+        ["52", "29667.680253587514", "2", "dry"],
+      ]);
+      expect(found).toEqual([["52"]]);
+    });
+
     it("reads integers past the 64-bit ranges as the warehouse does, with the rest of their row", async () => {
       const codes = "codes-e";
       const rows = [
