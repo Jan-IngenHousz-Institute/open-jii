@@ -122,7 +122,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   flagged(kind: ExperimentDataFlagged, addedRowIds: string[]): this {
     this.flaggedRowIds = addedRowIds;
-    const added = `has(${FLAGGED_ROW_IDS}, toString(id))`;
+    // A set the store builds once; has() would search the whole list for every row.
+    const added = `toString(id) IN (SELECT arrayJoin(${FLAGGED_ROW_IDS}))`;
     const flaggedCondition =
       this.phoneAnnotations === undefined
         ? added

@@ -3070,7 +3070,7 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(result);
       expect(execute).toHaveBeenCalledTimes(2);
       for (const [query] of execute.mock.calls) {
-        expect(query.sql).toContain("has(__flagged_row_ids, toString(id))");
+        expect(query.sql).toContain("toString(id) IN (SELECT arrayJoin(__flagged_row_ids))");
       }
       expect(result.value[0].totalRows).toBe(1);
     });
