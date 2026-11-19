@@ -347,10 +347,10 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
 
     return success(
       result.value.rows.map(([eventType, eventTimestamp, disconnectReason, sessionIdentifier]) => ({
-        eventType: this.textOrNull(eventType),
+        eventType: CellValues.textOrNull(eventType),
         eventTimestamp: CellValues.text(eventTimestamp, "TIMESTAMP"),
-        disconnectReason: this.textOrNull(disconnectReason),
-        sessionIdentifier: this.textOrNull(sessionIdentifier),
+        disconnectReason: CellValues.textOrNull(disconnectReason),
+        sessionIdentifier: CellValues.textOrNull(sessionIdentifier),
       })),
     );
   }
@@ -377,7 +377,7 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
     return success(
       result.value.rows.map(([bucketStart, experimentId, count]) => ({
         bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
-        experimentId: this.textOrNull(experimentId),
+        experimentId: CellValues.textOrNull(experimentId),
         count: Number(count),
       })),
     );
@@ -406,7 +406,7 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
     return success(
       result.value.rows.map(([bucketStart, averageBattery]) => ({
         bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
-        averageBattery: this.numberOrNull(averageBattery),
+        averageBattery: CellValues.numberOrNull(averageBattery),
       })),
     );
   }
@@ -433,10 +433,10 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
     return success(
       result.value.rows.map(
         ([version, protocolId, workbookVersionId, workbookRunId, count, withGps, withBattery]) => ({
-          deviceVersion: this.textOrNull(version),
-          protocolId: this.textOrNull(protocolId),
-          workbookVersionId: this.textOrNull(workbookVersionId),
-          workbookRunId: this.textOrNull(workbookRunId),
+          deviceVersion: CellValues.textOrNull(version),
+          protocolId: CellValues.textOrNull(protocolId),
+          workbookVersionId: CellValues.textOrNull(workbookVersionId),
+          workbookRunId: CellValues.textOrNull(workbookRunId),
           count: Number(count),
           withGps: Number(withGps),
           withBattery: Number(withBattery),
@@ -466,7 +466,7 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
 
     return success(
       result.value.rows.map(([macroId, count]) => ({
-        macroId: this.textOrNull(macroId),
+        macroId: CellValues.textOrNull(macroId),
         count: Number(count),
       })),
     );
@@ -494,7 +494,7 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
 
     return success(
       result.value.rows.map(([version, firstSeen, lastSeen, count]) => ({
-        version: this.textOrNull(version),
+        version: CellValues.textOrNull(version),
         firstSeen: CellValues.text(firstSeen, "TIMESTAMP"),
         lastSeen: CellValues.text(lastSeen, "TIMESTAMP"),
         count: Number(count),
@@ -541,14 +541,14 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
           sample,
         ]) => ({
           timestamp: CellValues.text(timestamp, "TIMESTAMP"),
-          experimentId: this.textOrNull(experimentId),
-          protocolId: this.textOrNull(protocolId),
-          workbookVersionId: this.textOrNull(workbookVersionId),
-          deviceVersion: this.textOrNull(deviceVersion),
-          battery: this.numberOrNull(battery),
-          latitude: this.numberOrNull(latitude),
-          longitude: this.numberOrNull(longitude),
-          sample: this.textOrNull(sample),
+          experimentId: CellValues.textOrNull(experimentId),
+          protocolId: CellValues.textOrNull(protocolId),
+          workbookVersionId: CellValues.textOrNull(workbookVersionId),
+          deviceVersion: CellValues.textOrNull(deviceVersion),
+          battery: CellValues.numberOrNull(battery),
+          latitude: CellValues.numberOrNull(latitude),
+          longitude: CellValues.numberOrNull(longitude),
+          sample: CellValues.textOrNull(sample),
         }),
       ),
     );
@@ -573,15 +573,6 @@ export class ServingStoreAdapter implements ServingStorePort, IotServingStorePor
   /** The store's plain parser reads no zone, so it refuses an ISO time's Z. */
   private time(iso: string): string {
     return `parseDateTime64BestEffort(${new StoreQueryBuilder().escapeValue(iso)}, 6, 'UTC')`;
-  }
-
-  private textOrNull(value: unknown): string | null {
-    return typeof value === "string" ? value : null;
-  }
-
-  /** NaN and infinities arrive quoted (output_format_json_quote_denormals) and read as no value. */
-  private numberOrNull(value: unknown): number | null {
-    return typeof value === "number" ? value : null;
   }
 
   private mergedSchemas(rows: unknown[][]): Map<string, string | null> {
