@@ -208,31 +208,6 @@ class _Store:
         return [json.loads(line) for line in text.splitlines()]
 
 
-def _local_list(name: str) -> list[str]:
-    """A list of names from the serving store module's locals."""
-    listing = re.search(rf"\n  {name} = \[(.*?)\]", (_MODULE / "main.tf").read_text(), re.DOTALL)
-    assert listing is not None
-    return re.findall(r'"(\w+)"', listing[1])
-
-
-def _role_grants(role: str) -> list[str]:
-    """A store user's grants as the serving store module writes them into users.xml, in order."""
-    users = re.search(rf"\n    {role} = \{{(.*?)\n    \}}", (_MODULE / "main.tf").read_text(), re.DOTALL)
-    assert users is not None
-    grants = []
-    for match in re.finditer(
-        r'\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"(GRANT [^"]+)"', users[1]
-    ):
-        name, listings, template, plain = match.groups()
-        values = [
-            value
-            for listing, literal in re.findall(r'local\.(\w+)|"(\w+)"', listings or "")
-            for value in (_local_list(listing) if listing else [literal])
-        ]
-        grants += [plain] if plain else [template.replace(f"${{{name}}}", value) for value in values]
-    return grants
-
-
 @pytest.fixture(scope="module")
 def tables(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     """Silver's and gold's rows, in a session that runs in UTC as Databricks sessions do."""
@@ -261,7 +236,7 @@ def tables(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> Ite
 
 
 @pytest.fixture(scope="module")
-def admin(store_migrations: list[str]) -> Iterator[_Store]:
+def admin(store_migrations: list[str], store_module) -> Iterator[_Store]:
     """A database holding the migrations, whose views have all refreshed once, empty."""
     url = os.environ.get("CLICKHOUSE_TEST_URL")
     if not url:
@@ -275,7 +250,7 @@ def admin(store_migrations: list[str]) -> Iterator[_Store]:
     for statement in store_migrations:
         admin.ok(statement, database=_DATABASE)
 
-    views = _local_list("metrics_views")
+    views = store_module.local_list("metrics_views")
     for _ in range(120):
         [state] = admin.rows(
             "SELECT countIf(last_success_time IS NOT NULL) AS refreshed FROM system.view_refreshes "
@@ -312,7 +287,9 @@ def _send(writer: StoreWriter, table: StoreTable, changes: DataFrame) -> None:
 
 
 @pytest.fixture(scope="module")
-def store(spark: SparkSession, tables: None, admin: _Store, first_refreshes: list[dict]) -> _Store:
+def store(
+    spark: SparkSession, tables: None, admin: _Store, first_refreshes: list[dict], store_module
+) -> _Store:
     """The same rows sent through the feed after older copies of two of them, left unmerged, every
     view refreshed, and a reader granted what the store's users.xml grants the backend's reader."""
     for table in ("measurements", "macro_results", "uploads"):
@@ -326,12 +303,12 @@ def store(spark: SparkSession, tables: None, admin: _Store, first_refreshes: lis
     for table, gold in golds.items():
         _send(writer, table, spark.sql(gold))
 
-    for view in _local_list("metrics_views"):
+    for view in store_module.local_list("metrics_views"):
         admin.ok(f"SYSTEM REFRESH VIEW {_DATABASE}.{view}")
         admin.ok(f"SYSTEM WAIT VIEW {_DATABASE}.{view}")
 
     admin.ok(f"CREATE USER {_READER} IDENTIFIED BY '{_PASSWORD}'")
-    for grant in _role_grants("reader"):
+    for grant in store_module.grants("reader"):
         admin.ok(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {_READER}")
 
     return _Store(admin.url, _READER, _PASSWORD)
@@ -380,15 +357,15 @@ def _sorted(rows: list[dict], *key: str) -> list[dict]:
     return sorted(rows, key=lambda row: tuple(str(row[column]) for column in key))
 
 
-def test_the_reader_is_granted_every_metrics_view_the_migrations_make() -> None:
+def test_the_reader_is_granted_every_metrics_view_the_migrations_make(store_module) -> None:
     made = {
         name
         for migration in _MIGRATIONS.glob("*.sql")
         for name in re.findall(r"CREATE MATERIALIZED VIEW IF NOT EXISTS (metrics_\w+)", migration.read_text())
     }
 
-    assert sorted(_local_list("metrics_views")) == sorted(made)
-    assert {f"GRANT SELECT ON store.{view}" for view in made} <= set(_role_grants("reader"))
+    assert sorted(store_module.local_list("metrics_views")) == sorted(made)
+    assert {f"GRANT SELECT ON store.{view}" for view in made} <= set(store_module.grants("reader"))
 
 
 def test_every_vetted_parameter_is_counted_under_its_label_from_its_own_field() -> None:
@@ -405,8 +382,10 @@ def test_every_vetted_parameter_is_counted_under_its_label_from_its_own_field() 
     }
 
 
-def test_the_views_refresh_one_after_another(admin: _Store, first_refreshes: list[dict]) -> None:
-    views = _local_list("metrics_views")
+def test_the_views_refresh_one_after_another(
+    admin: _Store, first_refreshes: list[dict], store_module
+) -> None:
+    views = store_module.local_list("metrics_views")
     made = admin.rows(
         f"SELECT name, create_table_query FROM system.tables WHERE database = '{_DATABASE}' "
         "AND startsWith(name, 'metrics_')"
@@ -422,14 +401,14 @@ def test_the_views_refresh_one_after_another(admin: _Store, first_refreshes: lis
 
 
 @pytest.mark.parametrize("role", ["writer", "reloader"])
-def test_neither_feed_user_can_write_a_figure(admin: _Store, role: str) -> None:
+def test_neither_feed_user_can_write_a_figure(admin: _Store, store_module, role: str) -> None:
     user = f"{_DATABASE}_{role}"
     admin.ok(f"CREATE USER {user} IDENTIFIED BY '{_PASSWORD}'")
-    for grant in _role_grants(role):
+    for grant in store_module.grants(role):
         admin.ok(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {user}")
     as_user = _Store(admin.url, user, _PASSWORD)
 
-    views = _local_list("metrics_views")
+    views = store_module.local_list("metrics_views")
     # A view without TO keeps its rows in a table named after its uuid.
     inner_tables = [
         row["name"]

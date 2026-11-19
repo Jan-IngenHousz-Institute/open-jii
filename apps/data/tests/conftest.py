@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import types
 from collections.abc import Iterator
@@ -121,3 +122,41 @@ def store_migrations() -> list[str]:
         if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
             statements.append("\n".join(lines))
     return statements
+
+
+_STORE_MODULE = Path(__file__).parents[3] / "infrastructure/modules/serving-store/main.tf"
+
+
+class StoreModule:
+    """The serving store module's main.tf, which names the store's views and each user's grants."""
+
+    def __init__(self, main_tf: str):
+        self.main_tf = main_tf
+
+    def local_list(self, name: str) -> list[str]:
+        """A list of names from the module's locals."""
+        listing = re.search(rf"\n  {name} = \[(.*?)\]", self.main_tf, re.DOTALL)
+        assert listing is not None
+        return re.findall(r'"(\w+)"', listing[1])
+
+    def grants(self, role: str) -> list[str]:
+        """A store user's grants as the module writes them into users.xml, in order."""
+        users = re.search(rf"\n    {role} = \{{(.*?)\n    \}}", self.main_tf, re.DOTALL)
+        assert users is not None
+        grants = []
+        for match in re.finditer(
+            r'\[for (\w+) in (local\.\w+|concat\([^)]*\)) : "([^"]+)"\]|"(GRANT [^"]+)"', users[1]
+        ):
+            name, listings, template, plain = match.groups()
+            values = [
+                value
+                for listing, literal in re.findall(r'local\.(\w+)|"(\w+)"', listings or "")
+                for value in (self.local_list(listing) if listing else [literal])
+            ]
+            grants += [plain] if plain else [template.replace(f"${{{name}}}", value) for value in values]
+        return grants
+
+
+@pytest.fixture(scope="session")
+def store_module() -> StoreModule:
+    return StoreModule(_STORE_MODULE.read_text())

@@ -1,5 +1,5 @@
-"""The serving store's reads for the backend: views that name one experiment, which are all its reader
-may read, and the contributor and client ids kept beside the rows.
+"""The serving store's reads for the backend: views that name one experiment, which with the platform
+metrics' views are all its reader may read, and the contributor and client ids kept beside the rows.
 
 The tests run against a real store, as described in test_serving_store_tables.py, and skip without
 one.
@@ -23,18 +23,6 @@ _READER = "views_test_reader"
 _READER_PROFILE = "views_test_reader_profile"
 
 _USERS_XML = Path(__file__).parents[4] / "infrastructure/modules/serving-store/templates/users.xml.tftpl"
-
-# The reader's grants in infrastructure/modules/serving-store/main.tf.
-_READER_VIEWS = (
-    "experiment_measurements",
-    "experiment_macro_results",
-    "experiment_uploads",
-    "experiment_contributor_ids",
-    "experiment_client_ids",
-    "experiment_payload_schemas",
-    "experiment_metadata_rows",
-    "experiment_metadata_sheets",
-)
 
 _COMMIT = "_commit_version, _commit_timestamp"
 
@@ -82,7 +70,7 @@ class _User:
 
 
 @pytest.fixture
-def admin(store_migrations: list[str]) -> Iterator[_User]:
+def admin(store_migrations: list[str], store_module) -> Iterator[_User]:
     url = os.environ.get("CLICKHOUSE_TEST_URL")
     if not url:
         pytest.skip("CLICKHOUSE_TEST_URL is not set")
@@ -95,8 +83,8 @@ def admin(store_migrations: list[str]) -> Iterator[_User]:
         admin.ok(statement, database=_DATABASE)
     admin.ok(_reader_profile())
     admin.ok(f"CREATE USER {_READER} IDENTIFIED BY 'views-test' SETTINGS PROFILE '{_READER_PROFILE}'")
-    for view in _READER_VIEWS:
-        admin.ok(f"GRANT SELECT ON {_DATABASE}.{view} TO {_READER}")
+    for grant in store_module.grants("reader"):
+        admin.ok(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {_READER}")
 
     admin.ok(
         f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, user_id, client_id, {_COMMIT}) VALUES "
