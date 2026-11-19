@@ -29,7 +29,7 @@ function incident(change: Partial<Incident> = {}): Incident {
     kind: "incident",
     title: "Sign-in is slow",
     impact: "outage",
-    components: ["sign-in", "data-intake"],
+    components: ["platform", "data-intake"],
     startsAt: "2026-11-04T08:30:00.000Z",
     updates: [update()],
     ...change,
@@ -152,7 +152,7 @@ describe("renderPreview", () => {
 
   it("shows the page card with the names the page uses", () => {
     expect(rendered).toContain("OUTAGE: Sign-in is slow");
-    expect(rendered).toContain("Affected: Sign-in, Data intake");
+    expect(rendered).toContain("Affected: Platform, Data intake");
     expect(rendered).toContain("Started: Nov 4, 2026, 08:30 UTC");
   });
 
@@ -165,7 +165,7 @@ describe("renderPreview", () => {
   it("shows the Slack message the publisher will send", () => {
     expect(rendered).toContain("Message 1 of 1 (incident.opened)");
     expect(rendered).toContain("Incident opened: Sign-in is slow");
-    expect(rendered).toContain("Impact: outage. Affects Sign-in and Data intake.");
+    expect(rendered).toContain("Impact: outage. Affects Platform and Data intake.");
     expect(rendered).toContain("View the status page");
   });
 

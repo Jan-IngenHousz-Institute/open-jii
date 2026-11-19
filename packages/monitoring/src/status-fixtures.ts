@@ -79,15 +79,12 @@ function component(
   };
 }
 
-const websiteSpecs: Record<string, DaySpec> = {
-  "2026-09-14": { degraded: 18 },
-  "2026-10-02": { down: 42, degraded: 9 },
-};
-
 const platformSpecs: Record<string, DaySpec> = {
   "2026-08-21": { degraded: 95 },
   "2026-09-12": { degraded: DAY_DEGRADED_MINUTES - 1 },
+  "2026-09-14": { degraded: 18 },
   "2026-09-30": { maintenance: 60 },
+  "2026-10-02": { down: 42, degraded: 9 },
   "2026-10-18": { down: 12, degraded: 20 },
 };
 
@@ -126,7 +123,6 @@ function document(
 
 function healthyComponents(): StatusComponent[] {
   return [
-    component("website", "operational", daysSince(websiteSpecs)),
     component("platform", "operational", daysSince(platformSpecs)),
     component("data-intake", "operational", daysSince(dataIntakeSpecs)),
     component("data-delivery", "operational", daysSince(dataDeliverySpecs)),
@@ -181,7 +177,6 @@ const INCIDENT_MINUTES = 38;
 export const incidentStatusDocument: StatusDocument = document(
   GENERATED_AT,
   [
-    component("website", "operational", daysSince(websiteSpecs)),
     component("platform", "operational", daysSince(platformSpecs)),
     component(
       "data-intake",
@@ -238,7 +233,7 @@ export const completedMaintenance: Incident = {
   kind: "maintenance",
   title: "Planned maintenance",
   impact: "outage",
-  components: ["website", "platform"],
+  components: ["platform"],
   startsAt: "2026-10-03T07:00:00.000Z",
   endsAt: "2026-10-03T08:10:00.000Z",
   resolvedAt: "2026-10-03T08:10:00.000Z",
@@ -263,7 +258,7 @@ export const upcomingMaintenance: Incident = {
   kind: "maintenance",
   title: "Planned maintenance",
   impact: "outage",
-  components: ["website", "platform"],
+  components: ["platform"],
   startsAt: "2026-11-07T07:00:00.000Z",
   endsAt: "2026-11-07T09:00:00.000Z",
   updates: [
@@ -281,14 +276,6 @@ export const plannedStatusDocument: StatusDocument = {
   ...document(
     GENERATED_AT,
     [
-      component(
-        "website",
-        "operational",
-        daysSince({
-          ...websiteSpecs,
-          "2026-10-03": { maintenance: 70 },
-        }),
-      ),
       component(
         "platform",
         "operational",
@@ -329,7 +316,7 @@ export const maintenanceInProgress: Incident = {
   kind: "maintenance",
   title: "Planned maintenance",
   impact: "outage",
-  components: ["website", "platform"],
+  components: ["platform"],
   startsAt: "2026-11-03T11:00:00.000Z",
   endsAt: "2026-11-03T13:00:00.000Z",
   updates: [
@@ -344,18 +331,10 @@ export const maintenanceInProgress: Incident = {
 
 const MAINTENANCE_MINUTES = 61;
 
-/** A window is open on the website and the platform, which carry "maintenance" while it lasts. */
+/** A window is open on the platform, which carries "maintenance" while it lasts. */
 export const maintenanceStatusDocument: StatusDocument = document(
   GENERATED_AT,
   [
-    component(
-      "website",
-      "maintenance",
-      daysSince({
-        ...websiteSpecs,
-        [TODAY]: { maintenance: MAINTENANCE_MINUTES },
-      }),
-    ),
     component(
       "platform",
       "maintenance",
