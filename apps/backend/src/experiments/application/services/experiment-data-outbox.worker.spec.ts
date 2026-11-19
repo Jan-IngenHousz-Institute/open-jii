@@ -13,12 +13,12 @@ import { ExperimentAnnotationsRepository } from "../../core/repositories/experim
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
-import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
+import { AnnotationsOutboxService } from "./annotations-outbox.service";
 import {
   EXPERIMENT_DATA_OUTBOX_INTERVAL,
   ExperimentDataOutboxWorker,
 } from "./experiment-data-outbox.worker";
-import { MetadataSheetsLakehouseCopierService } from "./metadata-sheets-lakehouse-copier.service";
+import { MetadataSheetsOutboxService } from "./metadata-sheets-outbox.service";
 
 describe("ExperimentDataOutboxWorker", () => {
   const testApp = TestHarness.App;
@@ -82,8 +82,8 @@ describe("ExperimentDataOutboxWorker", () => {
   ): ExperimentDataOutboxWorker {
     return new ExperimentDataOutboxWorker(
       outbox,
-      testApp.module.get(AnnotationsLakehouseCopierService),
-      testApp.module.get(MetadataSheetsLakehouseCopierService),
+      testApp.module.get(AnnotationsOutboxService),
+      testApp.module.get(MetadataSheetsOutboxService),
     );
   }
 
@@ -199,8 +199,8 @@ describe("ExperimentDataOutboxWorker", () => {
     }
     return new HastyWorker(
       testApp.module.get(ExperimentDataOutboxRepository),
-      testApp.module.get(AnnotationsLakehouseCopierService),
-      testApp.module.get(MetadataSheetsLakehouseCopierService),
+      testApp.module.get(AnnotationsOutboxService),
+      testApp.module.get(MetadataSheetsOutboxService),
     );
   }
 

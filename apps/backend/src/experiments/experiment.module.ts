@@ -24,7 +24,7 @@ import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { AnnotationMergerService } from "./application/services/annotation-merger.service";
 // Services
-import { AnnotationsLakehouseCopierService } from "./application/services/annotations-lakehouse-copier.service";
+import { AnnotationsOutboxService } from "./application/services/annotations-outbox.service";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
 import { ExperimentDataOutboxMetricsService } from "./application/services/experiment-data-outbox-metrics.service";
@@ -33,7 +33,7 @@ import { ExperimentDataSourceService } from "./application/services/experiment-d
 import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
-import { MetadataSheetsLakehouseCopierService } from "./application/services/metadata-sheets-lakehouse-copier.service";
+import { MetadataSheetsOutboxService } from "./application/services/metadata-sheets-outbox.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { NumberAnswersService } from "./application/services/number-answers.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
@@ -251,8 +251,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Services
     EmbargoProcessorService,
     ExperimentDataOutboxWorker,
-    AnnotationsLakehouseCopierService,
-    MetadataSheetsLakehouseCopierService,
+    AnnotationsOutboxService,
+    MetadataSheetsOutboxService,
     ExperimentDataOutboxMetricsService,
     AnnotationMergerService,
     ExportRunReconcilerService,

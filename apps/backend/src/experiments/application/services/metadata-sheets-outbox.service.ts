@@ -4,10 +4,10 @@ import { Result, success } from "../../../common/utils/fp-utils";
 import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
-import { ExperimentDataLakehouseCopierService } from "./experiment-data-lakehouse-copier.service";
+import { ExperimentDataOutboxService } from "./experiment-data-outbox.service";
 
 @Injectable()
-export class MetadataSheetsLakehouseCopierService extends ExperimentDataLakehouseCopierService<MetadataSheetRecord> {
+export class MetadataSheetsOutboxService extends ExperimentDataOutboxService<MetadataSheetRecord> {
   constructor(
     private readonly sheets: ExperimentMetadataRepository,
     private readonly warehouse: ExperimentMetadataWarehouseRepository,

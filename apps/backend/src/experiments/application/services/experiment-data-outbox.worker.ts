@@ -8,12 +8,9 @@ import type {
   ExperimentDataRecordType,
 } from "../../core/models/experiment-data-outbox.model";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
-import { AnnotationsLakehouseCopierService } from "./annotations-lakehouse-copier.service";
-import type {
-  CopyOutcome,
-  ExperimentDataLakehouseCopierService,
-} from "./experiment-data-lakehouse-copier.service";
-import { MetadataSheetsLakehouseCopierService } from "./metadata-sheets-lakehouse-copier.service";
+import { AnnotationsOutboxService } from "./annotations-outbox.service";
+import type { CopyOutcome, ExperimentDataOutboxService } from "./experiment-data-outbox.service";
+import { MetadataSheetsOutboxService } from "./metadata-sheets-outbox.service";
 
 /** A claim older than this was abandoned by a task that died, and is taken back. */
 export const LEASE_MS = 5 * 60_000;
@@ -47,9 +44,9 @@ export interface OutboxDrainCounts {
 }
 
 /**
- * Claims the outbox's rows and hands each kind of record to its copier. The order of the rows does
- * not matter, since a copy takes each record's state at the time of the copy. Every task runs this
- * loop; Postgres hands each one different rows.
+ * Claims the outbox's rows and hands each kind of record to its outbox service. The order of the
+ * rows does not matter, since a copy takes each record's state at the time of the copy. Every task
+ * runs this loop; Postgres hands each one different rows.
  */
 @Injectable()
 export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
@@ -62,17 +59,17 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
   private nudged = false;
   /** Overridden only by a spec that cannot wait two minutes for the real one. */
   protected readonly attemptDeadlineMs = ATTEMPT_DEADLINE_MS;
-  private readonly copiers: Record<
+  private readonly recordOutboxes: Record<
     ExperimentDataRecordType,
-    ExperimentDataLakehouseCopierService<{ id: string }>
+    ExperimentDataOutboxService<{ id: string }>
   >;
 
   constructor(
     private readonly outbox: ExperimentDataOutboxRepository,
-    annotations: AnnotationsLakehouseCopierService,
-    sheets: MetadataSheetsLakehouseCopierService,
+    annotations: AnnotationsOutboxService,
+    sheets: MetadataSheetsOutboxService,
   ) {
-    this.copiers = { annotation: annotations, metadata_sheet: sheets };
+    this.recordOutboxes = { annotation: annotations, metadata_sheet: sheets };
   }
 
   @Interval(EXPERIMENT_DATA_OUTBOX_INTERVAL, INTERVAL_MS)
@@ -190,8 +187,8 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     deadlineAt: number,
   ): Promise<OutboxDrainCounts> {
     const counts: OutboxDrainCounts = { applied: 0, retried: 0, released: 0 };
-    const copier = this.copiers[recordType];
-    const groups = await copier.groupsOf(rows.map((row) => row.recordId));
+    const recordOutbox = this.recordOutboxes[recordType];
+    const groups = await recordOutbox.groupsOf(rows.map((row) => row.recordId));
     if (groups.isFailure()) {
       await this.retry(recordType, rows, groups.error.message);
       counts.retried = rows.length;
@@ -201,7 +198,7 @@ export class ExperimentDataOutboxWorker implements OnApplicationShutdown {
     const canContinue = () => Date.now() < deadlineAt && !this.stopping;
     let left = rows;
     for (const ids of groups.value) {
-      const outcome = await copier.copy(ids, canContinue).catch(
+      const outcome = await recordOutbox.copy(ids, canContinue).catch(
         (error: unknown): CopyOutcome => ({
           failed: error instanceof Error ? error.message : String(error),
         }),
