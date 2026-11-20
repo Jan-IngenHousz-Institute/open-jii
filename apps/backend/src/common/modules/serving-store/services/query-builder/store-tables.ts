@@ -25,6 +25,8 @@ export interface StoreTable {
   payloadTexts?: Record<string, string>;
   /** The column the phone's own annotations travel in, on a table whose rows carry them. */
   phoneAnnotations?: string;
+  /** Whether the experiment's metadata sheets match its rows, by an answer or by the device. */
+  takesCustomMetadata?: boolean;
 }
 
 const MACROS = "ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>";
@@ -68,8 +70,8 @@ const DEVICE: StoreColumn = {
   idOf: "device",
 };
 
-// The store holds the sheets (experiment_metadata_rows, experiment_metadata_sheets), but pages do
-// not join them yet, so custom metadata reads as none.
+// A page shows custom metadata as its fields, which the builder reads from the sheets a read joins;
+// whole, it reads as none.
 const CUSTOM_METADATA: StoreColumn = {
   name: "custom_metadata",
   type: "VARIANT",
@@ -80,6 +82,7 @@ export const MEASUREMENTS_TABLE: StoreTable = {
   view: "experiment_measurements",
   key: ["timestamp", "id", "ifNull(device_id, '')"],
   phoneAnnotations: "annotations",
+  takesCustomMetadata: true,
   columns: [
     { name: "experiment_id", type: "STRING", expression: "experiment_id" },
     { name: "id", type: "BIGINT", expression: "id" },
@@ -106,6 +109,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
   view: "experiment_macro_results",
   identifierColumn: "macro_id",
   phoneAnnotations: "annotations",
+  takesCustomMetadata: true,
   key: [
     "ifNull(macro_id, '')",
     "timestamp",

@@ -46,14 +46,14 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
       }
 
       // % and _ in user input are intentionally treated as wildcards.
-      return `${builder.textOf(columnSql)} LIKE ${builder.escapeValue(`%${value}%`)}`;
+      return `${builder.textOf(columnSql, filter.column)} LIKE ${builder.escapeValue(`%${value}%`)}`;
     }
     case "in": {
       if (!Array.isArray(value) || value.length === 0) {
         throw new Error("'in' operator requires a non-empty array of values");
       }
 
-      const list = value.map((v) => builder.filterLiteral(filter.column, v)).join(", ");
+      const list = value.map((v) => builder.filterLiteral(filter.column, v, value)).join(", ");
       return `${col} IN (${list})`;
     }
     case "between": {
@@ -66,8 +66,8 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
         throw new Error("'between' bounds cannot be arrays");
       }
 
-      const from = builder.filterLiteral(filter.column, start);
-      return `${col} BETWEEN ${from} AND ${builder.filterLiteral(filter.column, end)}`;
+      const from = builder.filterLiteral(filter.column, start, value);
+      return `${col} BETWEEN ${from} AND ${builder.filterLiteral(filter.column, end, value)}`;
     }
   }
 }

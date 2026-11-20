@@ -103,6 +103,30 @@ describe("ServingStoreAdapter", () => {
     ]);
   });
 
+  it("lists an experiment's metadata sheets oldest first, for the tables whose rows take them", async () => {
+    const query = vi.spyOn(client, "query").mockResolvedValue(
+      success({
+        rows: [
+          ["s1", "plot", "OBJECT<area: DECIMAL(4,2)>", "3"],
+          ["s2", "column:device_id", null, "5"],
+        ],
+      }),
+    );
+
+    const sheets = await adapter.getMetadataSheets("e1");
+
+    assertSuccess(sheets);
+    expect(sheets.value).toEqual([
+      { id: "s1", matchOn: "plot", schema: "OBJECT<area: DECIMAL(4,2)>", version: "3" },
+      { id: "s2", matchOn: "column:device_id", schema: null, version: "5" },
+    ]);
+    expect(query.mock.calls[0][0]).toContain(
+      "FROM experiment_metadata_sheets(experiment = 'e1') ORDER BY sheet_created_at, sheet_id",
+    );
+    expect(adapter.takesCustomMetadata("upload", "t1")).toBe(false);
+    expect(adapter.takesCustomMetadata("macro", "m1")).toBe(true);
+  });
+
   it("passes on a failed listing", async () => {
     vi.spyOn(client, "query").mockResolvedValue(failure(AppError.internal("store down")));
 
@@ -1485,6 +1509,613 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
     // One byte more, sent anyway, is a statement the store refuses too.
     assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
+  });
+
+  describe("custom metadata on a page", () => {
+    const experiment = "metadata-e";
+    // The three sheets' rows below together, as custom_metadata_schemas.json has gold type them.
+    const schema =
+      "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(22,2), extra: STRING, note: STRING, soil: STRING>";
+
+    // A sheet as the feed sends it, with the schema gold gives its rows alone.
+    const sheet = (
+      sheetId: string,
+      createdAt: string,
+      matchOn: string,
+      sheetSchema: string,
+      commit = 1,
+    ) => ({
+      experiment_id: experiment,
+      sheet_id: sheetId,
+      sheet_created_at: createdAt,
+      match_on: matchOn,
+      schema: sheetSchema,
+      is_deleted: 0,
+      _commit_version: commit,
+    });
+
+    // A sheet row as the feed sends it from the lakehouse's copy of the sheet.
+    const sheetRow = (
+      sheetId: string,
+      createdAt: string,
+      matchOn: string,
+      identifier: string,
+      fields: Record<string, unknown>,
+    ) => ({
+      experiment_id: experiment,
+      sheet_id: sheetId,
+      sheet_created_at: createdAt,
+      match_on: matchOn,
+      identifier,
+      fields: JSON.stringify(fields),
+      is_deleted: 0,
+      _commit_version: 1,
+      _commit_timestamp: "2026-09-14 10:01:00",
+    });
+
+    const reading = (id: number, plot: string | null, deviceId: string | null) => ({
+      experiment_id: experiment,
+      id,
+      device_id: deviceId,
+      timestamp: `2026-09-14 10:00:0${id % 10}`,
+      questions_data: plot === null ? {} : { plot },
+      annotations: [],
+      _commit_version: 1,
+      _commit_timestamp: "2026-09-14 10:01:00",
+    });
+
+    /** The experiment's sheets as the store lists them, and their schemas joined. */
+    async function sheetsOf(experimentId: string) {
+      const sheets = await adapter.getMetadataSheets(experimentId);
+      assertSuccess(sheets);
+      const joined = VariantSchema.mergeKeepingDecimals(
+        sheets.value.flatMap((listed) => listed.schema ?? []),
+      );
+      return { sheets: sheets.value, schema: joined ?? "" };
+    }
+
+    async function page(
+      params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+      experimentId = experiment,
+    ) {
+      const { sheets, schema: joined } = await sheetsOf(experimentId);
+      const data = await rowsOf({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId,
+        variants: [{ columnName: "custom_metadata", schema: joined, suffix: "metadata" }],
+        metadataSheets: sheets,
+        ...params,
+      });
+      return data.rows;
+    }
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: [
+          reading(31, "A1", "d1"),
+          reading(32, "B2", "d2"),
+          reading(33, "Z9", "d9"),
+          reading(34, null, null),
+        ],
+        format: "JSONEachRow",
+      });
+      // The first row of each identifier wins, as the feed matches them.
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-old", "2026-09-01 08:00:00", "plot", "A1", {
+            "Plot no.": 3,
+            area: 1.15,
+            note: "dry",
+            soil: "clay",
+          }),
+          sheetRow("s-old", "2026-09-01 08:00:00", "plot", "B2", {
+            area: 12.25,
+            note: "wet",
+            soil: "sand",
+          }),
+          sheetRow("s-new", "2026-09-02 08:00:00", "column:device_id", "d1", { soil: "loam" }),
+          sheetRow("s-new", "2026-09-02 08:00:00", "column:device_id", "d2", {
+            area: 5,
+            note: null,
+          }),
+          sheetRow("s-other", "2026-09-03 08:00:00", "column:timezone", "UTC", {
+            extra: "matches nothing",
+          }),
+        ],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          sheet(
+            "s-old",
+            "2026-09-01 08:00:00",
+            "plot",
+            "OBJECT<`Plot no.`: BIGINT, area: DECIMAL(4,2), note: STRING, soil: STRING>",
+          ),
+          sheet(
+            "s-new",
+            "2026-09-02 08:00:00",
+            "column:device_id",
+            "OBJECT<area: BIGINT, note: VOID, soil: STRING>",
+          ),
+          sheet("s-other", "2026-09-03 08:00:00", "column:timezone", "OBJECT<extra: STRING>"),
+        ],
+        format: "JSONEachRow",
+      });
+    });
+
+    it("folds the sheets oldest first, writes decimals at their scale and leaves an unmatched row null", async () => {
+      const rows = await page({
+        columns: ["id", "soil", "area", "note", "Plot no.", "extra"],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(rows).toEqual([
+        ["31", "loam", "1.15", "dry", "3", null],
+        ["32", "sand", "5.00", null, null, null],
+        ["33", null, null, null, null, null],
+        ["34", null, null, null, null, null],
+      ]);
+    });
+
+    it("sorts and filters by a metadata field, reading the whole table's metadata for the page's keys", async () => {
+      const byArea = await page({
+        columns: ["id", "area"],
+        ordering: { column: "area", direction: "DESC" },
+        limit: 2,
+      });
+      const loam = await page({
+        columns: ["id"],
+        filters: [{ column: "soil", operator: "equals", value: "loam" }],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(byArea).toEqual([
+        ["32", "5.00"],
+        ["31", "1.15"],
+      ]);
+      expect(loam).toEqual([["31"]]);
+    });
+
+    it("finds text in a decimal as its cell shows it, at its scale", async () => {
+      const rows = await page({
+        columns: ["id"],
+        filters: [{ column: "area", operator: "contains", value: "5.00" }],
+        limit: 10,
+      });
+
+      expect(rows).toEqual([["32"]]);
+    });
+
+    it("finds a decimal by its text in a list, as Spark compares the two as doubles", async () => {
+      const rows = await page({
+        columns: ["id"],
+        filters: [{ column: "area", operator: "in", value: ["1.15", "5"] }],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(rows).toEqual([["31"], ["32"]]);
+    });
+
+    it("finds a decimal by a number in a list that also holds text, as Spark compares them all as doubles", async () => {
+      const rows = await page({
+        columns: ["id"],
+        filters: [{ column: "area", operator: "in", value: [1.15, "garbage"] }],
+        limit: 10,
+      });
+
+      expect(rows).toEqual([["31"]]);
+    });
+
+    it("lists the sheets oldest first, and their schemas join as gold types their rows together", async () => {
+      const { sheets, schema: joined } = await sheetsOf(experiment);
+
+      expect(sheets.map(({ id, matchOn }) => [id, matchOn])).toEqual([
+        ["s-old", "plot"],
+        ["s-new", "column:device_id"],
+        ["s-other", "column:timezone"],
+      ]);
+      expect(joined).toBe(schema);
+    });
+
+    it("lists a sheet at its newest commit, and no longer once it is deleted", async () => {
+      const edited = "edited-e";
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet("s1", "2026-09-01 08:00:00", "plot", "OBJECT<soil: STRING>"),
+            experiment_id: edited,
+          },
+          {
+            ...sheet("s1", "2026-09-01 08:00:00", "plot", "OBJECT<area: BIGINT>", 2),
+            experiment_id: edited,
+          },
+          {
+            ...sheet("s2", "2026-09-02 08:00:00", "plot", "OBJECT<ph: BIGINT>"),
+            experiment_id: edited,
+          },
+          {
+            ...sheet("s2", "2026-09-02 08:00:00", "plot", "OBJECT<ph: BIGINT>", 3),
+            experiment_id: edited,
+            is_deleted: 1,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const sheets = await adapter.getMetadataSheets(edited);
+
+      assertSuccess(sheets);
+      expect(sheets.value).toEqual([
+        { id: "s1", matchOn: "plot", schema: "OBJECT<area: BIGINT>", version: "2" },
+      ]);
+    });
+
+    it("reads a sheet's numbers as written, past a double's digits, and finds a row by its exact value", async () => {
+      const digits = "digits-e";
+      const rows = [
+        { plot: "D1", v: 9284706.999413481, "Plot no.": 1, note: null },
+        { plot: "D2", v: 29667.680253587514, "Plot no.": 2, note: "dry" },
+      ];
+      await admin.insert({
+        table: "measurements",
+        values: rows.map(({ plot }, index) => ({
+          ...reading(51 + index, plot, null),
+          experiment_id: digits,
+        })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: rows.map(({ plot, ...fields }) => ({
+          ...sheetRow("s-digits", "2026-09-01 08:00:00", "plot", plot, fields),
+          experiment_id: digits,
+        })),
+        format: "JSONEachRow",
+      });
+      // As custom_metadata_schemas.json has gold type the two fractions, with the rest of the row.
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet(
+              "s-digits",
+              "2026-09-01 08:00:00",
+              "plot",
+              "OBJECT<`Plot no.`: BIGINT, note: STRING, v: DECIMAL(19,12)>",
+            ),
+            experiment_id: digits,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const shown = await page(
+        {
+          columns: ["id", "v", "Plot no.", "note"],
+          ordering: { column: "id", direction: "ASC" },
+          limit: 10,
+        },
+        digits,
+      );
+      const found = await page(
+        {
+          columns: ["id"],
+          filters: [{ column: "v", operator: "equals", value: 29667.680253587514 }],
+          limit: 10,
+        },
+        digits,
+      );
+
+      expect(shown).toEqual([
+        ["51", "9284706.999413481000", "1", null],
+        ["52", "29667.680253587514", "2", "dry"],
+      ]);
+      expect(found).toEqual([["52"]]);
+    });
+
+    it("reads only a row's own keys, never a key nested in one of its values", async () => {
+      const nested = "nested-e";
+      await admin.insert({
+        table: "measurements",
+        values: [{ ...reading(61, "N1", null), experiment_id: nested }],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-flat", "2026-09-01 08:00:00", "plot", "N1", { soil: "clay" }),
+          sheetRow("s-nested", "2026-09-02 08:00:00", "plot", "N1", { extra: { soil: "sand" } }),
+          sheetRow("s-nested", "2026-09-02 08:00:00", "plot", "N2", { soil: "silt" }),
+        ].map((row) => ({ ...row, experiment_id: nested })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          sheet("s-flat", "2026-09-01 08:00:00", "plot", "OBJECT<soil: STRING>"),
+          sheet(
+            "s-nested",
+            "2026-09-02 08:00:00",
+            "plot",
+            "OBJECT<extra: OBJECT<soil: STRING>, soil: STRING>",
+          ),
+        ].map((row) => ({ ...row, experiment_id: nested })),
+        format: "JSONEachRow",
+      });
+
+      const rows = await page({ columns: ["id", "soil"], limit: 10 }, nested);
+
+      expect(rows).toEqual([["61", "clay"]]);
+    });
+
+    it("reads only a row's own keys where a field holds an object in one row and text in another", async () => {
+      const mixed = "mixed-object-e";
+      await admin.insert({
+        table: "measurements",
+        values: [{ ...reading(62, "V1", null), experiment_id: mixed }],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-flat", "2026-09-01 08:00:00", "plot", "V1", { soil: "clay" }),
+          sheetRow("s-mixed", "2026-09-02 08:00:00", "plot", "V1", { extra: { soil: "sand" } }),
+          sheetRow("s-mixed", "2026-09-02 08:00:00", "plot", "V2", { extra: "none", soil: "silt" }),
+        ].map((row) => ({ ...row, experiment_id: mixed })),
+        format: "JSONEachRow",
+      });
+      // As custom_metadata_schemas.json has gold type an object and text under one field.
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          sheet("s-flat", "2026-09-01 08:00:00", "plot", "OBJECT<soil: STRING>"),
+          sheet("s-mixed", "2026-09-02 08:00:00", "plot", "OBJECT<extra: VARIANT, soil: STRING>"),
+        ].map((row) => ({ ...row, experiment_id: mixed })),
+        format: "JSONEachRow",
+      });
+
+      const rows = await page({ columns: ["id", "soil"], limit: 10 }, mixed);
+
+      expect(rows).toEqual([["62", "clay"]]);
+    });
+
+    it("shows an explicit null in a mix of kinds as null, as the warehouse does, and a missing key as none", async () => {
+      const mixed = "mixed-e";
+      const plots = ["M1", "M2", "M3", "M4"];
+      await admin.insert({
+        table: "measurements",
+        values: plots.map((plot, index) => ({
+          ...reading(71 + index, plot, null),
+          experiment_id: mixed,
+        })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M1", { mix: 5 }),
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M2", { mix: "dry" }),
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M3", { mix: null }),
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M4", { soil: "clay" }),
+        ].map((row) => ({ ...row, experiment_id: mixed })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet("s-mix", "2026-09-01 08:00:00", "plot", "OBJECT<mix: VARIANT, soil: STRING>"),
+            experiment_id: mixed,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const shown = await page(
+        { columns: ["id", "mix"], ordering: { column: "id", direction: "ASC" }, limit: 10 },
+        mixed,
+      );
+      const nulls = await page(
+        {
+          columns: ["id"],
+          filters: [{ column: "mix", operator: "contains", value: "null" }],
+          limit: 10,
+        },
+        mixed,
+      );
+
+      expect(shown).toEqual([
+        ["71", "5"],
+        ["72", '"dry"'],
+        ["73", "null"],
+        ["74", null],
+      ]);
+      expect(nulls).toEqual([["73"]]);
+    });
+
+    it("reads integers past the 64-bit ranges as the warehouse does, with the rest of their row", async () => {
+      const codes = "codes-e";
+      const rows = [
+        { plot: "C1", soil: "clay", code: 2 ** 64 },
+        { plot: "C2", soil: "sand", code: 1e20 },
+        { plot: "C3", soil: "silt", code: -(2 ** 63) },
+        {
+          plot: "C4",
+          soil: "loam",
+          code: Number("-1234567890123456800"),
+          small: Number("-1234567890123456800"),
+        },
+      ];
+      // As custom_metadata_schemas.json has gold type these rows.
+      const codesSchema = "OBJECT<code: DECIMAL(21,0), small: BIGINT, soil: STRING>";
+      await admin.insert({
+        table: "measurements",
+        values: rows.map(({ plot }, index) => ({
+          ...reading(41 + index, plot, null),
+          experiment_id: codes,
+        })),
+        format: "JSONEachRow",
+      });
+      // Spark writes these integers as plain digits.
+      await admin.insert({
+        table: "metadata_rows",
+        values: rows.map(({ plot, ...fields }) => ({
+          ...sheetRow("s-codes", "2026-09-01 08:00:00", "plot", plot, fields),
+          experiment_id: codes,
+        })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet("s-codes", "2026-09-01 08:00:00", "plot", codesSchema),
+            experiment_id: codes,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const rowsRead = await page(
+        {
+          columns: ["id", "soil", "code", "small"],
+          ordering: { column: "id", direction: "ASC" },
+          limit: 10,
+        },
+        codes,
+      );
+
+      expect(rowsRead).toEqual([
+        ["41", "clay", "18446744073709552000", null],
+        ["42", "sand", "100000000000000000000", null],
+        ["43", "silt", "-9223372036854776000", null],
+        ["44", "loam", "-1234567890123456800", "-1234567890123456800"],
+      ]);
+    });
+
+    describe("a wide sheet under the reader's limits", () => {
+      const wide = "wide-e";
+      const readings = 100_000;
+      const plots = 5_000;
+      const columns = Array.from({ length: 60 }, (_, n) => `c${String(n).padStart(2, "0")}`);
+      const plotFields = Array.from({ length: plots }, (_, plot) => ({
+        area: plot / 4,
+        ...Object.fromEntries(columns.map((column) => [column, `v${plot % 50}-${column}`])),
+      }));
+      // Gold types a quarter's fractions and the whole plots together as DECIMAL(22,2).
+      const wideSchema = `OBJECT<area: DECIMAL(22,2), ${columns.map((column) => `${column}: STRING`).join(", ")}>`;
+      let capped: ServingStoreClientService;
+      let cappedAdapter: ServingStoreAdapter;
+
+      function wideQuery(
+        params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+      ) {
+        const query = cappedAdapter.buildExperimentQuery({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: wide,
+          variants: [{ columnName: "custom_metadata", schema: wideSchema, suffix: "metadata" }],
+          metadataSheets: [{ id: "s-wide", matchOn: "plot", schema: wideSchema, version: "1" }],
+          ...params,
+        });
+        assertSuccess(query);
+        return query.value;
+      }
+
+      async function wideRows(
+        params: Partial<Parameters<ServingStoreAdapter["buildExperimentQuery"]>[0]>,
+      ) {
+        const data = await cappedAdapter.executeQuery(wideQuery(params));
+        assertSuccess(data);
+        return data.value.rows;
+      }
+
+      beforeAll(async () => {
+        // The reader profile's per-query memory and time, and the dev store's two cores.
+        await admin.command({
+          query: `CREATE USER IF NOT EXISTS capped_reader IDENTIFIED BY ${new StoreQueryBuilder().escapeValue(STORE_PASSWORD)} SETTINGS max_memory_usage = 4294967296, max_execution_time = 30, max_threads = 2`,
+        });
+        await admin.command({ query: "GRANT SELECT ON store.* TO capped_reader" });
+        const config = new ConfigService({
+          servingStore: { url: STORE_URL, username: "capped_reader", password: STORE_PASSWORD },
+        });
+        capped = new ServingStoreClientService(new ServingStoreConfigService(config));
+        cappedAdapter = new ServingStoreAdapter(capped);
+
+        const start = Date.UTC(2026, 8, 1);
+        await admin.insert({
+          table: "measurements",
+          values: Array.from({ length: readings }, (_, id) => ({
+            experiment_id: wide,
+            id,
+            device_id: "d1",
+            timestamp: new Date(start + id * 1000).toISOString().replace("T", " ").slice(0, 19),
+            questions_data: { plot: `P${id % plots}` },
+            annotations: [],
+            _commit_version: 1,
+            _commit_timestamp: "2026-09-14 10:01:00",
+          })),
+          format: "JSONEachRow",
+        });
+        await admin.insert({
+          table: "metadata_rows",
+          values: plotFields.map((fields, plot) => ({
+            ...sheetRow("s-wide", "2026-09-01 08:00:00", "plot", `P${plot}`, fields),
+            experiment_id: wide,
+          })),
+          format: "JSONEachRow",
+        });
+      }, 120_000);
+
+      afterAll(async () => {
+        await capped.onModuleDestroy();
+        await admin.command({ query: "DROP USER IF EXISTS capped_reader" });
+      });
+
+      it("sorts and filters a page by a metadata field", async () => {
+        const byArea = await wideRows({
+          columns: ["id", "area"],
+          ordering: { column: "area", direction: "DESC" },
+          limit: 10,
+        });
+        const filtered = await wideRows({
+          columns: ["id", "c07"],
+          filters: [{ column: "c07", operator: "equals", value: "v3-c07" }],
+          ordering: { column: "id", direction: "ASC" },
+          limit: 3,
+        });
+
+        expect(byArea).toHaveLength(10);
+        expect(new Set(byArea.map(([, area]) => area))).toEqual(new Set(["1249.75"]));
+        expect(filtered).toEqual([
+          ["3", "v3-c07"],
+          ["53", "v3-c07"],
+          ["103", "v3-c07"],
+        ]);
+      }, 60_000);
+
+      it("lists a metadata field's distinct values and counts a filtered page", async () => {
+        const values = await wideRows({ columns: ["c07"], distinct: true, limit: 100 });
+        const count = await cappedAdapter.executeQuery(
+          cappedAdapter.countQuery(
+            wideQuery({ filters: [{ column: "c07", operator: "equals", value: "v3-c07" }] }),
+          ),
+        );
+
+        expect(values).toHaveLength(50);
+        assertSuccess(count);
+        expect(count.value.rows).toEqual([[String(readings / 50)]]);
+      }, 60_000);
+    });
   });
 });
 

@@ -382,6 +382,263 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
+  describe("custom metadata", () => {
+    const sheets = [
+      {
+        id: "s1",
+        matchOn: "plot",
+        schema: "OBJECT<area: DECIMAL(4,2), soil: STRING>",
+        version: "1",
+      },
+      { id: "s2", matchOn: "column:device_id", schema: "OBJECT<area: BIGINT>", version: "2" },
+      { id: "s3", matchOn: "column:timezone", schema: "OBJECT<soil: STRING>", version: "3" },
+    ];
+    const withMetadata = () =>
+      measurements()
+        .parseVariant("custom_metadata", "OBJECT<area: DECIMAL(4,2), soil: STRING>", "metadata")
+        .metadataSheets(sheets);
+    const key = "timestamp, id, ifNull(device_id, '')";
+
+    it("reads a field's text from the newest sheet holding it, a decimal at its scale", () => {
+      const sql = withMetadata().select(["area"]).build();
+
+      const text =
+        "multiIf(simpleJSONHas(sheet_1_fields, 'area'), simpleJSONExtractRaw(sheet_1_fields, 'area'), simpleJSONHas(sheet_0_fields, 'area'), simpleJSONExtractRaw(sheet_0_fields, 'area'), NULL)";
+      expect(sql).toContain(
+        `toDecimalString(accurateCastOrNull(${text}, 'Decimal(4, 2)'), 2) AS \`area\``,
+      );
+    });
+
+    it("reads a sheet whose rows hold objects by their top-level keys alone", () => {
+      const nested = "OBJECT<extra: OBJECT<soil: STRING>, soil: STRING>";
+      const sql = measurements()
+        .parseVariant("custom_metadata", nested, "metadata")
+        .metadataSheets([{ id: "s1", matchOn: "plot", schema: nested, version: "1" }])
+        .select(["soil"])
+        .build();
+
+      expect(sql).toContain(
+        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+    });
+
+    it("reads a sheet with a mix of kinds by its top-level keys alone, since a mix can hold an object", () => {
+      const sql = measurements()
+        .parseVariant(
+          "custom_metadata",
+          "OBJECT<extra: VARIANT, soil: STRING, tags: ARRAY<VARIANT>>",
+          "metadata",
+        )
+        .metadataSheets([
+          {
+            id: "s1",
+            matchOn: "plot",
+            schema: "OBJECT<extra: VARIANT, soil: STRING>",
+            version: "1",
+          },
+          {
+            id: "s2",
+            matchOn: "plot",
+            schema: "OBJECT<soil: STRING, tags: ARRAY<VARIANT>>",
+            version: "2",
+          },
+        ])
+        .select(["soil"])
+        .build();
+
+      expect(sql).toContain(
+        "multiIf(JSONHas(sheet_1_fields, 'soil'), JSONExtractRaw(sheet_1_fields, 'soil'), JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL)",
+      );
+    });
+
+    it("asks only the sheets whose schema holds the field", () => {
+      const sql = withMetadata().select(["soil"]).build();
+
+      expect(sql).toContain(
+        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+    });
+
+    it("keeps a page of many wide sheets within the store's query size", () => {
+      const wide = Array.from({ length: 20 }, (_, sheet) => {
+        const fields = Array.from({ length: 32 }, (_, field) => `s${sheet}_field_${field}: DOUBLE`);
+        return {
+          id: `s${sheet}`,
+          matchOn: "plot",
+          schema: `OBJECT<${fields.join(", ")}>`,
+          version: "1",
+        };
+      });
+      const schema = `OBJECT<${wide.map(({ schema }) => schema.slice("OBJECT<".length, -1)).join(", ")}>`;
+
+      const sql = measurements()
+        .parseVariant("custom_metadata", schema, "metadata")
+        .metadataSheets(wide)
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(20)
+        .build();
+
+      expect(Buffer.byteLength(sql)).toBeLessThan(1024 * 1024);
+    });
+
+    it("reads a payload, a reserved name or a sheet given after it first read the fields", () => {
+      const builder = measurements().parseVariant(
+        "questions_data",
+        "OBJECT<plot: STRING>",
+        "answer",
+      );
+      const names = () => builder.outputColumns().map(({ name }) => name);
+      expect(names()).toContain("plot");
+
+      builder.reserve(["plot"]);
+      expect(names()).toContain("plot_answer");
+
+      builder.parseVariant("custom_metadata", "OBJECT<soil: STRING>", "metadata");
+      expect(names()).toContain("soil");
+      expect(builder.build()).toContain(
+        "JSONExtract(CAST(NULL AS Nullable(String)), 'Nullable(String)') AS `soil`",
+      );
+
+      builder.metadataSheets([
+        { id: "s1", matchOn: "plot", schema: "OBJECT<soil: STRING>", version: "1" },
+      ]);
+      expect(builder.build()).toContain(
+        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+    });
+
+    it("compares a decimal field with a plain number as Spark does, as a decimal of its own scale", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "equals", value: 1.155 })
+        .build();
+
+      expect(sql).toContain("= toDecimal256('1.155', 3)");
+    });
+
+    it("looks for text in a decimal as its cell shows it, at its scale", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "contains", value: "5.00" })
+        .build();
+
+      expect(sql).toMatch(
+        /toDecimalString\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\), 2\) LIKE '%5\.00%'/,
+      );
+    });
+
+    it("compares a decimal field with text as two doubles, as Spark does", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "in", value: ["1.15"] })
+        .build();
+
+      expect(sql).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) IN \(toFloat64OrNull\(/,
+      );
+    });
+
+    it("compares a number listed with text as a double too, as the decimal field then reads", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "in", value: [1.15, "garbage"] })
+        .build();
+
+      expect(sql).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) IN \(toFloat64\(1\.15\), toFloat64OrNull\(/,
+      );
+    });
+
+    it("compares both bounds of a range with one text bound as doubles, and a plain range as decimals", () => {
+      const range = (value: [string | number, string | number]) =>
+        withMetadata()
+          .select(["id"])
+          .filter({ column: "area", operator: "between", value })
+          .build();
+
+      expect(range([1.15, "5"])).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) BETWEEN toFloat64\(1\.15\) AND toFloat64OrNull\(/,
+      );
+      expect(range([1.15, 5])).toMatch(
+        /accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\) BETWEEN toDecimal256\('1\.15', 2\) AND toDecimal256\('5', 0\)/,
+      );
+      expect(range(["1.15", "5"])).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) BETWEEN toFloat64OrNull\(.+\) AND toFloat64OrNull\(/,
+      );
+    });
+
+    it("unquotes a text field, keeps a mix of kinds as its JSON, and reads null as none only where typed", () => {
+      const mixedSchema = "OBJECT<mixed: VARIANT, soil: STRING, tags: ARRAY<STRING>>";
+      const sql = measurements()
+        .parseVariant("custom_metadata", mixedSchema, "metadata")
+        .metadataSheets([{ id: "s1", matchOn: "plot", schema: mixedSchema, version: "1" }])
+        .select(["soil", "mixed", "tags"])
+        .build();
+
+      expect(sql).toContain(
+        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+      expect(sql).toContain(
+        "multiIf(JSONHas(sheet_0_fields, 'mixed'), JSONExtractRaw(sheet_0_fields, 'mixed'), NULL) AS `mixed`",
+      );
+      expect(sql).toContain(
+        "nullIf(multiIf(JSONHas(sheet_0_fields, 'tags'), JSONExtractRaw(sheet_0_fields, 'tags'), NULL), 'null') AS `tags`",
+      );
+    });
+
+    it("joins each sheet a row can match, by an answer or the device, onto a sorted page's own rows", () => {
+      const sql = withMetadata()
+        .select(["id", "soil"])
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(10)
+        .build();
+
+      const lines = sql.split("\n");
+      expect(lines.slice(1, 4)).toEqual([
+        "FROM (SELECT base.*, sheet_0.fields AS sheet_0_fields, sheet_1.fields AS sheet_1_fields",
+        "FROM (SELECT * FROM experiment_measurements(experiment = 'e1')",
+        `WHERE (${key}) IN (SELECT ${key}`,
+      ]);
+      expect(lines[4]).toBe("FROM experiment_measurements(experiment = 'e1')");
+      expect(sql).toContain(
+        "LEFT JOIN (SELECT identifier, fields FROM experiment_metadata_rows(experiment = 'e1') WHERE sheet_id = 's1') AS sheet_0 ON sheet_0.identifier = base.questions_data['plot']",
+      );
+      expect(sql).toContain(
+        "WHERE sheet_id = 's2') AS sheet_1 ON sheet_1.identifier = base.device_id",
+      );
+      expect(sql).not.toContain("'s3'");
+    });
+
+    it("joins the whole table's metadata to pick a page by a metadata field", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "soil", operator: "equals", value: "loam" })
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(10)
+        .build();
+
+      const page = sql.slice(sql.indexOf(`IN (SELECT ${key}`));
+      expect(page).toMatch(/^IN \(SELECT [^\n]+\nFROM \(SELECT base\.\*, sheet_0\.fields/);
+      expect(page).toContain(
+        "FROM (SELECT * FROM experiment_measurements(experiment = 'e1')) AS base",
+      );
+    });
+
+    it("joins nothing for a read that names no metadata, or a table whose rows take none", () => {
+      const plain = withMetadata().select(["id"]).orderBy({ column: "id" }).limit(10).build();
+      const upload = new StoreQueryBuilder()
+        .read(UPLOADS_TABLE, "e1", "t1")
+        .metadataSheets(sheets)
+        .select(["custom_metadata"])
+        .build();
+
+      expect(plain).not.toContain("experiment_metadata_rows");
+      expect(upload).toBe(
+        "SELECT CAST(NULL AS Nullable(String)) AS `custom_metadata`\nFROM experiment_uploads(experiment = 'e1')\nWHERE upload_table_id = 't1'",
+      );
+    });
+  });
+
   it("reads an unsorted page as one statement, which stops at its limit", () => {
     const sql = measurements().select(["id"]).limit(5).build();
 

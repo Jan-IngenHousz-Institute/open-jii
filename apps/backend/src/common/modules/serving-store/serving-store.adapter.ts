@@ -8,6 +8,7 @@ import type {
 import { PageBytes } from "../../../experiments/core/models/page-bytes.model";
 import type {
   ServingStorePort,
+  StoreMetadataSheet,
   StoreQuery,
   StoreQueryColumn,
   StoreQueryParams,
@@ -40,6 +41,32 @@ export class ServingStoreAdapter implements ServingStorePort {
 
   holdsTable(tableName: string): boolean {
     return StoreTables.holds(tableName);
+  }
+
+  takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean {
+    return StoreTables.of(tableType, tableName)?.takesCustomMetadata === true;
+  }
+
+  reservedNames(): readonly string[] {
+    return StoreQueryBuilder.reservedNames;
+  }
+
+  async getMetadataSheets(experimentId: string): Promise<Result<StoreMetadataSheet[]>> {
+    const experiment = this.experimentArgument(experimentId);
+    const sql = `SELECT sheet_id, match_on, schema, toString(_commit_version) FROM experiment_metadata_sheets(${experiment}) ORDER BY sheet_created_at, sheet_id`;
+
+    const result = await this.client.query(sql);
+    if (result.isFailure()) {
+      return result;
+    }
+    return success(
+      result.value.rows.map(([id, matchOn, schema, version]) => ({
+        id: String(id),
+        matchOn: String(matchOn),
+        schema: typeof schema === "string" ? schema : null,
+        version: String(version),
+      })),
+    );
   }
 
   /**
@@ -124,7 +151,8 @@ export class ServingStoreAdapter implements ServingStorePort {
       .read(table, params.experimentId, identifier)
       .select(params.columns)
       .reserve(params.reservedColumns ?? [])
-      .serialNumbers(params.deviceSerials ?? []);
+      .serialNumbers(params.deviceSerials ?? [])
+      .metadataSheets(params.metadataSheets ?? []);
 
     if (params.distinct) {
       builder.distinct();
@@ -304,6 +332,9 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
     if (type.startsWith("STRUCT<")) {
       return "STRUCT";
+    }
+    if (type.startsWith("DECIMAL(")) {
+      return "DECIMAL";
     }
     return type === "BIGINT" ? "LONG" : type;
   }

@@ -410,6 +410,7 @@ describe("ExperimentStoreReadsService", () => {
       edges: [],
     };
     assertSuccess(await testApp.module.get(FlowRepository).create(experiment.id, graph));
+    vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success([]));
     vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(
       success([
         {
@@ -453,6 +454,83 @@ describe("ExperimentStoreReadsService", () => {
     assertSuccess(result);
     expect(result.value).toEqual(uploads);
     expect(flow).not.toHaveBeenCalled();
+  });
+
+  it("lists a table the sheets match with their schema, and a revision that moves with them", async () => {
+    vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(
+      success([
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 3,
+          latestRowAt: null,
+          schemaRevision: "r1",
+        },
+      ]),
+    );
+    vi.spyOn(store, "getMetadataSheets").mockResolvedValue(
+      success([{ id: "s1", matchOn: "plot", schema: "OBJECT<area: DECIMAL(2,1)>", version: "4" }]),
+    );
+
+    const result = await reads.tablesMetadata("e1");
+
+    assertSuccess(result);
+    expect(result.value[0].customMetadataSchema).toBe("OBJECT<area: DECIMAL(2,1)>");
+    expect(result.value[0].schemaRevision).toMatch(/^r1:[0-9a-f]{32}$/);
+  });
+
+  it("hands the store the sheets for a read that shows or filters by a metadata field, and reads none for any other", async () => {
+    const sheets = [{ id: "s1", matchOn: "plot", schema: "OBJECT<area: BIGINT>", version: "4" }];
+    const read = vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const metadata = { columnName: "custom_metadata", schema: "OBJECT<area: BIGINT>", suffix: "m" };
+    const ids = { ...page, variants: [metadata], columns: ["id"] };
+
+    assertSuccess(await reads.buildQuery({ ...page, variants: [metadata] }));
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        filters: [{ column: "area", operator: "equals", value: 3 }],
+      }),
+    );
+    assertSuccess(await reads.buildQuery(ids));
+    assertSuccess(await reads.buildQuery(page));
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledWith(page.experimentId);
+    expect(build).toHaveBeenNthCalledWith(1, expect.objectContaining({ metadataSheets: sheets }));
+    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ metadataSheets: sheets }));
+    expect(build).toHaveBeenNthCalledWith(3, expect.objectContaining({ metadataSheets: [] }));
+    expect(build).toHaveBeenNthCalledWith(4, expect.objectContaining({ metadataSheets: [] }));
+  });
+
+  it("hands the store the sheets for a metadata field named like one of the store's own lists", async () => {
+    const schema = "OBJECT<__order_ids: BIGINT>";
+    const sheets = [{ id: "s1", matchOn: "plot", schema, version: "4" }];
+    vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const metadata = { columnName: "custom_metadata", schema, suffix: "m" };
+    const ids = { ...page, variants: [metadata], columns: ["id"] };
+
+    assertSuccess(await reads.buildQuery({ ...ids, columns: ["__order_ids_m"] }));
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        filters: [{ column: "__order_ids_m", operator: "equals", value: 3 }],
+      }),
+    );
+    assertSuccess(
+      await reads.buildQuery({ ...ids, ordering: { column: "__order_ids_m", direction: "ASC" } }),
+    );
+
+    expect(build).toHaveBeenCalledTimes(3);
+    for (const call of [1, 2, 3]) {
+      expect(build).toHaveBeenNthCalledWith(
+        call,
+        expect.objectContaining({ metadataSheets: sheets }),
+      );
+    }
   });
 
   it("holds every table but the device table", () => {

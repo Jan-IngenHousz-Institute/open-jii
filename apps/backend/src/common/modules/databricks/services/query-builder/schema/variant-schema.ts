@@ -13,6 +13,9 @@ type SchemaNode =
 const VARIANT: SchemaNode = { kind: "scalar", name: "VARIANT" };
 const DOUBLE: SchemaNode = { kind: "scalar", name: "DOUBLE" };
 
+const DECIMAL_DIGITS = 38;
+const DECIMAL = /^DECIMAL\((\d+),(\d+)\)$/;
+
 // Spark leaves a field name bare when it reads as an identifier, and quotes any other.
 const BARE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -50,10 +53,36 @@ export class VariantSchema {
     const merged = schemas
       .map((schema) => VariantSchema.parse(schema))
       .reduce<SchemaNode | null>(
-        (sum, node) => (sum === null ? node : VariantSchema.mergeNodes(sum, node)),
+        (sum, node) =>
+          sum === null ? node : VariantSchema.mergeNodes(sum, node, VariantSchema.widenAsDouble),
         null,
       );
     return merged === null ? null : VariantSchema.render(merged);
+  }
+
+  /**
+   * The schema `schema_of_variant_agg` gives the rows of several custom metadata schemas together,
+   * decimals kept, as gold's listing types custom metadata. The store keeps one per metadata sheet,
+   * and this joins an experiment's. Null when there are none. The cases in
+   * `apps/data/tests/fixtures/custom_metadata_schemas.json`, worked out by gold's notebook, pin it.
+   */
+  static mergeKeepingDecimals(schemas: readonly string[]): string | null {
+    const merged = schemas
+      .map((schema) => VariantSchema.parse(schema))
+      .reduce<SchemaNode | null>(
+        (sum, node) =>
+          sum === null
+            ? node
+            : VariantSchema.mergeNodes(sum, node, VariantSchema.widenKeepingDecimals),
+        null,
+      );
+    return merged === null ? null : VariantSchema.render(merged);
+  }
+
+  /** A `DECIMAL(p,s)` type's precision and scale, null for any other type. */
+  static decimalOf(type: string): { precision: number; scale: number } | null {
+    const match = DECIMAL.exec(type);
+    return match === null ? null : { precision: Number(match[1]), scale: Number(match[2]) };
   }
 
   /** The object schema with the named top-level fields as DOUBLE, so their values cast on read. */
@@ -88,9 +117,13 @@ export class VariantSchema {
     return { kind: "scalar", name: trimmed.toUpperCase() };
   }
 
-  /** Spark's rules: a missing value gives way, numbers widen, objects and arrays merge inside, and
-   *  any other pair of kinds becomes VARIANT. */
-  private static mergeNodes(a: SchemaNode, b: SchemaNode): SchemaNode {
+  /** Spark's rules: a missing value gives way, two scalars widen, objects and arrays merge inside,
+   *  and any other pair of kinds becomes VARIANT. */
+  private static mergeNodes(
+    a: SchemaNode,
+    b: SchemaNode,
+    widen: (this: void, a: string, b: string) => string,
+  ): SchemaNode {
     if (VariantSchema.isVoid(a)) return b;
     if (VariantSchema.isVoid(b)) return a;
 
@@ -98,21 +131,43 @@ export class VariantSchema {
       const fields = new Map(a.fields);
       for (const [name, node] of b.fields) {
         const existing = fields.get(name);
-        fields.set(name, existing === undefined ? node : VariantSchema.mergeNodes(existing, node));
+        fields.set(
+          name,
+          existing === undefined ? node : VariantSchema.mergeNodes(existing, node, widen),
+        );
       }
       return { kind: "object", fields };
     }
 
     if (a.kind === "array" && b.kind === "array") {
-      return { kind: "array", element: VariantSchema.mergeNodes(a.element, b.element) };
+      return { kind: "array", element: VariantSchema.mergeNodes(a.element, b.element, widen) };
     }
 
     if (a.kind === "scalar" && b.kind === "scalar") {
-      if (a.name === b.name) return a;
-      const isNumberPair = [a.name, b.name].every((name) => name === "BIGINT" || name === "DOUBLE");
-      if (isNumberPair) return DOUBLE;
+      return a.name === b.name ? a : { kind: "scalar", name: widen(a.name, b.name) };
     }
     return VARIANT;
+  }
+
+  /** As gold's listing normalises them, every number a BIGINT or a DOUBLE. */
+  private static widenAsDouble(this: void, a: string, b: string): string {
+    const isNumberPair = [a, b].every((name) => name === "BIGINT" || name === "DOUBLE");
+    return isNumberPair ? "DOUBLE" : "VARIANT";
+  }
+
+  /** A double takes any number; decimals widen to hold both, a BIGINT counting as DECIMAL(20,0),
+   *  and need a double past 38 digits. */
+  private static widenKeepingDecimals(this: void, a: string, b: string): string {
+    const isNumber = (name: string) => name === "BIGINT" || name === "DOUBLE" || DECIMAL.test(name);
+    if (!isNumber(a) || !isNumber(b)) return "VARIANT";
+    if (a === "DOUBLE" || b === "DOUBLE") return "DOUBLE";
+
+    const asDecimal = (name: string) =>
+      VariantSchema.decimalOf(name) ?? { precision: 20, scale: 0 };
+    const [x, y] = [asDecimal(a), asDecimal(b)];
+    const scale = Math.max(x.scale, y.scale);
+    const precision = Math.max(x.precision - x.scale, y.precision - y.scale) + scale;
+    return precision > DECIMAL_DIGITS ? "DOUBLE" : `DECIMAL(${precision},${scale})`;
   }
 
   /** Fields in UTF-16 order, as Spark's Java strings compare and as JavaScript's do. */

@@ -18,6 +18,20 @@ const zMergeCases = z.array(
   }),
 );
 
+// Worked out by gold's table metadata notebook in the data tests.
+const SHEET_CASES = resolve(
+  __dirname,
+  "../../../../../../../../data/tests/fixtures/custom_metadata_schemas.json",
+);
+
+const zSheetCases = z.array(
+  z.object({
+    name: z.string(),
+    schema: z.string().nullable(),
+    rowSchemas: z.array(z.string().nullable()),
+  }),
+);
+
 describe("VariantSchema.topLevelFieldNames", () => {
   it("extracts simple comma-separated fields", () => {
     expect(VariantSchema.topLevelFieldNames("OBJECT<a: INT, b: STRING>")).toEqual(["a", "b"]);
@@ -101,6 +115,21 @@ describe("VariantSchema.merge", () => {
 
   it("has nothing to merge without a schema", () => {
     expect(VariantSchema.merge([])).toBeNull();
+  });
+});
+
+describe("VariantSchema.mergeKeepingDecimals", () => {
+  const cases = zSheetCases.parse(JSON.parse(readFileSync(SHEET_CASES, "utf-8")));
+
+  // Each row stands for a sheet of its own, whose schema the store holds apart.
+  it.each(cases)("joins the schemas of $name as gold types them together", (sheet) => {
+    const schemas = sheet.rowSchemas.filter((schema) => schema !== null);
+
+    expect(VariantSchema.mergeKeepingDecimals(schemas)).toBe(sheet.schema);
+  });
+
+  it("has nothing to merge without a schema", () => {
+    expect(VariantSchema.mergeKeepingDecimals([])).toBeNull();
   });
 });
 

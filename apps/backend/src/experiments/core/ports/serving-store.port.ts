@@ -28,12 +28,25 @@ export interface StoreQuery {
   columns: StoreQueryColumn[];
 }
 
+/** A metadata sheet as the store holds it, from the lakehouse's copy of the sheets. */
+export interface StoreMetadataSheet {
+  id: string;
+  /** The question whose answer matches a row's identifier, or `column:device_id`. */
+  matchOn: string;
+  /** Gold's schema of the sheet's rows, decimals kept; null for a sheet without rows. */
+  schema: string | null;
+  /** The commit the store holds the sheet at, which every change to the sheet moves. */
+  version: string;
+}
+
 export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
   /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
   orderByIds?: string[];
   /** Each client id whose device has a serial number to show, with it, for the labels a read
    *  filters, sorts or lists by. */
   deviceSerials?: [string, string][];
+  /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
+  metadataSheets?: StoreMetadataSheet[];
 }
 
 /** Reads of experiment data from the serving store, in the shapes warehouse reads come in. */
@@ -45,6 +58,16 @@ export interface ServingStorePort {
   holdsTable(tableName: string): boolean;
 
   getExperimentTableMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>>;
+
+  /** Whether the experiment's metadata sheets match the table's rows; an upload's they never do. */
+  takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean;
+
+  /** The names every store read holds for itself, so a payload field named alike reads under
+   *  another, as one named like a column does. */
+  reservedNames(): readonly string[];
+
+  /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
+  getMetadataSheets(experimentId: string): Promise<Result<StoreMetadataSheet[]>>;
 
   getExperimentTableColumns(
     tableType: ExperimentTableType,

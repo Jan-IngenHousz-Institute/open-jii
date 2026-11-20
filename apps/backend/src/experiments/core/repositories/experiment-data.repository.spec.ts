@@ -2878,6 +2878,7 @@ describe("ExperimentDataRepository", () => {
     beforeEach(() => {
       servingStore = testApp.module.get(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([largeTable]));
+      vi.spyOn(servingStore, "getMetadataSheets").mockResolvedValue(success([]));
     });
 
     it("reads a large table's page in one statement, never picking it by id first", async () => {
@@ -3520,6 +3521,7 @@ describe("ExperimentDataRepository", () => {
     it("adds later ones from Postgres to a store page's", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(servingStore, "getMetadataSheets").mockResolvedValue(success([]));
       vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
         success({
           columns: [column("id", 0), column("annotations", 1)],
@@ -3547,6 +3549,7 @@ describe("ExperimentDataRepository", () => {
     it("adds later ones to a filtered store page's", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(servingStore, "getMetadataSheets").mockResolvedValue(success([]));
       const countSql = "SELECT toString(count()) AS total";
       vi.spyOn(servingStore, "executeQuery").mockImplementation(({ sql }) =>
         Promise.resolve(
@@ -3585,6 +3588,7 @@ describe("ExperimentDataRepository", () => {
     it("shows a pseudonym for later annotations' authors in an anonymised experiment", async () => {
       const servingStore = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
       vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(success([table]));
+      vi.spyOn(servingStore, "getMetadataSheets").mockResolvedValue(success([]));
       vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
         success({
           columns: [

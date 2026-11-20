@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
@@ -22,6 +23,7 @@ import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
+import { CustomMetadataService } from "./custom-metadata.service";
 import { NumberAnswersService } from "./number-answers.service";
 
 type IdColumns = Map<string, "contributor" | "device">;
@@ -68,6 +70,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     private readonly deviceRepository: ExperimentDeviceRegistryRepository,
     private readonly numberAnswers: NumberAnswersService,
     private readonly annotationsRepository: ExperimentAnnotationsRepository,
+    private readonly customMetadata: CustomMetadataService,
   ) {}
 
   readsTable(tableName: string): boolean {
@@ -79,7 +82,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     if (metadata.isFailure()) {
       return metadata;
     }
-    return this.numberAnswers.typed(experimentId, metadata.value);
+    const withCustomMetadata = await this.customMetadata.typed(experimentId, metadata.value);
+    if (withCustomMetadata.isFailure()) {
+      return withCustomMetadata;
+    }
+    return this.numberAnswers.typed(experimentId, withCustomMetadata.value);
   }
 
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>> {
@@ -115,6 +122,13 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return orderResult;
     }
 
+    const sheetsResult = this.readsSheets(params)
+      ? await this.customMetadata.sheets(params.experimentId)
+      : success([]);
+    if (sheetsResult.isFailure()) {
+      return sheetsResult;
+    }
+
     // Devices can fill in alike, such as a registered one under two names, so a limit on what the
     // store returns would stop short of the distinct devices behind it.
     const isDistinctDevice =
@@ -125,6 +139,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
       deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
+      metadataSheets: sheetsResult.value,
     });
     if (built.isFailure()) {
       return built;
@@ -231,6 +246,35 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return idColumns.get(name) === "device" && field === "serial_number";
     });
     return namesLabel || this.sortsWholeDevice(params, idColumns);
+  }
+
+  /**
+   * Whether the read shows, filters or sorts by a custom metadata field, the only reads that join
+   * the sheets. A sheet's fields reach a read only through the custom metadata schema the listing
+   * gave it, and a read that names no columns shows them all.
+   */
+  private readsSheets(params: ExperimentQueryParams): boolean {
+    if (!this.store.takesCustomMetadata(params.tableType, params.tableName)) {
+      return false;
+    }
+    const sources = (params.variants ?? []).map(({ columnName, schema, suffix }) => ({
+      column: columnName,
+      schema,
+      suffix: suffix ?? columnName,
+    }));
+    const reserved = [...this.store.reservedNames(), ...(params.reservedColumns ?? [])];
+    const fields = new Set(
+      FlattenedFields.resolve(reserved, sources)
+        .filter(({ column }) => column === "custom_metadata")
+        .map(({ key }) => key),
+    );
+    const isEveryColumnShown = (params.columns ?? []).length === 0;
+    const named = [
+      ...(params.filters ?? []).map(({ column }) => column),
+      ...(params.columns ?? []),
+      params.ordering?.column ?? "",
+    ];
+    return (isEveryColumnShown && fields.size > 0) || named.some((name) => fields.has(name));
   }
 
   /** Only a serial a label shows enters the query; any other device reads none from the list. */
