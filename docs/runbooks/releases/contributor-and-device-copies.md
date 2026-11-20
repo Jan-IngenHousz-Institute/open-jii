@@ -232,5 +232,6 @@ WHERE id IN ('<id>', '<id>', '<id>');
 
 Each names its author as the platform shows them now, `Unknown User` for a deactivated profile.
 
-When the release comes back, run steps 2 to 4 again: the copies missed every change made meanwhile.
-Run step 6 again too, since the previous release wrote names back.
+When the release comes back, run steps 1 to 5 again: the copies missed every change made meanwhile,
+and a Centrum the rollback restarted keeps the previous notebooks until step 5 restarts it. Then run
+step 6 again, since the previous release wrote names back.
