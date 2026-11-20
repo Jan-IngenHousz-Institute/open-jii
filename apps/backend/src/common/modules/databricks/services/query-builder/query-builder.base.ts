@@ -121,23 +121,22 @@ export abstract class BaseQueryBuilder {
 
   protected buildOrdering(ordering: QueryOrdering, target: string): string {
     const { direction = "ASC", mode } = ordering;
+    const rowId = this.rowIdFor(ordering);
     if (mode?.kind === "numericString") {
-      return numericStringOrder(target, direction, this.rowIdFor(mode));
+      return numericStringOrder(target, direction, rowId);
     }
+
+    const tieBreak = rowId ? `, ${rowId} ASC` : "";
     if (mode?.kind === "number") {
-      const rowId = this.rowIdFor(mode);
-      return `${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
+      return `${target} ${direction} NULLS LAST${tieBreak}`;
     }
     const value =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${value} ${direction}`;
+    return `${value} ${direction}${tieBreak}`;
   }
 
-  protected rowIdFor(mode: QueryOrdering["mode"]): string | undefined {
-    const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
-    return !this.isDistinct && isRowOrdered && mode.rowId
-      ? this.escapeIdentifier(mode.rowId)
-      : undefined;
+  protected rowIdFor({ rowId }: QueryOrdering): string | undefined {
+    return !this.isDistinct && rowId ? this.columnExpression(rowId) : undefined;
   }
 
   /** The SQL literal a filter on `column` compares with. */
@@ -462,8 +461,8 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
   }
 
   private buildNumericQuery(ordering: QueryOrdering, projection: string, where: string): string {
-    const { direction = "ASC", mode } = ordering;
-    const rowId = this.rowIdFor(mode);
+    const { direction = "ASC" } = ordering;
+    const rowId = this.rowIdFor(ordering);
     const keys = numericStringKeys(this.columnExpression(ordering.column), rowId);
     const names = this.sortKeyNames();
     const sortedBy: NumericStringKeys = {

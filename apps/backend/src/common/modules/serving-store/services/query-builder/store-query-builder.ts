@@ -363,8 +363,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
-  private sortClause({ column, direction = "ASC", mode, idOrder }: StoreOrdering): string {
+  private sortClause(ordering: StoreOrdering): string {
+    const { column, direction = "ASC", mode, idOrder } = ordering;
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
+    const rowIdSql = this.rowIdFor(ordering);
+    const tieBreak = rowIdSql ? `, ${rowIdSql} ASC` : "";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
       const { expression, idOf } = this.baseColumn(name);
@@ -372,25 +375,23 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
       // in the order carry, then by its label.
       const isDevice = idOf === "device";
-      return isDevice ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}` : place;
+      const sorted = isDevice
+        ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}`
+        : place;
+      return `${sorted}${tieBreak}`;
     }
 
     const target = this.columnExpression(column);
-    const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
-    const rowId =
-      isRowOrdered && !this.isDistinct && mode.rowId
-        ? this.columnExpression(mode.rowId)
-        : undefined;
     if (mode?.kind === "numericString") {
-      return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
+      return numericStringOrdering(this.numericStringKeys(target, rowIdSql), direction);
     }
     if (mode?.kind === "number") {
       const nan = this.nanKey(target, column, direction, "NULLS LAST");
-      return `${nan}${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
+      return `${nan}${target} ${direction} NULLS LAST${tieBreak}`;
     }
     const sorted =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}`;
+    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}${tieBreak}`;
   }
 
   /** Spark sorts NaN above every number, where the store sorts it beside null. */

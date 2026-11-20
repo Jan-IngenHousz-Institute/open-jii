@@ -941,16 +941,16 @@ export class ExperimentDataRepository {
     const readsRows = !distinct && aggregation === undefined;
     const columns = readsRows ? this.withPhoneAnnotations(shape, options.columns) : options.columns;
 
-    let effectiveOrdering = ordering;
+    const hasRowId = shape.baseColumns?.includes(ROW_ID) ?? false;
+    const isSortedById = ordering?.column === ROW_ID;
+    const rowId = hasRowId && !isSortedById ? ROW_ID : undefined;
+    let effectiveOrdering = ordering && { ...ordering, rowId };
     const questionType =
       ordering && !ordering.mode ? this.questionType(shape, ordering.column) : undefined;
-    if (ordering && (questionType === "STRING" || questionType === "DOUBLE")) {
+    if (effectiveOrdering && (questionType === "STRING" || questionType === "DOUBLE")) {
       effectiveOrdering = {
-        ...ordering,
-        mode: {
-          kind: questionType === "STRING" ? "numericString" : "number",
-          rowId: reservedColumns.includes(ROW_ID) ? ROW_ID : undefined,
-        },
+        ...effectiveOrdering,
+        mode: { kind: questionType === "STRING" ? "numericString" : "number" },
       };
     }
 
