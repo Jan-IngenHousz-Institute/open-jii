@@ -43,6 +43,7 @@ import type {
   ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
+  FlaggedRows,
   SchemaDataDto,
   TableDataDto,
   VariantColumn,
@@ -119,7 +120,7 @@ interface TableShape {
    */
   phoneAnnotationsFrom?: string;
   /** Every query of a flagged read keeps the same rows: those with a flag, or those without. */
-  flagged?: ExperimentDataFlagged;
+  flagged?: FlaggedRows;
 }
 
 type RenamedColumns = Map<string, { name: string; source: VariantColumn }>;
@@ -241,7 +242,15 @@ export class ExperimentDataRepository {
       shape = joined.value;
     }
     if (flagged !== undefined) {
-      shape = { ...shape, flagged };
+      const flaggedRows = await this.storeReads.flaggedRows(
+        experimentId,
+        shape.metadata.identifier,
+        flagged,
+      );
+      if (flaggedRows.isFailure()) {
+        return flaggedRows;
+      }
+      shape = { ...shape, flagged: flaggedRows.value };
     }
 
     const anonymizedResult = await this.anonymizedQuery(experiment, tableName, shape.source, {

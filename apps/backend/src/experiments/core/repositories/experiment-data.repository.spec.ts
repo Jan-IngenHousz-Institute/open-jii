@@ -3075,6 +3075,38 @@ describe("ExperimentDataRepository", () => {
       expect(result.value[0].totalRows).toBe(1);
     });
 
+    it("looks up a flagged page's rows once, so its count and its rows keep the same ones", async () => {
+      const lookup = vi
+        .spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findFlaggedRowIds")
+        .mockResolvedValueOnce(success(["1"]))
+        .mockResolvedValueOnce(success(["1", "2"]));
+      const execute = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: storeColumns,
+          rows: [["1", "A1"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        flagged: "only",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(lookup).toHaveBeenCalledExactlyOnceWith(experimentId, "raw_data");
+      expect(execute).toHaveBeenCalledTimes(2);
+      for (const [query] of execute.mock.calls) {
+        expect(query.sql).toContain("CAST(['1'] AS Array(String)) AS __flagged_row_ids");
+      }
+    });
+
     it("refuses a flagged read the warehouse would answer before reading any metadata: a chart, or a table the store lacks", async () => {
       const metadata = vi
         .spyOn(databricksPort, "getExperimentTableMetadata")

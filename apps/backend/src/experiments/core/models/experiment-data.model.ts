@@ -128,6 +128,15 @@ export interface ExperimentAsOfJoin {
   toleranceMinutes: number;
 }
 
+/**
+ * A read filtered by flags: which rows it keeps, and the rows flagged after they were measured,
+ * from Postgres.
+ */
+export interface FlaggedRows {
+  kind: ExperimentDataFlagged;
+  addedRowIds: string[];
+}
+
 export interface ExperimentQueryParams {
   baseColumns?: string[];
   join?: ExperimentAsOfJoin;
@@ -145,7 +154,7 @@ export interface ExperimentQueryParams {
   limit?: number;
   offset?: number;
   /** Only the store reads by flags; a flagged read is refused before it could reach the warehouse. */
-  flagged?: ExperimentDataFlagged;
+  flagged?: FlaggedRows;
 }
 
 /**

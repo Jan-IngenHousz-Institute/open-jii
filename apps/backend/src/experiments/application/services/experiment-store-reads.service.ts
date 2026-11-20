@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
 
+import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
@@ -9,6 +11,7 @@ import type {
   ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
+  FlaggedRows,
 } from "../../core/models/experiment-data.model";
 import { PageBytes } from "../../core/models/page-bytes.model";
 import type {
@@ -16,11 +19,7 @@ import type {
   TableQuery,
 } from "../../core/ports/experiment-table-reads.port";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
-import type {
-  ServingStorePort,
-  StoreQueryColumn,
-  StoreQueryParams,
-} from "../../core/ports/serving-store.port";
+import type { ServingStorePort, StoreQueryColumn } from "../../core/ports/serving-store.port";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDeviceRegistryRepository } from "../../core/repositories/experiment-device-registry.repository";
 import { NumberAnswersService } from "./number-answers.service";
@@ -116,11 +115,6 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return orderResult;
     }
 
-    const flaggedResult = await this.flagFilter(params);
-    if (flaggedResult.isFailure()) {
-      return flaggedResult;
-    }
-
     // Devices can fill in alike, such as a registered one under two names, so a limit on what the
     // store returns would stop short of the distinct devices behind it.
     const isDistinctDevice =
@@ -131,7 +125,6 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
       deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
-      flagged: flaggedResult.value,
     });
     if (built.isFailure()) {
       return built;
@@ -145,6 +138,19 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
 
   countQuery(query: TableQuery): TableQuery {
     return { ...this.store.countQuery(query), distinct: false };
+  }
+
+  /**
+   * The rows a read filtered by `kind` keeps, the ones flagged since they were measured taken from
+   * Postgres. A read looks them up once, so its page and its count keep the same rows.
+   */
+  async flaggedRows(
+    experimentId: string,
+    tableName: string,
+    kind: ExperimentDataFlagged,
+  ): Promise<Result<FlaggedRows>> {
+    const added = await this.annotationsRepository.findFlaggedRowIds(experimentId, tableName);
+    return added.isFailure() ? added : success({ kind, addedRowIds: added.value });
   }
 
   deviceLabelsQuery(query: TableQuery, limit: number, offset: number): TableQuery {
@@ -199,18 +205,6 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       (a, b) => this.compareText(a.name, b.name) || this.compareText(a.id, b.id),
     );
     return success(byName.map(({ id }) => id));
-  }
-
-  private async flagFilter({
-    flagged,
-    experimentId,
-    tableName,
-  }: ExperimentQueryParams): Promise<Result<StoreQueryParams["flagged"]>> {
-    if (flagged === undefined) {
-      return success(undefined);
-    }
-    const added = await this.annotationsRepository.findFlaggedRowIds(experimentId, tableName);
-    return added.isFailure() ? added : success({ kind: flagged, addedRowIds: added.value });
   }
 
   /**
