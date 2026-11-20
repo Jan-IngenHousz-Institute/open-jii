@@ -186,6 +186,49 @@ describe("identifyDevice", () => {
     expect(identified.info.raw.helloReply).toBe("NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty");
   });
 
+  it.each(["ESP-ROM:esp32c3-api1-20210207\r\n", "\r\n", "BAD COMMAND\r\n"])(
+    "identifies an Ambit when a separate startup chunk precedes hello: %j",
+    async (startup) => {
+      vi.useFakeTimers();
+      const hello = "NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty\r\n";
+      const transport = createMockTransport((payload, reply) => {
+        if (payload === HELLO || payload === "hello\n") {
+          reply(startup);
+          setTimeout(() => reply(hello), 10);
+        }
+        // Older Ambit firmware has no INFO response.
+      });
+
+      const promise = identifyDevice(transport, { probeTimeoutMs: 50 });
+      await vi.advanceTimersByTimeAsync(1000);
+      const identified = await promise;
+
+      expect(identified.family).toBe("ambit");
+      expect(identified.connector).toBeInstanceOf(AmbitDriver);
+      expect(identified.info.firmwareVersion).toBe("1.1.4");
+      expect(transport.sent).not.toContain(INFO);
+    },
+  );
+
+  it("retries hello after an Ambit wake reply without a family signature", async () => {
+    vi.useFakeTimers();
+    let helloCount = 0;
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO) {
+        reply(++helloCount === 1 ? "BAD COMMAND\r\n" : "NEW AmbitV003 Ready FW:1.1.4\r\n");
+      }
+      if (payload === "hello\n") reply("NEW AmbitV003 Ready FW:1.1.4\r\n");
+    });
+
+    const promise = identifyDevice(transport, { probeTimeoutMs: 50 });
+    await vi.advanceTimersByTimeAsync(1000);
+    const identified = await promise;
+
+    expect(identified.family).toBe("ambit");
+    expect(transport.sent.filter((payload) => payload === HELLO)).toHaveLength(2);
+    expect(transport.sent).not.toContain(INFO);
+  });
+
   it("classifies a JSON hello by its device key case-insensitively, capturing name and version", async () => {
     const jsonHello = '{"device":"Ambit","version":"2.0","name":"Greenhouse A"}\nAmbit Ready\n';
     const transport = createMockTransport((payload, reply) => {

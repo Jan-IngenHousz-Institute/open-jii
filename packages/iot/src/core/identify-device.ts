@@ -18,7 +18,7 @@ import { isSensorFamily, SENSOR_FAMILIES } from "./families";
 export interface IdentifyDeviceOptions {
   /** Per-probe reply timeout in ms (default 2000). */
   probeTimeoutMs?: number;
-  /** Extra hello attempts after a silent first one (default 1). */
+  /** Extra hello attempts after silence or an unrecognized reply (default 1). */
   helloRetries?: number;
   /** Skip probing entirely and connect as this family. */
   assumeFamily?: SensorFamily;
@@ -268,7 +268,9 @@ export async function identifyDevice(
   for (let attempt = 0; attempt <= helloRetries; attempt++) {
     const reply = await probe(HELLO_PROBE, {
       timeoutMs,
-      isComplete: (buffer) => buffer.includes("\n") || classifyHelloReply(buffer) !== null,
+      // Boot output can precede the answer in a separate USB read.
+      isComplete: (buffer) =>
+        classifyHelloReply(buffer) !== null || parseJsonHello(buffer) !== null,
     });
     if (reply.trim() === "") continue;
     helloReply = reply.trim();
@@ -277,8 +279,10 @@ export async function identifyDevice(
       log.debug("identify: hello probe matched", { family: classified.family });
       probeIdentity = classified;
       connector = createConnectorForFamily(classified.family, options?.logger);
+      break;
     }
-    break;
+    // An unknown device has still identified itself; noise or a wake error has not.
+    if (parseJsonHello(reply)) break;
   }
 
   // Probe 2: the openJII generic JSON contract answers INFO with a status object.
