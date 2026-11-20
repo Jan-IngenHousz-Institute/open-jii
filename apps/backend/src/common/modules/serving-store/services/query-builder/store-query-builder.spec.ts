@@ -403,9 +403,22 @@ describe("StoreQueryBuilder", () => {
       const sql = withMetadata().select(["area"]).build();
 
       const text =
-        "multiIf(JSONHas(sheet_1_fields, 'area'), JSONExtractRaw(sheet_1_fields, 'area'), JSONHas(sheet_0_fields, 'area'), JSONExtractRaw(sheet_0_fields, 'area'), NULL)";
+        "multiIf(simpleJSONHas(sheet_1_fields, 'area'), simpleJSONExtractRaw(sheet_1_fields, 'area'), simpleJSONHas(sheet_0_fields, 'area'), simpleJSONExtractRaw(sheet_0_fields, 'area'), NULL)";
       expect(sql).toContain(
         `toDecimalString(accurateCastOrNull(${text}, 'Decimal(4, 2)'), 2) AS \`area\``,
+      );
+    });
+
+    it("reads a sheet whose rows hold objects by their top-level keys alone", () => {
+      const nested = "OBJECT<extra: OBJECT<soil: STRING>, soil: STRING>";
+      const sql = measurements()
+        .parseVariant("custom_metadata", nested, "metadata")
+        .metadataSheets([{ id: "s1", matchOn: "plot", schema: nested, version: "1" }])
+        .select(["soil"])
+        .build();
+
+      expect(sql).toContain(
+        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
       );
     });
 
@@ -413,7 +426,7 @@ describe("StoreQueryBuilder", () => {
       const sql = withMetadata().select(["soil"]).build();
 
       expect(sql).toContain(
-        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
       );
     });
 
@@ -479,13 +492,13 @@ describe("StoreQueryBuilder", () => {
         .build();
 
       expect(sql).toContain(
-        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
       );
       expect(sql).toContain(
-        "multiIf(JSONHas(sheet_0_fields, 'mixed'), JSONExtractRaw(sheet_0_fields, 'mixed'), NULL) AS `mixed`",
+        "multiIf(simpleJSONHas(sheet_0_fields, 'mixed'), simpleJSONExtractRaw(sheet_0_fields, 'mixed'), NULL) AS `mixed`",
       );
       expect(sql).toContain(
-        "nullIf(multiIf(JSONHas(sheet_0_fields, 'tags'), JSONExtractRaw(sheet_0_fields, 'tags'), NULL), 'null') AS `tags`",
+        "nullIf(multiIf(simpleJSONHas(sheet_0_fields, 'tags'), simpleJSONExtractRaw(sheet_0_fields, 'tags'), NULL), 'null') AS `tags`",
       );
     });
 

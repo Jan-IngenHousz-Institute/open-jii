@@ -68,7 +68,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private filterColumns: string[] = [];
   private deviceSerials: [string, string][] = [];
   private flaggedRowIds?: string[];
-  private sheets: (StoreMetadataSheet & { fields: ReadonlySet<string> })[] = [];
+  private sheets: (StoreMetadataSheet & {
+    fields: ReadonlySet<string>;
+    nestsObjects: boolean;
+  })[] = [];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
@@ -123,10 +126,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** The experiment's metadata sheets, oldest first, which a read of custom metadata joins. */
   metadataSheets(sheets: StoreMetadataSheet[]): this {
-    this.sheets = sheets.map((sheet) => ({
-      ...sheet,
-      fields: new Set(sheet.schema === null ? [] : VariantSchema.topLevelFieldNames(sheet.schema)),
-    }));
+    this.sheets = sheets.map((sheet) => {
+      const fields = sheet.schema === null ? [] : VariantSchema.topLevelFields(sheet.schema);
+      return {
+        ...sheet,
+        fields: new Set(fields.map(({ name }) => name)),
+        nestsObjects: fields.some(({ type }) => type.includes("OBJECT<")),
+      };
+    });
     return this;
   }
 
@@ -418,10 +425,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     match: string;
     alias: string;
     fields: ReadonlySet<string>;
+    nestsObjects: boolean;
   }[] {
-    return this.sheets.flatMap(({ id, matchOn, fields }, index) => {
+    return this.sheets.flatMap(({ id, matchOn, fields, nestsObjects }, index) => {
       const match = this.sheetMatch(matchOn);
-      return match === null ? [] : [{ id, match, alias: `sheet_${index}`, fields }];
+      return match === null ? [] : [{ id, match, alias: `sheet_${index}`, fields, nestsObjects }];
     });
   }
 
@@ -437,19 +445,21 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /**
    * A field's JSON text in the newest sheet whose matched row holds it, null ones included. It is
    * copied as written, since a parsed number passes through a double, which loses digits a sheet's
-   * decimals keep. Only a row's top-level keys count, as the warehouse reads a sheet's fields. A
-   * sheet whose schema lacks the field is not asked, so a page of many wide sheets stays within the
-   * store's query size.
+   * decimals keep. simpleJSON copies it so, and reads a row holding an integer past 64 bits, which
+   * JSONHas cannot parse; but it finds a key at any depth. Only a row's top-level keys count, as
+   * the warehouse reads a sheet's fields, so a sheet whose rows hold objects is read with JSONHas
+   * and JSONExtractRaw. A sheet whose schema lacks the field is not asked, so a page of many wide
+   * sheets stays within the store's query size.
    */
   private metadataText(name: string): string {
     const key = this.escapeValue(name);
     const newestFirst = this.matchedSheets()
       .filter(({ fields }) => fields.has(name))
       .reverse();
-    const branches = newestFirst.flatMap(({ alias }) => [
-      `JSONHas(${alias}_fields, ${key})`,
-      `JSONExtractRaw(${alias}_fields, ${key})`,
-    ]);
+    const branches = newestFirst.flatMap(({ alias, nestsObjects }) => {
+      const json = nestsObjects ? "JSON" : "simpleJSON";
+      return [`${json}Has(${alias}_fields, ${key})`, `${json}ExtractRaw(${alias}_fields, ${key})`];
+    });
     return branches.length === 0
       ? "CAST(NULL AS Nullable(String))"
       : `multiIf(${branches.join(", ")}, NULL)`;
