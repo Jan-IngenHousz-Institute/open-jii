@@ -1826,6 +1826,60 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(rows).toEqual([["61", "clay"]]);
     });
 
+    it("shows an explicit null in a mix of kinds as null, as the warehouse does, and a missing key as none", async () => {
+      const mixed = "mixed-e";
+      const plots = ["M1", "M2", "M3", "M4"];
+      await admin.insert({
+        table: "measurements",
+        values: plots.map((plot, index) => ({
+          ...reading(71 + index, plot, null),
+          experiment_id: mixed,
+        })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M1", { mix: 5 }),
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M2", { mix: "dry" }),
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M3", { mix: null }),
+          sheetRow("s-mix", "2026-09-01 08:00:00", "plot", "M4", { soil: "clay" }),
+        ].map((row) => ({ ...row, experiment_id: mixed })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          {
+            ...sheet("s-mix", "2026-09-01 08:00:00", "plot", "OBJECT<mix: VARIANT, soil: STRING>"),
+            experiment_id: mixed,
+          },
+        ],
+        format: "JSONEachRow",
+      });
+
+      const shown = await page(
+        { columns: ["id", "mix"], ordering: { column: "id", direction: "ASC" }, limit: 10 },
+        mixed,
+      );
+      const nulls = await page(
+        {
+          columns: ["id"],
+          filters: [{ column: "mix", operator: "contains", value: "null" }],
+          limit: 10,
+        },
+        mixed,
+      );
+
+      expect(shown).toEqual([
+        ["71", "5"],
+        ["72", '"dry"'],
+        ["73", "null"],
+        ["74", null],
+      ]);
+      expect(nulls).toEqual([["73"]]);
+    });
+
     it("reads integers past the 64-bit ranges as the warehouse does, with the rest of their row", async () => {
       const codes = "codes-e";
       const rows = [

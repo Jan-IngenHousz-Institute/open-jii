@@ -413,18 +413,25 @@ describe("StoreQueryBuilder", () => {
       expect(sql).toContain("= toDecimal256('1.155', 3)");
     });
 
-    it("unquotes a text field, and keeps a mix of kinds as its JSON", () => {
+    it("unquotes a text field, keeps a mix of kinds as its JSON, and reads null as none only where typed", () => {
       const sql = measurements()
-        .parseVariant("custom_metadata", "OBJECT<mixed: VARIANT, soil: STRING>", "metadata")
+        .parseVariant(
+          "custom_metadata",
+          "OBJECT<mixed: VARIANT, soil: STRING, tags: ARRAY<STRING>>",
+          "metadata",
+        )
         .metadataSheets(sheets.slice(0, 1))
-        .select(["soil", "mixed"])
+        .select(["soil", "mixed", "tags"])
         .build();
 
       expect(sql).toContain(
         "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
       );
       expect(sql).toContain(
-        "nullIf(multiIf(JSONHas(sheet_0_fields, 'mixed'), JSONExtractRaw(sheet_0_fields, 'mixed'), NULL), 'null') AS `mixed`",
+        "multiIf(JSONHas(sheet_0_fields, 'mixed'), JSONExtractRaw(sheet_0_fields, 'mixed'), NULL) AS `mixed`",
+      );
+      expect(sql).toContain(
+        "nullIf(multiIf(JSONHas(sheet_0_fields, 'tags'), JSONExtractRaw(sheet_0_fields, 'tags'), NULL), 'null') AS `tags`",
       );
     });
 

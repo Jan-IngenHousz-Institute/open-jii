@@ -698,7 +698,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** A sheet value's JSON text typed as an answer's text is, a decimal at the schema's scale; an
-   *  object, an array or a mix of kinds shows as its JSON. */
+   *  object, an array or a mix of kinds shows as its JSON. A mix keeps an explicit null as `null`,
+   *  as `try_variant_get` shows it, where a typed value reads it as none. */
   private metadataValue(text: string, type: string): string {
     const decimal = VariantSchema.decimalOf(type);
     if (decimal !== null) {
@@ -710,6 +711,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
     if (type === "STRING") {
       return `JSONExtract(${text}, 'Nullable(String)')`;
+    }
+    if (type === "VARIANT") {
+      return text;
     }
     const isScalar = type in STORE_SCALARS;
     return isScalar ? this.typedScalar(text, type) : `nullIf(${text}, 'null')`;
