@@ -1,7 +1,7 @@
-import { eq, experiments } from "@repo/database";
+import { and, eq, experiments } from "@repo/database";
 
 import { TestHarness } from "../../test/test-harness";
-import { resourceRoleExpression } from "./resource-access-scope";
+import { readingResourceCondition, resourceRoleExpression } from "./resource-access-scope";
 
 describe("resourceRoleExpression", () => {
   const testApp = TestHarness.App;
@@ -64,5 +64,56 @@ describe("resourceRoleExpression", () => {
     });
 
     expect(await roleOf(experiment.id, testUserId)).toBeNull();
+  });
+});
+
+describe("readingResourceCondition", () => {
+  const testApp = TestHarness.App;
+
+  beforeAll(async () => {
+    await testApp.setup();
+  });
+
+  beforeEach(async () => {
+    await testApp.beforeEach();
+  });
+
+  afterEach(() => {
+    testApp.afterEach();
+  });
+
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  function conditionFor(userId: string | undefined) {
+    return readingResourceCondition({
+      database: testApp.database,
+      resourceType: "experiment",
+      resourceIdColumn: experiments.id,
+      organizationIdColumn: experiments.organizationId,
+      userId,
+    });
+  }
+
+  it("is undefined when there is no caller", () => {
+    expect(conditionFor(undefined)).toBeUndefined();
+  });
+
+  it("is undefined for an empty caller id", () => {
+    expect(conditionFor("")).toBeUndefined();
+  });
+
+  it("admits an experiment the caller can read through a relationship", async () => {
+    const userId = await testApp.createTestUser({});
+    const { experiment } = await testApp.createExperiment({ name: "Own work", userId });
+    const condition = conditionFor(userId);
+
+    expect(condition).toBeDefined();
+    const rows = await testApp.database
+      .select({ id: experiments.id })
+      .from(experiments)
+      .where(and(eq(experiments.id, experiment.id), condition));
+    expect(rows).toEqual([{ id: experiment.id }]);
   });
 });

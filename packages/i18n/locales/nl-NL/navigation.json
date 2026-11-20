@@ -72,6 +72,9 @@
       "showKeyboardShortcuts": "Sneltoetsen tonen",
       "openDocumentation": "Documentatie openen"
     },
+    "result": {
+      "inParent": "in {{title}}"
+    },
     "status": {
       "searching": "Zoeken...",
       "errorTitle": "Er is iets misgegaan",
