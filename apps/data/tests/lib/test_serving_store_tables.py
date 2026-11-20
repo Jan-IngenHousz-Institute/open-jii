@@ -324,6 +324,7 @@ def test_a_sheets_schema_leaves_out_a_row_that_is_no_object_and_keeps_the_rest(
 
 def test_each_table_reads_its_source_in_the_pipeline_or_the_sheets_copy_by_name() -> None:
     assert MEASUREMENTS.source("open_jii_dev") == "LIVE.experiment_raw_data"
+    assert DEVICE_EVENTS.source("open_jii_dev") == "LIVE.clean_device_lifecycle_events"
     assert METADATA_ROWS.source("open_jii_dev") == "open_jii_dev.centrum.experiment_custom_metadata"
 
 
