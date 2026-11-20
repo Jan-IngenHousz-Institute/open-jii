@@ -31,18 +31,22 @@ describe("GetUsersMetadataUseCase", () => {
     userRepository = testApp.module.get(UserRepository);
 
     // Create profiles for the test users
-    await userRepository.createOrUpdateUserProfile(testUser1Id, {
-      firstName: "John",
-      lastName: "Doe",
-      bio: "Test bio 1",
-      activated: true,
-    });
-    await userRepository.createOrUpdateUserProfile(testUser2Id, {
-      firstName: "Jane",
-      lastName: "Smith",
-      bio: "Test bio 2",
-      activated: true,
-    });
+    await userRepository.transaction((tx) =>
+      userRepository.createOrUpdateUserProfile(tx, testUser1Id, {
+        firstName: "John",
+        lastName: "Doe",
+        bio: "Test bio 1",
+        activated: true,
+      }),
+    );
+    await userRepository.transaction((tx) =>
+      userRepository.createOrUpdateUserProfile(tx, testUser2Id, {
+        firstName: "Jane",
+        lastName: "Smith",
+        bio: "Test bio 2",
+        activated: true,
+      }),
+    );
   });
 
   afterEach(() => {

@@ -21,6 +21,13 @@ import { TestHarness } from "../../../test/test-harness";
 import type { IotDeviceDto, CreateIotDeviceDto } from "../models/iot-device.model";
 import { deviceRungSql, IotDeviceRepository } from "./iot-device.repository";
 
+// create and delete take the caller's transaction.
+const register = (devices: IotDeviceRepository, dto: CreateIotDeviceDto, userId: string) =>
+  devices.transaction((tx) => devices.create(tx, dto, userId));
+
+const remove = (devices: IotDeviceRepository, deviceId: string) =>
+  devices.transaction((tx) => devices.delete(tx, deviceId));
+
 describe("IotDeviceRepository", () => {
   const testApp = TestHarness.App;
   let repository: IotDeviceRepository;
@@ -59,10 +66,10 @@ describe("IotDeviceRepository", () => {
   it("creates a device and persists it", async () => {
     const dto = buildDto();
 
-    const result = await repository.create(dto, userId);
+    const result = await register(repository, dto, userId);
 
     assertSuccess(result);
-    const device = result.value[0];
+    const device = result.value;
     expect(device.serialNumber).toBe(dto.serialNumber);
     expect(device.status).toBe("registered");
 
@@ -75,10 +82,10 @@ describe("IotDeviceRepository", () => {
   });
 
   it("lists devices the caller created", async () => {
-    await repository.create(buildDto(), userId);
-    await repository.create(buildDto(), userId);
+    await register(repository, buildDto(), userId);
+    await register(repository, buildDto(), userId);
     const otherUser = await testApp.createTestUser({});
-    await repository.create(buildDto(), otherUser);
+    await register(repository, buildDto(), otherUser);
 
     const result = await repository.listAccessible(userId);
 
@@ -255,18 +262,18 @@ describe("IotDeviceRepository", () => {
   });
 
   it("findById is not owner-scoped (authorization is enforced by the @CanAccess guard)", async () => {
-    const created = await repository.create(buildDto(), userId);
+    const created = await register(repository, buildDto(), userId);
     assertSuccess(created);
 
-    const result = await repository.findById(created.value[0].id);
+    const result = await repository.findById(created.value.id);
 
     assertSuccess(result);
-    expect(result.value?.id).toBe(created.value[0].id);
+    expect(result.value?.id).toBe(created.value.id);
   });
 
   it("finds a device by serial number", async () => {
     const dto = buildDto();
-    await repository.create(dto, userId);
+    await register(repository, dto, userId);
 
     const result = await repository.findBySerialNumber(dto.serialNumber);
 
@@ -278,8 +285,8 @@ describe("IotDeviceRepository", () => {
     const otherUser = await testApp.createTestUser({ name: "Other Owner" });
     const mine = buildDto();
     const theirs = buildDto();
-    await repository.create(mine, userId);
-    await repository.create(theirs, otherUser);
+    await register(repository, mine, userId);
+    await register(repository, theirs, otherUser);
 
     const result = await repository.findByThingNames([mine.thingName, theirs.thingName, "missing"]);
 
@@ -297,16 +304,16 @@ describe("IotDeviceRepository", () => {
   });
 
   it("deletes a device", async () => {
-    const created = await repository.create(buildDto(), userId);
+    const created = await register(repository, buildDto(), userId);
     assertSuccess(created);
 
-    const del = await repository.delete(created.value[0].id);
+    const del = await remove(repository, created.value.id);
 
     assertSuccess(del);
     const rows = await testApp.database
       .select()
       .from(iotDevices)
-      .where(eq(iotDevices.id, created.value[0].id));
+      .where(eq(iotDevices.id, created.value.id));
     expect(rows).toHaveLength(0);
   });
 });
@@ -496,7 +503,7 @@ describe("IotDeviceRepository — listAccessible scoping", () => {
     it("deletes the device's grants along with it", async () => {
       const resource = await sharedDevice();
 
-      assertSuccess(await repository.delete(resource.id));
+      assertSuccess(await remove(repository, resource.id));
 
       expect(await grantsFor(resource.id)).toHaveLength(0);
     });

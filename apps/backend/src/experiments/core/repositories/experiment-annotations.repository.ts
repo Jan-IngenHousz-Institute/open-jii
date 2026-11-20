@@ -9,7 +9,7 @@ import {
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
 import type {
-  AnnotationCopy,
+  NamedAnnotation,
   AnnotationRecord,
   UpdateAnnotationDto,
 } from "../models/experiment-data-annotation.model";
@@ -19,6 +19,19 @@ const INSERT_CHUNK = 1000;
 
 // One parameter a row id, beside the three that name the experiment, table and type.
 const ROW_ID_CHUNK = 10_000;
+
+const RECORD_COLUMNS = {
+  id: experimentAnnotations.id,
+  experimentId: experimentAnnotations.experimentId,
+  tableName: experimentAnnotations.tableName,
+  rowId: experimentAnnotations.rowId,
+  type: experimentAnnotations.type,
+  contentText: experimentAnnotations.contentText,
+  flagType: experimentAnnotations.flagType,
+  createdBy: experimentAnnotations.createdBy,
+  createdAt: experimentAnnotations.createdAt,
+  updatedAt: experimentAnnotations.updatedAt,
+};
 
 /** Researchers' annotations in Postgres. */
 @Injectable()
@@ -110,10 +123,15 @@ export class ExperimentAnnotationsRepository {
     return ids;
   }
 
-  /** The annotations among `ids` that still exist, each with its author's name as it reads now. */
-  async findCopies(ids: string[]): Promise<Result<AnnotationCopy[]>> {
+  /** The annotations among `ids` that still exist; a copy names its author by id alone. */
+  async findCopies(ids: string[]): Promise<Result<AnnotationRecord[]>> {
     return tryCatch(
-      () => this.withAuthorNames(inArray(experimentAnnotations.id, ids)),
+      () =>
+        this.database
+          .select(RECORD_COLUMNS)
+          .from(experimentAnnotations)
+          .where(inArray(experimentAnnotations.id, ids))
+          .orderBy(asc(experimentAnnotations.createdAt), asc(experimentAnnotations.id)),
       (error) => this.queryError(error),
     );
   }
@@ -123,10 +141,10 @@ export class ExperimentAnnotationsRepository {
     experimentId: string,
     tableName: string,
     rowIds: string[],
-  ): Promise<Result<AnnotationCopy[]>> {
+  ): Promise<Result<NamedAnnotation[]>> {
     return tryCatch(
       async () => {
-        const found: AnnotationCopy[] = [];
+        const found: NamedAnnotation[] = [];
         for (let start = 0; start < rowIds.length; start += ROW_ID_CHUNK) {
           found.push(
             ...(await this.withAuthorNames(
@@ -164,19 +182,10 @@ export class ExperimentAnnotationsRepository {
     );
   }
 
-  private withAuthorNames(condition: SQL | undefined): Promise<AnnotationCopy[]> {
+  private withAuthorNames(condition: SQL | undefined): Promise<NamedAnnotation[]> {
     return this.database
       .select({
-        id: experimentAnnotations.id,
-        experimentId: experimentAnnotations.experimentId,
-        tableName: experimentAnnotations.tableName,
-        rowId: experimentAnnotations.rowId,
-        type: experimentAnnotations.type,
-        contentText: experimentAnnotations.contentText,
-        flagType: experimentAnnotations.flagType,
-        createdBy: experimentAnnotations.createdBy,
-        createdAt: experimentAnnotations.createdAt,
-        updatedAt: experimentAnnotations.updatedAt,
+        ...RECORD_COLUMNS,
         // As every other read shows a person: "Unknown User" once they deactivate their profile.
         userName: sql<string | null>`CASE WHEN ${profiles.userId} IS NULL THEN NULL
           ELSE nullif(trim(${getAnonymizedFirstName()} || ' ' || ${getAnonymizedLastName()}), '') END`,

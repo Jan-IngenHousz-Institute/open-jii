@@ -1,3 +1,5 @@
+import { faker } from "@faker-js/faker";
+
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ExperimentDeviceRegistryRepository } from "./experiment-device-registry.repository";
@@ -43,6 +45,7 @@ describe("ExperimentDeviceRegistryRepository", () => {
         createdBy: owner,
         status: "registered",
         deviceType: "ambyte",
+        registeredAt: device.createdAt,
       },
     ]);
   });
@@ -52,5 +55,31 @@ describe("ExperimentDeviceRegistryRepository", () => {
 
     assertSuccess(result);
     expect(result.value).toEqual([]);
+  });
+
+  it("finds the registered devices among the ids, leaving out a deleted one", async () => {
+    const owner = await testApp.createTestUser({});
+    const device = await testApp.createIotDevice({
+      createdBy: owner,
+      serialNumber: "SN-7",
+      thingName: "thing-7",
+      deviceType: "multispeq",
+      status: "active",
+    });
+
+    const result = await repository.findByIds([device.id, faker.string.uuid()]);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      {
+        thingName: "thing-7",
+        id: device.id,
+        serialNumber: "SN-7",
+        createdBy: owner,
+        status: "active",
+        deviceType: "multispeq",
+        registeredAt: device.createdAt,
+      },
+    ]);
   });
 });

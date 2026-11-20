@@ -32,8 +32,8 @@ export interface AnnotationRecord {
   updatedAt: Date;
 }
 
-/** An annotation as its copies take it, with its author's name as it reads now. */
-export interface AnnotationCopy extends AnnotationRecord {
+/** An annotation with its author's name as every page shows it now. */
+export interface NamedAnnotation extends AnnotationRecord {
   userName: string | null;
 }
 

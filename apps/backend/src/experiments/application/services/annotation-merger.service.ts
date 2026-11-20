@@ -3,7 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { AnnotationCopy } from "../../core/models/experiment-data-annotation.model";
+import type { NamedAnnotation } from "../../core/models/experiment-data-annotation.model";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 
 const ROW_ID = "id";
@@ -54,7 +54,7 @@ export class AnnotationMergerService {
       return found;
     }
 
-    const onRow = new Map<string, AnnotationCopy[]>();
+    const onRow = new Map<string, NamedAnnotation[]>();
     for (const annotation of found.value) {
       onRow.set(annotation.rowId, [...(onRow.get(annotation.rowId) ?? []), annotation]);
     }
@@ -83,7 +83,7 @@ export class AnnotationMergerService {
   }
 
   /** In the order of the annotations column's type, and with its times, as both sources write it. */
-  private cell(annotation: AnnotationCopy) {
+  private cell(annotation: NamedAnnotation) {
     return {
       id: annotation.id,
       rowId: annotation.rowId,

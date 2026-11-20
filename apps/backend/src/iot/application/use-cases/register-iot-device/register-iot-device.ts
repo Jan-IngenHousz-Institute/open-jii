@@ -4,6 +4,8 @@ import type { RegisterIotDeviceBody } from "@repo/api/domains/iot/iot.schema";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -17,6 +19,8 @@ export class RegisterIotDeviceUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(
@@ -57,29 +61,33 @@ export class RegisterIotDeviceUseCase {
     }
 
     const thing = thingResult.value;
-    const createResult = await this.deviceRepository.create(
-      {
-        thingName: thing.thingName,
-        thingArn: thing.thingArn,
-        serialNumber: body.serialNumber,
-        name: body.name ?? null,
-        deviceType: body.deviceType,
-      },
-      userId,
-      targetOrganizationId,
-    );
+    const createResult = await this.deviceRepository.transaction(async (tx) => {
+      const device = await this.deviceRepository.create(
+        tx,
+        {
+          thingName: thing.thingName,
+          thingArn: thing.thingArn,
+          serialNumber: body.serialNumber,
+          name: body.name ?? null,
+          deviceType: body.deviceType,
+        },
+        userId,
+        targetOrganizationId,
+      );
+      await this.outboxRepository.owe(tx, [
+        { recordType: "device", recordId: device.id, experimentId: null },
+      ]);
+      return device;
+    });
 
-    if (createResult.isFailure() || createResult.value.length === 0) {
+    if (createResult.isFailure()) {
       // Roll back the Thing so AWS does not keep an orphan when the row cannot be persisted.
       await this.awsPort.deleteThing(thing.thingName);
-      return createResult.isFailure()
-        ? failure(createResult.error)
-        : failure(
-            AppError.internal("Failed to persist device", ErrorCodes.IOT_DEVICE_REGISTER_FAILED),
-          );
+      return failure(createResult.error);
     }
 
-    return success(createResult.value[0]);
+    this.outboxWorker.nudge();
+    return success(createResult.value);
   }
 
   // AWS IoT thing names allow [a-zA-Z0-9:_-]; sanitise so MAC-style serials are safe.

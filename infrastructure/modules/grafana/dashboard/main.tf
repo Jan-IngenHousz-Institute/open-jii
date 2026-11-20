@@ -570,7 +570,7 @@ EOT
     for            = "5m"
 
     annotations = {
-      description      = "The backend refused calls from the pipeline that carried a key id. Macro results, contributor names and device metadata from those calls are missing."
+      description      = "The backend refused calls from the pipeline that carried a key id. Macro results from those calls are missing, and any project transfer among them is marked failed."
       summary          = "Backend is rejecting the pipeline's calls"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/webhook-failures.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -937,9 +937,9 @@ resource "grafana_rule_group" "email_health" {
   }
 }
 
-# Copies of annotations and metadata sheets. The backend publishes the outbox's gauges every five
-# minutes from each task, 0 when nothing waits, so no data means the reporting has stopped and the
-# rule fires.
+# Copies of annotations, metadata sheets, contributors and devices. The backend publishes the
+# outbox's gauges every five minutes from each task, 0 when nothing waits, so no data means the
+# reporting has stopped and the rule fires.
 resource "grafana_rule_group" "experiment_data_copies" {
   provider         = grafana.amg
   name             = "Experiment Data Copies"
@@ -1022,8 +1022,8 @@ resource "grafana_rule_group" "experiment_data_copies" {
     for            = "5m"
 
     annotations = {
-      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse refuses every copy, or one record fails on every attempt. Exports, charts and the custom metadata on every page miss the latest edits until it lands, store pages included, whose sheets the feed takes from the same copy. It also fires when the backend has stopped reporting the outbox."
-      summary          = "Annotation and sheet copies are not landing"
+      description      = "A copy of an annotation, metadata sheet, contributor or device has waited in the outbox for over 30 minutes. Either the lakehouse refuses every copy, or one record fails on every attempt. Until it lands, exports, charts and the custom metadata on every page, store pages included, miss the latest edits, and the warehouse views keep a contributor's or device's previous name. It also fires when the backend has stopped reporting the outbox."
+      summary          = "Experiment data copies are not landing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
       __dashboardUid__ = local.heartbeat_daily_uid
       __panelId__      = local.heartbeat_panel_ids["experiment-data-outbox-waiting"]

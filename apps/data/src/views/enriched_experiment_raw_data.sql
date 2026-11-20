@@ -8,20 +8,22 @@ WITH
 -- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
 db_annotations AS (
   SELECT
-    experiment_id,
-    row_id,
+    annotation.experiment_id,
+    annotation.row_id,
     sort_array(collect_list(named_struct(
-      'id', id,
-      'rowId', row_id,
-      'type', type,
-      'content', named_struct('text', content_text, 'flagType', flag_type),
-      'createdBy', user_id,
-      'createdByName', user_name,
-      'createdAt', created_at,
-      'updatedAt', updated_at
+      'id', annotation.id,
+      'rowId', annotation.row_id,
+      'type', annotation.type,
+      'content', named_struct('text', annotation.content_text, 'flagType', annotation.flag_type),
+      'createdBy', annotation.user_id,
+      -- As pages name an author: from their profile, masked as its copy is, and none without one.
+      'createdByName', nullif(trim(concat(author.first_name, ' ', author.last_name)), ''),
+      'createdAt', annotation.created_at,
+      'updatedAt', annotation.updated_at
     ))) AS annotations
-  FROM ${catalog}.centrum.experiment_annotations
-  GROUP BY experiment_id, row_id
+  FROM ${catalog}.centrum.experiment_annotations AS annotation
+  LEFT JOIN ${catalog}.centrum.contributor_profiles AS author ON author.user_id = annotation.user_id
+  GROUP BY annotation.experiment_id, annotation.row_id
 ),
 -- Each upload's rows keyed by their identifier value, built once per upload so a
 -- measurement looks its row up instead of scanning them all. The first row wins

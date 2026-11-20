@@ -18,6 +18,7 @@ import {
   OWED_COPIES,
   zExperimentDataDestination,
   zExperimentDataRecordType,
+  zOwedRecord,
 } from "../models/experiment-data-outbox.model";
 import type {
   ClaimedOutboxRow,
@@ -31,10 +32,9 @@ import type {
  * and `claimed_at` as text tagged `AT TIME ZONE 'UTC'`, parsed below. Left naive it would read
  * as local time here, and a claim read one way and fenced the other would never match.
  */
-type ClaimedRow = Omit<ClaimedOutboxRow, "recordType" | "destination" | "claimedAt"> & {
-  recordType: string;
-  destination: string;
-  claimedAt: string;
+type ClaimedRow = Record<"id" | "recordType" | "recordId" | "destination" | "claimedAt", string> & {
+  experimentId: string | null;
+  attempts: number;
 };
 
 /** Postgres binds one parameter per column, so a single statement cannot take every row. */
@@ -46,10 +46,6 @@ const INSERT_CHUNK_SIZE = 1000;
  */
 const CLAIM_STAMP = sql`date_trunc('milliseconds', now() AT TIME ZONE 'UTC')`;
 
-/**
- * The copies of annotations and metadata sheets still owed. A write to a record owes its current
- * state to each copy in the same transaction; the worker applies it and deletes the row.
- */
 /** What putting a row back changes besides its claim. */
 interface RetryChanges {
   attempts: SQL;
@@ -57,6 +53,11 @@ interface RetryChanges {
   lastError: string;
 }
 
+/**
+ * The copies of annotations, metadata sheets, contributors and devices still owed. A write to a
+ * record owes its current state to each copy in the same transaction; the worker applies it and
+ * deletes the row.
+ */
 @Injectable()
 export class ExperimentDataOutboxRepository {
   constructor(@Inject("DATABASE") private readonly database: DatabaseInstance) {}
@@ -153,11 +154,12 @@ export class ExperimentDataOutboxRepository {
                   ${experimentDataOutbox.claimedAt} AT TIME ZONE 'UTC' AS "claimedAt"
       `);
 
-      return claimed.map((row) => ({
-        ...row,
-        recordType: zExperimentDataRecordType.parse(row.recordType),
-        destination: zExperimentDataDestination.parse(row.destination),
-        claimedAt: new Date(row.claimedAt),
+      return claimed.map(({ id, recordType, recordId, experimentId, ...claim }) => ({
+        ...zOwedRecord.parse({ recordType, recordId, experimentId }),
+        id,
+        destination: zExperimentDataDestination.parse(claim.destination),
+        attempts: claim.attempts,
+        claimedAt: new Date(claim.claimedAt),
       }));
     });
   }

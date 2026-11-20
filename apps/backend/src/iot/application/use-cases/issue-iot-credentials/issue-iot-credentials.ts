@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort, CertificateResult } from "../../../core/ports/aws.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
@@ -14,6 +16,8 @@ export class IssueIotCredentialsUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<CertificateResult>> {
@@ -79,10 +83,18 @@ export class IssueIotCredentialsUseCase {
       return failure(policyResult.error);
     }
 
-    const updateResult = await this.deviceRepository.update(deviceId, {
-      certificateId: cert.certificateId,
-      certificateArn: cert.certificateArn,
-      status: "active",
+    const updateResult = await this.deviceRepository.transaction(async (tx) => {
+      const updated = await this.deviceRepository.update(tx, deviceId, {
+        certificateId: cert.certificateId,
+        certificateArn: cert.certificateArn,
+        status: "active",
+      });
+      if (updated) {
+        await this.outboxRepository.owe(tx, [
+          { recordType: "device", recordId: deviceId, experimentId: null },
+        ]);
+      }
+      return updated;
     });
     if (updateResult.isFailure() || !updateResult.value) {
       await this.detachAndRevoke(device.thingName, cert);
@@ -96,6 +108,7 @@ export class IssueIotCredentialsUseCase {
           );
     }
 
+    this.outboxWorker.nudge();
     return success(cert);
   }
 

@@ -1,4 +1,8 @@
+import { eq, experimentDataOutbox, profiles } from "@repo/database";
+
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../core/repositories/user.repository";
 import { CreateUserProfileUseCase } from "./create-user-profile";
@@ -101,5 +105,82 @@ describe("CreateUserProfileUseCase", () => {
     // Code says: return failure(AppError.notFound(`Cannot update user with ID ${userId}`));
     expect(result.error.code).toBe("NOT_FOUND");
     expect(result.error.message).toContain(`Cannot update user with ID ${testUserId}`);
+  });
+
+  describe("the contributor's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+    const profileOf = async (userId: string) => {
+      const [profile] = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userId));
+      return profile;
+    };
+
+    it.each([
+      ["a first profile", { createProfile: false }],
+      ["an edit, deactivating it among them", { createProfile: true }],
+    ])("is owed %s in the same transaction, and the worker nudged", async (_, user) => {
+      const userId = await testApp.createTestUser(user);
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      assertSuccess(
+        await useCase.execute({ firstName: "Ada", lastName: "Lovelace", activated: false }, userId),
+      );
+
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "contributor",
+          recordId: userId,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the profile active when the copy its deactivation owes cannot be written", async () => {
+      // The row lands, and the failure after it takes it back with the edit.
+      const real = new ExperimentDataOutboxRepository(testApp.database);
+      const outbox = testApp.module.get(ExperimentDataOutboxRepository);
+      vi.spyOn(outbox, "owe").mockImplementation(async (tx, records) => {
+        await real.owe(tx, records);
+        throw new Error("outbox unavailable");
+      });
+
+      assertFailure(
+        await useCase.execute(
+          { firstName: "Ada", lastName: "Lovelace", activated: false },
+          testUserId,
+        ),
+      );
+
+      expect((await profileOf(testUserId)).activated).toBe(true);
+      expect(await owed()).toEqual([]);
+    });
+
+    it("keeps the old name when the copy an edit owes cannot be written", async () => {
+      const before = await profileOf(testUserId);
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      assertFailure(await useCase.execute({ firstName: "Ada", lastName: "Lovelace" }, testUserId));
+
+      expect((await profileOf(testUserId)).firstName).toBe(before.firstName);
+      expect(nudge).not.toHaveBeenCalled();
+    });
+
+    it("keeps no first profile when the copy it owes cannot be written", async () => {
+      const userId = await testApp.createTestUser({ createProfile: false });
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+
+      assertFailure(await useCase.execute({ firstName: "Ada", lastName: "Lovelace" }, userId));
+
+      expect(await profileOf(userId)).toBeUndefined();
+    });
   });
 });

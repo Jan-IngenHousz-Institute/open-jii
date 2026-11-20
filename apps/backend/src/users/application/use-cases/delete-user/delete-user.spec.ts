@@ -1,4 +1,4 @@
-import { eq, users } from "@repo/database";
+import { eq, experimentDataOutbox, profiles, users } from "@repo/database";
 
 import { MailchimpAdapter } from "../../../../common/modules/mailchimp/mailchimp.adapter";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
@@ -9,6 +9,8 @@ import {
   AppError,
   success,
 } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../core/repositories/user.repository";
 import { DeleteUserUseCase } from "./delete-user";
@@ -179,13 +181,54 @@ describe("DeleteUserUseCase", () => {
     const deleteMember = vi.spyOn(mailchimp, "deleteMember");
 
     // Mock failure
-    vi.spyOn(userRepository, "delete").mockResolvedValue(failure(AppError.internal("DB Error")));
+    vi.spyOn(userRepository, "delete").mockRejectedValue(AppError.internal("DB Error"));
 
     const result = await useCase.execute(userId);
 
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
     expect(deleteMember).not.toHaveBeenCalled();
+  });
+
+  describe("the contributor's lakehouse copy", () => {
+    it("is owed the closed account's scrubbed name in the same transaction, and the worker nudged", async () => {
+      const userId = await testApp.createTestUser({});
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      assertSuccess(await useCase.execute(userId));
+
+      expect(await testApp.database.select().from(experimentDataOutbox)).toEqual([
+        expect.objectContaining({
+          recordType: "contributor",
+          recordId: userId,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the account open when the copy its closing owes cannot be written", async () => {
+      const userId = await testApp.createTestUser({});
+      // The row lands, and the failure after it takes it back with the closing.
+      const real = new ExperimentDataOutboxRepository(testApp.database);
+      const outbox = testApp.module.get(ExperimentDataOutboxRepository);
+      vi.spyOn(outbox, "owe").mockImplementation(async (tx, records) => {
+        await real.owe(tx, records);
+        throw new Error("outbox unavailable");
+      });
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+
+      assertFailure(await useCase.execute(userId));
+
+      const [profile] = await testApp.database
+        .select()
+        .from(profiles)
+        .where(eq(profiles.userId, userId));
+      expect(profile.deletedAt).toBeNull();
+      expect(await testApp.database.select().from(experimentDataOutbox)).toEqual([]);
+      expect(nudge).not.toHaveBeenCalled();
+    });
   });
 
   async function expectUserToBeAnonymized(userId: string, originalEmail: string) {

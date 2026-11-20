@@ -8,12 +8,16 @@ import { AppError, assertSuccess, failure, success } from "../../../common/utils
 import { TestHarness } from "../../../test/test-harness";
 import type { AnnotationRecord } from "../../core/models/experiment-data-annotation.model";
 import type { MetadataSheetRecord } from "../../core/models/experiment-metadata.model";
+import { ContributorProfilesWarehouseRepository } from "../../core/repositories/contributor-profiles-warehouse.repository";
+import { DeviceRegistryWarehouseRepository } from "../../core/repositories/device-registry-warehouse.repository";
 import { ExperimentAnnotationsWarehouseRepository } from "../../core/repositories/experiment-annotations-warehouse.repository";
 import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { ExperimentDataOutboxRepository } from "../../core/repositories/experiment-data-outbox.repository";
 import { ExperimentMetadataWarehouseRepository } from "../../core/repositories/experiment-metadata-warehouse.repository";
 import { ExperimentMetadataRepository } from "../../core/repositories/experiment-metadata.repository";
 import { AnnotationsOutboxService } from "./annotations-outbox.service";
+import { ContributorsOutboxService } from "./contributors-outbox.service";
+import { DevicesOutboxService } from "./devices-outbox.service";
 import {
   EXPERIMENT_DATA_OUTBOX_INTERVAL,
   ExperimentDataOutboxWorker,
@@ -72,6 +76,19 @@ describe("ExperimentDataOutboxWorker", () => {
     return recordId;
   }
 
+  /** Owes the copies of records no experiment owns, as a profile or device write does. */
+  async function oweWithoutExperiment(
+    recordType: "contributor" | "device",
+    ...recordIds: string[]
+  ) {
+    await testApp.database.transaction((tx) =>
+      testApp.module.get(ExperimentDataOutboxRepository).owe(
+        tx,
+        recordIds.map((recordId) => ({ recordType, recordId, experimentId: null })),
+      ),
+    );
+  }
+
   function outboxRows() {
     return testApp.database.select().from(experimentDataOutbox);
   }
@@ -84,6 +101,8 @@ describe("ExperimentDataOutboxWorker", () => {
       outbox,
       testApp.module.get(AnnotationsOutboxService),
       testApp.module.get(MetadataSheetsOutboxService),
+      testApp.module.get(ContributorsOutboxService),
+      testApp.module.get(DevicesOutboxService),
     );
   }
 
@@ -117,7 +136,7 @@ describe("ExperimentDataOutboxWorker", () => {
     await testApp.teardown();
   });
 
-  it("copies the annotations Postgres holds with their author's name, deletes the copies of gone ones, and clears the rows", async () => {
+  it("copies the annotations Postgres holds, deletes the copies of gone ones, and clears the rows", async () => {
     const warehouse = testApp.module.get(ExperimentAnnotationsWarehouseRepository);
     const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
     const remove = vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
@@ -127,7 +146,7 @@ describe("ExperimentDataOutboxWorker", () => {
     const counts = await worker.drain();
 
     expect(counts).toEqual({ applied: 2, retried: 0, released: 0 });
-    expect(merge).toHaveBeenCalledWith([{ ...kept, userName: "Ada Lovelace" }]);
+    expect(merge).toHaveBeenCalledWith([kept]);
     expect(remove).toHaveBeenCalledWith([gone]);
     expect(await outboxRows()).toEqual([]);
   });
@@ -159,6 +178,83 @@ describe("ExperimentDataOutboxWorker", () => {
     expect(merge).toHaveBeenCalledWith([sheet], expect.any(Function));
     expect(remove).toHaveBeenCalledWith([gone]);
     expect(await outboxRows()).toEqual([]);
+  });
+
+  it("copies contributors' profiles as pages show them, masked once deactivated, and deletes the copy of one without a profile", async () => {
+    const warehouse = testApp.module.get(ContributorProfilesWarehouseRepository);
+    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+    const remove = vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
+    const deactivated = await testApp.createTestUser({ name: "Grace Hopper", activated: false });
+    const gone = faker.string.uuid();
+    await oweWithoutExperiment("contributor", userId, deactivated, gone);
+
+    expect(await worker.drain()).toEqual({ applied: 3, retried: 0, released: 0 });
+
+    const [written] = merge.mock.calls[0];
+    expect(written).toHaveLength(2);
+    expect(written).toEqual(
+      expect.arrayContaining([
+        { id: userId, userId, firstName: "Ada", lastName: "Lovelace", avatarUrl: null },
+        {
+          id: deactivated,
+          userId: deactivated,
+          firstName: "Unknown",
+          lastName: "User",
+          avatarUrl: null,
+        },
+      ]),
+    );
+    expect(remove).toHaveBeenCalledWith([gone]);
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it("copies registered devices as the pipelines name them, and deletes the copy of a deleted one", async () => {
+    const warehouse = testApp.module.get(DeviceRegistryWarehouseRepository);
+    const merge = vi.spyOn(warehouse, "merge").mockResolvedValue(success(undefined));
+    const remove = vi.spyOn(warehouse, "delete").mockResolvedValue(success(undefined));
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      thingName: "multispeq_SN1",
+      serialNumber: "SN1",
+      deviceType: "multispeq",
+      status: "active",
+    });
+    const gone = faker.string.uuid();
+    await oweWithoutExperiment("device", device.id, gone);
+
+    expect(await worker.drain()).toEqual({ applied: 2, retried: 0, released: 0 });
+
+    expect(merge).toHaveBeenCalledWith([
+      {
+        thingName: "multispeq_SN1",
+        id: device.id,
+        serialNumber: "SN1",
+        createdBy: userId,
+        status: "active",
+        deviceType: "multispeq",
+        registeredAt: device.createdAt,
+      },
+    ]);
+    expect(remove).toHaveBeenCalledWith([gone]);
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it("keeps a contributor's copy owed, with the reason, while the lakehouse refuses it", async () => {
+    const warehouse = testApp.module.get(ContributorProfilesWarehouseRepository);
+    vi.spyOn(warehouse, "merge").mockResolvedValue(failure(AppError.internal("Warehouse down")));
+    await oweWithoutExperiment("contributor", userId);
+
+    expect(await worker.drain()).toEqual({ applied: 0, retried: 1, released: 0 });
+
+    const [row] = await outboxRows();
+    expect(row).toMatchObject({
+      recordType: "contributor",
+      recordId: userId,
+      experimentId: null,
+      attempts: 1,
+      claimedAt: null,
+    });
+    expect(row.lastError).toContain("Warehouse down");
   });
 
   it("copies a batch of annotations in one statement", async () => {
@@ -201,6 +297,8 @@ describe("ExperimentDataOutboxWorker", () => {
       testApp.module.get(ExperimentDataOutboxRepository),
       testApp.module.get(AnnotationsOutboxService),
       testApp.module.get(MetadataSheetsOutboxService),
+      testApp.module.get(ContributorsOutboxService),
+      testApp.module.get(DevicesOutboxService),
     );
   }
 
@@ -278,13 +376,13 @@ describe("ExperimentDataOutboxWorker", () => {
       "findCopies",
     ).mockImplementationOnce(async () => {
       await new Promise((resolve) => setTimeout(resolve, 300));
-      return success([{ ...record, userName: "Ada Lovelace" }]);
+      return success([record]);
     });
 
     expect(await workerWithDeadline(200).drain()).toEqual({ applied: 1, retried: 0, released: 1 });
 
     expect(merge).toHaveBeenCalledTimes(1);
-    expect(merge).toHaveBeenCalledWith([{ ...record, userName: "Ada Lovelace" }]);
+    expect(merge).toHaveBeenCalledWith([record]);
     expect(await outboxRows()).toEqual([]);
   });
 

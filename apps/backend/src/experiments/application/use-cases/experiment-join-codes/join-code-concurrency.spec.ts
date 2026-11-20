@@ -423,7 +423,8 @@ describe("join code concurrency", () => {
 
   it("refuses a redemption by an account that has already been deleted", async () => {
     const { experiment, code } = await seedCode();
-    assertSuccess(await testApp.module.get(UserRepository).delete(studentId));
+    const users = testApp.module.get(UserRepository);
+    assertSuccess(await users.transaction((tx) => users.delete(tx, studentId)));
 
     const redeemed = await redeemUseCase.execute(code.code, studentId);
 
@@ -441,7 +442,7 @@ describe("join code concurrency", () => {
       const [{ pid: deleterPid }] = await deleter.database.execute<{ pid: number }>(
         sql`SELECT pg_backend_pid() AS pid`,
       );
-      let deleting: ReturnType<UserRepository["delete"]> | undefined;
+      let deleting: ReturnType<UserRepository["transaction"]> | undefined;
       let deletionWaited = false;
 
       const redeemed = await redeemWhileBlocked(
@@ -451,9 +452,12 @@ describe("join code concurrency", () => {
           // The redemption is queued on the experiment row, past the point where it
           // claims the account. A deletion started now has to wait for it to commit.
           const deletion = { settled: false };
-          deleting = new UserRepository(deleter.database).delete(studentId).finally(() => {
-            deletion.settled = true;
-          });
+          const users = new UserRepository(deleter.database);
+          deleting = users
+            .transaction((tx) => users.delete(tx, studentId))
+            .finally(() => {
+              deletion.settled = true;
+            });
           const deadline = Date.now() + 5000;
           while (!deletion.settled && Date.now() < deadline) {
             const rows = await observer.execute<{ waitEventType: string | null }>(

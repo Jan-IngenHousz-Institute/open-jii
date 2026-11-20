@@ -1720,6 +1720,7 @@ module "experiment_annotations_table" {
     { name = "id", type = "STRING" },
     { name = "experiment_id", type = "STRING" },
     { name = "user_id", type = "STRING" },
+    # No longer written: the enriched views name an author from contributor_profiles.
     { name = "user_name", type = "STRING" },
     { name = "table_name", type = "STRING" },
     { name = "row_id", type = "STRING" },
@@ -1728,6 +1729,69 @@ module "experiment_annotations_table" {
     { name = "flag_type", type = "STRING" },
     { name = "created_at", type = "TIMESTAMP" },
     { name = "updated_at", type = "TIMESTAMP" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "contributor_profiles_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "contributor_profiles"
+  table_type   = "MANAGED"
+  comment      = "Contributors' names and avatars as every page shows them, which the pipelines join to name an experiment's contributors and the enriched views its annotations' authors. The backend's outbox keeps it to Postgres."
+
+  columns = [
+    { name = "user_id", type = "STRING", nullable = false },
+    { name = "first_name", type = "STRING" },
+    { name = "last_name", type = "STRING" },
+    { name = "avatar_url", type = "STRING" },
+  ]
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["SELECT", "MODIFY"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "device_registry_table" {
+  source = "../../modules/databricks/sql-table"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "device_registry"
+  table_type   = "MANAGED"
+  comment      = "The device registry, one row per thing name, which the pipelines join to name an experiment's devices. The backend's outbox keeps it to Postgres."
+
+  columns = [
+    { name = "id", type = "STRING", nullable = false },
+    { name = "thing_name", type = "STRING", nullable = false },
+    { name = "serial_number", type = "STRING" },
+    { name = "created_by", type = "STRING" },
+    { name = "status", type = "STRING" },
+    { name = "device_type", type = "STRING" },
+    { name = "registered_at", type = "TIMESTAMP", nullable = false },
   ]
 
   grants = {
@@ -1884,7 +1948,11 @@ module "enriched_views" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+  depends_on = [
+    module.experiment_annotations_table,
+    module.experiment_custom_metadata_table,
+    module.contributor_profiles_table,
+  ]
 }
 
 # The device and experiment status, computed when someone reads, under the names of

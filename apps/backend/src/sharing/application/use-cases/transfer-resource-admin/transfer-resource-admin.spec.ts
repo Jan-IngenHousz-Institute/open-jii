@@ -415,7 +415,8 @@ describe("TransferResourceAdminUseCase", () => {
       testUserId,
     );
     await checkFinished;
-    assertSuccess(await new UserRepository(secondary.database).delete(target));
+    const users = new UserRepository(secondary.database);
+    assertSuccess(await users.transaction((tx) => users.delete(tx, target)));
     release();
 
     const result = await transferring;

@@ -64,13 +64,7 @@ class BackendClient:
     - Session management with connection pooling
     """
 
-    WEBHOOK_USER_METADATA_PATH = "/api/v1/users/metadata"
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
-    WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
-    DEVICE_REGISTRY_BATCH_SIZE = 500
-    DEVICE_REGISTRY_RETRY_DELAYS = (1, 2)
-    DEVICE_REGISTRY_REQUEST_TIMEOUT = 5
-    DEVICE_REGISTRY_LOOKUP_BUDGET = 30
 
     # Keeps the request under the backend's 10 MB JSON body limit, so one
     # outsized sample fails alone instead of failing every item in its chunk.
@@ -89,7 +83,6 @@ class BackendClient:
             timeout: Request timeout in seconds
         """
         self.base_url = base_url.rstrip("/")
-        self.webhook_path = self.WEBHOOK_USER_METADATA_PATH
         self.api_key_id = api_key_id
         self.webhook_secret = webhook_secret
         self.timeout = timeout
@@ -212,147 +205,6 @@ class BackendClient:
             is_transient = status is None or status == 429 or status >= 500
             error_type = TransientBackendError if is_transient else BackendIntegrationError
             raise error_type(error_msg) from e
-
-    def get_user_metadata(self, user_ids: list[str]) -> dict[str, dict[str, Any]]:
-        """
-        Fetch user metadata for multiple user IDs with robust error handling.
-
-        Args:
-            user_ids: List of user IDs to fetch metadata for
-
-        Returns:
-            Dictionary mapping user_id to user metadata
-
-        Raises:
-            BackendIntegrationError: If request fails or validation errors occur
-        """
-        if not user_ids:
-            return {}
-
-        # Validate input
-        if not isinstance(user_ids, list):
-            raise BackendIntegrationError("user_ids must be a list")
-
-        # Limit batch size to avoid API limits
-        if len(user_ids) > 500:
-            raise BackendIntegrationError(f"Too many user IDs in batch: {len(user_ids)} (max 500)")
-
-        # Filter out None/empty values
-        valid_user_ids = [uid for uid in user_ids if uid is not None and str(uid).strip()]
-        if not valid_user_ids:
-            return {}
-
-        payload = {"userIds": valid_user_ids}
-
-        try:
-            result = self._make_request(self.webhook_path, payload)
-        except BackendIntegrationError:
-            # Re-raise BackendIntegrationError as-is
-            raise
-        except Exception as e:
-            # Wrap other exceptions
-            raise BackendIntegrationError(f"Unexpected error fetching user metadata: {e!s}") from e
-
-        # Convert list to dictionary for easier lookup
-        user_metadata = {}
-        users_list = result.get("users", [])
-
-        if not isinstance(users_list, list):
-            raise BackendIntegrationError(
-                f"Invalid response format: expected 'users' to be a list, got {type(users_list)}"
-            )
-
-        for user in users_list:
-            if not isinstance(user, dict) or "userId" not in user:
-                continue  # Skip malformed user entries
-
-            user_metadata[user["userId"]] = {
-                "firstName": user.get("firstName"),
-                "lastName": user.get("lastName"),
-                "avatarUrl": user.get("avatarUrl"),
-            }
-
-        return user_metadata
-
-    def get_device_registry(self, thing_names: list[str]) -> dict[str, dict[str, Any]]:
-        """
-        Resolve broker-authenticated client ids to their device registry rows.
-
-        For an X.509 device the MQTT client id equals its Thing name, so the
-        pipeline passes distinct client_id values here; Cognito/mobile client ids
-        match no registry row and are simply absent from the result.
-        Requests stay within the backend's 500-name limit. A failed chunk raises
-        instead of returning a partial registry that would erase device metadata.
-
-        Returns:
-            Dict mapping thing_name -> {id, serialNumber, deviceType, status, createdBy}
-        """
-        if not thing_names:
-            return {}
-        if not isinstance(thing_names, list):
-            raise BackendIntegrationError("thing_names must be a list")
-        valid = list(dict.fromkeys(t for t in thing_names if t is not None and str(t).strip()))
-        if not valid:
-            return {}
-
-        registry: dict[str, dict[str, Any]] = {}
-        deadline = time.monotonic() + self.DEVICE_REGISTRY_LOOKUP_BUDGET
-        for offset in range(0, len(valid), self.DEVICE_REGISTRY_BATCH_SIZE):
-            payload = {"thingNames": valid[offset : offset + self.DEVICE_REGISTRY_BATCH_SIZE]}
-
-            try:
-                result = self._get_registry_chunk(payload, deadline)
-            except BackendIntegrationError:
-                raise
-            except Exception as e:
-                raise BackendIntegrationError(f"Unexpected error fetching device registry: {e!s}") from e
-
-            if not isinstance(result, dict):
-                raise BackendIntegrationError("Invalid registry response: expected an object")
-            devices_list = result.get("devices")
-            if not isinstance(devices_list, list):
-                raise BackendIntegrationError(
-                    f"Invalid response format: expected 'devices' to be a list, got {type(devices_list)}"
-                )
-
-            for device in devices_list:
-                if not isinstance(device, dict) or "thingName" not in device:
-                    continue
-                registry[device["thingName"]] = {
-                    "id": device.get("id"),
-                    "serialNumber": device.get("serialNumber"),
-                    "deviceType": device.get("deviceType"),
-                    "status": device.get("status"),
-                    "createdBy": device.get("createdBy"),
-                }
-
-        return registry
-
-    def _get_registry_chunk(self, payload: dict[str, Any], deadline: float) -> dict[str, Any]:
-        def request() -> dict[str, Any]:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise BackendIntegrationError("Device registry lookup time budget exhausted")
-            return self._make_request(
-                self.WEBHOOK_IOT_REGISTRY_PATH,
-                payload,
-                timeout=min(self.DEVICE_REGISTRY_REQUEST_TIMEOUT, remaining),
-            )
-
-        for delay in self.DEVICE_REGISTRY_RETRY_DELAYS:
-            try:
-                return request()
-            except BackendIntegrationError as error:
-                cause = error.__cause__
-                response = getattr(cause, "response", None)
-                status = response.status_code if response is not None else None
-                transient = isinstance(cause, (requests.ConnectionError, requests.Timeout)) or (
-                    status is not None and (status == 429 or status >= 500)
-                )
-                if not transient:
-                    raise
-                time.sleep(min(delay, max(0, deadline - time.monotonic())))
-        return request()
 
     def _chunk_items(
         self,

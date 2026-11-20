@@ -1,6 +1,10 @@
+import { experimentDataOutbox } from "@repo/database";
+
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { AppError } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { IssueIotCredentialsUseCase } from "./issue-iot-credentials";
@@ -44,31 +48,38 @@ describe("IssueIotCredentialsUseCase", () => {
 
   const createDevice = async (status: "registered" | "active" | "revoked" = "registered") => {
     seq++;
-    const created = await repo.create(
-      {
-        thingName: `ambyte_issue_${seq}`,
-        thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/ambyte_issue_${seq}`,
-        serialNumber: `SN-ISSUE-${seq}`,
-        name: null,
-        deviceType: "ambyte",
-      },
-      userId,
+    const created = await repo.transaction((tx) =>
+      repo.create(
+        tx,
+        {
+          thingName: `ambyte_issue_${seq}`,
+          thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/ambyte_issue_${seq}`,
+          serialNumber: `SN-ISSUE-${seq}`,
+          name: null,
+          deviceType: "ambyte",
+        },
+        userId,
+      ),
     );
     assertSuccess(created);
-    const device = created.value[0];
+    const device = created.value;
     if (status === "active") {
-      await repo.update(device.id, {
-        status: "active",
-        certificateId: "old-cert",
-        certificateArn: "arn:old",
-      });
+      await repo.transaction((tx) =>
+        repo.update(tx, device.id, {
+          status: "active",
+          certificateId: "old-cert",
+          certificateArn: "arn:old",
+        }),
+      );
     }
     if (status === "revoked") {
-      await repo.update(device.id, {
-        status: "revoked",
-        certificateId: null,
-        certificateArn: null,
-      });
+      await repo.transaction((tx) =>
+        repo.update(tx, device.id, {
+          status: "revoked",
+          certificateId: null,
+          certificateArn: null,
+        }),
+      );
     }
     return device;
   };
@@ -199,7 +210,7 @@ describe("IssueIotCredentialsUseCase", () => {
       .mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
     const device = await createDevice("registered");
-    vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("write failed")));
+    vi.spyOn(repo, "update").mockRejectedValue(AppError.internal("write failed"));
 
     const result = await useCase.execute(device.id, userId);
 
@@ -213,7 +224,7 @@ describe("IssueIotCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
     const device = await createDevice("registered");
-    vi.spyOn(repo, "update").mockResolvedValue(success(null));
+    vi.spyOn(repo, "update").mockResolvedValue(null);
 
     const result = await useCase.execute(device.id, userId);
 
@@ -245,5 +256,49 @@ describe("IssueIotCredentialsUseCase", () => {
     const device = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
 
     assertFailure(await useCase.execute(device.id, userId));
+  });
+
+  describe("the registry's lakehouse copy", () => {
+    const owed = () => testApp.database.select().from(experimentDataOutbox);
+
+    it("is owed the device's activation in the same transaction, and the worker nudged", async () => {
+      mockHappyPath();
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await createDevice("registered");
+
+      assertSuccess(await useCase.execute(device.id, userId));
+
+      expect(await owed()).toEqual([
+        expect.objectContaining({
+          recordType: "device",
+          recordId: device.id,
+          experimentId: null,
+          destination: "lakehouse",
+        }),
+      ]);
+      expect(nudge).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the device without credentials, and revokes the new ones, when the copy it owes cannot be written", async () => {
+      mockHappyPath();
+      const revoke = vi
+        .spyOn(awsAdapter, "setCertificateStatus")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
+        new Error("outbox unavailable"),
+      );
+      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+      const device = await createDevice("registered");
+
+      assertFailure(await useCase.execute(device.id, userId));
+
+      const stored = await repo.findById(device.id);
+      assertSuccess(stored);
+      expect(stored.value?.status).toBe("registered");
+      expect(stored.value?.certificateId).toBeNull();
+      expect(revoke).toHaveBeenCalledWith(CERT.certificateId, "REVOKED");
+      expect(nudge).not.toHaveBeenCalled();
+    });
   });
 });

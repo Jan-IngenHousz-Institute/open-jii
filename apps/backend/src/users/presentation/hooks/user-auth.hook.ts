@@ -6,6 +6,7 @@ import z from "zod";
 
 import { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
+import { ReactivateProfileUseCase } from "../../application/use-cases/reactivate-profile/reactivate-profile";
 import { UserRepository } from "../../core/repositories/user.repository";
 
 @Hook()
@@ -17,6 +18,7 @@ export class UserAuthHook {
     private readonly acceptInvitationUseCase: AcceptPendingInvitationsUseCase,
     private readonly userRepository: UserRepository,
     private readonly notifyPendingInvitationsUseCase: NotifyPendingOrganizationInvitationsUseCase,
+    private readonly reactivateProfileUseCase: ReactivateProfileUseCase,
   ) {}
 
   @BeforeHook("/sign-in/email-otp")
@@ -46,18 +48,21 @@ export class UserAuthHook {
 
   @AfterHook("/sign-in/email")
   async handleEmailSignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/sign-in/email-otp")
   async handleEmailOtpSignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/sign-in/social")
   async handleSocialSignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
@@ -70,6 +75,7 @@ export class UserAuthHook {
    */
   @AfterHook("/callback/:id")
   async handleOAuthCallback(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
     await this.acceptInvitationsForNewUser(ctx);
     await this.notifyPendingOrganizationInvitations(ctx);
   }
@@ -80,9 +86,32 @@ export class UserAuthHook {
     await this.notifyPendingOrganizationInvitations(ctx);
   }
 
+  @AfterHook("/passkey/verify-authentication")
+  async handlePasskeySignIn(ctx: AuthHookContext) {
+    await this.reactivateProfile(ctx);
+  }
+
   /* v8 ignore next 3 */
   protected async getSessionFromCtx(ctx: AuthHookContext) {
     return getSessionFromCtx(ctx);
+  }
+
+  /** A failure must not fail a sign-in that has already succeeded. */
+  private async reactivateProfile(ctx: AuthHookContext) {
+    const user = ctx.context.newSession?.user;
+    if (!user?.id) {
+      return;
+    }
+
+    const result = await this.reactivateProfileUseCase.execute(user.id);
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to reactivate the profile on sign-in, the sign-in stands",
+        operation: "profile-reactivation",
+        userId: user.id,
+        error: result.error.message,
+      });
+    }
   }
 
   private async acceptInvitationsForNewUser(ctx: AuthHookContext) {

@@ -949,11 +949,14 @@ export const experimentMetadataSheets = pgTable(
 export const experimentDataRecordTypeEnum = pgEnum("experiment_data_record_type", [
   "annotation",
   "metadata_sheet",
+  "contributor",
+  "device",
 ]);
 export const experimentDataDestinationEnum = pgEnum("experiment_data_destination", ["lakehouse"]);
 
-// Annotations and metadata sheets whose current state is still owed to a copy elsewhere. A row
-// is deleted once the copy has it.
+// Records whose current state is still owed to a copy elsewhere: an experiment's annotations and
+// metadata sheets, and the contributors and devices its rows name. A row is deleted once the copy
+// has it.
 export const experimentDataOutbox = pgTable(
   "experiment_data_outbox",
   {
@@ -961,7 +964,8 @@ export const experimentDataOutbox = pgTable(
     recordType: experimentDataRecordTypeEnum("record_type").notNull(),
     // No foreign key: once the record is deleted, its row still has to carry the delete.
     recordId: uuid("record_id").notNull(),
-    experimentId: uuid("experiment_id").notNull(),
+    // Null for a contributor or a device, which no one experiment owns.
+    experimentId: uuid("experiment_id"),
     destination: experimentDataDestinationEnum("destination").notNull(),
     attempts: integer("attempts").default(0).notNull(),
     nextAttemptAt: timestamp("next_attempt_at")
@@ -973,6 +977,10 @@ export const experimentDataOutbox = pgTable(
     ...timestamps,
   },
   (table) => [
+    check(
+      "experiment_data_outbox_experiment_check",
+      sql`(${table.experimentId} IS NOT NULL) = (${table.recordType} IN ('annotation', 'metadata_sheet'))`,
+    ),
     // A change made while the record's row waits joins that row.
     uniqueIndex("experiment_data_outbox_waiting_uniq")
       .on(table.recordType, table.recordId, table.destination)

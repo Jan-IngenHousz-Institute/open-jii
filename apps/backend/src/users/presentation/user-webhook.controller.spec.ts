@@ -55,18 +55,22 @@ describe("UserWebhookController", () => {
       });
 
       // Create profiles for test users
-      await userRepository.createOrUpdateUserProfile(testUser1Id, {
-        firstName: "John",
-        lastName: "Doe",
-        bio: "Test bio 1",
-        activated: true,
-      });
-      await userRepository.createOrUpdateUserProfile(testUser2Id, {
-        firstName: "Jane",
-        lastName: "Smith",
-        bio: "Test bio 2",
-        activated: true,
-      });
+      await userRepository.transaction((tx) =>
+        userRepository.createOrUpdateUserProfile(tx, testUser1Id, {
+          firstName: "John",
+          lastName: "Doe",
+          bio: "Test bio 1",
+          activated: true,
+        }),
+      );
+      await userRepository.transaction((tx) =>
+        userRepository.createOrUpdateUserProfile(tx, testUser2Id, {
+          firstName: "Jane",
+          lastName: "Smith",
+          bio: "Test bio 2",
+          activated: true,
+        }),
+      );
 
       // Define webhook payload
       const webhookPayload: UserMetadataWebhookPayload = {
@@ -139,11 +143,13 @@ describe("UserWebhookController", () => {
         name: "Valid User",
       });
 
-      await userRepository.createOrUpdateUserProfile(testUserId, {
-        firstName: "Valid",
-        lastName: "User",
-        activated: true,
-      });
+      await userRepository.transaction((tx) =>
+        userRepository.createOrUpdateUserProfile(tx, testUserId, {
+          firstName: "Valid",
+          lastName: "User",
+          activated: true,
+        }),
+      );
 
       const invalidUserId = faker.string.uuid();
 
@@ -221,11 +227,13 @@ describe("UserWebhookController", () => {
         name: "With Profile User",
       });
 
-      await userRepository.createOrUpdateUserProfile(userWithProfileId, {
-        firstName: "With",
-        lastName: "Profile",
-        activated: true,
-      });
+      await userRepository.transaction((tx) =>
+        userRepository.createOrUpdateUserProfile(tx, userWithProfileId, {
+          firstName: "With",
+          lastName: "Profile",
+          activated: true,
+        }),
+      );
 
       // Create user without profile
       const userWithoutProfileId = await testApp.createTestUser({
@@ -384,11 +392,13 @@ describe("UserWebhookController", () => {
         name: "Duplicate Test User",
       });
 
-      await userRepository.createOrUpdateUserProfile(testUserId, {
-        firstName: "Duplicate",
-        lastName: "Test",
-        activated: true,
-      });
+      await userRepository.transaction((tx) =>
+        userRepository.createOrUpdateUserProfile(tx, testUserId, {
+          firstName: "Duplicate",
+          lastName: "Test",
+          activated: true,
+        }),
+      );
 
       // Define webhook payload with duplicate user IDs
       const webhookPayload: UserMetadataWebhookPayload = {

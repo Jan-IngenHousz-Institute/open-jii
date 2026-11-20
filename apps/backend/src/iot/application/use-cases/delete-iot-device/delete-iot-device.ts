@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { ResourceDeletedNotifier } from "../../../../notifications/application/services/resource-deleted-notifier";
 import { SharingRepository } from "../../../../sharing/core/repositories/sharing.repository";
 import { AWS_PORT } from "../../../core/ports/aws.port";
@@ -17,6 +19,8 @@ export class DeleteIotDeviceUseCase {
     private readonly deviceRepository: IotDeviceRepository,
     private readonly sharingRepository: SharingRepository,
     private readonly deletionNotifier: ResourceDeletedNotifier,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<void>> {
@@ -65,12 +69,21 @@ export class DeleteIotDeviceUseCase {
     const members = await this.sharingRepository.listMemberIds("device", deviceId);
     const name = await this.sharingRepository.findResourceName("device", deviceId);
 
-    const deleteResult = await this.deviceRepository.delete(deviceId);
+    const deleteResult = await this.deviceRepository.transaction(async (tx) => {
+      const deleted = await this.deviceRepository.delete(tx, deviceId);
+      if (deleted.length > 0) {
+        await this.outboxRepository.owe(tx, [
+          { recordType: "device", recordId: deviceId, experimentId: null },
+        ]);
+      }
+      return deleted;
+    });
     if (deleteResult.isFailure()) {
       return failure(deleteResult.error);
     }
 
     if (deleteResult.value.length > 0) {
+      this.outboxWorker.nudge();
       await this.deletionNotifier.notify({
         operation: "deleteIotDevice",
         actorId: userId,

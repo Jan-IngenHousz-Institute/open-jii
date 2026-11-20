@@ -40,7 +40,15 @@ import {
   lockStaffingGrants,
 } from "../../../sharing/core/resource-staffing";
 import { TestHarness } from "../../../test/test-harness";
+import type { CreateUserProfileDto } from "../models/user.model";
 import { UserRepository } from "./user.repository";
+
+/** Closes an account in a transaction of its own, as the use case does. */
+const closeAccount = (users: UserRepository, userId: string) =>
+  users.transaction((tx) => users.delete(tx, userId));
+
+const saveProfile = (users: UserRepository, userId: string, profile: CreateUserProfileDto) =>
+  users.transaction((tx) => users.createOrUpdateUserProfile(tx, userId, profile));
 
 describe("UserRepository", () => {
   const testApp = TestHarness.App;
@@ -1047,7 +1055,7 @@ describe("UserRepository", () => {
       await testApp.addResourceVisit({ userId: userToDeleteId, resourceId: experiment.id });
       await testApp.addResourceVisit({ userId: otherUserId, resourceId: experiment.id });
 
-      const result = await repository.delete(userToDeleteId);
+      const result = await closeAccount(repository, userToDeleteId);
 
       expect(result.isSuccess()).toBe(true);
       const remaining = await testApp.database.select().from(resourceVisits);
@@ -1062,7 +1070,7 @@ describe("UserRepository", () => {
       });
 
       // Act
-      const result = await repository.delete(userToDeleteId);
+      const result = await closeAccount(repository, userToDeleteId);
 
       // Assert result
       expect(result.isSuccess()).toBe(true);
@@ -1132,7 +1140,7 @@ describe("UserRepository", () => {
         deviceType: "singleDevice",
       });
 
-      const result = await repository.delete(userToDeleteId);
+      const result = await closeAccount(repository, userToDeleteId);
       expect(result.isSuccess()).toBe(true);
 
       const remainingApiKeys = await testApp.database
@@ -1164,7 +1172,7 @@ describe("UserRepository", () => {
       expect(before.name).toBe("Jane Secret's workspace");
 
       // Act
-      const result = await repository.delete(userToDeleteId);
+      const result = await closeAccount(repository, userToDeleteId);
       expect(result.isSuccess()).toBe(true);
 
       // Assert: name scrubbed of PII; org (and ownership) intentionally kept.
@@ -1213,7 +1221,7 @@ describe("UserRepository", () => {
       }
       expect((await grantsForUser(doomed)).length).toBeGreaterThanOrEqual(2);
 
-      assertSuccess(await repository.delete(doomed));
+      assertSuccess(await closeAccount(repository, doomed));
 
       expect(await grantsForUser(doomed)).toHaveLength(0);
       // Other users' grants are untouched.
@@ -1247,7 +1255,7 @@ describe("UserRepository", () => {
         const doomed = await testApp.createTestUser({ name: "Doomed" });
         const { organizationId, coOwner } = await sharedOrganization(doomed);
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         // The co-owner's own membership is untouched — this sweeps one account's
         // associations, not the organization.
@@ -1258,7 +1266,7 @@ describe("UserRepository", () => {
         const doomed = await testApp.createTestUser({ name: "Doomed" });
         const { organizationId, coOwner } = await sharedOrganization(doomed);
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         // The count Better Auth's last-owner guards actually run: raw rows spelling
         // `owner`, with no reference to the profile that marks an account closed. A
@@ -1279,7 +1287,7 @@ describe("UserRepository", () => {
         const doomed = await testApp.createTestUser({ name: "Doomed" });
         const personalId = await testApp.personalOrganizationId(doomed);
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         // The personal organization survives the soft-delete by design and still owns
         // whatever it owned, so stripping its only owner would strand all of it.
@@ -1294,7 +1302,7 @@ describe("UserRepository", () => {
         await testApp.addTeamMember(teamId, doomed);
         await testApp.addTeamMember(teamId, survivor);
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         expect(
           await testApp.database
@@ -1326,7 +1334,7 @@ describe("UserRepository", () => {
         await testApp.addOrganizationJoinRequest(pendingOrg, doomed);
         await testApp.addOrganizationJoinRequest(rejectedOrg, doomed, { status: "rejected" });
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         // A decided request is history and reads correctly against a closed account;
         // a pending one is a queue item nobody can act on any more.
@@ -1355,7 +1363,7 @@ describe("UserRepository", () => {
           inviterId: inviter,
         });
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         // The address becomes `deleted-<id>@example.com` two steps later, so a
         // surviving invitation is a slot held against `invitationLimit` for a mailbox
@@ -1380,7 +1388,7 @@ describe("UserRepository", () => {
           status: "accepted",
         });
 
-        assertSuccess(await repository.delete(doomed));
+        assertSuccess(await closeAccount(repository, doomed));
 
         expect(
           await testApp.database
@@ -1398,7 +1406,7 @@ describe("UserRepository", () => {
         // The sweep is only safe because this refusal comes first: it is what
         // guarantees every organization it strips a membership from keeps another
         // living owner.
-        assertFailure(await repository.delete(doomed));
+        assertFailure(await closeAccount(repository, doomed));
         expect(await membersOf(organizationId)).toEqual([{ userId: doomed }]);
       });
     });
@@ -1426,7 +1434,7 @@ describe("UserRepository", () => {
           .then((d) => d.allow);
       expect(await canRead()).toBe(true);
 
-      assertSuccess(await repository.delete(doomed));
+      assertSuccess(await closeAccount(repository, doomed));
 
       expect(await canRead()).toBe(false);
     });
@@ -1441,7 +1449,7 @@ describe("UserRepository", () => {
         lastName: "Smith",
       };
 
-      const result = await repository.createOrUpdateUserProfile(newUserId, dto);
+      const result = await saveProfile(repository, newUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -1480,14 +1488,14 @@ describe("UserRepository", () => {
         firstName: "Bob",
         lastName: "Jones",
       };
-      await repository.createOrUpdateUserProfile(testUserId, initialDto);
+      await saveProfile(repository, testUserId, initialDto);
 
       // Now, update the profile
       const updateDto = {
         firstName: "Robert",
         lastName: "Jones",
       };
-      const result = await repository.createOrUpdateUserProfile(testUserId, updateDto);
+      const result = await saveProfile(repository, testUserId, updateDto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -1510,7 +1518,7 @@ describe("UserRepository", () => {
         lastName: "Brown",
       };
 
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+      const result = await saveProfile(repository, testUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -1535,7 +1543,7 @@ describe("UserRepository", () => {
         bio: "Software engineer with 10 years of experience.",
       };
 
-      const result = await repository.createOrUpdateUserProfile(testUserId, dto);
+      const result = await saveProfile(repository, testUserId, dto);
 
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
@@ -1580,13 +1588,13 @@ describe("UserRepository", () => {
       });
 
       // Create profiles for users 1 and 2, but not 3
-      await repository.createOrUpdateUserProfile(testUser1Id, {
+      await saveProfile(repository, testUser1Id, {
         firstName: "Find",
         lastName: "User1",
         bio: "Test bio 1",
         activated: true,
       });
-      await repository.createOrUpdateUserProfile(testUser2Id, {
+      await saveProfile(repository, testUser2Id, {
         firstName: "Find",
         lastName: "User2",
         bio: "Test bio 2",
@@ -1884,7 +1892,7 @@ describe("UserRepository", () => {
 
       // The pre-flight blocker is bypassed here on purpose — this asserts the
       // in-transaction guard is itself sufficient.
-      const result = await repository.delete(soleOwner);
+      const result = await closeAccount(repository, soleOwner);
 
       assertFailure(result);
       expect(result.error.message).toContain("only admin");
@@ -1904,7 +1912,7 @@ describe("UserRepository", () => {
         });
         await createAuthoredResource(resourceType, soleOwner);
 
-        const result = await repository.delete(soleOwner);
+        const result = await closeAccount(repository, soleOwner);
 
         assertFailure(result);
         expect(result.error.message).toContain("only admin");
@@ -1932,11 +1940,11 @@ describe("UserRepository", () => {
       });
 
       // The owner may go: somebody else holds full control now.
-      assertSuccess(await repository.delete(originalOwner));
+      assertSuccess(await closeAccount(repository, originalOwner));
 
       // ...which leaves the org a husk, so the transferee is now the only person
       // in full control and is blocked in exactly the same way.
-      const result = await repository.delete(transferee);
+      const result = await closeAccount(repository, transferee);
       assertFailure(result);
       expect(result.error.message).toContain("only admin");
       expect(await isStillLive(transferee)).toBe(true);
@@ -1961,8 +1969,8 @@ describe("UserRepository", () => {
         });
       }
 
-      assertSuccess(await repository.delete(originalOwner));
-      assertSuccess(await repository.delete(transferee));
+      assertSuccess(await closeAccount(repository, originalOwner));
+      assertSuccess(await closeAccount(repository, transferee));
 
       // The successor is what the experiment is left with — never nobody.
       expect(await staffingGrantCount(experiment.id)).toBe(1);
@@ -1983,7 +1991,7 @@ describe("UserRepository", () => {
         role: "admin",
       });
 
-      assertSuccess(await repository.delete(leaving));
+      assertSuccess(await closeAccount(repository, leaving));
 
       // The remaining admin keeps the experiment staffed.
       expect(await staffingGrantCount(experiment.id)).toBe(1);
@@ -2008,7 +2016,7 @@ describe("UserRepository", () => {
       });
 
       // Same rule as the pre-flight check: an admin who stepped away is not cover.
-      const result = await repository.delete(activeAdmin);
+      const result = await closeAccount(repository, activeAdmin);
 
       assertFailure(result);
       expect(result.error.message).toContain("only admin");
@@ -2032,7 +2040,7 @@ describe("UserRepository", () => {
         role: "admin",
       });
 
-      const result = await repository.delete(activeAdmin);
+      const result = await closeAccount(repository, activeAdmin);
 
       assertFailure(result);
       expect(result.error.message).toContain("only admin");
@@ -2046,7 +2054,7 @@ describe("UserRepository", () => {
       const org = await testApp.createOrganization();
       await testApp.addOrganizationMember(org, soleOwner, "owner");
 
-      const result = await repository.delete(soleOwner);
+      const result = await closeAccount(repository, soleOwner);
 
       assertFailure(result);
       expect(result.error.message).toContain("only owner of one or more organizations");
@@ -2068,7 +2076,7 @@ describe("UserRepository", () => {
       const grantee = await testApp.createTestUser({ email: "husk-grantee@example.com" });
       await testApp.addResourceAdmin("experiment", experiment.id, grantee);
 
-      const result = await repository.delete(soleOwner);
+      const result = await closeAccount(repository, soleOwner);
 
       assertFailure(result);
       expect(result.error.message).toContain("only owner of one or more organizations");
@@ -2084,7 +2092,7 @@ describe("UserRepository", () => {
       const orgAdmin = await testApp.createTestUser({ email: "only-an-admin@example.com" });
       await testApp.addOrganizationMember(org, orgAdmin, "admin");
 
-      const result = await repository.delete(soleOwner);
+      const result = await closeAccount(repository, soleOwner);
 
       assertFailure(result);
       expect(result.error.message).toContain("only owner of one or more organizations");
@@ -2098,7 +2106,7 @@ describe("UserRepository", () => {
       await testApp.addOrganizationMember(org, leaving, "owner");
       await testApp.addOrganizationMember(org, staying, "owner");
 
-      assertSuccess(await repository.delete(leaving));
+      assertSuccess(await closeAccount(repository, leaving));
     });
 
     // Everybody is the permanent sole owner of their own personal organization, so a
@@ -2107,7 +2115,7 @@ describe("UserRepository", () => {
       const ordinary = await testApp.createTestUser({ email: "just-personal@example.com" });
       await testApp.personalOrganizationId(ordinary);
 
-      assertSuccess(await repository.delete(ordinary));
+      assertSuccess(await closeAccount(repository, ordinary));
     });
 
     /**
@@ -2190,7 +2198,7 @@ describe("UserRepository", () => {
 
         const deleterPid = await backendPidOf(deleter.database);
         const { release, holding } = await holdOrgOwnerLock(blocker.database, org);
-        const deletion = deleterRepo.delete(ownerA);
+        const deletion = closeAccount(deleterRepo, ownerA);
         await waitUntilBlocked(deleterPid);
 
         release();
@@ -2200,7 +2208,7 @@ describe("UserRepository", () => {
         // With A gone, B is the sole living owner of the organization — so B is now
         // refused. Without the lock above the two could have decided simultaneously
         // and both left, and the organization would own a macro nobody answers for.
-        const second = await repository.delete(ownerB);
+        const second = await closeAccount(repository, ownerB);
         assertFailure(second);
         expect(second.error.message).toContain("only owner of one or more organizations");
       } finally {
@@ -2229,7 +2237,7 @@ describe("UserRepository", () => {
 
         const deleterPid = await backendPidOf(deleter.database);
         const { release, holding } = await holdOrgOwnerLock(blocker.database, org);
-        const deletion = deleterRepo.delete(ownerA);
+        const deletion = closeAccount(deleterRepo, ownerA);
         await waitUntilBlocked(deleterPid);
 
         release();
@@ -2237,7 +2245,7 @@ describe("UserRepository", () => {
         assertSuccess(await deletion);
 
         // B now reads the world A left behind, and is the last owner standing.
-        const second = await repository.delete(ownerB);
+        const second = await closeAccount(repository, ownerB);
         assertFailure(second);
         expect(second.error.message).toContain("only owner of one or more organizations");
       } finally {
@@ -2298,7 +2306,7 @@ describe("UserRepository", () => {
         });
         const personalOrg = await testApp.personalOrganizationId(soleOwner);
         // Owns nothing yet, so the blocker lets the deletion through.
-        assertSuccess(await repository.delete(soleOwner));
+        assertSuccess(await closeAccount(repository, soleOwner));
 
         const creation = await creatorRepo.create(
           {
@@ -2348,7 +2356,7 @@ describe("UserRepository", () => {
         await testApp.addOrganizationMember(org, departing, "member");
 
         // They own nothing, so nothing blocks their deletion.
-        assertSuccess(await repository.delete(departing));
+        assertSuccess(await closeAccount(repository, departing));
 
         const creation = await creatorRepo.create(
           {
@@ -2389,7 +2397,7 @@ describe("UserRepository", () => {
         });
         const personalOrg = await testApp.personalOrganizationId(preOnboarding);
 
-        assertSuccess(await repository.delete(preOnboarding));
+        assertSuccess(await closeAccount(repository, preOnboarding));
 
         // The marker exists and is scrubbed...
         const [tombstone] = await testApp.database
@@ -2452,12 +2460,12 @@ describe("UserRepository", () => {
             role: "admin",
           });
         }
-        assertSuccess(await repository.delete(gone));
+        assertSuccess(await closeAccount(repository, gone));
         expect(await staffingGrantCount(experiment.id)).toBe(2);
 
         const outcomes = await Promise.all([
-          secondaryRepo.delete(adminA),
-          repository.delete(adminB),
+          closeAccount(secondaryRepo, adminA),
+          closeAccount(repository, adminB),
         ]);
 
         // Exactly one deletion may win; the other must be refused so the experiment
@@ -2559,7 +2567,7 @@ describe("UserRepository", () => {
             await released;
           });
 
-          const deletion = deleterRepo.delete(leaving);
+          const deletion = closeAccount(deleterRepo, leaving);
           await waitUntilBlocked();
 
           // Blocked on the macro, so it cannot yet be holding the workbook — the

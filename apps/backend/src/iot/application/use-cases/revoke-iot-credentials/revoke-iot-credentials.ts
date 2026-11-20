@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
+import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
@@ -15,6 +17,8 @@ export class RevokeIotCredentialsUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly outboxRepository: ExperimentDataOutboxRepository,
+    private readonly outboxWorker: ExperimentDataOutboxWorker,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<IotDeviceDto>> {
@@ -67,10 +71,18 @@ export class RevokeIotCredentialsUseCase {
       }
     }
 
-    const updateResult = await this.deviceRepository.update(deviceId, {
-      status: "revoked",
-      certificateId: null,
-      certificateArn: null,
+    const updateResult = await this.deviceRepository.transaction(async (tx) => {
+      const updated = await this.deviceRepository.update(tx, deviceId, {
+        status: "revoked",
+        certificateId: null,
+        certificateArn: null,
+      });
+      if (updated) {
+        await this.outboxRepository.owe(tx, [
+          { recordType: "device", recordId: deviceId, experimentId: null },
+        ]);
+      }
+      return updated;
     });
     if (updateResult.isFailure() || !updateResult.value) {
       return updateResult.isFailure()
@@ -83,6 +95,7 @@ export class RevokeIotCredentialsUseCase {
           );
     }
 
+    this.outboxWorker.nudge();
     return success(updateResult.value);
   }
 }

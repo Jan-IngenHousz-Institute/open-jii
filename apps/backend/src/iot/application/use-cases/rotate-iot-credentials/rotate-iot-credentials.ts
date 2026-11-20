@@ -75,11 +75,14 @@ export class RotateIotCredentialsUseCase {
     // with the new cert, so log failures but do not abort.
     await this.retireCertificate(device.thingName, oldCertificateId, oldCertificateArn);
 
-    const updateResult = await this.deviceRepository.update(deviceId, {
-      certificateId: cert.certificateId,
-      certificateArn: cert.certificateArn,
-      status: "active",
-    });
+    // The registry's lakehouse copy holds no certificate, so a rotation owes it nothing.
+    const updateResult = await this.deviceRepository.transaction((tx) =>
+      this.deviceRepository.update(tx, deviceId, {
+        certificateId: cert.certificateId,
+        certificateArn: cert.certificateArn,
+        status: "active",
+      }),
+    );
     if (updateResult.isFailure() || !updateResult.value) {
       return updateResult.isFailure()
         ? failure(updateResult.error)

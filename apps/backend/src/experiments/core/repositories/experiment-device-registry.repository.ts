@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { inArray, iotDevices } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 
@@ -10,14 +10,15 @@ export interface RegisteredDevice {
   thingName: string;
   id: string;
   serialNumber: string;
-  createdBy: string | null;
+  createdBy: string;
   status: string;
   deviceType: string;
+  registeredAt: Date;
 }
 
 /**
- * The registry's devices by the client id they publish under, which is their thing name, the way
- * the pipelines resolve them through the device registry webhook.
+ * The registry's devices as an experiment's rows name them, by the client id they publish under,
+ * which is their thing name, the key the pipelines join the registry's lakehouse copy on.
  */
 @Injectable()
 export class ExperimentDeviceRegistryRepository {
@@ -28,17 +29,26 @@ export class ExperimentDeviceRegistryRepository {
       if (thingNames.length === 0) {
         return [];
       }
-      return await this.database
-        .select({
-          thingName: iotDevices.thingName,
-          id: iotDevices.id,
-          serialNumber: iotDevices.serialNumber,
-          createdBy: iotDevices.createdBy,
-          status: iotDevices.status,
-          deviceType: iotDevices.deviceType,
-        })
-        .from(iotDevices)
-        .where(inArray(iotDevices.thingName, thingNames));
+      return await this.select(inArray(iotDevices.thingName, thingNames));
     });
+  }
+
+  async findByIds(ids: string[]): Promise<Result<RegisteredDevice[]>> {
+    return tryCatch(() => this.select(inArray(iotDevices.id, ids)));
+  }
+
+  private async select(condition: SQL): Promise<RegisteredDevice[]> {
+    return this.database
+      .select({
+        thingName: iotDevices.thingName,
+        id: iotDevices.id,
+        serialNumber: iotDevices.serialNumber,
+        createdBy: iotDevices.createdBy,
+        status: iotDevices.status,
+        deviceType: iotDevices.deviceType,
+        registeredAt: iotDevices.createdAt,
+      })
+      .from(iotDevices)
+      .where(condition);
   }
 }

@@ -1,17 +1,22 @@
 # experiment-data-outbox-waiting
 
-**A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes.** Postgres
-holds annotations and metadata sheets, and every change to one owes its current state to the
-lakehouse's copy, which exports, charts and the warehouse views read. The serving store's sheet rows
-come from that copy through the store feed. Each owed copy is a row in `experiment_data_outbox`, and
-the worker on every backend task applies them. Every five minutes each task publishes
-`ExperimentDataCopiesWaiting`, how many rows are owed, and `ExperimentDataCopyOldestWaitingSeconds`,
-how long since the oldest was first owed (its `created_at`, on the database's clock). The rule fires
-when the age stays above 1,800 seconds for 5 minutes. A copy usually lands within seconds.
+**A copy of an annotation, metadata sheet, contributor or device has waited in the outbox for over
+30 minutes.** Postgres holds annotations and metadata sheets, and every change to one owes its
+current state to the lakehouse's copy, which exports, charts and the warehouse views read. The
+serving store's sheet rows come from that copy through the store feed. A change to a profile or a
+device owes the lakehouse its copy too, in `centrum.contributor_profiles` or
+`centrum.device_registry`, which the pipelines join to name an experiment's contributors and
+devices. Each owed copy is a row in `experiment_data_outbox`, and the worker on every backend task
+applies them. Every five minutes each task publishes `ExperimentDataCopiesWaiting`, how many rows are
+owed, and `ExperimentDataCopyOldestWaitingSeconds`, how long since the oldest was first owed (its
+`created_at`, on the database's clock). The rule fires when the age stays above 1,800 seconds for 5
+minutes. A copy usually lands within seconds.
 
-Pages read annotations from Postgres, so nobody sees a stale annotation. What waits is the copy: an
-export, a chart, or the custom metadata a page shows, through the warehouse or the store, may be
-missing the latest edits.
+Pages read annotations from Postgres, so nobody sees a stale annotation, and store pages read names
+and devices from Postgres too. What waits is the copy: an export, a chart, or the custom metadata a
+page shows, through the warehouse or the store, may be missing the latest edits, and the warehouse
+views, with the pages still read through them, keep a contributor's or device's previous name and
+status.
 
 ## Which copy, and why
 

@@ -151,7 +151,8 @@ describe("createGrant", () => {
       role: "viewer",
     });
     await checkFinished;
-    assertSuccess(await new UserRepository(secondary.database).delete(grantee));
+    const users = new UserRepository(secondary.database);
+    assertSuccess(await users.transaction((tx) => users.delete(tx, grantee)));
     release();
 
     const result = await creating;
