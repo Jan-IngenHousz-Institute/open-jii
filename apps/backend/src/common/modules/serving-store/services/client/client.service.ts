@@ -33,6 +33,14 @@ export class ServingStoreClientService implements OnModuleDestroy {
    */
   private static readonly RESULT_BYTES_GUARD = 4 * PAGE_BYTE_LIMIT;
 
+  /**
+   * A sort by contributor name, a device label and a flag filter write the experiment's ids into
+   * the query, once each; the store's default 256 KiB would cap that near 5,000 ids.
+   */
+  private static readonly MAX_QUERY_BYTES = 1_048_576;
+
+  private static readonly FORMAT = "JSONCompactEachRow";
+
   private readonly client: ClickHouseClient | null;
 
   constructor(configService: ServingStoreConfigService) {
@@ -67,9 +75,7 @@ export class ServingStoreClientService implements OnModuleDestroy {
               // separately, which is faster. The adapter spec checks each table's partition time is
               // in its sorting key, which this depends on.
               do_not_merge_across_partitions_select_final: 1,
-              // A sort by contributor name and a device label write the experiment's ids into the
-              // query, once each; the default 256 KiB would cap that near 5,000 ids.
-              max_query_size: "1048576",
+              max_query_size: String(ServingStoreClientService.MAX_QUERY_BYTES),
               // Text read as a number, such as a Number question's answer, lands on the nearest
               // double as Spark's does; the fast parser misses it for about 1 % of decimals.
               precise_float_parsing: 1,
@@ -79,6 +85,12 @@ export class ServingStoreClientService implements OnModuleDestroy {
 
   isConfigured(): boolean {
     return this.client !== null;
+  }
+
+  /** The store counts the format clause the client appends to a statement against its limit. */
+  fitsQuerySize(sql: string): boolean {
+    const sent = `${sql.trim()} \nFORMAT ${ServingStoreClientService.FORMAT}`;
+    return Buffer.byteLength(sent) <= ServingStoreClientService.MAX_QUERY_BYTES;
   }
 
   async query(sql: string): Promise<Result<StoreResult>> {
@@ -105,7 +117,10 @@ export class ServingStoreClientService implements OnModuleDestroy {
 
     return tryCatch(
       async () => {
-        const resultSet = await client.query({ query: sql, format: "JSONCompactEachRow" });
+        const resultSet = await client.query({
+          query: sql,
+          format: ServingStoreClientService.FORMAT,
+        });
         for await (const rows of resultSet.stream()) {
           for (const row of rows) {
             if (!take(zRow.parse(row.json()))) {

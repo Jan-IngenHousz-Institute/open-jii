@@ -75,6 +75,7 @@ export class GetExperimentDataUseCase {
         aggregation,
         join,
         limit,
+        flagged,
       } = query;
 
       if (!tableName) {
@@ -104,6 +105,7 @@ export class GetExperimentDataUseCase {
         page,
         pageSize,
         limit,
+        flagged,
         source,
       });
       if (result.isFailure()) return result;

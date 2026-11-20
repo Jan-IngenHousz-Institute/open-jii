@@ -5,7 +5,10 @@ import {
   DATA_QUERY_MAX_LIMIT,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type { ExperimentDataJoin } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentDataFlagged,
+  ExperimentDataJoin,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   getColumnKind,
   isDecimalType,
@@ -40,6 +43,7 @@ import type {
   ExperimentQueryParams,
   ExperimentTableMetadata,
   ExperimentTableType,
+  FlaggedRows,
   SchemaDataDto,
   TableDataDto,
   VariantColumn,
@@ -115,6 +119,8 @@ interface TableShape {
    * view's payload_annotations, or none, as on an upload table. Annotations added later come from Postgres.
    */
   phoneAnnotationsFrom?: string;
+  /** Every query of a flagged read keeps the same rows: those with a flag, or those without. */
+  flagged?: FlaggedRows;
 }
 
 type RenamedColumns = Map<string, { name: string; source: VariantColumn }>;
@@ -166,6 +172,7 @@ export class ExperimentDataRepository {
     page?: number;
     pageSize?: number;
     limit?: number;
+    flagged?: ExperimentDataFlagged;
     source: ExperimentDataSource;
   }): Promise<Result<TableDataDto[]>> {
     const {
@@ -181,17 +188,33 @@ export class ExperimentDataRepository {
       page,
       pageSize,
       limit,
+      flagged,
       source,
     } = params;
 
     const hasAggregation =
       (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
-    const hasFilters = (filters?.length ?? 0) > 0;
+    // A flag filter narrows the rows as a filter does, so the read counts them itself.
+    const hasFilters = (filters?.length ?? 0) > 0 || flagged !== undefined;
     const hasColumns = join !== undefined || (columns?.length ?? 0) > 0;
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
     const isChartRead = hasAggregation || ((hasFilters || hasColumns) && !hasPaging);
     const readSource = isChartRead || join !== undefined ? "warehouse" : source;
+
+    // Charts, joined reads and tables the store does not hold read from the warehouse, and only
+    // the store's read builds the flag filter.
+    const isFlaggedReadUnsupported =
+      flagged !== undefined &&
+      (readSource !== "store" || !this.sourceReads(readSource).readsTable(tableName));
+    if (isFlaggedReadUnsupported) {
+      return failure(
+        AppError.badRequest(
+          "Rows can be filtered by flags only on a page of a table the serving store holds",
+          "FLAGGED_READ_UNSUPPORTED",
+        ),
+      );
+    }
 
     const read: ReadTrace = {
       experimentId,
@@ -217,6 +240,17 @@ export class ExperimentDataRepository {
       const joined = await this.joinedShape(experimentId, tableName, shape, join);
       if (joined.isFailure()) return joined;
       shape = joined.value;
+    }
+    if (flagged !== undefined) {
+      const flaggedRows = await this.storeReads.flaggedRows(
+        experimentId,
+        shape.metadata.identifier,
+        flagged,
+      );
+      if (flaggedRows.isFailure()) {
+        return flaggedRows;
+      }
+      shape = { ...shape, flagged: flaggedRows.value };
     }
 
     const anonymizedResult = await this.anonymizedQuery(experiment, tableName, shape.source, {
@@ -1003,6 +1037,7 @@ export class ExperimentDataRepository {
       ordering: effectiveOrdering,
       limit,
       offset,
+      flagged: shape.flagged,
     });
   }
 

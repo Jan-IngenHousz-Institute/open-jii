@@ -1,18 +1,20 @@
-"""What each store table holds, built from its gold table's change feed."""
+"""What each store table holds, built from the change feed of the table it reads: a gold table, or
+the lakehouse's copy of the metadata sheets."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from pyspark.sql import Column, DataFrame
+from pyspark.sql import Column, DataFrame, Window
 from pyspark.sql import functions as F
 
 from openjii.centrum.constants import (
+    EXPERIMENT_CUSTOM_METADATA_TABLE,
     EXPERIMENT_MACRO_DATA_TABLE,
     EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_UPLOADED_DATA_TABLE,
 )
-from openjii.variant_schema import merged_variant_schema
+from openjii.variant_schema import custom_metadata_schemas, merged_variant_schema
 
 # The store parses microseconds without an offset. Spark's default writes milliseconds with the
 # session's offset, and pre-1900 zones carry offsets such as +00:17:30 that the store refuses.
@@ -30,6 +32,9 @@ _KEPT_CHANGES = ("insert", "update_postimage")
 
 # The store table that holds every table's payload schemas.
 PAYLOAD_SCHEMAS = "payload_schemas"
+
+# The store table that holds each metadata sheet's match and the schema its rows give.
+METADATA_SHEETS = "metadata_sheets"
 
 # The store's Float64 columns, which each line writes first so the writer can rewrite their digits
 # without reading the rest of the line (writer.exact_doubles).
@@ -68,10 +73,11 @@ def or_empty(column: str) -> Column:
 
 
 class StoreTable:
-    """A store table fed from one gold table."""
+    """A store table fed from the change feed of ``source_table``: a gold table, unless ``source``
+    names another."""
 
     name: str
-    gold_table: str
+    source_table: str
     # The time the store table's month partitions follow.
     partitioned_by = "timestamp"
     # The time gold processed a row at, later on a recomputed copy than on the row it replaces.
@@ -81,6 +87,12 @@ class StoreTable:
     # holds, and the payload columns whose schemas it lists.
     table_type: str
     payloads: tuple[str, ...]
+    # The store table its schema lines go to, after its rows.
+    schema_table = PAYLOAD_SCHEMAS
+
+    def source(self, catalog: str) -> str:
+        """The table whose change feed the store table is fed from."""
+        return f"LIVE.{self.source_table}"
 
     def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
         """One JSON line, in column ``line``, per row gold inserted or updated in ``changes``, with
@@ -146,7 +158,7 @@ class StoreTable:
 
 class Measurements(StoreTable):
     name = "measurements"
-    gold_table = EXPERIMENT_RAW_DATA_TABLE
+    source_table = EXPERIMENT_RAW_DATA_TABLE
     table_type = "static"
     payloads = ("questions_data",)
 
@@ -195,7 +207,7 @@ class Measurements(StoreTable):
 
 class MacroResults(StoreTable):
     name = "macro_results"
-    gold_table = EXPERIMENT_MACRO_DATA_TABLE
+    source_table = EXPERIMENT_MACRO_DATA_TABLE
     table_type = "macro"
     payloads = ("macro_output", "questions_data")
 
@@ -241,7 +253,7 @@ class MacroResults(StoreTable):
 
 class Uploads(StoreTable):
     name = "uploads"
-    gold_table = EXPERIMENT_UPLOADED_DATA_TABLE
+    source_table = EXPERIMENT_UPLOADED_DATA_TABLE
     partitioned_by = "uploaded_at"
     processed_at = None
     table_type = "upload"
@@ -267,6 +279,130 @@ class Uploads(StoreTable):
         ]
 
 
+class MetadataRows(StoreTable):
+    """The rows of the experiments' metadata sheets, from the lakehouse's copy of the sheets, which
+    the backend keeps to Postgres. That copy, unlike gold, edits and deletes a sheet in place, so this
+    table takes deletions: an identifier an edit dropped, or every identifier of a deleted sheet, goes
+    to the store as a row with ``is_deleted`` set at the commit that removed it.
+
+    A sheet's rows are matched as the warehouse's enriched views match them, so both read the same
+    metadata: by the identifier column's value as text, the first row of each identifier winning,
+    and the rest of the row, without its ``_id``, as the fields. Each sheet also goes to
+    ``metadata_sheets`` with the schema gold types its rows with."""
+
+    name = "metadata_rows"
+    source_table = EXPERIMENT_CUSTOM_METADATA_TABLE
+    partitioned_by = "sheet_created_at"
+    processed_at = None
+    schema_table = METADATA_SHEETS
+
+    def source(self, catalog: str) -> str:
+        return f"{catalog}.centrum.{self.source_table}"
+
+    def lines(self, changes: DataFrame, reloaded: bool = False) -> DataFrame:
+        rows = self._sheet_rows(changes)
+        keys = ["sheet_id", "identifier", "_commit_version"]
+        current = rows.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
+        removed = rows.filter(F.col("_change_type").isin("update_preimage", "delete")).join(
+            current.select(*keys), keys, "left_anti"
+        )
+        stored = current.withColumn("is_deleted", F.lit(0)).unionByName(
+            removed.withColumn("is_deleted", F.lit(1))
+        )
+        row = F.struct(
+            "experiment_id",
+            "sheet_id",
+            "sheet_created_at",
+            "match_on",
+            "identifier",
+            "fields",
+            "is_deleted",
+            "_commit_version",
+            "_commit_timestamp",
+        )
+        return stored.select(
+            F.to_json(row, JSON_OPTIONS).alias("line"), F.col(self.partitioned_by).alias("partition_time")
+        )
+
+    def schema_lines(self, changes: DataFrame) -> DataFrame:
+        """One JSON line per sheet in ``changes`` at each commit that changed it: its match and the
+        schema of its rows as gold types custom metadata, none for a sheet without rows. A deleted
+        sheet goes as deleted, as its rows do."""
+        sheets = changes.selectExpr(
+            "experiment_id",
+            "metadata_id AS sheet_id",
+            "created_at AS sheet_created_at",
+            "coalesce(variant_get(metadata, '$.experimentQuestionId', 'STRING'), '') AS match_on",
+            "metadata",
+            "_change_type",
+            "_commit_version",
+        )
+        keys = ["sheet_id", "_commit_version"]
+        current = sheets.filter(F.col("_change_type").isin(*_KEPT_CHANGES))
+        removed = sheets.filter(F.col("_change_type").isin("update_preimage", "delete")).join(
+            current.select(*keys), keys, "left_anti"
+        )
+        typed = current.join(custom_metadata_schemas(current, *keys), keys, "left")
+        stored = typed.withColumn("is_deleted", F.lit(0)).unionByName(
+            removed.withColumn("custom_metadata_schema", F.lit(None).cast("string")).withColumn(
+                "is_deleted", F.lit(1)
+            )
+        )
+        row = F.struct(
+            "experiment_id",
+            "sheet_id",
+            "sheet_created_at",
+            "match_on",
+            F.col("custom_metadata_schema").alias("schema"),
+            "is_deleted",
+            "_commit_version",
+        )
+        return stored.select(F.to_json(row, JSON_OPTIONS).alias("line"))
+
+    def _sheet_rows(self, changes: DataFrame) -> DataFrame:
+        """Each sheet's rows in ``changes``, one per identifier, per change. A sheet saved before its
+        shape was checked, or a row that is no object, has none."""
+        rows = (
+            changes.selectExpr(
+                "experiment_id",
+                "metadata_id AS sheet_id",
+                "created_at AS sheet_created_at",
+                "variant_get(metadata, '$.experimentQuestionId', 'STRING') AS match_on",
+                "variant_get(metadata, '$.identifierColumnId', 'STRING') AS identifier_column",
+                "_change_type",
+                "_commit_version",
+                "_commit_timestamp",
+                "posexplode(try_variant_get(metadata, '$.rows', 'ARRAY<VARIANT>')) AS (position, row)",
+            )
+            .selectExpr(
+                "*",
+                "try_variant_get(row, '$', 'MAP<STRING, VARIANT>') AS row_map",
+            )
+            .selectExpr(
+                "experiment_id",
+                "sheet_id",
+                "sheet_created_at",
+                "coalesce(match_on, '') AS match_on",
+                "variant_get(element_at(row_map, identifier_column), '$', 'STRING') AS identifier",
+                "to_json(map_filter(row_map, (k, v) -> k != '_id' AND k != identifier_column)) AS fields",
+                "_change_type",
+                "_commit_version",
+                "_commit_timestamp",
+                "position",
+            )
+            .filter(F.col("identifier").isNotNull())
+        )
+        first = Window.partitionBy("sheet_id", "identifier", "_commit_version", "_change_type").orderBy(
+            "position"
+        )
+        return (
+            rows.withColumn("_nth", F.row_number().over(first))
+            .filter(F.col("_nth") == 1)
+            .drop("_nth", "position")
+        )
+
+
 MEASUREMENTS = Measurements()
 MACRO_RESULTS = MacroResults()
 UPLOADS = Uploads()
+METADATA_ROWS = MetadataRows()
