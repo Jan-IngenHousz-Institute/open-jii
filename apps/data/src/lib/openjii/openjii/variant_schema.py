@@ -34,18 +34,19 @@ def merged_variant_schema(expression: str) -> Column:
 def custom_metadata_schemas(sheets: DataFrame, *keys: str) -> DataFrame:
     """The schema of the custom metadata the sheets in ``sheets`` hold, per group of ``keys``, in
     column ``custom_metadata_schema``, decimals kept. Each row leaves out its ``_id`` and its
-    identifier, so a read does not expand them into columns that repeat it."""
+    identifier, so a read does not expand them into columns that repeat it. Rows that are no
+    object, and ``rows`` that is no array, add nothing, as the sheets' rows leave them out."""
     return (
         sheets.select(
             *keys,
             F.expr("variant_get(metadata, '$.identifierColumnId', 'STRING')").alias("_id_col"),
-            F.expr("explode(variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row"),
+            F.expr("explode(try_variant_get(metadata, '$.rows', 'ARRAY<VARIANT>'))").alias("_row"),
         )
         .withColumn(
             "_row",
             F.expr("""
                 parse_json(to_json(map_filter(
-                    cast(_row AS MAP<STRING, VARIANT>),
+                    try_variant_get(_row, '$', 'MAP<STRING, VARIANT>'),
                     (k, v) -> k != '_id' AND k != _id_col
                 )))
             """),

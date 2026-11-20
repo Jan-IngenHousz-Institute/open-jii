@@ -277,6 +277,30 @@ def test_each_sheet_goes_once_per_commit_with_the_schema_gold_types_its_rows_wit
     assert METADATA_ROWS.schema_table == "metadata_sheets"
 
 
+def test_a_sheets_schema_leaves_out_a_row_that_is_no_object_and_keeps_the_rest(
+    spark: SparkSession,
+) -> None:
+    mixed = (
+        '{"identifierColumnId": "plot", "rows": ['
+        '{"_id": "r1", "plot": "A1", "soil": "clay", "area": 1.5}, "legacy", 7, [1]]}'
+    )
+    no_rows = '{"identifierColumnId": "plot", "rows": "legacy"}'
+    changes = spark.sql(f"""
+        SELECT experiment_id, metadata_id, parse_json(doc) AS metadata, 'u1' AS created_by,
+          TIMESTAMP'2026-09-01 08:00:00' AS created_at, TIMESTAMP'2026-09-01 08:00:00' AS updated_at,
+          'insert' AS _change_type, _commit_version, TIMESTAMP'2026-09-02 10:00:00' AS _commit_timestamp
+        FROM VALUES ('e1', 's1', '{mixed}', 1L), ('e1', 's2', '{no_rows}', 1L)
+        AS t(experiment_id, metadata_id, doc, _commit_version)
+    """)
+
+    lines = [json.loads(row.line) for row in METADATA_ROWS.schema_lines(changes).collect()]
+
+    assert {line["sheet_id"]: line.get("schema") for line in lines} == {
+        "s1": "OBJECT<area: DECIMAL(2,1), soil: STRING>",
+        "s2": None,
+    }
+
+
 def test_each_table_reads_its_source_in_the_pipeline_or_the_sheets_copy_by_name() -> None:
     assert MEASUREMENTS.source("open_jii_dev") == "LIVE.experiment_raw_data"
     assert METADATA_ROWS.source("open_jii_dev") == "open_jii_dev.centrum.experiment_custom_metadata"
