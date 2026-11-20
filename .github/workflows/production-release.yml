@@ -26,7 +26,7 @@ on:
         type: boolean
         default: true
       deploy_app:
-        description: "Leave empty: a release deploys every app. Only for a runbook that deploys named apps alone (e.g. backend,web). Options: web, backend, migration, databricks, docs, status, macro-sandbox, calibration-sandbox"
+        description: "Leave empty: a release deploys every app. Only for a runbook that deploys named apps alone (e.g. backend,web), or none for infrastructure alone. Options: web, backend, migration, databricks, docs, status, macro-sandbox, calibration-sandbox, none"
         required: false
         type: string
         default: ""
