@@ -2389,6 +2389,8 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         "experiment_contributor_ids",
         "experiment_macro_results",
         "experiment_measurements",
+        "experiment_metadata_rows",
+        "experiment_metadata_sheets",
         "experiment_payload_schemas",
         "experiment_uploads",
         "macro_results",
@@ -2405,7 +2407,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
       for (const name of others) {
         const read = await readerClient.stream(
-          `SELECT 1 FROM ${name} LIMIT 1`,
+          `SELECT 1 FROM \`${name}\` LIMIT 1`,
           { [EXPERIMENT_SETTING]: EXPERIMENT },
           () => true,
         );
