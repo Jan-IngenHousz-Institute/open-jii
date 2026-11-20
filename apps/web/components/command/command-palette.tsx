@@ -197,6 +197,18 @@ export function CommandPalette({ locale }: { locale: string }) {
           return navigate(`/${locale}/platform/calibrations/${result.id}`);
         case "organization":
           return navigate(`/${locale}/platform/organizations/${result.id}`);
+        case "dashboard":
+          if (!result.parent) return;
+          return navigate(
+            `/${locale}/platform/experiments/${result.parent.id}/dashboards/${result.id}`,
+          );
+        case "visualization":
+          if (!result.parent) return;
+          return navigate(
+            `/${locale}/platform/experiments/${result.parent.id}/analysis/visualizations/${result.id}`,
+          );
+        case "device":
+          return navigate(`/${locale}/platform/devices/${result.id}`);
       }
     },
     [locale, navigate],

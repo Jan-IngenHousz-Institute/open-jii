@@ -127,7 +127,7 @@ jobs:
         uses: ./.github/actions/tofu/grafana-token
         with:
           workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
@@ -153,7 +153,7 @@ jobs:
         uses: ./.github/actions/tofu/grafana-token-delete
         with:
           workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
           token_id: ${{ steps.grafana.outputs.token_id }}
 
   approval_gate:
@@ -260,7 +260,7 @@ jobs:
         uses: ./.github/actions/tofu/grafana-token
         with:
           workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
           seconds_to_live: "7200"
 
       - name: OpenTofu Apply
@@ -275,5 +275,5 @@ jobs:
         uses: ./.github/actions/tofu/grafana-token-delete
         with:
           workspace_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ inputs.environment == 'prod' && secrets.GRAFANA_SERVICE_ACCOUNT_ID_PROD || secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          service_account_id: ${{ inputs.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
           token_id: ${{ steps.grafana.outputs.token_id }}

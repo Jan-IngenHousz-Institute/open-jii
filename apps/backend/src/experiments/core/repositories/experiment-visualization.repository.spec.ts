@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import { eq, experiments, experimentVisualizations, profiles } from "@repo/database";
+
 import { assertSuccess, assertFailure } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import type {
@@ -50,7 +52,139 @@ describe("ExperimentVisualizationRepository", () => {
     await testApp.teardown();
   });
 
+  describe("search", () => {
+    async function insertSearchRow(
+      experimentId: string,
+      name: string,
+      description: string | null = null,
+    ) {
+      const [row] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId,
+          name,
+          description,
+          createdBy: testUserId,
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig: {},
+        })
+        .returning({ id: experimentVisualizations.id });
+      return row;
+    }
+
+    it("matches the title and returns the experiment, subtitle and score without the vector", async () => {
+      const name = `Canopy ${crypto.randomUUID().replaceAll("-", "")}`;
+      const row = await insertSearchRow(testExperimentId, name, "Subtitle only");
+      const result = await repository.search(name, testUserId, 20);
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          id: row.id,
+          name,
+          description: "Subtitle only",
+          score: expect.any(Number) as number,
+          parent: { id: testExperimentId, title: "Test Experiment" },
+        },
+      ]);
+      const descriptionOnly = await repository.search("Subtitle only", testUserId, 20);
+      assertSuccess(descriptionOnly);
+      expect(descriptionOnly.value.map((entry) => entry.id)).not.toContain(row.id);
+    });
+
+    it("hides a private experiment from an outsider until a read grant exists", async () => {
+      const name = `Private ${crypto.randomUUID().replaceAll("-", "")}`;
+      const row = await insertSearchRow(testExperimentId, name);
+      const hidden = await repository.search(name, anotherUserId, 20);
+      assertSuccess(hidden);
+      expect(hidden.value).toEqual([]);
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: testExperimentId,
+        granteeType: "user",
+        granteeId: anotherUserId,
+        role: "viewer",
+      });
+      const visible = await repository.search(name, anotherUserId, 20);
+      assertSuccess(visible);
+      expect(visible.value.map((entry) => entry.id)).toEqual([row.id]);
+    });
+
+    it("hides archived experiments even from an experiment admin", async () => {
+      const name = `Archived ${crypto.randomUUID().replaceAll("-", "")}`;
+      await insertSearchRow(testExperimentId, name);
+      await testApp.database
+        .update(experiments)
+        .set({ status: "archived" })
+        .where(eq(experiments.id, testExperimentId));
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: testExperimentId,
+        granteeType: "user",
+        granteeId: anotherUserId,
+        role: "admin",
+      });
+      for (const userId of [testUserId, anotherUserId]) {
+        const result = await repository.search(name, userId, 20);
+        assertSuccess(result);
+        expect(result.value).toEqual([]);
+      }
+    });
+
+    it("returns only the public row when public and private experiments share a title", async () => {
+      const name = `Shared ${crypto.randomUUID().replaceAll("-", "")}`;
+      const { experiment } = await testApp.createExperiment({
+        name: `Public ${crypto.randomUUID()}`,
+        userId: testUserId,
+        visibility: "public",
+      });
+      await insertSearchRow(testExperimentId, name);
+      const publicRow = await insertSearchRow(experiment.id, name);
+      const result = await repository.search(name, anotherUserId, 20);
+      assertSuccess(result);
+      expect(result.value.map((entry) => entry.id)).toEqual([publicRow.id]);
+    });
+
+    it("orders equal matches by the experiment relationship and then id, respecting the limit", async () => {
+      const name = `Ranking ${crypto.randomUUID().replaceAll("-", "")}`;
+      const { experiment } = await testApp.createExperiment({
+        name: `Public ${crypto.randomUUID()}`,
+        userId: anotherUserId,
+        visibility: "public",
+      });
+      await insertSearchRow(experiment.id, name);
+      const owned = await insertSearchRow(testExperimentId, name);
+      const ownedSecond = await insertSearchRow(testExperimentId, name);
+      const result = await repository.search(name, testUserId, 2);
+      assertSuccess(result);
+      expect(result.value.map((entry) => entry.id)).toEqual([owned.id, ownedSecond.id].sort());
+    });
+  });
+
   describe("create", () => {
+    it("returns the created visualization when its creator has no profile", async () => {
+      await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
+      const createDto: CreateExperimentVisualizationDto = {
+        name: "Profile-less chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      };
+
+      const created = await repository.create(testExperimentId, createDto, testUserId);
+      assertSuccess(created);
+      expect(created.value).toEqual([
+        expect.objectContaining({
+          name: "Profile-less chart",
+          experimentId: testExperimentId,
+          createdBy: testUserId,
+          createdByName: undefined,
+        }),
+      ]);
+    });
+
     it("should create a new experiment visualization", async () => {
       // Arrange
       const createDto: CreateExperimentVisualizationDto = {
@@ -290,6 +424,31 @@ describe("ExperimentVisualizationRepository", () => {
   });
 
   describe("findById", () => {
+    it("reads and lists a visualization whose creator has no profile", async () => {
+      const [visualization] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: testExperimentId,
+          name: "Profile-less chart",
+          createdBy: testUserId,
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig: {},
+        })
+        .returning({ id: experimentVisualizations.id });
+      await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
+
+      const found = await repository.findById(visualization.id);
+      assertSuccess(found);
+      expect(found.value).toMatchObject({ id: visualization.id, createdByName: undefined });
+      const listed = await repository.listVisualizations(testExperimentId);
+      assertSuccess(listed);
+      expect(listed.value).toEqual([
+        expect.objectContaining({ id: visualization.id, createdByName: undefined }),
+      ]);
+    });
+
     it("should return null when visualization does not exist", async () => {
       // Arrange
       const nonExistentId = faker.string.uuid();
@@ -352,6 +511,39 @@ describe("ExperimentVisualizationRepository", () => {
   });
 
   describe("update", () => {
+    it("returns the updated visualization when its creator has no profile", async () => {
+      const [visualization] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: testExperimentId,
+          name: "Profile-less chart",
+          createdBy: testUserId,
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig: {},
+        })
+        .returning({ id: experimentVisualizations.id });
+      await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
+
+      const updateDto: UpdateExperimentVisualizationDto = {
+        name: "Renamed chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "renamed_table", dataSources: [] },
+      };
+      const updated = await repository.update(visualization.id, updateDto);
+      assertSuccess(updated);
+      expect(updated.value).toEqual([
+        expect.objectContaining({
+          id: visualization.id,
+          name: "Renamed chart",
+          createdByName: undefined,
+        }),
+      ]);
+    });
+
     it("should update an existing visualization", async () => {
       // Arrange
       const createDto: CreateExperimentVisualizationDto = {

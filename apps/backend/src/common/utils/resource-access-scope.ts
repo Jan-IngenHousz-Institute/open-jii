@@ -30,6 +30,11 @@ const CONTRIBUTING_ORG_ROLES = Object.keys(roles).filter((role) =>
   orgRoleCan(role, "experiment", "contribute"),
 );
 
+const READING_GRANT_ROLES = GRANT_ROLES.filter((role) => grantRoleCan(role, "experiment", "read"));
+const READING_ORG_ROLES = Object.keys(roles).filter((role) =>
+  orgRoleCan(role, "experiment", "read"),
+);
+
 /** Which stored roles an arm accepts, per role column. Absent means any role. */
 interface RelationshipRoleFilters {
   /** Accepted values of `resource_grants.role`. */
@@ -186,6 +191,30 @@ export function contributingResourceCondition(params: {
       roleFilters: {
         grant: CONTRIBUTING_GRANT_ROLES,
         owningOrg: CONTRIBUTING_ORG_ROLES,
+      },
+    });
+
+  return or(userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists);
+}
+
+export function readingResourceCondition(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  resourceIdColumn: AnyColumn;
+  organizationIdColumn: AnyColumn;
+  userId: string | undefined;
+}): SQL | undefined {
+  if (!params.userId) {
+    return undefined;
+  }
+
+  const { userGrantExists, teamGrantExists, orgGrantExists, owningOrgMemberExists } =
+    resourceRelationshipParts({
+      ...params,
+      userId: params.userId,
+      roleFilters: {
+        grant: READING_GRANT_ROLES,
+        owningOrg: READING_ORG_ROLES,
       },
     });
 
