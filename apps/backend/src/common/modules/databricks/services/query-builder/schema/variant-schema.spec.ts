@@ -16,10 +16,7 @@ const zMergeCases = z.array(
 );
 
 // Worked out by gold's table metadata notebook in the data tests.
-const SHEET_CASES = resolve(
-  __dirname,
-  "../../../../../../../../data/tests/fixtures/custom_metadata_schemas.json",
-);
+const SHEET_CASES = dataFixture("custom_metadata_schemas.json");
 
 const zSheetCases = z.array(
   z.object({
