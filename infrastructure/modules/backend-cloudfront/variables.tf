@@ -14,16 +14,23 @@ variable "alb_domain_name" {
   type        = string
 }
 
+variable "vpc_origin_id" {
+  description = "CloudFront VPC origin of an internal ALB. When set, CloudFront reaches the ALB through it and sends no custom header."
+  type        = string
+  default     = null
+}
+
 variable "custom_header_name" {
-  description = "Name of the custom header used to restrict ALB access to CloudFront"
+  description = "Name of the custom header used to restrict an internet-facing ALB to CloudFront"
   type        = string
   default     = "X-Origin-Verify"
 }
 
 variable "custom_header_value" {
-  description = "Value of the custom header used to restrict ALB access to CloudFront (generated with OpenSSL)"
+  description = "Value of the custom header used to restrict an internet-facing ALB to CloudFront (generated with OpenSSL). Unused with vpc_origin_id."
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "price_class" {
