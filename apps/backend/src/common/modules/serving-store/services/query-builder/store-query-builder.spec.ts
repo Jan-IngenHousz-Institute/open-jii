@@ -17,6 +17,29 @@ describe("StoreQueryBuilder", () => {
     );
   });
 
+  it("keeps the rows flagged on the phone or afterwards, or only the rows neither flagged", () => {
+    const only = measurements().select(["id"]).flagged("only", ["7", "9"]).build();
+    const exclude = measurements().select(["id"]).flagged("exclude", ["7", "9"]).build();
+
+    const flaggedCondition =
+      "(toString(id) IN (SELECT arrayJoin(__flagged_row_ids)) OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', annotations))";
+    expect(only).toMatch(/^WITH CAST\(\['7', '9'\] AS Array\(String\)\) AS __flagged_row_ids\n/);
+    expect(only).toContain(`WHERE ${flaggedCondition}`);
+    expect(exclude).toContain(`WHERE NOT ${flaggedCondition}`);
+  });
+
+  it("looks for an upload table's flags only among those added afterwards", () => {
+    const sql = new StoreQueryBuilder()
+      .read(UPLOADS_TABLE, "e1", "t1")
+      .select(["id"])
+      .flagged("only", [])
+      .build();
+
+    expect(sql).toContain("WITH CAST([] AS Array(String)) AS __flagged_row_ids");
+    expect(sql).toContain("AND toString(id) IN (SELECT arrayJoin(__flagged_row_ids))");
+    expect(sql).not.toContain("arrayExists");
+  });
+
   it("projects the view's columns in its order, hiding the payloads and the excepted ones", () => {
     const builder = measurements()
       .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")

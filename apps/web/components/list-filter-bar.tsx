@@ -10,12 +10,19 @@ import { ListFilterMenu } from "@repo/ui/components/list-filter-menu";
 
 interface ListFilterBarProps {
   search: ReactNode;
+  searchWidth?: "default" | "wide";
   filters: readonly ListFilter[];
   onClearFilters: () => void;
   actions?: ReactNode;
 }
 
-export function ListFilterBar({ search, filters, onClearFilters, actions }: ListFilterBarProps) {
+export function ListFilterBar({
+  search,
+  searchWidth,
+  filters,
+  onClearFilters,
+  actions,
+}: ListFilterBarProps) {
   const { t } = useTranslation("common");
   const labels: ListFilterLabels = {
     filter: t("common.filter"),
@@ -32,6 +39,7 @@ export function ListFilterBar({ search, filters, onClearFilters, actions }: List
     <>
       <OverviewToolbar
         search={search}
+        searchWidth={searchWidth}
         filters={
           <>
             <ListFilterMenu filters={filters} labels={labels} />

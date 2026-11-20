@@ -98,7 +98,7 @@ class StoreReload:
         version, committed_at = self.latest_version(table)
         if newest > version:
             raise StoreAheadOfGold(
-                f"store.{table.name} or its payload schemas hold version {newest} and gold's {table.gold_table} "
+                f"store.{table.name} or its payload schemas hold version {newest} and gold's {table.source_table} "
                 f"only {version}: empty both first (docs/runbooks/procedures/serving-store-reload.md)"
             )
 
@@ -162,7 +162,7 @@ class StoreReload:
         return rows.withColumn("_copy", F.row_number().over(newest)).filter(F.col("_copy") == 1).drop("_copy")
 
     def _gold_name(self, table: StoreTable) -> str:
-        return f"{self.gold_schema}.{table.gold_table}"
+        return f"{self.gold_schema}.{table.source_table}"
 
     def _write(self, table: StoreTable, changes: DataFrame) -> Written:
         """Writes the load, again until every row has gone."""
@@ -222,7 +222,7 @@ class StoreReload:
 
         largest = sorted(removed.items(), key=lambda item: item[1], reverse=True)[:20]
         raise RemovalOverLimit(
-            f"the delete would remove {total} rows of store.{table.name} that gold's {table.gold_table} "
+            f"the delete would remove {total} rows of store.{table.name} that gold's {table.source_table} "
             f"no longer holds, over the limit of {REMOVAL_LIMIT}: "
             + ", ".join(f"{experiment} ({count})" for experiment, count in largest)
             + ". Nothing was deleted. If gold is being refreshed, wait for it; if the rows should go, "

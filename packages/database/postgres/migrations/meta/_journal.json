@@ -477,6 +477,13 @@
       "when": 1794805392716,
       "tag": "0067_experiment_data_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1794922702637,
+      "tag": "0068_global_search_vectors",
+      "breakpoints": true
     }
   ]
 }

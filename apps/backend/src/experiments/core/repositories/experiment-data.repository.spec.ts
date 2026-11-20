@@ -3037,6 +3037,117 @@ describe("ExperimentDataRepository", () => {
       });
     });
 
+    it("pages and counts a flagged read in the store, both by its flags", async () => {
+      const countSql = "SELECT toString(count()) AS total";
+      const execute = vi.spyOn(servingStore, "executeQuery").mockImplementation(({ sql }) =>
+        Promise.resolve(
+          sql.startsWith(countSql)
+            ? success({
+                columns: [{ name: "total", type_name: "LONG", type_text: "BIGINT", position: 0 }],
+                rows: [["1"]],
+                totalRows: 1,
+                truncated: false,
+              })
+            : success({
+                columns: storeColumns,
+                rows: [["1", "A1"]],
+                totalRows: 1,
+                truncated: false,
+              }),
+        ),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        flagged: "only",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(execute).toHaveBeenCalledTimes(2);
+      for (const [query] of execute.mock.calls) {
+        expect(query.sql).toContain("toString(id) IN (SELECT arrayJoin(__flagged_row_ids))");
+      }
+      expect(result.value[0].totalRows).toBe(1);
+    });
+
+    it("looks up a flagged page's rows once, so its count and its rows keep the same ones", async () => {
+      const lookup = vi
+        .spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findFlaggedRowIds")
+        .mockResolvedValueOnce(success(["1"]))
+        .mockResolvedValueOnce(success(["1", "2"]));
+      const execute = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: storeColumns,
+          rows: [["1", "A1"]],
+          totalRows: 1,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        flagged: "only",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(lookup).toHaveBeenCalledExactlyOnceWith(experimentId, "raw_data");
+      expect(execute).toHaveBeenCalledTimes(2);
+      for (const [query] of execute.mock.calls) {
+        expect(query.sql).toContain("CAST(['1'] AS Array(String)) AS __flagged_row_ids");
+      }
+    });
+
+    it("refuses a flagged read the warehouse would answer before reading any metadata: a chart, or a table the store lacks", async () => {
+      const metadata = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(failure(AppError.internal("Warehouse asleep")));
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+
+      const chart = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: { groupBy: [{ column: "plot" }] },
+        flagged: "only",
+        source: "store",
+      });
+      const warehousePage = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        flagged: "exclude",
+        page: 1,
+        pageSize: 10,
+        source: "warehouse",
+      });
+      const deviceTable = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "device",
+        flagged: "only",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      for (const result of [chart, warehousePage, deviceTable]) {
+        assertFailure(result);
+        expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
+      }
+      expect(metadata).not.toHaveBeenCalled();
+      expect(warehouse).not.toHaveBeenCalled();
+    });
+
     it("keeps charts' reads on the warehouse until the store aggregates", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([largeTable]),

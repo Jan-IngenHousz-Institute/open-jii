@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zListFilter, zListSort, zPaginated, zPaginationQuery } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
 import { zProtocolFamily, zSensorFamily } from "../protocol/protocol.schema";
@@ -83,6 +84,34 @@ export const zIotDeviceWithConnectivity = zIotDevice.extend({
 });
 
 export const zIotDeviceList = z.array(zIotDeviceWithConnectivity);
+
+export const zIotDeviceSort = zListSort(z.enum(["name", "status", "family", "registered"]));
+
+export const zIotDeviceFilterQuery = z
+  .object({
+    search: z.string().optional(),
+    status: zListFilter(zIotDeviceRung).optional(),
+    family: zListFilter(zSensorFamily).optional(),
+    sort: zIotDeviceSort.optional(),
+  })
+  .merge(zPaginationQuery);
+
+export const zIotDevicePaginatedList = zPaginated(zIotDeviceWithConnectivity).extend({
+  statusCounts: z.object({
+    registered: z.number().int(),
+    provisioned: z.number().int(),
+    onboarded: z.number().int(),
+    revoked: z.number().int(),
+    retired: z.number().int(),
+  }),
+});
+
+export const zIotDeviceListResponse = z.union([zIotDeviceList, zIotDevicePaginatedList]);
+
+export type IotDeviceSort = z.infer<typeof zIotDeviceSort>;
+export type IotDeviceFilterQuery = z.infer<typeof zIotDeviceFilterQuery>;
+export type IotDevicePaginatedList = z.infer<typeof zIotDevicePaginatedList>;
+export type IotDeviceListResponse = z.infer<typeof zIotDeviceListResponse>;
 
 /**
  * A single device plus the caller's effective capabilities on it. Only the detail

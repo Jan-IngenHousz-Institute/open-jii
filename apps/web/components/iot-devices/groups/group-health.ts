@@ -36,16 +36,17 @@ export function memberStatus(member: IotDeviceGroupMemberHealth): MemberStatus {
   return member.connectivity.connected ? "online" : "offline";
 }
 
-export type MemberStatusFilter = MemberStatus | "silent" | "all";
+export type MemberStatusFilter = MemberStatus | "silent";
 
 export interface MemberFilter {
   search: string;
-  status: MemberStatusFilter;
+  statuses: MemberStatusFilter[];
+  families: IotDeviceGroupMemberHealth["deviceType"][];
 }
 
 /**
- * Case-insensitive name/serial search plus one status chip. Silence is a flag
- * on top of "online", so it filters as its own chip rather than a fourth state.
+ * Name/serial search combined with selected health values and families. Silence
+ * remains a flag on top of "online", so either value matches a silent member.
  */
 export function filterGroupMembers(
   members: IotDeviceGroupMemberHealth[],
@@ -57,14 +58,20 @@ export function filterGroupMembers(
   const needle = filter.search.trim().toLowerCase();
 
   return members.filter((member) => {
+    if (filter.families.length > 0 && !filter.families.includes(member.deviceType)) return false;
     if (needle !== "") {
       const haystack = `${labelFor(member)} ${member.serialNumber}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
 
-    if (filter.status === "all") return true;
-    if (filter.status === "silent") return isMemberSilent(member, pipelineUnavailable, now);
-    return memberStatus(member) === filter.status;
+    return (
+      filter.statuses.length === 0 ||
+      filter.statuses.some((status) =>
+        status === "silent"
+          ? isMemberSilent(member, pipelineUnavailable, now)
+          : memberStatus(member) === status,
+      )
+    );
   });
 }
 

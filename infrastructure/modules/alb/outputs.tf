@@ -3,7 +3,8 @@ output "alb_arn" {
 }
 
 output "target_group_arn" {
-  value = aws_lb_target_group.app_tg.arn
+  value      = aws_lb_target_group.app_tg.arn
+  depends_on = [aws_lb_listener.https_listener, aws_lb_listener_rule.cloudfront_header_rule]
 }
 
 output "alb_dns_name" {
@@ -13,4 +14,9 @@ output "alb_dns_name" {
 output "alb_zone_id" {
   description = "The zone ID of the ALB"
   value       = aws_lb.app_alb.zone_id
+}
+
+output "vpc_origin_id" {
+  description = "ID of the CloudFront VPC origin for an internal ALB, null otherwise"
+  value       = one(aws_cloudfront_vpc_origin.this[*].id)
 }

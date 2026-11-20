@@ -24,15 +24,16 @@ import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { AnnotationMergerService } from "./application/services/annotation-merger.service";
 // Services
-import { AnnotationsLakehouseCopier } from "./application/services/annotations-lakehouse-copier";
+import { AnnotationsOutboxService } from "./application/services/annotations-outbox.service";
 import { ContributorAnonymizerService } from "./application/services/contributor-anonymizer.service";
 import { EmbargoProcessorService } from "./application/services/embargo-processor.service";
+import { ExperimentDataOutboxMetricsService } from "./application/services/experiment-data-outbox-metrics.service";
 import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
 import { ExperimentDataSourceService } from "./application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
-import { MetadataSheetsLakehouseCopier } from "./application/services/metadata-sheets-lakehouse-copier";
+import { MetadataSheetsOutboxService } from "./application/services/metadata-sheets-outbox.service";
 import { MultipartUploadService } from "./application/services/multipart-upload.service";
 import { NumberAnswersService } from "./application/services/number-answers.service";
 import { UploadRunReconcilerService } from "./application/services/upload-run-reconciler.service";
@@ -102,6 +103,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { EXPERIMENT_METRICS_PORT } from "./core/ports/metrics.port";
 import { SERVING_STORE_PORT } from "./core/ports/serving-store.port";
 // Repositories
 import { ExperimentAnnotationsWarehouseRepository } from "./core/repositories/experiment-annotations-warehouse.repository";
@@ -190,6 +192,10 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
       useExisting: AwsAdapter,
     },
     {
+      provide: EXPERIMENT_METRICS_PORT,
+      useExisting: AwsAdapter,
+    },
+    {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
     },
@@ -245,8 +251,9 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Services
     EmbargoProcessorService,
     ExperimentDataOutboxWorker,
-    AnnotationsLakehouseCopier,
-    MetadataSheetsLakehouseCopier,
+    AnnotationsOutboxService,
+    MetadataSheetsOutboxService,
+    ExperimentDataOutboxMetricsService,
     AnnotationMergerService,
     ExportRunReconcilerService,
     ContributorAnonymizerService,
@@ -344,6 +351,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     UpdateExperimentMetadataUseCase,
     DeleteExperimentMetadataUseCase,
   ],
-  exports: [ExperimentRepository],
+  exports: [ExperimentRepository, ExperimentDashboardRepository, ExperimentVisualizationRepository],
 })
 export class ExperimentModule {}

@@ -23,6 +23,7 @@ import type {
   ExperimentDataResponse,
   ExperimentTableMetadata,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import type {
   Experiment,
   ExperimentAccess,
@@ -71,6 +72,7 @@ import type {
   ProtocolDetail,
   ProtocolMacroEntry,
 } from "@repo/api/domains/protocol/protocol.schema";
+import type { SearchResult } from "@repo/api/domains/search/search.schema";
 import type {
   GranteeUserDto,
   ResourceGrantDto,
@@ -1174,6 +1176,25 @@ export function createIotDevice(
   };
 }
 
+let experimentDeviceEntrySeq = 0;
+
+export function createExperimentDeviceEntry(
+  overrides: Partial<ExperimentDeviceEntry> = {},
+): ExperimentDeviceEntry {
+  experimentDeviceEntrySeq++;
+  return {
+    device: createIotDevice(),
+    clientId: `publisher-${experimentDeviceEntrySeq}`,
+    binding: null,
+    connectivity: null,
+    lastDataAt: null,
+    recentData: null,
+    reported: null,
+    canView: true,
+    ...overrides,
+  };
+}
+
 /**
  * A device as its detail route returns it: the registry row plus the caller's
  * capabilities. Defaults to the owner's view — full control, and no grant of their
@@ -1452,6 +1473,21 @@ export function createAmbitTrace(overrides: Partial<AmbitTraceFixture> = {}): Am
       fluo_630_signal: { u: "count", t0: 0, dt: 0.1, v: [120, 160, 140] },
       leaf_temp: { u: "Cel", t: [0.05, 0.25], v: [23.5, 23.7] },
     },
+    ...overrides,
+  };
+}
+
+let searchResultSeq = 0;
+
+export function createSearchResult(overrides: Partial<SearchResult> = {}): SearchResult {
+  searchResultSeq++;
+  return {
+    type: "experiment",
+    id: crypto.randomUUID(),
+    title: `Search result ${searchResultSeq}`,
+    subtitle: null,
+    meta: null,
+    parent: null,
     ...overrides,
   };
 }

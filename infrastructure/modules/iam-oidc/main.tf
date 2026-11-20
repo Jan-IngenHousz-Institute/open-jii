@@ -240,6 +240,13 @@ locals {
         "cloudfront:UpdateOriginRequestPolicy",
         "cloudfront:DeleteOriginRequestPolicy",
         "cloudfront:GetOriginRequestPolicy",
+        # VPC origins for internal load balancers (Terraform); a distribution that uses one
+        # also needs GetVpcOrigin to create or update.
+        "cloudfront:CreateVpcOrigin",
+        "cloudfront:UpdateVpcOrigin",
+        "cloudfront:DeleteVpcOrigin",
+        "cloudfront:GetVpcOrigin",
+        "cloudfront:ListVpcOrigins",
         # Tags (Terraform)
         "cloudfront:TagResource",
         "cloudfront:UntagResource",
@@ -1123,11 +1130,17 @@ locals {
     }
 
     # ── ECR replication: service-linked role creation (first-time enablement) ──
+    # Also CloudFront's VPC origin role, needed by the first VPC origin in an account. A key of its
+    # own would shift every later statement into another managed policy, and the deploy role would
+    # briefly lose grants while it rewrites them.
     ecr-replication-slr = {
       actions = [
         "iam:CreateServiceLinkedRole",
       ]
-      resource = "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication"
+      resource = [
+        "arn:aws:iam::*:role/aws-service-role/replication.ecr.amazonaws.com/AWSServiceRoleForECRReplication",
+        "arn:aws:iam::*:role/aws-service-role/vpcorigin.cloudfront.amazonaws.com/AWSServiceRoleForCloudFrontVPCOrigin",
+      ]
     }
   }
 
@@ -1264,6 +1277,265 @@ resource "aws_iam_role_policy" "plan_role_reads" {
         ]
         Resource = "*"
       }
+    ]
+  })
+}
+
+# Applies the foundation root: CI's roles, the GitHub trust and the state backend. It may edit its
+# own policy, so the boundary, which no CI role can edit, caps what that policy can grant. A
+# GithubActions* role it creates can still carry any policy, so it is admin by delegation and the
+# environment's reviewers are the real gate.
+resource "aws_iam_role" "foundation_role" {
+  count = var.foundation_role_github_environment == null ? 0 : 1
+
+  name                 = var.foundation_role_name
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.foundation_role_boundary_name}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = merge(
+          {
+            "StringEquals" : {
+              "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com",
+              "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:environment:${var.foundation_role_github_environment}"
+            }
+          },
+          var.foundation_role_allowed_refs == null ? {} : {
+            "StringLike" : {
+              "token.actions.githubusercontent.com:ref" : var.foundation_role_allowed_refs
+            }
+          }
+        )
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "foundation_role" {
+  count = length(aws_iam_role.foundation_role)
+
+  name = "${var.foundation_role_name}Policy"
+  role = aws_iam_role.foundation_role[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ManageCiRoles"
+        Effect = "Allow"
+        Action = [
+          "iam:GetRole",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:UpdateRole",
+          "iam:UpdateAssumeRolePolicy",
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:ListInstanceProfilesForRole",
+          "iam:GetRolePolicy",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:AttachRolePolicy",
+          "iam:DetachRolePolicy",
+          "iam:ListAttachedRolePolicies",
+          "iam:GetPolicy",
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:TagPolicy",
+          "iam:UntagPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:SetDefaultPolicyVersion",
+        ]
+        Resource = [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GithubActions*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/GithubActions*",
+        ]
+      },
+      {
+        Sid    = "ManageGithubTrust"
+        Effect = "Allow"
+        Action = [
+          "iam:GetOpenIDConnectProvider",
+          "iam:CreateOpenIDConnectProvider",
+          "iam:DeleteOpenIDConnectProvider",
+          "iam:UpdateOpenIDConnectProviderThumbprint",
+          "iam:AddClientIDToOpenIDConnectProvider",
+          "iam:RemoveClientIDFromOpenIDConnectProvider",
+          "iam:TagOpenIDConnectProvider",
+          "iam:UntagOpenIDConnectProvider",
+        ]
+        Resource = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+      },
+      {
+        Sid    = "ManageStateBucket"
+        Effect = "Allow"
+        Action = [
+          "s3:CreateBucket",
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:DeleteBucketPolicy",
+          "s3:GetBucketAcl",
+          "s3:PutBucketAcl",
+          "s3:GetBucketCORS",
+          "s3:GetBucketWebsite",
+          "s3:GetBucketVersioning",
+          "s3:PutBucketVersioning",
+          "s3:GetAccelerateConfiguration",
+          "s3:GetBucketRequestPayment",
+          "s3:GetBucketLogging",
+          "s3:GetLifecycleConfiguration",
+          "s3:PutLifecycleConfiguration",
+          "s3:GetReplicationConfiguration",
+          "s3:GetEncryptionConfiguration",
+          "s3:PutEncryptionConfiguration",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:GetBucketTagging",
+          "s3:PutBucketTagging",
+          "s3:GetBucketOwnershipControls",
+          "s3:PutBucketOwnershipControls",
+          "s3:GetBucketPublicAccessBlock",
+          "s3:PutBucketPublicAccessBlock",
+        ]
+        Resource = "arn:aws:s3:::open-jii-terraform-state-${var.environment}"
+      },
+      {
+        Sid    = "FoundationStateAndPlans"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+        ]
+        Resource = [
+          "arn:aws:s3:::open-jii-terraform-state-${var.environment}/foundation/*",
+          "arn:aws:s3:::open-jii-terraform-state-${var.environment}/plans/foundation-*",
+        ]
+      },
+      {
+        Sid    = "ManageStateLock"
+        Effect = "Allow"
+        Action = [
+          "dynamodb:CreateTable",
+          "dynamodb:DescribeTable",
+          "dynamodb:UpdateTable",
+          "dynamodb:DescribeContinuousBackups",
+          "dynamodb:UpdateContinuousBackups",
+          "dynamodb:DescribeTimeToLive",
+          "dynamodb:ListTagsOfResource",
+          "dynamodb:TagResource",
+          "dynamodb:UntagResource",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
+      },
+    ]
+  })
+}
+
+# The deploy role's broad IAM, S3 and DynamoDB rights would otherwise let an environment root
+# change CI's existing access. A deny outranks every allow, so only the foundation role can change
+# the objects named here. New users and roles are OJD-2011's work.
+resource "aws_iam_role_policy" "oidc_role_ci_access_guard" {
+  count = length(aws_iam_role.foundation_role)
+
+  name = "${var.role_name}CiAccessGuard"
+  role = aws_iam_role.oidc_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "NoChangesToCiRolesOrTrust"
+        Effect = "Deny"
+        Action = [
+          "iam:Add*",
+          "iam:Attach*",
+          "iam:Create*",
+          "iam:Delete*",
+          "iam:Detach*",
+          "iam:Put*",
+          "iam:Remove*",
+          "iam:SetDefaultPolicyVersion",
+          "iam:Tag*",
+          "iam:Untag*",
+          "iam:Update*",
+        ]
+        Resource = [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GithubActions*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/GithubActions*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.foundation_role_boundary_name}",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com",
+        ]
+      },
+      {
+        Sid    = "NoChangesToStateBucketSettings"
+        Effect = "Deny"
+        Action = [
+          "s3:DeleteBucket*",
+          "s3:PutAccelerateConfiguration",
+          "s3:PutBucket*",
+          "s3:PutEncryptionConfiguration",
+          "s3:PutLifecycleConfiguration",
+          "s3:PutReplicationConfiguration",
+        ]
+        Resource = "arn:aws:s3:::open-jii-terraform-state-${var.environment}"
+      },
+      {
+        Sid    = "NoChangesToFoundationState"
+        Effect = "Deny"
+        Action = [
+          "s3:DeleteObject*",
+          "s3:PutObject*",
+        ]
+        Resource = "arn:aws:s3:::open-jii-terraform-state-${var.environment}/foundation/*"
+      },
+      {
+        Sid    = "NoChangesToLockTableSettings"
+        Effect = "Deny"
+        Action = [
+          "dynamodb:DeleteTable",
+          "dynamodb:TagResource",
+          "dynamodb:UntagResource",
+          "dynamodb:UpdateContinuousBackups",
+          "dynamodb:UpdateTable",
+          "dynamodb:UpdateTimeToLive",
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
+      },
+      {
+        # The foundation state's digest item. A wrong digest makes OpenTofu refuse to read the
+        # state, and a rerun does not repair it. The lock item stays writable: the deploy role
+        # takes the lock when it plans the foundation root.
+        Sid    = "NoChangesToFoundationStateDigest"
+        Effect = "Deny"
+        Action = [
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+        ]
+        Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/terraform-state-lock"
+        Condition = {
+          "ForAnyValue:StringLike" = {
+            "dynamodb:LeadingKeys" = ["open-jii-terraform-state-${var.environment}/foundation/*-md5"]
+          }
+        }
+      },
     ]
   })
 }

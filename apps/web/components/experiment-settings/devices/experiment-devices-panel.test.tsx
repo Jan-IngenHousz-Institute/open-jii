@@ -1,4 +1,5 @@
 import { createIotDevice } from "@/test/factories";
+import { openOnUrl } from "@/test/list-request";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -148,7 +149,7 @@ describe("ExperimentDevicesPanel", () => {
     expect(screen.getAllByText("iot.experimentDevices.noAccess").length).toBeGreaterThan(0);
   });
 
-  it("filters the list by search, leaving the detail pane alone", async () => {
+  it("filters the list by search, leaving an explicitly selected device open", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperimentDevices, {
       body: overview([bound, observedPhone]),
@@ -157,19 +158,58 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await screen.findByText("Field phone");
+    await user.click(
+      within(screen.getByRole("list")).getByRole("button", { name: /Bench sensor/ }),
+    );
     await user.type(
       screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
       "Field",
     );
 
     // Gone from the list, still in the detail pane: filtering does not deselect.
-    expect(within(screen.getByRole("list")).queryByText("Bench sensor")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(screen.getByRole("list")).queryByText("Bench sensor")).not.toBeInTheDocument(),
+    );
     expect(within(screen.getByRole("list")).getByText("Field phone")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
 
     await user.clear(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"));
     await user.type(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"), "zzz");
-    expect(screen.getByText("iot.experimentDevices.searchNoMatches")).toBeInTheDocument();
+    expect(await screen.findByText("iot.experimentDevices.searchNoMatches")).toBeInTheDocument();
+  });
+
+  it("defaults the detail pane to the first filtered and sorted row from a shared URL", async () => {
+    openOnUrl(
+      `/platform/experiments/${EXPERIMENT_ID}/devices`,
+      `deviceFamily=mobile&q=Field&sort=${encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]))}`,
+    );
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([bound, observedPhone]),
+    });
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+    expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Bench sensor" })).not.toBeInTheDocument();
+  });
+
+  it("follows sorting and search until the user picks a device", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([observedPhone, bound]),
+    });
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+    expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
+    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+    await user.type(
+      screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
+      "missing",
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Bench sensor" })).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("heading", { name: "Field phone" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
+    expect(await screen.findByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
   });
 
   it("counts onboarded, sending, silent and unbound devices in the tiles", async () => {
@@ -280,6 +320,44 @@ describe("ExperimentDevicesPanel", () => {
     await waitFor(() => expect(spy.called).toBe(true));
   });
 
+  it("falls back to the first visible row when an explicitly selected device is detached", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([bound, unregisteredNamed, observedPhone]),
+    });
+    server.mount(contract.experiments.removeExperimentDevice, { status: 204, body: undefined });
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await screen.findByRole("heading", { name: "Bench sensor" });
+    await user.click(
+      within(screen.getByRole("list")).getByRole("button", { name: /Bench sensor/ }),
+    );
+    await user.type(
+      screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
+      "Field",
+    );
+    await waitFor(() =>
+      expect(within(screen.getByRole("list")).getAllByRole("button")).toHaveLength(1),
+    );
+    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([unregisteredNamed, observedPhone]),
+    });
+    await user.click(screen.getByRole("button", { name: "iot.experimentDevices.detach" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: "iot.experimentDevices.detach",
+      }),
+    );
+
+    expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "shed-logger" })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).getByRole("button", { current: true }),
+    ).toHaveTextContent("Field phone");
+  });
+
   it("shows an error toast when detaching fails", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperimentDevices, { body: overview([bound]) });
@@ -347,19 +425,24 @@ describe("ExperimentDevicesPanel", () => {
     await waitFor(() => {
       expect(screen.getAllByText("publisher-0").length).toBeGreaterThan(0);
     });
-    // 25 to a page, matching the device registry.
-    expect(screen.queryByText("publisher-25")).not.toBeInTheDocument();
-    expect(screen.getByText("iot.devices.pageOf")).toBeInTheDocument();
+    // 20 to a page, matching the other resource lists.
+    expect(screen.queryByText("publisher-20")).not.toBeInTheDocument();
+    expect(screen.getByText("pagination.pageOf")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByLabelText("Go to next page"));
+    await userEvent.click(screen.getByRole("button", { name: "pagination.next" }));
 
-    expect(await screen.findByText("publisher-25")).toBeInTheDocument();
-    // publisher-0 stays selected, so it is still named in the detail pane.
-    expect(screen.queryAllByText("publisher-0")).toHaveLength(1);
+    await waitFor(() => expect(screen.getAllByText("publisher-20")).toHaveLength(2));
+    expect(
+      within(screen.getByRole("list")).getByRole("button", { current: true }),
+    ).toHaveTextContent("publisher-20");
+    expect(screen.queryByText("publisher-0")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByLabelText("Go to previous page"));
+    await userEvent.click(screen.getByRole("button", { name: "pagination.previous" }));
 
     expect(await screen.findByText("publisher-1")).toBeInTheDocument();
-    expect(screen.queryByText("publisher-25")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).getByRole("button", { current: true }),
+    ).toHaveTextContent("publisher-0");
+    expect(screen.queryByText("publisher-20")).not.toBeInTheDocument();
   });
 });

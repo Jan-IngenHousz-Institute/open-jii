@@ -136,6 +136,10 @@ export class ServingStoreAdapter implements ServingStorePort {
       builder.except(params.exceptColumns);
     }
 
+    if (params.flagged !== undefined) {
+      builder.flagged(params.flagged.kind, params.flagged.addedRowIds);
+    }
+
     try {
       for (const filter of params.filters ?? []) {
         builder.filter(filter);
@@ -149,7 +153,21 @@ export class ServingStoreAdapter implements ServingStorePort {
       if (params.offset !== undefined) {
         builder.offset(params.offset);
       }
-      return success({ sql: builder.build(), columns: builder.outputColumns() });
+      const query = { sql: builder.build(), columns: builder.outputColumns() };
+
+      // The flagged ids are written into the statement, and a flagged page also sends its count,
+      // which wraps it.
+      const isFlaggedReadTooLarge =
+        params.flagged !== undefined && !this.client.fitsQuerySize(this.countQuery(query).sql);
+      if (isFlaggedReadTooLarge) {
+        return failure(
+          AppError.badRequest(
+            "Too many of the table's rows are flagged to filter a read by flags",
+            "FLAGGED_READ_TOO_LARGE",
+          ),
+        );
+      }
+      return success(query);
     } catch (error) {
       if (error instanceof QueryBuilderInputError) {
         return failure(AppError.badRequest(error.message, "INVALID_QUERY_INPUT"));

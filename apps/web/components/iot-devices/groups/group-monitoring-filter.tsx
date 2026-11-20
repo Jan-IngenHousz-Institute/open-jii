@@ -1,82 +1,61 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { ListFilterBar } from "@/components/list-filter-bar";
+import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { Activity, Layers } from "lucide-react";
 
+import { zDeviceType } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
+import { SearchInput } from "@repo/ui/components/search-input";
 
-import type { GroupHealthSummary } from "./group-health";
-import type { MemberFilter, MemberStatusFilter } from "./group-health";
+import type { GroupDevicesList } from "./use-group-devices-list";
 
-interface GroupMonitoringFilterProps {
-  filter: MemberFilter;
-  onFilterChange: (filter: MemberFilter) => void;
-  /** Unfiltered counts, so a chip always shows what it would select. */
-  summary: GroupHealthSummary;
-}
-
-/** Search plus one-of status chips; every panel below follows the selection. */
-export function GroupMonitoringFilter({
-  filter,
-  onFilterChange,
-  summary,
-}: GroupMonitoringFilterProps) {
+export function GroupMonitoringFilter({ list }: { list: GroupDevicesList }) {
   const { t } = useTranslation("iot");
 
-  const chips: { status: MemberStatusFilter; label: string; count: number }[] = [
-    { status: "all", label: t("iot.groups.monitoring.filter.all"), count: summary.total },
-    { status: "online", label: t("iot.groups.monitoring.onlineLabel"), count: summary.online },
-    {
-      status: "offline",
-      label: t("iot.groups.monitoring.filter.offline"),
-      count: summary.total - summary.online - summary.unknown,
-    },
-    {
-      status: "silent",
-      label: t("iot.groups.monitoring.filter.silent"),
-      count: summary.silent,
-    },
-    { status: "unknown", label: t("iot.groups.monitoring.unknownLabel"), count: summary.unknown },
-  ];
-
-  function renderChip(chip: { status: MemberStatusFilter; label: string; count: number }) {
-    const isActive = filter.status === chip.status;
-
-    return (
-      <Button
-        key={chip.status}
-        size="sm"
-        variant={isActive ? "default" : "outline"}
-        className="h-8"
-        onClick={() => {
-          onFilterChange({ ...filter, status: chip.status });
-        }}
-      >
-        {chip.label}
-        <span className="ml-1.5 tabular-nums opacity-70">{chip.count}</span>
-      </Button>
-    );
-  }
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative">
-        <Search
-          className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2"
-          aria-hidden
-        />
-        <Input
-          aria-label={t("iot.groups.monitoring.filter.searchPlaceholder")}
-          value={filter.search}
-          onChange={(event) => {
-            onFilterChange({ ...filter, search: event.target.value });
-          }}
+    <ListFilterBar
+      search={
+        <SearchInput
+          value={list.search}
+          onChange={list.setSearch}
+          isLoading={list.isSearchPending}
           placeholder={t("iot.groups.monitoring.filter.searchPlaceholder")}
-          className="h-8 w-full pl-8 md:w-56"
         />
-      </div>
-      <div className="flex flex-wrap gap-1.5">{chips.map(renderChip)}</div>
-    </div>
+      }
+      filters={[
+        {
+          key: "groupHealth",
+          icon: Activity,
+          label: t("iot.groups.monitoring.stateColumn"),
+          options: [
+            { value: "online", label: t("iot.groups.monitoring.onlineLabel") },
+            { value: "offline", label: t("iot.groups.monitoring.filter.offline") },
+            { value: "unknown", label: t("iot.groups.monitoring.unknownLabel") },
+            { value: "silent", label: t("iot.groups.monitoring.filter.silent") },
+          ],
+          selected: list.filters.groupHealth,
+          onChange: (values) =>
+            list.setFilter("groupHealth", list.filterShape.groupHealth.array().parse(values)),
+        },
+        {
+          key: "deviceFamily",
+          icon: Layers,
+          label: t("iot.devices.columns.family"),
+          options: zDeviceType.options.map((value) => ({
+            value,
+            label: getSensorFamilyLabel(value),
+          })),
+          selected: list.filters.deviceFamily,
+          onChange: (values) =>
+            list.setFilter("deviceFamily", list.filterShape.deviceFamily.array().parse(values)),
+        },
+      ]}
+      onClearFilters={list.clearFilters}
+      actions={
+        <ResetSortingButton active={list.sort.length > 0} onReset={() => list.setSort([])} />
+      }
+    />
   );
 }

@@ -29,5 +29,11 @@ export interface ClaimedOutboxRow extends OwedRecord {
   claimedAt: Date;
 }
 
+/** The copies still owed, and how long the oldest has waited since it was first owed. */
+export interface WaitingCopies {
+  waiting: number;
+  oldestWaitingSeconds: number;
+}
+
 /** What a later write has to still hold for it to land: the row, and the claim on it. */
 export type OutboxClaim = Pick<ClaimedOutboxRow, "id" | "claimedAt">;

@@ -54,11 +54,13 @@ export class IotDeviceController {
 
   @Implement(iotContract.listIotDevices)
   listIotDevices(@Session() session: UserSession) {
-    return implement(iotContract.listIotDevices).handler(async () => {
-      const result = await this.listIotDevicesUseCase.execute(session.user.id);
+    return implement(iotContract.listIotDevices).handler(async ({ input }) => {
+      const result = await this.listIotDevicesUseCase.execute(session.user.id, input);
 
       if (result.isSuccess()) {
-        return formatDatesList(result.value);
+        return Array.isArray(result.value)
+          ? formatDatesList(result.value)
+          : { ...result.value, items: formatDatesList(result.value.items) };
       }
 
       return throwOrpcFailure(result, this.logger, "listIotDevices");

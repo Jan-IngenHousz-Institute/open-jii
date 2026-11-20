@@ -1,3 +1,4 @@
+import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
@@ -30,6 +31,7 @@ interface StoreOrdering extends QueryOrdering {
 const ORDER_IDS = "__order_ids";
 const DEVICE_CLIENT_IDS = "__device_client_ids";
 const DEVICE_SERIALS = "__device_serials";
+const FLAGGED_ROW_IDS = "__flagged_row_ids";
 
 const STORE_SCALARS: Record<string, string> = {
   STRING: "String",
@@ -51,12 +53,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private columns: StoreColumn[] = [];
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
+  private phoneAnnotations?: string;
   private selectColumns?: string[];
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
   private exceptColumns: string[] = [];
   private whereConditions: string[] = [];
   private deviceSerials: [string, string][] = [];
+  private flaggedRowIds?: string[];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
@@ -65,7 +69,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.columns = table.columns;
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
-    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS);
+    this.phoneAnnotations = table.phoneAnnotations;
+    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS, FLAGGED_ROW_IDS);
     this.from(`${table.view}(experiment = ${this.escapeValue(experimentId)})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -109,6 +114,21 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   where(condition: string): this {
     this.whereConditions.push(condition);
     return this;
+  }
+
+  /**
+   * Keeps the rows with a flag, or the rows without one. A flag counts whether the phone recorded
+   * it with the measurement or someone added it afterwards, as `addedRowIds` from Postgres say.
+   */
+  flagged(kind: ExperimentDataFlagged, addedRowIds: string[]): this {
+    this.flaggedRowIds = addedRowIds;
+    // A set the store builds once; has() would search the whole list for every row.
+    const added = `toString(id) IN (SELECT arrayJoin(${FLAGGED_ROW_IDS}))`;
+    const flaggedCondition =
+      this.phoneAnnotations === undefined
+        ? added
+        : `(${added} OR arrayExists(annotation -> tupleElement(annotation, 'type') = 'flag', ${this.phoneAnnotations}))`;
+    return this.where(kind === "only" ? flaggedCondition : `NOT ${flaggedCondition}`);
   }
 
   /**
@@ -444,6 +464,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
             `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS ${DEVICE_CLIENT_IDS}`,
             `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS ${DEVICE_SERIALS}`,
           ]),
+      ...(this.flaggedRowIds === undefined
+        ? []
+        : [`CAST([${quoted(this.flaggedRowIds)}] AS Array(String)) AS ${FLAGGED_ROW_IDS}`]),
     ];
     return lists.length === 0 ? "" : `WITH ${lists.join(", ")}`;
   }

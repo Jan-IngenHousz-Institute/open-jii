@@ -9,24 +9,39 @@ resource "aws_cloudfront_distribution" "api_distribution" {
   price_class         = var.price_class
   http_version        = "http2and3" # Enable HTTP/2 and HTTP/3 for better performance
 
-  # ALB Origin
+  # ALB Origin. An internal ALB is reached through its VPC origin, which carries the protocol
+  # settings itself; an internet-facing one only forwards requests that carry the custom header.
   origin {
     domain_name = var.alb_domain_name
     origin_id   = "alb-${var.service_name}-${var.environment}"
 
-    custom_origin_config {
-      http_port                = 80
-      https_port               = 443
-      origin_protocol_policy   = "https-only"
-      origin_ssl_protocols     = ["TLSv1.2"]
-      origin_read_timeout      = 60
-      origin_keepalive_timeout = 5
+    dynamic "vpc_origin_config" {
+      for_each = var.vpc_origin_id != null ? [1] : []
+      content {
+        vpc_origin_id            = var.vpc_origin_id
+        origin_read_timeout      = 60
+        origin_keepalive_timeout = 5
+      }
     }
 
-    # TODO: move to ssm
-    custom_header {
-      name  = var.custom_header_name
-      value = var.custom_header_value # This value is passed to CF to set in requests to origin
+    dynamic "custom_origin_config" {
+      for_each = var.vpc_origin_id == null ? [1] : []
+      content {
+        http_port                = 80
+        https_port               = 443
+        origin_protocol_policy   = "https-only"
+        origin_ssl_protocols     = ["TLSv1.2"]
+        origin_read_timeout      = 60
+        origin_keepalive_timeout = 5
+      }
+    }
+
+    dynamic "custom_header" {
+      for_each = var.vpc_origin_id == null ? [1] : []
+      content {
+        name  = var.custom_header_name
+        value = var.custom_header_value
+      }
     }
   }
 

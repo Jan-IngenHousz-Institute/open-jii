@@ -1,22 +1,42 @@
-module "terraform_state_s3" {
-  source      = "../../modules/s3"
-  bucket_name = "open-jii-terraform-state-${var.environment}"
+# CI's roles, the GitHub trust and the state backend belong to infrastructure/foundation, which a
+# separate workflow applies with its own role. This root forgets them without destroying anything
+# and only reads them. Delete the removed blocks once the first apply has run.
+removed {
+  from = module.terraform_state_s3
 
-  lifecycle_rules = [
-    {
-      id                                 = "expire-saved-plans"
-      status                             = "Enabled"
-      prefix                             = "plans/"
-      transitions                        = []
-      expiration_days                    = 7
-      noncurrent_version_expiration_days = 1
-    }
-  ]
-
-  providers = {
-    aws    = aws
-    aws.dr = aws.dr
+  lifecycle {
+    destroy = false
   }
+}
+
+removed {
+  from = module.terraform_state_lock
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.iam_oidc
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_dynamodb_table" "terraform_state_lock" {
+  name = "terraform-state-lock"
+}
+
+data "aws_iam_role" "github_actions_deploy" {
+  name = "GithubActionsDeployAccess"
+}
+
+data "aws_iam_openid_connect_provider" "github" {
+  arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 module "backup" {
@@ -28,7 +48,7 @@ module "backup" {
   aurora_cluster_arns = [module.aurora_db.cluster_arn]
 
   dynamodb_table_arns = [
-    module.terraform_state_lock.table_arn,
+    data.aws_dynamodb_table.terraform_state_lock.arn,
   ]
 
   backup_retention_days    = 14
@@ -46,21 +66,7 @@ module "backup" {
     Component   = "disaster-recovery"
   }
 
-  depends_on = [module.aurora_db, module.terraform_state_lock]
-}
-
-module "terraform_state_lock" {
-  source     = "../../modules/dynamodb"
-  table_name = "terraform-state-lock"
-}
-
-module "iam_oidc" {
-  source     = "../../modules/iam-oidc"
-  role_name  = "GithubActionsDeployAccess"
-  repository = "Jan-IngenHousz-Institute/open-jii"
-  aws_region = var.aws_region
-
-  github_environments = [var.environment]
+  depends_on = [module.aurora_db]
 }
 
 module "cloudwatch" {
@@ -80,7 +86,7 @@ module "logs_bucket" {
   enable_versioning = false
 
   # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
-  elb_log_delivery_prefixes = ["backend-alb-logs"]
+  elb_log_delivery_prefixes = ["backend-alb-logs", "backend-private-alb-logs"]
 
   lifecycle_rules = [{
     id                                 = "expire-cloudfront-access-logs"
@@ -297,7 +303,7 @@ module "firmware_rollout_role" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  oidc_provider_arn   = module.iam_oidc.oidc_provider_arn
+  oidc_provider_arn   = data.aws_iam_openid_connect_provider.github.arn
   firmware_bucket_arn = module.firmware_s3.bucket_arn
   presign_role_arn    = module.iot_core.jobs_presign_role_arn
 }
@@ -339,7 +345,7 @@ module "macro_sandbox" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  ci_cd_role_arn      = module.iam_oidc.role_arn
+  ci_cd_role_arn      = data.aws_iam_role.github_actions_deploy.arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
@@ -369,7 +375,7 @@ module "calibration_sandbox" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  ci_cd_role_arn      = module.iam_oidc.role_arn
+  ci_cd_role_arn      = data.aws_iam_role.github_actions_deploy.arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.calibration_sandbox_lambda_security_group_id
   flow_log_group_name = module.macro_sandbox.flow_log_group_name
@@ -1841,8 +1847,11 @@ module "experiment_custom_metadata_table" {
     { name = "updated_at", type = "TIMESTAMP", nullable = false },
   ]
 
+  # The change feed carries each sheet's edits and deletions to the serving store
+  # (apps/data/src/lib/openjii/openjii/serving_store/tables.py, MetadataRows).
   properties = {
     "delta.feature.variantType-preview" = "supported"
+    "delta.enableChangeDataFeed"        = "true"
   }
 
   grants = {
@@ -2152,6 +2161,9 @@ locals {
     measurements  = "58430"
     uploads       = "44"
     macro_results = "57120"
+    # The sheets' copy needs no history: the first load owes every sheet to it once
+    # (docs/runbooks/procedures/serving-store-reload.md).
+    metadata_rows = "latest"
   }
   serving_store_feed = length(local.serving_store_feed_start_versions) > 0
 
@@ -2159,11 +2171,10 @@ locals {
   # before a release has deployed the notebook.
   centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed"] : []
   macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = local.serving_store_feed ? {
-    SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
-    SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
-    SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
-  } : {}
+  serving_store_feed_settings = {
+    for table, version in local.serving_store_feed_start_versions :
+    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
+  }
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
@@ -2624,7 +2635,7 @@ module "migration_runner_ecr" {
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"
 
-  ci_cd_role_arn = module.iam_oidc.role_arn
+  ci_cd_role_arn = data.aws_iam_role.github_actions_deploy.arn
 
   tags = {
     Environment = var.environment
@@ -2728,7 +2739,7 @@ module "backend_ecr" {
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"
 
-  ci_cd_role_arn = module.iam_oidc.role_arn
+  ci_cd_role_arn = data.aws_iam_role.github_actions_deploy.arn
 
   tags = {
     Environment = var.environment
@@ -2741,12 +2752,12 @@ module "backend_ecr" {
 module "backend_alb" {
   source = "../../modules/alb"
 
-  service_name      = "backend"
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnets
-  container_port    = var.backend_container_port
-  security_groups   = [module.vpc.alb_security_group_id]
-  environment       = var.environment
+  service_name    = "backend"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.public_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
 
   # Health check configuration
   health_check_path                = "/health"
@@ -2770,6 +2781,40 @@ module "backend_alb" {
     ManagedBy   = "terraform"
     Component   = "backend"
   }
+}
+
+module "backend_alb_private" {
+  source = "../../modules/alb"
+
+  service_name    = "backend-private"
+  internal        = true
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
+
+  health_check_path                = "/health"
+  health_check_timeout             = 5
+  health_check_interval            = 90
+  health_check_healthy_threshold   = 3
+  health_check_unhealthy_threshold = 3
+  health_check_matcher             = "200-299"
+
+  certificate_arn = module.route53.regional_services_certificate_arn
+
+  enable_access_logs = true
+  access_logs_bucket = module.logs_bucket.bucket_id
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+
+  # The logs bucket's policy admits the new prefix before access logging is switched on.
+  depends_on = [module.logs_bucket]
 }
 
 module "backend_ecs" {
@@ -2802,6 +2847,8 @@ module "backend_ecs" {
 
   # Load balancer integration
   target_group_arn = module.backend_alb.target_group_arn
+  # Registers the tasks with the private ALB too, so it is healthy before CloudFront switches.
+  additional_target_group_arns = [module.backend_alb_private.target_group_arn]
 
   # Auto-scaling settings
   enable_autoscaling = true
@@ -3230,12 +3277,12 @@ module "backend_waf" {
 module "backend_cloudfront" {
   source = "../../modules/backend-cloudfront"
 
-  service_name    = "backend"
-  environment     = var.environment
-  alb_domain_name = module.backend_alb.alb_dns_name
+  service_name = "backend"
+  environment  = var.environment
 
-  # Custom header for ALB protection
-  custom_header_value = var.api_cloudfront_header_value
+
+  alb_domain_name = module.backend_alb_private.alb_dns_name
+  vpc_origin_id   = module.backend_alb_private.vpc_origin_id
 
   # CloudFront settings
   price_class = "PriceClass_200" # Adds edges in Africa, the Middle East and Asia, where many of our users are
@@ -3557,8 +3604,8 @@ module "grafana_dashboard" {
   server_function_name           = module.opennext.server_function_name
   ecs_service_name               = module.backend_ecs.ecs_service_name
   cloudfront_distribution_id     = module.opennext.cloudfront_distribution_id
-  target_group_arn               = module.backend_alb.target_group_arn
-  load_balancer_arn              = module.backend_alb.alb_arn
+  target_group_arn               = module.backend_alb_private.target_group_arn
+  load_balancer_arn              = module.backend_alb_private.alb_arn
   ecs_cluster_name               = module.backend_ecs.ecs_cluster_name
   slack_webhook_url              = var.slack_webhook_url
   posthog_project_id             = "80726"
@@ -3691,7 +3738,7 @@ module "status_publisher" {
   # uncached, and the home page's public metrics go through the SQL warehouse.
   web_url             = "https://${module.route53.environment_domain}/en-US/verify-request?provider=email"
   api_health_url      = "https://${module.route53.api_domain}/health"
-  load_balancer_arn   = module.backend_alb.alb_arn
+  load_balancer_arn   = module.backend_alb_private.alb_arn
   web_distribution_id = module.opennext.cloudfront_distribution_id
   kinesis_stream_name = module.kinesis.kinesis_stream_name
 

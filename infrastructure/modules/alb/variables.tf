@@ -1,6 +1,12 @@
-variable "public_subnet_ids" {
-  description = "List of public subnets for the ALB"
+variable "subnet_ids" {
+  description = "Subnets for the ALB: private ones when internal, public ones otherwise"
   type        = list(string)
+}
+
+variable "internal" {
+  description = "Place the ALB in private subnets with no public address, reached by CloudFront through a VPC origin"
+  type        = bool
+  default     = false
 }
 
 variable "container_port" {
@@ -96,9 +102,10 @@ variable "tags" {
 }
 
 variable "cloudfront_header_value" {
-  description = "The value for the custom header that CloudFront sends to the ALB."
+  description = "The value for the custom header that CloudFront sends to an internet-facing ALB. Unused when internal."
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "cloudfront_header_name" {

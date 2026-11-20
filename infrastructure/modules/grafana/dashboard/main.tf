@@ -937,6 +937,105 @@ resource "grafana_rule_group" "email_health" {
   }
 }
 
+# Copies of annotations and metadata sheets. The backend publishes the outbox's gauges every five
+# minutes from each task, 0 when nothing waits, so no data means the reporting has stopped and the
+# rule fires.
+resource "grafana_rule_group" "experiment_data_copies" {
+  provider         = grafana.amg
+  name             = "Experiment Data Copies"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 60
+
+  # Catalog entry 151. Every task publishes the same age, so the highest reads right however many
+  # run. A copy unreachable for everyone holds every row; one record failing on every attempt
+  # crosses it too. No point at all for the query's 15 minutes and the 5 to hold means the job
+  # reporting the outbox has stopped, as when it cannot count the outbox, while copies may be
+  # stuck, so no data fires as well.
+  rule {
+    name      = "Experiment Data Copies Waiting"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "ExperimentDataCopyOldestWaitingSeconds"
+        statistic  = "Maximum"
+        period     = "300"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = true
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 1800"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description      = "A copy of an annotation or metadata sheet has waited in the outbox for over 30 minutes. Either the lakehouse refuses every copy, or one record fails on every attempt. Exports, charts and the custom metadata on warehouse pages miss the latest edits until it lands, and so do the store's sheet rows, which the feed takes from the same copy. It also fires when the backend has stopped reporting the outbox."
+      summary          = "Annotation and sheet copies are not landing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-data-outbox-waiting.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["experiment-data-outbox-waiting"]
+    }
+    labels = {
+      metric_id = "experiment-data-outbox-waiting"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
+}
+
 # CloudFront Alerts
 resource "grafana_rule_group" "cloudfront_errors" {
   provider         = grafana.amg
@@ -2019,7 +2118,7 @@ resource "grafana_rule_group" "serving_store_health" {
 
 # Serving store feed alerts, only where the pipelines feed the store
 locals {
-  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads"])
+  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows"])
 
   # The heartbeat metric counting the gold rows each table is fed from. Uploads have none, so a stall
   # there shows only as a slow feed once rows arrive.
@@ -5480,7 +5579,8 @@ resource "grafana_notification_policy" "policy" {
 
   # A spend step fires for about a week, until it has become the usual day, so it posts when it
   # fires and when it clears, with one reminder after five days: Grafana repeats at most that far
-  # apart, the notification log's default retention.
+  # apart, the notification log's default retention. Written as Grafana stores it, so the plan
+  # stays quiet.
   policy {
     matcher {
       label = "metric_id"
@@ -5488,7 +5588,7 @@ resource "grafana_notification_policy" "policy" {
       value = "aws-spend-limit|databricks-spend-limit"
     }
     contact_point   = grafana_contact_point.slack.name
-    repeat_interval = "120h"
+    repeat_interval = "5d"
   }
 
   policy {

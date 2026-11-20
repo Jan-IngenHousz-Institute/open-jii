@@ -33,13 +33,15 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { ExperimentDeviceDetail } from "./experiment-device-detail";
 import { ExperimentDevicesList } from "./experiment-devices-list";
 import { summarizeExperimentDevices } from "./experiment-devices-summary";
+import { useExperimentDevicesList } from "./use-experiment-devices-list";
 
 export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
 
-  const { data, isLoading, isError, refetch } = useExperimentDevices(experimentId);
+  const { data, dataUpdatedAt, isLoading, isError, refetch } = useExperimentDevices(experimentId);
+  const list = useExperimentDevicesList({ experimentId, devices: data?.devices, dataUpdatedAt });
 
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -110,7 +112,9 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
 
   // Derived each render so a refetch cannot leave the pane on a stale entry.
   const selectedEntry =
-    data.devices.find((entry) => entry.clientId === selectedClientId) ?? data.devices[0];
+    selectedClientId === null
+      ? list.data?.items[0]
+      : (data.devices.find((entry) => entry.clientId === selectedClientId) ?? list.data?.items[0]);
 
   return (
     <>
@@ -126,19 +130,21 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
       <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-20 lg:self-start">
           <ExperimentDevicesList
-            devices={data.devices}
-            selectedClientId={selectedEntry.clientId}
+            list={list}
+            selectedClientId={selectedEntry?.clientId ?? null}
             onSelect={setSelectedClientId}
           />
         </div>
 
-        <ExperimentDeviceDetail
-          experimentId={experimentId}
-          entry={selectedEntry}
-          window={data.window}
-          pipelineUnavailable={data.pipelineUnavailable}
-          onRequestDetach={setDetaching}
-        />
+        {selectedEntry && (
+          <ExperimentDeviceDetail
+            experimentId={experimentId}
+            entry={selectedEntry}
+            window={data.window}
+            pipelineUnavailable={data.pipelineUnavailable}
+            onRequestDetach={setDetaching}
+          />
+        )}
       </div>
 
       <AlertDialog

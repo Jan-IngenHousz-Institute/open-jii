@@ -235,6 +235,25 @@ describe("ServingStoreAdapter", () => {
     expect(sent.handed).toBe(2);
   });
 
+  it("refuses a flagged read whose ids would pass the store's query size, before it reaches the store", () => {
+    const flaggedRead = (rows: number) =>
+      adapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: "e1",
+        columns: ["id"],
+        flagged: {
+          kind: "only",
+          addedRowIds: Array.from({ length: rows }, (_, index) => `${"r".repeat(58)}${index}`),
+        },
+      });
+
+    assertSuccess(flaggedRead(1_000));
+    const refused = flaggedRead(20_000);
+    assertFailure(refused);
+    expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+  });
+
   it("counts a read as text", () => {
     const count = adapter.countQuery({ sql: "SELECT 1", columns: [] });
 
@@ -1371,6 +1390,101 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     assertSuccess(devices);
     expect(contributors.value.sort()).toEqual([ADA, BEN]);
     expect(devices.value.sort()).toEqual(["PST-client", "thing-1"]);
+  });
+
+  it("filters a page by its rows' flags, the phone's and those added afterwards alike", async () => {
+    const experiment = "flagged-e";
+    const reading = (id: number, annotations: unknown[]) => ({
+      experiment_id: experiment,
+      id,
+      timestamp: `2026-09-14 10:00:0${id % 10}`,
+      questions_data: {},
+      annotations,
+      _commit_version: 1,
+      _commit_timestamp: "2026-09-14 10:01:00",
+    });
+    const phoneFlag = {
+      id: "p1",
+      rowId: "21",
+      type: "flag",
+      content: { text: null, flagType: "outlier" },
+      createdBy: null,
+      createdByName: null,
+      createdAt: null,
+      updatedAt: null,
+    };
+    await admin.insert({
+      table: "measurements",
+      values: [reading(21, [phoneFlag]), reading(22, []), reading(23, [])],
+      format: "JSONEachRow",
+    });
+    // Row 23 carries a flag someone added afterwards, which Postgres holds.
+    const params = (flagged: "only" | "exclude", added: string[]): StoreQueryParams => ({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: experiment,
+      columns: ["id"],
+      flagged: { kind: flagged, addedRowIds: added },
+    });
+    const sortedPage = async (flagged: "only" | "exclude", added: string[]) =>
+      (await rowsOf({ ...params(flagged, added), ordering: { column: "id" } })).rows;
+    const unsortedIds = async (flagged: "only" | "exclude", added: string[]) =>
+      (await rowsOf(params(flagged, added))).rows.flat().sort();
+    const count = async (flagged: "only" | "exclude", added: string[]) => {
+      const query = adapter.buildExperimentQuery(params(flagged, added));
+      assertSuccess(query);
+      const counted = await adapter.executeQuery(adapter.countQuery(query.value));
+      assertSuccess(counted);
+      return counted.value.rows;
+    };
+
+    expect(await sortedPage("only", ["23"])).toEqual([["21"], ["23"]]);
+    expect(await sortedPage("exclude", ["23"])).toEqual([["22"]]);
+    expect(await unsortedIds("only", ["23"])).toEqual(["21", "23"]);
+    expect(await count("only", ["23"])).toEqual([["2"]]);
+
+    // Once the flag added afterwards is removed, only the phone's flag keeps its row.
+    expect(await sortedPage("only", [])).toEqual([["21"]]);
+    expect(await unsortedIds("only", [])).toEqual(["21"]);
+    expect(await count("only", [])).toEqual([["1"]]);
+    expect(await count("exclude", [])).toEqual([["2"]]);
+  });
+
+  it("runs the largest flagged read it takes, whose count fills the store's query size to the byte", async () => {
+    const ids = Array.from(
+      { length: 14_000 },
+      (_, index) => `flagged-${String(index).padStart(56, "0")}`,
+    );
+    const read = (last: string) =>
+      adapter.buildExperimentQuery({
+        tableName: "raw_data",
+        tableType: "static",
+        experimentId: EXPERIMENT,
+        columns: ["id"],
+        ordering: { column: "id" },
+        flagged: { kind: "only", addedRowIds: [...ids, last] },
+      });
+    let [fits, passes] = [0, 200_000];
+    while (passes - fits > 1) {
+      const middle = Math.floor((fits + passes) / 2);
+      if (read("x".repeat(middle)).isSuccess()) {
+        fits = middle;
+      } else {
+        passes = middle;
+      }
+    }
+
+    const largest = read("x".repeat(fits));
+    assertSuccess(largest);
+    const countSql = adapter.countQuery(largest.value).sql;
+    assertSuccess(await adapter.executeQuery(largest.value));
+    assertSuccess(await adapter.executeQuery(adapter.countQuery(largest.value)));
+
+    const refused = read("x".repeat(passes));
+    assertFailure(refused);
+    expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+    // One byte more, sent anyway, is a statement the store refuses too.
+    assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
   });
 });
 

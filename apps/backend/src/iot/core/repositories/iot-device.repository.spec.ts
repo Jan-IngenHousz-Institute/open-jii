@@ -1,11 +1,25 @@
 import { faker } from "@faker-js/faker";
 
-import { and, eq, iotDevices, organizationMembers, resourceGrants } from "@repo/database";
+import { deviceRung } from "@repo/api/domains/iot/device-rung";
+import type {
+  IotDeviceRung,
+  IotDeviceSort,
+  IotDeviceStatus,
+} from "@repo/api/domains/iot/iot.schema";
+import {
+  and,
+  asc,
+  eq,
+  experimentDevices,
+  iotDevices,
+  organizationMembers,
+  resourceGrants,
+} from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
-import type { CreateIotDeviceDto } from "../models/iot-device.model";
-import { IotDeviceRepository } from "./iot-device.repository";
+import type { IotDeviceDto, CreateIotDeviceDto } from "../models/iot-device.model";
+import { deviceRungSql, IotDeviceRepository } from "./iot-device.repository";
 
 describe("IotDeviceRepository", () => {
   const testApp = TestHarness.App;
@@ -70,6 +84,167 @@ describe("IotDeviceRepository", () => {
 
     assertSuccess(result);
     expect(result.value).toHaveLength(2);
+  });
+
+  describe("search", () => {
+    it("finds a device by name and returns its family and serial number without its vector", async () => {
+      const name = `Canopy ${faker.string.alphanumeric(16)}`;
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        name,
+        deviceType: "multispeq",
+      });
+
+      const result = await repository.search(name, userId, 20);
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(1);
+      const { score, ...row } = result.value[0];
+      expect(row).toEqual({
+        id: device.id,
+        name,
+        description: device.serialNumber,
+        deviceType: "multispeq",
+      });
+      expect(score).toBeGreaterThan(0);
+    });
+
+    it("finds a named device by its hyphenated serial number", async () => {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        name: "Canopy sensor",
+        serialNumber: `MSQ-${faker.string.numeric(16)}`,
+      });
+
+      const result = await repository.search(device.serialNumber.toLowerCase(), userId, 20);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        expect.objectContaining({ id: device.id, name: "Canopy sensor" }),
+      ]);
+    });
+
+    it("ranks a named device's full serial match at least as high as an unnamed device's", async () => {
+      const named = await testApp.createIotDevice({
+        createdBy: userId,
+        name: "Canopy sensor",
+        serialNumber: `MSQ-${faker.string.numeric(16)}`,
+      });
+      const unnamed = await testApp.createIotDevice({
+        createdBy: userId,
+        name: null,
+        serialNumber: `AMB-${faker.string.numeric(16)}`,
+      });
+
+      const namedResult = await repository.search(named.serialNumber, userId, 20);
+      const unnamedResult = await repository.search(unnamed.serialNumber, userId, 20);
+
+      assertSuccess(namedResult);
+      assertSuccess(unnamedResult);
+      expect(namedResult.value).toEqual([expect.objectContaining({ id: named.id })]);
+      expect(unnamedResult.value).toEqual([expect.objectContaining({ id: unnamed.id })]);
+      expect(namedResult.value[0].score).toBeGreaterThanOrEqual(unnamedResult.value[0].score);
+    });
+
+    it("uses the serial number as an unnamed device's title", async () => {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        name: null,
+        serialNumber: `MSQ-${faker.string.numeric(16)}`,
+      });
+
+      const result = await repository.search(device.serialNumber, userId, 20);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        expect.objectContaining({ id: device.id, name: device.serialNumber, description: null }),
+      ]);
+    });
+
+    it("finds an organization-less self-registered device for its creator only", async () => {
+      const name = `Phone ${faker.string.alphanumeric(16)}`;
+      const device = await testApp.createIotDevice({ createdBy: userId, name });
+      await testApp.database
+        .update(iotDevices)
+        .set({ organizationId: null })
+        .where(eq(iotDevices.id, device.id));
+      const stranger = await testApp.createTestUser({});
+
+      const own = await repository.search(name, userId, 20);
+      const other = await repository.search(name, stranger, 20);
+
+      assertSuccess(own);
+      assertSuccess(other);
+      expect(own.value.map((row) => row.id)).toEqual([device.id]);
+      expect(other.value).toEqual([]);
+    });
+
+    it("hides another organization's private device until the caller holds a grant", async () => {
+      const owner = await testApp.createTestUser({});
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const name = `Private ${faker.string.alphanumeric(16)}`;
+      const device = await testApp.createIotDevice({ createdBy: owner, organizationId, name });
+
+      const hidden = await repository.search(name, userId, 20);
+      assertSuccess(hidden);
+      expect(hidden.value).toEqual([]);
+
+      await testApp.addResourceGrant({
+        resourceType: "device",
+        resourceId: device.id,
+        granteeType: "user",
+        granteeId: userId,
+        role: "viewer",
+      });
+      const shared = await repository.search(name, userId, 20);
+      assertSuccess(shared);
+      expect(shared.value.map((row) => row.id)).toEqual([device.id]);
+    });
+
+    it("includes every device status", async () => {
+      const name = `Status ${faker.string.alphanumeric(16)}`;
+      const devices = await Promise.all(
+        (["registered", "active", "revoked", "retired"] as const).map((status) =>
+          testApp.createIotDevice({ createdBy: userId, name, status }),
+        ),
+      );
+
+      const result = await repository.search(name, userId, 20);
+
+      assertSuccess(result);
+      expect(result.value.map((row) => row.id).sort()).toEqual(devices.map((row) => row.id).sort());
+    });
+
+    it("limits candidates and breaks equal scores by id", async () => {
+      const name = `Ranking ${faker.string.alphanumeric(16)}`;
+      const devices = await Promise.all(
+        Array.from({ length: 3 }, () => testApp.createIotDevice({ createdBy: userId, name })),
+      );
+
+      const result = await repository.search(name, userId, 2);
+
+      assertSuccess(result);
+      expect(result.value.map((row) => row.id)).toEqual(
+        devices
+          .map((row) => row.id)
+          .sort()
+          .slice(0, 2),
+      );
+    });
+
+    it.each(["%", "_", "\\"])("matches serial metacharacter %s literally", async (term) => {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        serialNumber: `MSQ${term}${faker.string.numeric(16)}`,
+      });
+      await testApp.createIotDevice({ createdBy: userId });
+
+      const result = await repository.search(term, userId, 20);
+
+      assertSuccess(result);
+      expect(result.value.map((row) => row.id)).toEqual([device.id]);
+    });
   });
 
   it("returns null from findById for a missing device", async () => {
@@ -325,5 +500,256 @@ describe("IotDeviceRepository — listAccessible scoping", () => {
 
       expect(await grantsFor(resource.id)).toHaveLength(0);
     });
+  });
+});
+
+describe("IotDeviceRepository listing", () => {
+  const testApp = TestHarness.App;
+  let repository: IotDeviceRepository;
+  let userId: string;
+
+  beforeAll(async () => {
+    await testApp.setup();
+  });
+  beforeEach(async () => {
+    await testApp.beforeEach();
+    repository = testApp.module.get(IotDeviceRepository);
+    userId = await testApp.createTestUser({});
+  });
+  afterEach(() => {
+    testApp.afterEach();
+  });
+  afterAll(async () => {
+    await testApp.teardown();
+  });
+
+  const cases: { status: IotDeviceStatus; bound: boolean; rung: IotDeviceRung }[] = [
+    { status: "registered", bound: false, rung: "registered" },
+    { status: "registered", bound: true, rung: "registered" },
+    { status: "active", bound: false, rung: "provisioned" },
+    { status: "active", bound: true, rung: "onboarded" },
+    { status: "revoked", bound: false, rung: "revoked" },
+    { status: "revoked", bound: true, rung: "revoked" },
+    { status: "retired", bound: false, rung: "retired" },
+    { status: "retired", bound: true, rung: "retired" },
+  ];
+
+  it("resolves the same rungs as the web helper for every stored status and binding state", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Listing experiment", userId });
+    for (const { status, bound, rung } of cases) {
+      const device = await testApp.createIotDevice({ createdBy: userId, status });
+      if (bound)
+        await testApp.database.insert(experimentDevices).values({
+          experimentId: experiment.id,
+          deviceId: device.id,
+          addedBy: userId,
+        });
+      const [row] = await testApp.database
+        .select({ rung: deviceRungSql() })
+        .from(iotDevices)
+        .where(eq(iotDevices.id, device.id));
+      expect(row.rung).toBe(rung);
+      expect(row.rung).toBe(deviceRung(status, bound ? 1 : 0));
+    }
+  });
+
+  it("filters by multiple rungs while counting all rungs under search and family", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Listing experiment", userId });
+    for (const [index, { status, bound }] of cases.entries()) {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status,
+        serialNumber: `MSQ-2-${index}`,
+        deviceType: "multispeq",
+        name: "Sensor",
+      });
+      if (bound)
+        await testApp.database.insert(experimentDevices).values({
+          experimentId: experiment.id,
+          deviceId: device.id,
+          addedBy: userId,
+        });
+    }
+    await testApp.createIotDevice({
+      createdBy: userId,
+      serialNumber: "MSQ-2-other",
+      deviceType: "generic",
+    });
+    await testApp.createIotDevice({
+      createdBy: userId,
+      serialNumber: "MSQ-3",
+      deviceType: "multispeq",
+    });
+    const result = await repository.findPage(
+      { userId, search: "MSQ-2", family: ["multispeq"], status: ["provisioned", "onboarded"] },
+      1,
+      20,
+    );
+    assertSuccess(result);
+    expect(result.value.items).toHaveLength(2);
+    expect(result.value.items.every((device) => device.status === "active")).toBe(true);
+    expect(result.value.totalCount).toBe(2);
+    expect(result.value.statusCounts).toEqual({
+      registered: 2,
+      provisioned: 1,
+      onboarded: 1,
+      revoked: 2,
+      retired: 2,
+    });
+    const totals: { status?: IotDeviceRung[]; totalCount: number }[] = [
+      { totalCount: 8 },
+      { status: [], totalCount: 8 },
+      { status: ["registered"], totalCount: 2 },
+      { status: ["registered", "revoked"], totalCount: 4 },
+      { status: ["provisioned", "onboarded"], totalCount: 2 },
+    ];
+    for (const { status, totalCount } of totals) {
+      const page = await repository.findPage(
+        { userId, search: "MSQ-2", family: ["multispeq"], status },
+        99,
+        1,
+      );
+      assertSuccess(page);
+      expect(page.value.items).toEqual([]);
+      expect(page.value.totalCount).toBe(totalCount);
+      expect(page.value.statusCounts).toEqual(result.value.statusCounts);
+    }
+  });
+
+  it("escapes wildcard characters and searches names or serials without treating whitespace as a filter", async () => {
+    const nameMatch = await testApp.createIotDevice({ createdBy: userId, name: "100%_\\sensor" });
+    const serialMatch = await testApp.createIotDevice({
+      createdBy: userId,
+      serialNumber: "100%_\\serial",
+    });
+    await testApp.createIotDevice({
+      createdBy: userId,
+      name: "10000sensor",
+      serialNumber: "10000serial",
+    });
+    const filtered = await repository.findAll({ userId, search: " 100%_\\ " });
+    assertSuccess(filtered);
+    expect(filtered.value.map((device) => device.id).sort()).toEqual(
+      [nameMatch.id, serialMatch.id].sort(),
+    );
+    const unfiltered = await repository.findPage(
+      { userId, search: "  ", status: [], family: [] },
+      1,
+      20,
+    );
+    assertSuccess(unfiltered);
+    expect(unfiltered.value.totalCount).toBe(3);
+  });
+
+  it.each(["name", "status", "family", "registered"] as const)(
+    "sorts %s in both directions with stable id ties",
+    async (field) => {
+      const rows: IotDeviceDto[] = [];
+      const statuses = ["registered", "active", "active", "revoked", "retired"] as const;
+      const families = ["ambit", "ambyte", "generic", "minipar", "multispeq"] as const;
+      const { experiment } = await testApp.createExperiment({ name: "Listing experiment", userId });
+      for (let index = 0; index < 5; index++) {
+        const device = await testApp.createIotDevice({
+          createdBy: userId,
+          status: statuses[index],
+          deviceType: families[index],
+          name: index === 0 ? null : `Name-${index}`,
+          serialNumber: index === 0 ? "Name-0" : `serial-${index}`,
+        });
+        await testApp.database
+          .update(iotDevices)
+          .set({ createdAt: new Date(2026, 0, index + 1) })
+          .where(eq(iotDevices.id, device.id));
+        if (index === 2)
+          await testApp.database
+            .insert(experimentDevices)
+            .values({ experimentId: experiment.id, deviceId: device.id, addedBy: userId });
+        rows.push(device);
+      }
+      for (const direction of ["asc", "desc"] as const) {
+        const sort: IotDeviceSort = [{ field, direction }];
+        const result = await repository.findPage({ userId, sort }, 1, 20);
+        assertSuccess(result);
+        expect(result.value.items.map((device) => device.id)).toEqual(
+          (direction === "asc" ? rows : [...rows].reverse()).map((device) => device.id),
+        );
+      }
+      await testApp.database.update(iotDevices).set({
+        name: "Same",
+        status: "registered",
+        deviceType: "generic",
+        createdAt: new Date(2026, 0, 1),
+      });
+      const expected = await testApp.database
+        .select({ id: iotDevices.id })
+        .from(iotDevices)
+        .orderBy(asc(iotDevices.id));
+      for (const direction of ["asc", "desc"] as const) {
+        const ids: string[] = [];
+        for (let page = 1; page <= 3; page++) {
+          const result = await repository.findPage(
+            { userId, sort: [{ field, direction }] },
+            page,
+            2,
+          );
+          assertSuccess(result);
+          ids.push(...result.value.items.map((device) => device.id));
+        }
+        expect(ids).toEqual(expected.map((device) => device.id));
+      }
+    },
+  );
+
+  it("keeps every access tier and organization-less phones in parity with listAccessible across pages", async () => {
+    const owner = await testApp.createTestUser({});
+    const orgId = await testApp.createOrganization();
+    await testApp.addOrganizationMember(orgId, userId, "member");
+    await testApp.createIotDevice({ createdBy: owner, organizationId: orgId });
+    const direct = await testApp.createIotDevice({ createdBy: owner });
+    await testApp.addResourceGrant({
+      resourceType: "device",
+      resourceId: direct.id,
+      granteeType: "user",
+      granteeId: userId,
+      role: "viewer",
+    });
+    const grantedOrg = await testApp.createOrganization();
+    await testApp.addOrganizationMember(grantedOrg, userId, "member");
+    const orgShared = await testApp.createIotDevice({ createdBy: owner });
+    await testApp.addResourceGrant({
+      resourceType: "device",
+      resourceId: orgShared.id,
+      granteeType: "organization",
+      granteeId: grantedOrg,
+      role: "viewer",
+    });
+    await testApp.createIotDevice({ createdBy: owner, visibility: "public" });
+    const hidden = await testApp.createIotDevice({ createdBy: owner });
+    const phone = await testApp.createIotDevice({ createdBy: userId, deviceType: "mobile" });
+    const otherPhone = await testApp.createIotDevice({ createdBy: owner, deviceType: "mobile" });
+    await testApp.database
+      .update(iotDevices)
+      .set({ organizationId: null })
+      .where(eq(iotDevices.id, phone.id));
+    await testApp.database
+      .update(iotDevices)
+      .set({ organizationId: null })
+      .where(eq(iotDevices.id, otherPhone.id));
+    const legacy = await repository.listAccessible(userId);
+    assertSuccess(legacy);
+    const ids: string[] = [];
+    for (let page = 1; page <= legacy.value.length; page++) {
+      const result = await repository.findPage({ userId }, page, 1);
+      assertSuccess(result);
+      expect(result.value.totalCount).toBe(legacy.value.length);
+      ids.push(...result.value.items.map((device) => device.id));
+    }
+    expect(ids.sort()).toEqual(legacy.value.map((device) => device.id).sort());
+    expect(ids).toContain(phone.id);
+    expect(ids).not.toContain(otherPhone.id);
+    expect(ids).not.toContain(hidden.id);
+    const unpaged = await repository.findAll({ userId, family: ["mobile"] });
+    assertSuccess(unpaged);
+    expect(unpaged.value.map((device) => device.id)).toEqual([phone.id]);
   });
 });

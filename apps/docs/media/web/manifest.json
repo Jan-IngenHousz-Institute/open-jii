@@ -21,7 +21,7 @@
       "Next.js and TanStack Query development overlays are suppressed by the capture tool; a production build renders none of them.",
       "The sign-out toast on the last-used-badge shot is closed through its own control rather than hidden with CSS.",
       "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here.",
-      "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag.",
+      "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag. Superseded by the 2026-11-18 recapture below.",
       "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner.",
       "collaborators, organization-members, organization-team, delete-account-blockers and workbooks-list were recaptured on 2026-10-29 at 1920x1200 from a copy of the branch running against a fresh capture database (migrations, db:seed, then db:seed:orgs with seed@openjii.local as the target account), so the seed account holds every organization relationship the shots need. Every frame was reviewed at full size: only seeded personas (@orgseed.local, seed@openjii.local) and seeded resource names are visible. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "protocols-list and macros-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. Frames were reviewed at full size and show only seeded protocol/macro names. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. Both captures include the current data-processing status banner.",
@@ -41,7 +41,8 @@
       "charts-filters recaptured on 2026-11-02 at 1920x1200 with capture-docs-media and synthetic FixtureWarehouse measurements in an isolated local stack. The full frame shows only the seed identity and example experiment data, with no credentials or dev overlays. The user approved the staged frame in the OJD-2320 handoff before publication. The capture replaces the former PNG whose top-right panel had no X labels.",
       "notification-settings retaken on 2026-11-05 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notification-settings, after the upload emails made Data exports and uploads switchable: Requests and invitations, Membership and access, Experiments and resources, Devices and calibration and Project transfers are on, Data exports and uploads is off at its default and enabled, no category reads Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size; no experiment, organization or person is named in the frame beyond the seeded identity in the sidebar. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
       "experiments-list retaken on 2026-11-10 at 1920x1200 from the local stack with the seeded development identity, because the Activity header became sortable and now carries a sort icon. The backend ran with Databricks unreachable, as in the previous capture, so no dev measurements show and the Activity header is in its unavailable state. The repo capture command was not used as is: the local database holds three developer-authored public experiments, so a one-off Playwright script with the shot's route, frame and preparation dropped every non-[Seed] experiment from the list response and checked that no developer name or experiment name reached the page text. Reviewed at full size and approved before publishing; only [Seed] experiments and the seeded identity appear. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine's ffmpeg lacks libwebp.",
-      "ordered-aggregates-gap and ordered-aggregates-row-number captured on 2026-11-09 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only ordered-aggregates-gap,ordered-aggregates-row-number. The chart reads synthetic sensor rows that the capture tool serves at the warehouse boundary (FixtureWarehouse); no lakehouse data is shown. The page is scrolled so the Y series settings are visible, which cuts the top edge of the chart card. Both frames were reviewed at full size and approved before publishing; only the seeded identity and the [Seed] experiment name appear, with no credentials, real names or dev overlays."
+      "ordered-aggregates-gap and ordered-aggregates-row-number captured on 2026-11-09 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only ordered-aggregates-gap,ordered-aggregates-row-number. The chart reads synthetic sensor rows that the capture tool serves at the warehouse boundary (FixtureWarehouse); no lakehouse data is shown. The page is scrolled so the Y series settings are visible, which cuts the top edge of the chart card. Both frames were reviewed at full size and approved before publishing; only the seeded identity and the [Seed] experiment name appear, with no credentials, real names or dev overlays.",
+      "experiment-devices and devices-list captured on 2026-11-18 at 1920x1200 from the local stack with the seeded development identity (seed@openjii.local), via pnpm --filter @repo/e2e capture-docs-media --only experiment-devices,devices-list. experiment-devices now targets [Seed] Soil Health Monitoring — Midwest and waits for the device search and Filter controls; devices-list shows the Filter menu open on Status with per-status counts. Device rows are [Seed] fixtures and local demo devices named Demo <Family> NN with DEMO-1860 serials; no real names, emails, credentials or dev overlays appear. Online status reads Unknown because AWS is unreachable locally. The user approved publication in the OJD-1860 handoff. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
     ]
   },
   "assets": [
@@ -464,15 +465,26 @@
       "scope": "First frame of passkey-flows.webm"
     },
     {
+      "path": "/img/guide/web/devices-list.webp",
+      "slug": "devices-list",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 96164,
+      "sha256": "cf8a5639d6501e0792e266607bd55af9dfba7bcd4cf645384ce694e877523503",
+      "disposition": "published",
+      "scope": "Device list with the Filter menu open on Status, showing a device count beside each status"
+    },
+    {
       "path": "/img/guide/web/experiment-devices.webp",
       "slug": "experiment-devices",
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 60424,
-      "sha256": "20ab60d5d7bcb2c03e82fb5d15069c99154e8edc34af396729b4fbb427a79287",
+      "bytes": 84888,
+      "sha256": "c49b8a54bcfeb92353dd01a9e72ee207c488d7507ed726e1ffe6e1bb3f959ec5",
       "disposition": "published",
-      "scope": "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles"
+      "scope": "Experiment Devices tab with search, the Filter menu, sortable Name and Family headers, pagination and the selected device details"
     },
     {
       "path": "/img/guide/web/charts-filters.webp",

@@ -1,52 +1,34 @@
 "use client";
 
-import { ErrorDisplay } from "@/components/error-display";
 import { BulkRegisterIotDevicesDialog } from "@/components/iot-devices/bulk-register-iot-devices-dialog";
+import { ListFilterBar } from "@/components/list-filter-bar";
+import { ListPagination } from "@/components/list-pagination";
 import {
   OPEN_DEVICE_BULK_REGISTER_EVENT,
   OPEN_DEVICE_REGISTER_EVENT,
 } from "@/components/navigation/site-header/platform-header-events";
-import { OverviewToolbar } from "@/components/overview-toolbar";
-import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
-import { useEffect, useMemo, useState } from "react";
+import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
+import { useIotDeviceList } from "@/hooks/iot/useIotDeviceList/useIotDeviceList";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { CircleDot, Layers } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { zIotDeviceRung } from "@repo/api/domains/iot/iot.schema";
-import type { IotDeviceRung, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
+import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@repo/ui/components/pagination";
+import type { ListFilter } from "@repo/ui/components/list-filter-menu";
 import { SearchInput } from "@repo/ui/components/search-input";
 
-import { deviceRung } from "./device-rung";
 import { useDevicesRegister } from "./devices-register-context";
 import { IotDevicesEmptyState } from "./iot-devices-empty-state";
 import { IotDevicesTable } from "./iot-devices-table";
 
-const PAGE_SIZE = 20;
-type StatusFilter = "all" | IotDeviceRung;
-
-// One-of chips in the group monitoring filter's language, not a tab strip:
-// a filter narrows the same list, it does not navigate. They filter on the
-// rung the badge shows, which is what a person narrowing the list means.
-const CHIP_STATUSES = ["all", ...zIotDeviceRung.options] as const;
-type ChipStatus = (typeof CHIP_STATUSES)[number];
-
 export function IotDevicesTableView() {
   const { t } = useTranslation(["iot", "common"]);
   const { openRegister } = useDevicesRegister();
-  const { data, isLoading, isFetching, isError, error } = useIotDevices();
-  const devices = useMemo<IotDeviceWithConnectivity[]>(() => data ?? [], [data]);
-
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const list = useIotDeviceList();
   const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
@@ -59,148 +41,123 @@ export function IotDevicesTableView() {
     };
   }, [openRegister]);
 
-  const counts = useMemo(() => {
-    const byRung: Record<StatusFilter, number> = {
-      all: devices.length,
-      registered: 0,
-      provisioned: 0,
-      onboarded: 0,
-      revoked: 0,
-      retired: 0,
-    };
-    for (const device of devices) {
-      byRung[deviceRung(device.status, device.boundExperimentCount)] += 1;
-    }
-    return byRung;
-  }, [devices]);
+  const filters: ListFilter[] = [
+    {
+      key: "status",
+      label: t("iot.devices.columns.status"),
+      icon: CircleDot,
+      options: zIotDeviceRung.options.map((value) => ({
+        value,
+        label: t(`iot.devices.status.${value}`),
+        count: list.statusCounts?.[value],
+      })),
+      selected: list.filters.status,
+      onChange: (values) => list.setFilter("status", zIotDeviceRung.array().parse(values)),
+    },
+    {
+      key: "family",
+      label: t("iot.devices.columns.family"),
+      icon: Layers,
+      options: zSensorFamily.options.map((value) => ({
+        value,
+        label: getSensorFamilyLabel(value),
+      })),
+      selected: list.filters.family,
+      onChange: (values) => list.setFilter("family", zSensorFamily.array().parse(values)),
+    },
+  ];
+  const hasSearch = list.search.trim() !== "";
+  const isEmpty = !list.isLoading && list.data?.totalCount === 0;
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return [...devices]
-      .filter((d) => status === "all" || deviceRung(d.status, d.boundExperimentCount) === status)
-      .filter(
-        (d) =>
-          q === "" ||
-          (d.name?.toLowerCase().includes(q) ?? false) ||
-          d.serialNumber.toLowerCase().includes(q) ||
-          d.deviceType.toLowerCase().includes(q),
-      )
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [devices, status, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  const changeStatus = (value: StatusFilter) => {
-    setStatus(value);
-    setPage(1);
-  };
-  const changeSearch = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
-  const clearFilters = () => {
-    setStatus("all");
-    setSearch("");
-    setPage(1);
-  };
-
-  function renderStatusChip(chipStatus: ChipStatus) {
-    const isActive = status === chipStatus;
-    const label =
-      chipStatus === "all" ? t("iot.devices.tabs.all") : t(`iot.devices.status.${chipStatus}`);
-
-    return (
-      <Button
-        key={chipStatus}
-        size="sm"
-        variant={isActive ? "default" : "outline"}
-        className="h-8"
-        onClick={() => {
-          changeStatus(chipStatus);
-        }}
-      >
-        {label}
-        <span className="ml-1.5 tabular-nums opacity-70">{counts[chipStatus]}</span>
-      </Button>
-    );
-  }
-
-  if (isError) {
-    return <ErrorDisplay error={error} title={t("iot.devices.loadError")} />;
-  }
-
-  if (!isLoading && devices.length === 0 && search.trim() === "" && status === "all") {
+  if (
+    isEmpty &&
+    !list.error &&
+    !list.isPlaceholderData &&
+    list.search === list.debouncedSearch &&
+    !hasSearch &&
+    !list.hasActiveFilters
+  ) {
     return (
       <>
         <IotDevicesEmptyState onRegister={openRegister} />
-        <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />
+        {bulkOpen && <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />}
       </>
     );
   }
 
   return (
     <div className="space-y-4">
-      <OverviewToolbar
-        // "Search by name or serial number" measures ~223px, and the icon and clear button
-        // take 78px, so the default width cuts it mid-word.
+      <ListFilterBar
         searchWidth="wide"
         search={
           <SearchInput
-            value={search}
-            onChange={changeSearch}
-            isLoading={search.trim() !== "" && isFetching}
+            value={list.search}
+            onChange={list.setSearch}
+            isLoading={list.isSearchPending}
             placeholder={t("iot.devices.searchPlaceholder")}
             clearLabel={t("common.clear")}
             loadingLabel={t("common.loading")}
           />
         }
-        filters={<>{CHIP_STATUSES.map(renderStatusChip)}</>}
+        filters={filters}
+        onClearFilters={list.clearFilters}
+        actions={
+          <ResetSortingButton active={list.sort.length > 0} onReset={() => list.setSort([])} />
+        }
       />
 
-      {!isLoading && filtered.length === 0 ? (
-        <EmptyState
-          title={t("iot.devices.zeroResults.title")}
-          description={t("iot.devices.zeroResults.description")}
-          action={
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              {t("iot.devices.zeroResults.clear")}
-            </Button>
-          }
-        />
-      ) : (
-        <>
-          <IotDevicesTable devices={pageRows} isLoading={isLoading} />
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs">
-              {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
-            </span>
-            <Pagination className="m-0 w-auto">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    size="sm"
-                    onClick={() => setPage(Math.max(1, currentPage - 1))}
-                    aria-disabled={currentPage <= 1}
-                    className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    size="sm"
-                    onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                    aria-disabled={currentPage >= totalPages}
-                    className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        </>
-      )}
+      <div
+        aria-busy={list.isPlaceholderData}
+        inert={list.isPlaceholderData}
+        className={`space-y-4 transition-opacity ${list.isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        {list.error ? (
+          <EmptyState
+            size="inline"
+            variant="error"
+            description={t("iot.devices.loadError")}
+            action={
+              <Button variant="outline" size="sm" onClick={() => void list.refetch()}>
+                {t("errors.tryAgain")}
+              </Button>
+            }
+          />
+        ) : isEmpty ? (
+          <EmptyState
+            title={t("iot.devices.zeroResults.title")}
+            description={t("iot.devices.zeroResults.description")}
+            action={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  list.clearFilters();
+                  list.setSearch("");
+                }}
+              >
+                {t("iot.devices.zeroResults.clear")}
+              </Button>
+            }
+          />
+        ) : (
+          <>
+            <IotDevicesTable
+              devices={list.data?.items ?? []}
+              isLoading={list.isLoading}
+              sorting={{ sort: list.sort, onToggle: list.toggleSort }}
+            />
+            {list.data && (
+              <ListPagination
+                page={list.page}
+                totalPages={list.data.totalPages}
+                onPageChange={list.setPage}
+              />
+            )}
+          </>
+        )}
+      </div>
 
-      <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />
+      {bulkOpen && <BulkRegisterIotDevicesDialog open={bulkOpen} onOpenChange={setBulkOpen} />}
     </div>
   );
 }

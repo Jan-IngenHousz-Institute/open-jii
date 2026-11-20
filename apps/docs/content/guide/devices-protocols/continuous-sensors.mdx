@@ -44,6 +44,27 @@ with, and a retired phone carries the Retired badge like any other device.
   paste it into an issue, screenshot, or shared document.
 </Callout>
 
+## Find a device
+
+Open **Devices** to search the registry by name or serial number. Use the
+**Family** filter to find devices from a particular family. The list loads 20
+devices per page. Use **Previous** and **Next** to move between pages.
+
+In **Filter**, choose **Status** or **Family** and tick one or more values. Each
+status shows its device count for the current search and family filters. Picking
+a status keeps the other status counts visible. Values within one filter match
+either choice, while status and family filters apply together. Remove a chip to
+drop one value, or choose **Clear filters** to remove all filters and keep your
+search and sort.
+
+![The device list with the Filter menu open on Status, showing a device count beside each status](/img/guide/web/devices-list.webp)
+
+Click **Name**, **Status**, **Family** or **Registered** to sort ascending,
+descending, then back to newest registered first. Hold Shift to sort by two
+columns, or choose **Reset sorting** to restore newest first. Search, filters and
+sort stay in the URL, so reloading or sharing the link restores the view. A
+change to search, filters or sort returns the list to page 1.
+
 ## Open the Lab record
 
 If you belong to the JII organization, the **About** card on a JII-owned Ambyte,
@@ -77,8 +98,18 @@ Every experiment has a **Devices** tab. It lists two kinds of device together:
 Four tiles summarize the roster: onboarded, sending data, onboarded with no
 recent data, and sending without onboarding.
 
-Below them the devices are listed down the left, searchable and paged 25 at a
-time, with the first one selected. Picking a device fills the rest of the page
+Below them the devices are listed down the left, paged 20 at a time, with the
+first one selected. Search by client id, name or serial number. The **Filter**
+menu lets you choose device families, and each selected family has a removable
+chip. Picking a family hides unregistered publishers because they have no registry family.
+Click **Name** or **Family** to sort ascending, descending, then back to the
+original order. Hold Shift to add the other column to the sort, or use **Reset
+sorting** to restore the original order. Search, family filters and sort are
+saved in the URL and restored when you reload. Until you pick a device, the
+first device on the current page fills the detail pane. Once you pick one,
+filtering, sorting and paging leave its details open.
+
+Picking a device fills the rest of the page
 with its detail: status and live broker connectivity, the firmware version and
 battery level it last reported, how much it has sent into this experiment both in
 the window and in total, when data last arrived from it anywhere, and its
@@ -93,7 +124,7 @@ This replaces the separate device metadata table that used to sit among the
 experiment's data tables: the same reported facts now appear beside each device's
 registry identity and live state.
 
-![The experiment Devices tab: four summary tiles above a table of onboarded gateways, one gateway sending without onboarding, and an unregistered publisher listed by client id](/img/guide/web/experiment-devices.webp)
+![The experiment Devices tab with summary tiles, a searchable device list and the selected device's details](/img/guide/web/experiment-devices.webp)
 
 Anyone who can view or edit the experiment can open an onboarded device from this
 tab, even without their own access to the device. A device that only sent data
@@ -113,6 +144,31 @@ experiment through public visibility alone.
   `ambit`. A legacy `ambyte` row may therefore hold data captured by an Ambit. openJII records this
   ambiguity and follows the current stored value; it does not rewrite historical rows.
 </Callout>
+
+## Monitor a device group
+
+Open a group from **Devices**, then choose **Monitoring** to see its members'
+connectivity and recent data. Search by device label or serial number. In the
+**Filter** menu, **State** accepts several values at once: Online, Offline,
+Unknown and Silent. A device matches any selected value. Silent means a
+connected device stopped delivering data; it still matches Online as well.
+Phones are exempt from silence checks, and the platform does not judge silence
+while the data pipeline is unavailable.
+
+**Family** also accepts several values and combines with State to narrow the
+whole page; the Family column sorts alphabetically by family name.
+
+The member table shows 20 devices per page. Click **Device**, **Family** or
+**State** to cycle through ascending, descending and the original order. Hold
+Shift to sort by two columns, or choose **Reset sorting**. Remove a filter chip
+to drop one value or use **Clear filters** to remove all state and family
+filters.
+
+Search, state and family filters and sorting are saved in the URL. Changing the
+monitoring time range keeps them in place. Search, state and family filters
+also narrow the tiles, throughput, firmware and event log to matching members.
+Changing pages only changes the member table. Opening a row takes you to that
+device's own monitoring dashboard.
 
 ## Bring in Ambyte data
 

@@ -1,40 +1,42 @@
-module "terraform_state_s3" {
-  source      = "../../modules/s3"
-  bucket_name = "open-jii-terraform-state-${var.environment}"
+# CI's roles, the GitHub trust and the state backend belong to infrastructure/foundation, which a
+# separate workflow applies with its own role. This root forgets them without destroying anything
+# and only reads them. Delete the removed blocks once the first apply has run.
+removed {
+  from = module.terraform_state_s3
 
-  # Saved plans hold the configuration's secret values; an approved one is applied within hours.
-  lifecycle_rules = [
-    {
-      id                                 = "expire-saved-plans"
-      status                             = "Enabled"
-      prefix                             = "plans/"
-      transitions                        = []
-      expiration_days                    = 7
-      noncurrent_version_expiration_days = 1
-    }
-  ]
-
-  providers = {
-    aws    = aws
-    aws.dr = aws.dr
+  lifecycle {
+    destroy = false
   }
 }
 
-module "terraform_state_lock" {
-  source     = "../../modules/dynamodb"
-  table_name = "terraform-state-lock"
+removed {
+  from = module.terraform_state_lock
+
+  lifecycle {
+    destroy = false
+  }
 }
 
-module "iam_oidc" {
-  source     = "../../modules/iam-oidc"
-  role_name  = "GithubActionsDeployAccess"
-  repository = "Jan-IngenHousz-Institute/open-jii"
-  aws_region = var.aws_region
+removed {
+  from = module.iam_oidc
 
-  environment                  = var.environment
-  github_environments          = [var.environment]
-  allowed_refs                 = ["refs/heads/main", "refs/heads/release/*"]
-  plan_role_github_environment = "${var.environment}-plan"
+  lifecycle {
+    destroy = false
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_dynamodb_table" "terraform_state_lock" {
+  name = "terraform-state-lock"
+}
+
+data "aws_iam_role" "github_actions_deploy" {
+  name = "GithubActionsDeployAccess"
+}
+
+data "aws_iam_openid_connect_provider" "github" {
+  arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
 module "cloudwatch" {
@@ -54,7 +56,7 @@ module "logs_bucket" {
   enable_versioning = false
 
   # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
-  elb_log_delivery_prefixes = ["backend-alb-logs"]
+  elb_log_delivery_prefixes = ["backend-alb-logs", "backend-private-alb-logs"]
 
   lifecycle_rules = [{
     id                                 = "expire-cloudfront-access-logs"
@@ -272,7 +274,7 @@ module "firmware_rollout_role" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  oidc_provider_arn   = module.iam_oidc.oidc_provider_arn
+  oidc_provider_arn   = data.aws_iam_openid_connect_provider.github.arn
   firmware_bucket_arn = module.firmware_s3.bucket_arn
   presign_role_arn    = module.iot_core.jobs_presign_role_arn
 }
@@ -314,7 +316,7 @@ module "macro_sandbox" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  ci_cd_role_arn      = module.iam_oidc.role_arn
+  ci_cd_role_arn      = data.aws_iam_role.github_actions_deploy.arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
@@ -342,7 +344,7 @@ module "calibration_sandbox" {
 
   aws_region          = var.aws_region
   environment         = var.environment
-  ci_cd_role_arn      = module.iam_oidc.role_arn
+  ci_cd_role_arn      = data.aws_iam_role.github_actions_deploy.arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.calibration_sandbox_lambda_security_group_id
   flow_log_group_name = module.macro_sandbox.flow_log_group_name
@@ -1835,8 +1837,11 @@ module "experiment_custom_metadata_table" {
     { name = "updated_at", type = "TIMESTAMP", nullable = false },
   ]
 
+  # The change feed carries each sheet's edits and deletions to the serving store
+  # (apps/data/src/lib/openjii/openjii/serving_store/tables.py, MetadataRows).
   properties = {
     "delta.feature.variantType-preview" = "supported"
+    "delta.enableChangeDataFeed"        = "true"
   }
 
   grants = {
@@ -2137,9 +2142,9 @@ module "serving_store" {
 }
 
 locals {
-  # The gold version each feed sink starts at when its checkpoint is new, as in dev. Empty keeps the
-  # feed and its alerts off; switching on means filling in all three, read from gold on the day they
-  # ship (docs/runbooks/store-feed-stalled.md).
+  # The version each feed sink starts at when its checkpoint is new, as in dev. Empty keeps the feed
+  # and its alerts off; switching on means filling in every table dev lists, each gold table's
+  # version read from gold on the day they ship (docs/runbooks/store-feed-stalled.md).
   serving_store_feed_start_versions = {}
   serving_store_feed                = length(local.serving_store_feed_start_versions) > 0
 
@@ -2147,11 +2152,10 @@ locals {
   # before a release has deployed the notebook.
   centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/serving_store_feed"] : []
   macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = local.serving_store_feed ? {
-    SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
-    SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
-    SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
-  } : {}
+  serving_store_feed_settings = {
+    for table, version in local.serving_store_feed_start_versions :
+    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
+  }
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
@@ -2335,7 +2339,7 @@ module "backup" {
   aurora_cluster_arns = [module.aurora_db.cluster_arn]
 
   dynamodb_table_arns = [
-    module.terraform_state_lock.table_arn,
+    data.aws_dynamodb_table.terraform_state_lock.arn,
   ]
 
   backup_retention_days    = 14
@@ -2353,7 +2357,7 @@ module "backup" {
     Component   = "disaster-recovery"
   }
 
-  depends_on = [module.aurora_db, module.terraform_state_lock]
+  depends_on = [module.aurora_db]
 }
 
 module "cloud_trail" {
@@ -2761,12 +2765,12 @@ module "backend_ecr" {
 module "backend_alb" {
   source = "../../modules/alb"
 
-  service_name      = "backend"
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnets
-  container_port    = var.backend_container_port
-  security_groups   = [module.vpc.alb_security_group_id]
-  environment       = var.environment
+  service_name    = "backend"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.public_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
 
   # Health check configuration
   health_check_path                = "/health"
@@ -2790,6 +2794,44 @@ module "backend_alb" {
     ManagedBy   = "terraform"
     Component   = "backend"
   }
+}
+
+# The API's load balancer moves to private subnets (OJD-2125). This one runs beside backend_alb
+# until CloudFront's origin is switched to its VPC origin; backend_alb and the shared header are
+# removed after that. It reuses the ALB security group, which admits only CloudFront's
+# origin-facing prefix list on 443, and the ECS group already admits that security group.
+module "backend_alb_private" {
+  source = "../../modules/alb"
+
+  service_name    = "backend-private"
+  internal        = true
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnets
+  container_port  = var.backend_container_port
+  security_groups = [module.vpc.alb_security_group_id]
+  environment     = var.environment
+
+  health_check_path                = "/health"
+  health_check_timeout             = 5
+  health_check_interval            = 90
+  health_check_healthy_threshold   = 3
+  health_check_unhealthy_threshold = 3
+  health_check_matcher             = "200-299"
+
+  certificate_arn = module.route53.regional_services_certificate_arn
+
+  enable_access_logs = true
+  access_logs_bucket = module.logs_bucket.bucket_id
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "backend"
+  }
+
+  # The logs bucket's policy admits the new prefix before access logging is switched on.
+  depends_on = [module.logs_bucket]
 }
 
 module "backend_ecs" {
@@ -2822,6 +2864,8 @@ module "backend_ecs" {
 
   # Load balancer integration
   target_group_arn = module.backend_alb.target_group_arn
+  # Registers the tasks with the private ALB too, so it is healthy before CloudFront switches.
+  additional_target_group_arns = [module.backend_alb_private.target_group_arn]
 
   # Auto-scaling settings
   enable_autoscaling = true

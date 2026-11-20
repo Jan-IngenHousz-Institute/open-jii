@@ -128,7 +128,7 @@ const { mockRouter } = vi.hoisted(() => ({
 }));
 
 vi.mock("@repo/i18n", () => ({
-  useTranslation: (_ns?: string) => ({
+  useTranslation: (namespace = "common") => ({
     t: (key: string, options?: Record<string, unknown>) =>
       (key === "signInMethods.passkeysCount" ||
         key === "sharing.collaboratorCount" ||
@@ -139,18 +139,24 @@ vi.mock("@repo/i18n", () => ({
               key === "workbooks.versionPublished") &&
             typeof options?.version === "number"
           ? `${key}:${options.version}`
-          : key === "joinCode.redeemed" && typeof options?.joined === "number"
-            ? `${key}:${options.joined}`
-            : key === "common.filterChip" &&
-                typeof options?.filter === "string" &&
-                typeof options.value === "string"
-              ? `${key}:${options.filter}:${options.value}`
-              : key === "workbooks.duplicateName" && typeof options?.name === "string"
-                ? `Fork of ${options.name}`
-                : (key === "unsubscribe.done.body" || key === "unsubscribe.undone.body") &&
-                    typeof options?.category === "string"
-                  ? `${key}:${options.category}`
-                  : key,
+          : namespace === "navigation" &&
+              key === "commandPalette.result.inParent" &&
+              typeof options?.title === "string"
+            ? `in ${options.title}`
+            : namespace !== "common" && key === "organizations.types.research_institute"
+              ? `${namespace}:${key}`
+              : key === "joinCode.redeemed" && typeof options?.joined === "number"
+                ? `${key}:${options.joined}`
+                : key === "common.filterChip" &&
+                    typeof options?.filter === "string" &&
+                    typeof options.value === "string"
+                  ? `${key}:${options.filter}:${options.value}`
+                  : key === "workbooks.duplicateName" && typeof options?.name === "string"
+                    ? `Fork of ${options.name}`
+                    : (key === "unsubscribe.done.body" || key === "unsubscribe.undone.body") &&
+                        typeof options?.category === "string"
+                      ? `${key}:${options.category}`
+                      : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",
