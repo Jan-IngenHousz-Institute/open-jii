@@ -66,8 +66,8 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
         throw new Error("'between' bounds cannot be arrays");
       }
 
-      const from = builder.filterLiteral(filter.column, start);
-      return `${col} BETWEEN ${from} AND ${builder.filterLiteral(filter.column, end)}`;
+      const from = builder.filterLiteral(filter.column, start, value);
+      return `${col} BETWEEN ${from} AND ${builder.filterLiteral(filter.column, end, value)}`;
     }
   }
 }

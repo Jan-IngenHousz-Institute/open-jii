@@ -523,6 +523,24 @@ describe("StoreQueryBuilder", () => {
       );
     });
 
+    it("compares both bounds of a range with one text bound as doubles, and a plain range as decimals", () => {
+      const range = (value: [string | number, string | number]) =>
+        withMetadata()
+          .select(["id"])
+          .filter({ column: "area", operator: "between", value })
+          .build();
+
+      expect(range([1.15, "5"])).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) BETWEEN toFloat64\(1\.15\) AND toFloat64OrNull\(/,
+      );
+      expect(range([1.15, 5])).toMatch(
+        /accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\) BETWEEN toDecimal256\('1\.15', 2\) AND toDecimal256\('5', 0\)/,
+      );
+      expect(range(["1.15", "5"])).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) BETWEEN toFloat64OrNull\(.+\) AND toFloat64OrNull\(/,
+      );
+    });
+
     it("unquotes a text field, keeps a mix of kinds as its JSON, and reads null as none only where typed", () => {
       const mixedSchema = "OBJECT<mixed: VARIANT, soil: STRING, tags: ARRAY<STRING>>";
       const sql = measurements()
