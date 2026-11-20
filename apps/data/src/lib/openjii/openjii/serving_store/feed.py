@@ -1,4 +1,4 @@
-"""The sinks that send a pipeline's gold changes to the serving store."""
+"""The sinks that send a pipeline's changes to the serving store."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any
 
 from pyspark.sql import DataFrame, SparkSession
 
-from .tables import PAYLOAD_SCHEMAS, StoreTable
+from .tables import StoreTable
 from .writer import StoreUnavailable, StoreWriter
 
 # Bounds a catch-up batch, so the feed cannot hold the cores ingestion needs for long. Delta reads a
@@ -23,23 +23,26 @@ DRIVER_RETRY_DELAYS = (10, 30, 60)
 
 
 class StoreFeed:
-    """One pipeline's store sinks, each reading its gold table's change feed in the same pipeline.
+    """One pipeline's store sinks, each reading the change feed of its store table's source: a gold
+    table of the same pipeline, or the lakehouse's copy of the metadata sheets.
 
     A sink with a new checkpoint starts at the version in ``SERVING_STORE_FEED_START_<TABLE>``,
-    which must still be within the gold table's file retention (seven days unless the table sets
-    its own).
+    which must still be within the source's file retention (seven days unless the table sets its
+    own).
     """
 
-    def __init__(self, dp: ModuleType, spark: SparkSession, dbutils: Any, environment: str):
+    def __init__(self, dp: ModuleType, spark: SparkSession, dbutils: Any, environment: str, catalog: str):
         self.dp = dp
         self.spark = spark
         self.dbutils = dbutils
         self.scope = f"serving-store-{environment}"
+        self.catalog = catalog
 
     def define(self, table: StoreTable) -> None:
         start_version = self.spark.conf.get(f"SERVING_STORE_FEED_START_{table.name.upper()}")
         sink = f"serving_store_{table.name}"
         spark = self.spark
+        source = table.source(self.catalog)
 
         @self.dp.foreach_batch_sink(name=sink)
         def write_batch(changes: DataFrame, batch_id: int) -> None:
@@ -51,7 +54,7 @@ class StoreFeed:
                 spark.readStream.option("readChangeFeed", "true")
                 .option("startingVersion", start_version)
                 .option("maxBytesPerTrigger", MAX_BYTES_PER_TRIGGER)
-                .table(f"LIVE.{table.gold_table}")
+                .table(source)
             )
 
     def write(self, table: StoreTable, changes: DataFrame, batch_id: int) -> None:
@@ -102,11 +105,11 @@ class StoreFeed:
         written = writer.write(lines, table.name)
         if written.unfinished:
             return f"{written.unfinished} rows not sent"
-        schemas_written = writer.insert(PAYLOAD_SCHEMAS, schemas)
+        schemas_written = writer.insert(table.schema_table, schemas)
         if schemas_written.unfinished:
             return f"{schemas_written.unfinished} schemas not sent"
         # A refused schema is recorded under its own table too, whose rejects alert covers it; the
-        # refused line itself is filed under payload_schemas, which no alert reads.
+        # refused line itself is filed under the schema table, which no alert reads.
         refused = (
             f"batch {batch_id}: the store refused {schemas_written.rejected} of its payload schemas"
             if schemas_written.rejected

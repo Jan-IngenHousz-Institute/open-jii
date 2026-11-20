@@ -144,6 +144,26 @@ export class ExperimentAnnotationsRepository {
     );
   }
 
+  /** The ids of one table's rows that carry a flag added after they were measured. */
+  async findFlaggedRowIds(experimentId: string, tableName: string): Promise<Result<string[]>> {
+    return tryCatch(
+      async () => {
+        const rows = await this.database
+          .selectDistinct({ rowId: experimentAnnotations.rowId })
+          .from(experimentAnnotations)
+          .where(
+            and(
+              eq(experimentAnnotations.experimentId, experimentId),
+              eq(experimentAnnotations.tableName, tableName),
+              eq(experimentAnnotations.type, "flag"),
+            ),
+          );
+        return rows.map(({ rowId }) => rowId);
+      },
+      (error) => this.queryError(error),
+    );
+  }
+
   private withAuthorNames(condition: SQL | undefined): Promise<AnnotationCopy[]> {
     return this.database
       .select({

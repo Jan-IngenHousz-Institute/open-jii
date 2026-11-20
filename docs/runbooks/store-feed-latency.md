@@ -7,7 +7,8 @@ the store holds data that is minutes old rather than missing. If rows stopped ar
 `store-feed-stalled` fires instead.
 
 The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Before each attempt at a batch the driver checks that the
+macro results in the macro pipeline. Centrum also sends the metadata sheets and their rows, from
+the backend's copy of the sheets rather than from gold. Before each attempt at a batch the driver checks that the
 store answers, so while it does not, the executors get no work from the feed at all. When the store
 answers inserts with errors, the executors retry for about half a minute, then hand the batch back;
 a missing table or column they hand back at once.

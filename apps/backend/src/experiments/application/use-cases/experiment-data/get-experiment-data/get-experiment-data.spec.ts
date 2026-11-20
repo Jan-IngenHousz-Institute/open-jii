@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
 
+import type { ExperimentDataQuery } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import {
   assertFailure,
   assertSuccess,
@@ -8,6 +10,8 @@ import {
   AppError,
 } from "../../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../../test/test-harness";
+import { SERVING_STORE_PORT } from "../../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../../core/ports/serving-store.port";
 import { ExperimentDataRepository } from "../../../../core/repositories/experiment-data.repository";
 import { GetExperimentDataUseCase } from "./get-experiment-data";
 
@@ -364,6 +368,51 @@ describe("GetExperimentDataUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("BAD_REQUEST");
     expect(result.error.message).toContain("tableName parameter is required");
+  });
+
+  describe("a flagged page", () => {
+    const query: ExperimentDataQuery = {
+      tableName: "raw_data",
+      flagged: "only",
+      page: 1,
+      pageSize: 10,
+    };
+
+    it("is refused while the store's reads are off, even where there is a store", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Flagged readings",
+        userId: testUserId,
+      });
+      const store = testApp.module.get<ServingStorePort>(SERVING_STORE_PORT);
+      vi.spyOn(store, "isConfigured").mockReturnValue(true);
+      const storeQuery = vi.spyOn(store, "executeQuery");
+      const getTableData = vi.spyOn(experimentDataRepository, "getTableData");
+
+      const refused = await useCase.execute(experiment.id, testUserId, query, "warehouse");
+
+      assertFailure(refused);
+      expect(refused.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
+      expect(getTableData).toHaveBeenCalledWith(
+        expect.objectContaining({ flagged: "only", source: "warehouse" }),
+      );
+      expect(storeQuery).not.toHaveBeenCalled();
+    });
+
+    it("reads from the store once the store's reads are on", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Flagged readings",
+        userId: testUserId,
+      });
+      const getTableData = vi
+        .spyOn(experimentDataRepository, "getTableData")
+        .mockResolvedValue(success([]));
+
+      assertSuccess(await useCase.execute(experiment.id, testUserId, query, "store"));
+
+      expect(getTableData).toHaveBeenCalledWith(
+        expect.objectContaining({ flagged: "only", source: "store" }),
+      );
+    });
   });
 
   it("should handle repository getTableData failure", async () => {

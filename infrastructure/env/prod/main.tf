@@ -1837,8 +1837,11 @@ module "experiment_custom_metadata_table" {
     { name = "updated_at", type = "TIMESTAMP", nullable = false },
   ]
 
+  # The change feed carries each sheet's edits and deletions to the serving store
+  # (apps/data/src/lib/openjii/openjii/serving_store/tables.py, MetadataRows).
   properties = {
     "delta.feature.variantType-preview" = "supported"
+    "delta.enableChangeDataFeed"        = "true"
   }
 
   grants = {
@@ -2139,9 +2142,9 @@ module "serving_store" {
 }
 
 locals {
-  # The gold version each feed sink starts at when its checkpoint is new, as in dev. Empty keeps the
-  # feed and its alerts off; switching on means filling in all three, read from gold on the day they
-  # ship (docs/runbooks/store-feed-stalled.md).
+  # The version each feed sink starts at when its checkpoint is new, as in dev. Empty keeps the feed
+  # and its alerts off; switching on means filling in every table dev lists, each gold table's
+  # version read from gold on the day they ship (docs/runbooks/store-feed-stalled.md).
   serving_store_feed_start_versions = {}
   serving_store_feed                = length(local.serving_store_feed_start_versions) > 0
 
@@ -2149,11 +2152,10 @@ locals {
   # before a release has deployed the notebook.
   centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/serving_store_feed"] : []
   macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = local.serving_store_feed ? {
-    SERVING_STORE_FEED_START_MEASUREMENTS  = local.serving_store_feed_start_versions.measurements
-    SERVING_STORE_FEED_START_UPLOADS       = local.serving_store_feed_start_versions.uploads
-    SERVING_STORE_FEED_START_MACRO_RESULTS = local.serving_store_feed_start_versions.macro_results
-  } : {}
+  serving_store_feed_settings = {
+    for table, version in local.serving_store_feed_start_versions :
+    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
+  }
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use

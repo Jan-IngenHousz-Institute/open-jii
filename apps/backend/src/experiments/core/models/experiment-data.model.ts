@@ -1,4 +1,5 @@
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type {
   AggregationSpec,
@@ -127,6 +128,15 @@ export interface ExperimentAsOfJoin {
   toleranceMinutes: number;
 }
 
+/**
+ * A read filtered by flags: which rows it keeps, and the rows flagged after they were measured,
+ * from Postgres.
+ */
+export interface FlaggedRows {
+  kind: ExperimentDataFlagged;
+  addedRowIds: string[];
+}
+
 export interface ExperimentQueryParams {
   baseColumns?: string[];
   join?: ExperimentAsOfJoin;
@@ -143,6 +153,8 @@ export interface ExperimentQueryParams {
   ordering?: QueryOrdering;
   limit?: number;
   offset?: number;
+  /** Only the store reads by flags; a flagged read is refused before it could reach the warehouse. */
+  flagged?: FlaggedRows;
 }
 
 /**

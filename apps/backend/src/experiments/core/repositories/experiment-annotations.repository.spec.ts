@@ -271,6 +271,26 @@ describe("ExperimentAnnotationsRepository", () => {
     ]);
   });
 
+  it("finds each flagged row of one table once, leaving out comments and other tables", async () => {
+    const flag: Partial<AnnotationRecord> = {
+      type: "flag",
+      flagType: "outlier",
+      contentText: null,
+    };
+    await insert(
+      record({ rowId: "1", ...flag }),
+      record({ rowId: "1", ...flag, flagType: "needs_review" }),
+      record({ rowId: "2", ...flag }),
+      record({ rowId: "3" }),
+      record({ rowId: "4", ...flag, tableName: "4f0c6b1e-3a8e-4b7e-9c55-1d2e3f4a5b6c" }),
+    );
+
+    const found = await repository.findFlaggedRowIds(experimentId, "raw_data");
+
+    assertSuccess(found);
+    expect(found.value.sort()).toEqual(["1", "2"]);
+  });
+
   it("finds annotations on more rows than one statement takes", async () => {
     const rowIds = Array.from({ length: 10_005 }, (_, index) => String(index));
     await insert(record({ rowId: "10004" }));

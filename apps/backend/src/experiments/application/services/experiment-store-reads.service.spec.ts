@@ -7,10 +7,12 @@ import { PAGE_BYTE_LIMIT } from "../../core/models/experiment-data.model";
 import type {
   ExperimentQueryParams,
   ExperimentTableMetadata,
+  FlaggedRows,
 } from "../../core/models/experiment-data.model";
 import type { FlowGraphDto } from "../../core/models/flow.model";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
+import { ExperimentAnnotationsRepository } from "../../core/repositories/experiment-annotations.repository";
 import { FlowRepository } from "../../core/repositories/flow.repository";
 import { ExperimentStoreReadsService } from "./experiment-store-reads.service";
 
@@ -182,6 +184,32 @@ describe("ExperimentStoreReadsService", () => {
     assertSuccess(query);
     expect(build).toHaveBeenCalledWith(expect.objectContaining({ orderByIds: [ada, zoe] }));
     expect(query.value.sql).not.toContain("Lovelace");
+  });
+
+  it("reads the rows flagged in Postgres for a read filtered by flags", async () => {
+    const lookup = vi
+      .spyOn(testApp.module.get(ExperimentAnnotationsRepository), "findFlaggedRowIds")
+      .mockResolvedValue(success(["7", "9"]));
+
+    const flagged = await reads.flaggedRows(page.experimentId, "raw_data", "only");
+
+    assertSuccess(flagged);
+    expect(flagged.value).toEqual({ kind: "only", addedRowIds: ["7", "9"] });
+    expect(lookup).toHaveBeenCalledExactlyOnceWith(page.experimentId, "raw_data");
+  });
+
+  it("hands the store the flagged rows its read looked up, and looks up none itself", async () => {
+    const lookup = vi.spyOn(
+      testApp.module.get(ExperimentAnnotationsRepository),
+      "findFlaggedRowIds",
+    );
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const flagged: FlaggedRows = { kind: "only", addedRowIds: ["7"] };
+
+    assertSuccess(await reads.buildQuery({ ...page, flagged }));
+
+    expect(build).toHaveBeenCalledWith(expect.objectContaining({ flagged }));
+    expect(lookup).not.toHaveBeenCalled();
   });
 
   it("leaves an anonymized contributor sort to the pseudonym the store computes", async () => {

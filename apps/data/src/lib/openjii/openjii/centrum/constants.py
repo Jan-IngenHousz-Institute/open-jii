@@ -33,6 +33,9 @@ EXPERIMENT_DEVICES_TABLE = "experiment_devices"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 EXPERIMENT_UPLOADED_DATA_TABLE = "experiment_uploaded_data"
 
+# The backend's copy of the experiments' metadata sheets, outside the pipeline.
+EXPERIMENT_CUSTOM_METADATA_TABLE = "experiment_custom_metadata"
+
 # Distinct keys, appended by a streaming dropDuplicates. Many-to-many pairs,
 # hence bridge rather than dim.
 BRIDGE_EXPERIMENT_CONTRIBUTOR_TABLE = "bridge_experiment_contributor"
