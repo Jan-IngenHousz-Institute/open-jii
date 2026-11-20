@@ -1683,6 +1683,16 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(loam).toEqual([["31"]]);
     });
 
+    it("finds text in a decimal as its cell shows it, at its scale", async () => {
+      const rows = await page({
+        columns: ["id"],
+        filters: [{ column: "area", operator: "contains", value: "5.00" }],
+        limit: 10,
+      });
+
+      expect(rows).toEqual([["32"]]);
+    });
+
     it("finds a decimal by its text in a list, as Spark compares the two as doubles", async () => {
       const rows = await page({
         columns: ["id"],

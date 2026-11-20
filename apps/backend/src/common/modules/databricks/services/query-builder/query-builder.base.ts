@@ -151,7 +151,7 @@ export abstract class BaseQueryBuilder {
   }
 
   /** A column's value as text, for `LIKE`. Databricks casts to text itself. */
-  textOf(columnSql: string): string {
+  textOf(columnSql: string, _column: string): string {
     return columnSql;
   }
 

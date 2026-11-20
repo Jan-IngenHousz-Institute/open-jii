@@ -46,7 +46,7 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
       }
 
       // % and _ in user input are intentionally treated as wildcards.
-      return `${builder.textOf(columnSql)} LIKE ${builder.escapeValue(`%${value}%`)}`;
+      return `${builder.textOf(columnSql, filter.column)} LIKE ${builder.escapeValue(`%${value}%`)}`;
     }
     case "in": {
       if (!Array.isArray(value) || value.length === 0) {

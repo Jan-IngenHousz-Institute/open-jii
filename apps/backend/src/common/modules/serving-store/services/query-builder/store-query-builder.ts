@@ -252,8 +252,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return isInteger ? /^-?\d+$/.test(text) : /^-?\d+(\.\d+)?$/.test(text);
   }
 
-  textOf(columnSql: string): string {
-    return `toString(${columnSql})`;
+  /** A decimal reads as text at its scale, as its cell shows it: 5 at scale 2 is 5.00. */
+  textOf(columnSql: string, column: string): string {
+    const decimal = VariantSchema.decimalOf(this.typeOf(column));
+    return decimal === null
+      ? `toString(${columnSql})`
+      : `toDecimalString(${columnSql}, ${decimal.scale})`;
   }
 
   contributorPseudonym(idSql: string, salt: string): string {
