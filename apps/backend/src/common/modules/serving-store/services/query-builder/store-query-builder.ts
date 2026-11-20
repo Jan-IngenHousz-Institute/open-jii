@@ -206,8 +206,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** A literal of the column's own type: the store compares no text with a number, and reads a
    *  time only in its own format. Text compared with a payload's number reads as Spark casts it,
-   *  so text that holds no number matches no row, as on the warehouse. */
-  filterLiteral(column: string, value: Exclude<FilterValue, (string | number)[]>): string {
+   *  so text that holds no number matches no row, as on the warehouse; a number listed with that
+   *  text reads as a double, as the column then does. */
+  filterLiteral(
+    column: string,
+    value: Exclude<FilterValue, (string | number)[]>,
+    compared: FilterValue = value,
+  ): string {
     const type = this.typeOf(column);
     const isTime = type === "TIMESTAMP" || type === "DATE";
     if (isTime && typeof value !== "string") {
@@ -230,6 +235,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (typeof value !== "string" && type === "STRING") {
       return this.escapeValue(String(value));
     }
+    if (typeof value === "number" && this.isComparedAsDouble(column, compared)) {
+      return `toFloat64(${this.escapeScalarValue(value)})`;
+    }
 
     // Spark reads a plain number as a decimal literal, which it compares with a decimal exactly;
     // the store would read a Float64 and compare the decimal through an inexact conversion.
@@ -246,13 +254,17 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /** Spark compares a payload's integer or decimal with text as two doubles, so text past 2^53
    *  matches every integer that rounds to its double; the store compares them the same way. */
   comparedColumn(columnSql: string, column: string, value: FilterValue): string {
+    return this.isComparedAsDouble(column, value) ? `toFloat64(${columnSql})` : columnSql;
+  }
+
+  private isComparedAsDouble(column: string, value: FilterValue): boolean {
     const field = this.flattenedFields().find(({ key }) => key === column);
     const type = this.variantCastType(field?.field.type ?? "");
-    const isComparedAsDouble = type === "BIGINT" || VariantSchema.decimalOf(type) !== null;
+    const isNumberField = type === "BIGINT" || VariantSchema.decimalOf(type) !== null;
     const isText = (Array.isArray(value) ? value : [value]).some(
       (item) => typeof item === "string",
     );
-    return isComparedAsDouble && isText ? `toFloat64(${columnSql})` : columnSql;
+    return isNumberField && isText;
   }
 
   /** The store reads text as a number column's value only as plain digits, with a fraction where

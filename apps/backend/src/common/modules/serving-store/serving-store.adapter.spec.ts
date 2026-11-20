@@ -1704,6 +1704,16 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(rows).toEqual([["31"], ["32"]]);
     });
 
+    it("finds a decimal by a number in a list that also holds text, as Spark compares them all as doubles", async () => {
+      const rows = await page({
+        columns: ["id"],
+        filters: [{ column: "area", operator: "in", value: [1.15, "garbage"] }],
+        limit: 10,
+      });
+
+      expect(rows).toEqual([["31"]]);
+    });
+
     it("lists the sheets oldest first, and their schemas join as gold types their rows together", async () => {
       const { sheets, schema: joined } = await sheetsOf(experiment);
 

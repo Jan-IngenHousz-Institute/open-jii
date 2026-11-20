@@ -483,6 +483,17 @@ describe("StoreQueryBuilder", () => {
       );
     });
 
+    it("compares a number listed with text as a double too, as the decimal field then reads", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "in", value: [1.15, "garbage"] })
+        .build();
+
+      expect(sql).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) IN \(toFloat64\(1\.15\), toFloat64OrNull\(/,
+      );
+    });
+
     it("unquotes a text field, keeps a mix of kinds as its JSON, and reads null as none only where typed", () => {
       const mixedSchema = "OBJECT<mixed: VARIANT, soil: STRING, tags: ARRAY<STRING>>";
       const sql = measurements()

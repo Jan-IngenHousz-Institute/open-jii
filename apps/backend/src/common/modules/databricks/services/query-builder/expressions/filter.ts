@@ -53,7 +53,7 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
         throw new Error("'in' operator requires a non-empty array of values");
       }
 
-      const list = value.map((v) => builder.filterLiteral(filter.column, v)).join(", ");
+      const list = value.map((v) => builder.filterLiteral(filter.column, v, value)).join(", ");
       return `${col} IN (${list})`;
     }
     case "between": {
