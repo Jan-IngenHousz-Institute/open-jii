@@ -2042,7 +2042,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       beforeAll(async () => {
         // The reader profile's per-query memory and time, and the dev store's two cores.
         await admin.command({
-          query: `CREATE USER IF NOT EXISTS capped_reader IDENTIFIED BY '${STORE_PASSWORD}' SETTINGS max_memory_usage = 4294967296, max_execution_time = 30, max_threads = 2`,
+          query: `CREATE USER IF NOT EXISTS capped_reader IDENTIFIED BY ${new StoreQueryBuilder().escapeValue(STORE_PASSWORD)} SETTINGS max_memory_usage = 4294967296, max_execution_time = 30, max_threads = 2`,
         });
         await admin.command({ query: "GRANT SELECT ON store.* TO capped_reader" });
         const config = new ConfigService({
