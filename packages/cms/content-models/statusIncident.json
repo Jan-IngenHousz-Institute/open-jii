@@ -7,7 +7,7 @@
       "id": "title",
       "name": "Title",
       "type": "Symbol",
-      "localized": true,
+      "localized": false,
       "required": true,
       "validations": [],
       "disabled": false,
