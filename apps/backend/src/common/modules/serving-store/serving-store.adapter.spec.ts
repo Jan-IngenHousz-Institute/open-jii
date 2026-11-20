@@ -1683,6 +1683,17 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(loam).toEqual([["31"]]);
     });
 
+    it("finds a decimal by its text in a list, as Spark compares the two as doubles", async () => {
+      const rows = await page({
+        columns: ["id"],
+        filters: [{ column: "area", operator: "in", value: ["1.15", "5"] }],
+        ordering: { column: "id", direction: "ASC" },
+        limit: 10,
+      });
+
+      expect(rows).toEqual([["31"], ["32"]]);
+    });
+
     it("lists the sheets oldest first, and their schemas join as gold types their rows together", async () => {
       const { sheets, schema: joined } = await sheetsOf(experiment);
 

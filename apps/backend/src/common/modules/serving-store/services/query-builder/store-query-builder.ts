@@ -233,16 +233,16 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this.escapeScalarValue(value);
   }
 
-  /** Spark compares a payload's integer with text as two doubles, so text past 2^53 matches every
-   *  integer that rounds to its double; the store compares them the same way. */
+  /** Spark compares a payload's integer or decimal with text as two doubles, so text past 2^53
+   *  matches every integer that rounds to its double; the store compares them the same way. */
   comparedColumn(columnSql: string, column: string, value: FilterValue): string {
     const field = this.flattenedFields().find(({ key }) => key === column);
-    const isBigintField =
-      field !== undefined && this.variantCastType(field.field.type) === "BIGINT";
+    const type = this.variantCastType(field?.field.type ?? "");
+    const isComparedAsDouble = type === "BIGINT" || VariantSchema.decimalOf(type) !== null;
     const isText = (Array.isArray(value) ? value : [value]).some(
       (item) => typeof item === "string",
     );
-    return isBigintField && isText ? `toFloat64(${columnSql})` : columnSql;
+    return isComparedAsDouble && isText ? `toFloat64(${columnSql})` : columnSql;
   }
 
   /** The store reads text as a number column's value only as plain digits, with a fraction where

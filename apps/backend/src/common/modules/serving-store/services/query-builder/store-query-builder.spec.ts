@@ -413,6 +413,17 @@ describe("StoreQueryBuilder", () => {
       expect(sql).toContain("= toDecimal256('1.155', 3)");
     });
 
+    it("compares a decimal field with text as two doubles, as Spark does", () => {
+      const sql = withMetadata()
+        .select(["id"])
+        .filter({ column: "area", operator: "in", value: ["1.15"] })
+        .build();
+
+      expect(sql).toMatch(
+        /toFloat64\(accurateCastOrNull\(.+, 'Decimal\(4, 2\)'\)\) IN \(toFloat64OrNull\(/,
+      );
+    });
+
     it("unquotes a text field, keeps a mix of kinds as its JSON, and reads null as none only where typed", () => {
       const sql = measurements()
         .parseVariant(
