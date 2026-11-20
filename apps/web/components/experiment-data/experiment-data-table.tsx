@@ -182,7 +182,7 @@ export function ExperimentDataTable({
     filtersKey,
   ].join("|");
   // The previous page stands in while the next one loads, so it is no baseline for the new view.
-  const landedRowIds = useLandedRowIds(isRefreshing ? undefined : tableRows, viewKey);
+  const landedRowIds = useLandedRowIds(isRefreshing ? undefined : tableRows, viewKey, latestRowAt);
 
   const handlePaginationChange = useCallback<typeof setPagination>((updaterOrValue) => {
     setPagination(updaterOrValue);
