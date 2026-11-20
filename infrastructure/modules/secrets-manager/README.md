@@ -2,6 +2,8 @@
 
 This module creates an AWS Secrets Manager secret and secret version with the supplied secret string. It's designed to securely store and manage application secrets.
 
+For a secret whose value OpenTofu must never hold, use [`container`](container/main.tf) instead: it creates the secret without a version, and the value is set with `pnpm secrets:set`.
+
 ## 📖 Overview
 
 AWS Secrets Manager helps you protect secrets needed to access your applications, services, and IT resources. The service enables you to easily rotate, manage, and retrieve database credentials, API keys, and other secrets throughout their lifecycle.
