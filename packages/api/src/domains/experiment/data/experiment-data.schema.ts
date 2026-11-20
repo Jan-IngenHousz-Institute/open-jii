@@ -452,7 +452,7 @@ export const zExperimentDataQuery = z.object({
     .string()
     .optional()
     .describe(
-      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only. A page the serving store answers shows custom metadata only as its fields, each a column of its own; the custom_metadata column itself reads null there. In a metadata sheet whose rows hold objects or mix kinds within one field, a row holding an integer past 64 bits can read all its fields as empty there; the web upload makes no objects, and such an integer only from an Excel number that large",
+      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only. A page the serving store answers shows custom metadata only as its fields, each a column of its own; the custom_metadata column itself reads null there. In a metadata sheet whose rows hold objects or mix kinds within one field, a row holding an integer past 64 bits cannot be read there, so each of its fields can show an older matching sheet's value instead, and reads as empty only when no older matching sheet holds it; the web upload makes no objects, and such an integer only from an Excel number that large",
     ),
   orderBy: z.string().optional().describe("Column name to order results by"),
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
