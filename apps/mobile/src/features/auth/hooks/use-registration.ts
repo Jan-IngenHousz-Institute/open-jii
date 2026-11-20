@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner-native";
 import type { CompleteRegistrationInput } from "~/features/auth/api/registration.api";
@@ -10,6 +11,14 @@ const log = createLogger("registration");
 
 export interface RegisterInput extends CompleteRegistrationInput {
   newsletterOptIn: boolean;
+}
+
+// Mailchimp refuses to re-add an address erased on request, so retrying later cannot help.
+function isForgottenNewsletterEmail(error: unknown): boolean {
+  return (
+    error instanceof ORPCError &&
+    (error.data as { code?: string } | undefined)?.code === "MAILCHIMP_FORGOTTEN_EMAIL"
+  );
 }
 
 export function useRegistration() {
@@ -28,7 +37,11 @@ export function useRegistration() {
       if (newsletterOptIn) {
         subscribeToNewsletter().catch((error: unknown) => {
           log.warn("newsletter opt-in failed", { err: (error as Error)?.message });
-          toast.error(t("registration.newsletterOptInError"));
+          toast.error(
+            isForgottenNewsletterEmail(error)
+              ? t("registration.newsletterForgottenEmail")
+              : t("registration.newsletterOptInError"),
+          );
         });
       }
 

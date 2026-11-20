@@ -1,4 +1,4 @@
-import { getAuthClient } from "~/features/auth/services/auth";
+import { reloadSessionFromServer } from "~/features/auth/services/auth";
 import { orpcClient } from "~/shared/api/orpc";
 
 export interface CompleteRegistrationInput {
@@ -7,19 +7,14 @@ export interface CompleteRegistrationInput {
   avatarUrl: string | null;
 }
 
-/**
- * Saving the profile is what registers the account server-side. The session cookie caches the user
- * for a day, so it is re-read from the database before the app is told the session changed.
- */
+/** Saving the profile is what registers the account server-side. */
 export async function completeRegistration(input: CompleteRegistrationInput) {
   await orpcClient.users.createUserProfile(input);
 
-  const authClient = getAuthClient();
-  const refreshed = await authClient.getSession({ query: { disableCookieCache: true } });
-  if (refreshed.error || !refreshed.data?.user.registered) {
-    throw new Error(refreshed.error?.message ?? "The account is still not registered");
+  const user = await reloadSessionFromServer();
+  if (!user?.registered) {
+    throw new Error("The session still reads the account as unregistered");
   }
-  authClient.$store.notify("$sessionSignal");
 }
 
 export function subscribeToNewsletter() {
