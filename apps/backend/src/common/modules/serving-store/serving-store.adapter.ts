@@ -202,7 +202,10 @@ export class ServingStoreAdapter implements ServingStorePort {
           offset: params.offset,
           idOrder: params.orderByIds,
         });
-        return success({ ...aggregated, experiment: this.policyExperiment(builder, params) });
+        return this.withinQuerySize(params, {
+          ...aggregated,
+          experiment: this.policyExperiment(builder, params),
+        });
       }
       if (params.ordering) {
         builder.orderBy(params.ordering, params.orderByIds);
@@ -213,31 +216,35 @@ export class ServingStoreAdapter implements ServingStorePort {
       if (params.offset !== undefined) {
         builder.offset(params.offset);
       }
-      const query = {
+      return this.withinQuerySize(params, {
         sql: builder.build(),
         columns: builder.outputColumns(),
         experiment: this.policyExperiment(builder, params),
-      };
-
-      // The flagged ids are written into the statement, and a flagged page also sends its count,
-      // which wraps it.
-      const isFlaggedReadTooLarge =
-        params.flagged !== undefined && !this.client.fitsQuerySize(this.countQuery(query).sql);
-      if (isFlaggedReadTooLarge) {
-        return failure(
-          AppError.badRequest(
-            "Too many of the table's rows are flagged to filter a read by flags",
-            "FLAGGED_READ_TOO_LARGE",
-          ),
-        );
-      }
-      return success(query);
+      });
     } catch (error) {
       if (error instanceof QueryBuilderInputError) {
         return failure(AppError.badRequest(error.message, "INVALID_QUERY_INPUT"));
       }
       throw error;
     }
+  }
+
+  /**
+   * The flagged ids are written into the statement, and a flagged read also sends its count, which
+   * wraps it, so both must fit the store's limit on a statement's text.
+   */
+  private withinQuerySize(params: StoreQueryParams, query: StoreQuery): Result<StoreQuery> {
+    const isFlaggedReadTooLarge =
+      params.flagged !== undefined && !this.client.fitsQuerySize(this.countQuery(query).sql);
+    if (isFlaggedReadTooLarge) {
+      return failure(
+        AppError.badRequest(
+          "Too many of the table's rows are flagged to filter a read by flags",
+          "FLAGGED_READ_TOO_LARGE",
+        ),
+      );
+    }
+    return success(query);
   }
 
   /**

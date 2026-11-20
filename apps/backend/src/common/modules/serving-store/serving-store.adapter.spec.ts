@@ -261,24 +261,36 @@ describe("ServingStoreAdapter", () => {
     expect(sent.handed).toBe(2);
   });
 
-  it("refuses a flagged read whose ids would pass the store's query size, before it reaches the store", () => {
-    const flaggedRead = (rows: number) =>
-      adapter.buildExperimentQuery({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId: "e1",
-        columns: ["id"],
-        flagged: {
-          kind: "only",
-          addedRowIds: Array.from({ length: rows }, (_, index) => `${"r".repeat(58)}${index}`),
-        },
-      });
+  it.each([
+    ["page", { columns: ["id"] }],
+    [
+      "chart",
+      {
+        isChartRead: true,
+        aggregation: { functions: [{ column: "*", function: "count" as const }] },
+      },
+    ],
+  ])(
+    "refuses a flagged %s whose ids would pass the store's query size, before it reaches the store",
+    (_, read: Partial<StoreQueryParams>) => {
+      const flaggedRead = (rows: number) =>
+        adapter.buildExperimentQuery({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: "e1",
+          ...read,
+          flagged: {
+            kind: "only",
+            addedRowIds: Array.from({ length: rows }, (_, index) => `${"r".repeat(58)}${index}`),
+          },
+        });
 
-    assertSuccess(flaggedRead(1_000));
-    const refused = flaggedRead(20_000);
-    assertFailure(refused);
-    expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
-  });
+      assertSuccess(flaggedRead(1_000));
+      const refused = flaggedRead(20_000);
+      assertFailure(refused);
+      expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+    },
+  );
 
   it("sends the experiment setting with every read of a table and never with a read of views alone", async () => {
     const stream = vi.spyOn(client, "stream").mockResolvedValue(success({ complete: true }));
