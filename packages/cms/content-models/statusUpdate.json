@@ -39,7 +39,7 @@
       "id": "text",
       "name": "Text",
       "type": "Text",
-      "localized": true,
+      "localized": false,
       "required": true,
       "validations": [],
       "disabled": false,

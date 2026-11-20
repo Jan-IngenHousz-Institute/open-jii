@@ -695,18 +695,23 @@ describe("the content models and the publisher", () => {
     fields: z.array(
       z.object({
         id: z.string(),
+        localized: z.boolean(),
         validations: validationsSchema,
         items: z.optional(z.object({ validations: validationsSchema })),
       }),
     ),
   });
 
-  function fieldOf(model: string, id: string) {
+  function fieldsOf(model: string) {
     const source = readFileSync(
       join(repoRoot, `packages/cms/content-models/${model}.json`),
       "utf8",
     );
-    const field = modelSchema.parse(JSON.parse(source)).fields.find((entry) => entry.id === id);
+    return modelSchema.parse(JSON.parse(source)).fields;
+  }
+
+  function fieldOf(model: string, id: string) {
+    const field = fieldsOf(model).find((entry) => entry.id === id);
     if (field === undefined) {
       throw new Error(`${model} has no ${id} field`);
     }
@@ -730,6 +735,16 @@ describe("the content models and the publisher", () => {
     expect(allowedIn(fieldOf("statusUpdate", "stage").validations)).toEqual(
       incidentStageSchema.options,
     );
+  });
+
+  it("keeps every field in one language, since the space requires a value in each language a field has", () => {
+    const translated = ["statusIncident", "statusUpdate"].flatMap((model) =>
+      fieldsOf(model)
+        .filter((field) => field.localized)
+        .map((field) => `${model}.${field.id}`),
+    );
+
+    expect(translated).toEqual([]);
   });
 
   it("caps an incident's updates at what the query fetches", () => {

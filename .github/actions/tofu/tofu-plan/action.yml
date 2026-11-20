@@ -1,6 +1,10 @@
 name: "OpenTofu Plan"
 description: "Runs OpenTofu plan"
 inputs:
+  root:
+    description: "Directory under infrastructure/ that holds the environment roots: env or foundation"
+    required: false
+    default: "env"
   lock:
     description: "Hold the state lock while planning"
     required: false
@@ -26,7 +30,7 @@ runs:
         fi
     - name: OpenTofu Plan
       shell: bash
-      working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
+      working-directory: infrastructure/${{ inputs.root }}/${{ env.RESOLVED_ENV }}
       env:
         LOCK: ${{ inputs.lock }}
         REFRESH: ${{ inputs.refresh }}
