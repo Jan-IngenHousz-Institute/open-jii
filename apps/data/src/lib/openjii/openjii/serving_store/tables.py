@@ -100,6 +100,11 @@ class StoreTable:
     def counted_by(self) -> str:
         return "experiment_id" if self.per_experiment else "client_id"
 
+    @property
+    def sends_schemas(self) -> bool:
+        """Whether a batch brings schema lines for ``schema_table``: a table's payload schemas."""
+        return len(self.payloads) > 0
+
     def source(self, catalog: str) -> str:
         """The table whose change feed the store table is fed from."""
         return f"LIVE.{self.source_table}"
@@ -306,6 +311,10 @@ class MetadataRows(StoreTable):
     partitioned_by = "sheet_created_at"
     processed_at = None
     schema_table = METADATA_SHEETS
+
+    @property
+    def sends_schemas(self) -> bool:
+        return True
 
     def source(self, catalog: str) -> str:
         return f"{catalog}.centrum.{self.source_table}"

@@ -80,7 +80,7 @@ class StoreFeed:
         """The batch's payload schemas, or none and why when Spark cannot work them out. The rows
         still go, and the reason goes to ``feed_rejects``, since an upload's rows arrive in one batch
         and no later one would bring its schemas."""
-        if not table.payloads:
+        if not table.sends_schemas:
             return [], None
         try:
             return [row.line for row in table.schema_lines(changes).collect()], None
