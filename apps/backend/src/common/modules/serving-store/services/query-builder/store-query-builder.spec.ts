@@ -422,6 +422,35 @@ describe("StoreQueryBuilder", () => {
       );
     });
 
+    it("reads a sheet with a mix of kinds by its top-level keys alone, since a mix can hold an object", () => {
+      const sql = measurements()
+        .parseVariant(
+          "custom_metadata",
+          "OBJECT<extra: VARIANT, soil: STRING, tags: ARRAY<VARIANT>>",
+          "metadata",
+        )
+        .metadataSheets([
+          {
+            id: "s1",
+            matchOn: "plot",
+            schema: "OBJECT<extra: VARIANT, soil: STRING>",
+            version: "1",
+          },
+          {
+            id: "s2",
+            matchOn: "plot",
+            schema: "OBJECT<soil: STRING, tags: ARRAY<VARIANT>>",
+            version: "2",
+          },
+        ])
+        .select(["soil"])
+        .build();
+
+      expect(sql).toContain(
+        "multiIf(JSONHas(sheet_1_fields, 'soil'), JSONExtractRaw(sheet_1_fields, 'soil'), JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL)",
+      );
+    });
+
     it("asks only the sheets whose schema holds the field", () => {
       const sql = withMetadata().select(["soil"]).build();
 
@@ -503,13 +532,13 @@ describe("StoreQueryBuilder", () => {
         .build();
 
       expect(sql).toContain(
-        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
       );
       expect(sql).toContain(
-        "multiIf(simpleJSONHas(sheet_0_fields, 'mixed'), simpleJSONExtractRaw(sheet_0_fields, 'mixed'), NULL) AS `mixed`",
+        "multiIf(JSONHas(sheet_0_fields, 'mixed'), JSONExtractRaw(sheet_0_fields, 'mixed'), NULL) AS `mixed`",
       );
       expect(sql).toContain(
-        "nullIf(multiIf(simpleJSONHas(sheet_0_fields, 'tags'), simpleJSONExtractRaw(sheet_0_fields, 'tags'), NULL), 'null') AS `tags`",
+        "nullIf(multiIf(JSONHas(sheet_0_fields, 'tags'), JSONExtractRaw(sheet_0_fields, 'tags'), NULL), 'null') AS `tags`",
       );
     });
 

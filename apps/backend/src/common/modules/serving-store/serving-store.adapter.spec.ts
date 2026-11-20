@@ -1857,6 +1857,37 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(rows).toEqual([["61", "clay"]]);
     });
 
+    it("reads only a row's own keys where a field holds an object in one row and text in another", async () => {
+      const mixed = "mixed-object-e";
+      await admin.insert({
+        table: "measurements",
+        values: [{ ...reading(62, "V1", null), experiment_id: mixed }],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-flat", "2026-09-01 08:00:00", "plot", "V1", { soil: "clay" }),
+          sheetRow("s-mixed", "2026-09-02 08:00:00", "plot", "V1", { extra: { soil: "sand" } }),
+          sheetRow("s-mixed", "2026-09-02 08:00:00", "plot", "V2", { extra: "none", soil: "silt" }),
+        ].map((row) => ({ ...row, experiment_id: mixed })),
+        format: "JSONEachRow",
+      });
+      // As custom_metadata_schemas.json has gold type an object and text under one field.
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          sheet("s-flat", "2026-09-01 08:00:00", "plot", "OBJECT<soil: STRING>"),
+          sheet("s-mixed", "2026-09-02 08:00:00", "plot", "OBJECT<extra: VARIANT, soil: STRING>"),
+        ].map((row) => ({ ...row, experiment_id: mixed })),
+        format: "JSONEachRow",
+      });
+
+      const rows = await page({ columns: ["id", "soil"], limit: 10 }, mixed);
+
+      expect(rows).toEqual([["62", "clay"]]);
+    });
+
     it("shows an explicit null in a mix of kinds as null, as the warehouse does, and a missing key as none", async () => {
       const mixed = "mixed-e";
       const plots = ["M1", "M2", "M3", "M4"];

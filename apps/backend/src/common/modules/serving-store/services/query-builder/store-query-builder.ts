@@ -131,7 +131,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return {
         ...sheet,
         fields: new Set(fields.map(({ name }) => name)),
-        nestsObjects: fields.some(({ type }) => type.includes("OBJECT<")),
+        nestsObjects: fields.some(({ type }) => /OBJECT<|VARIANT/.test(type)),
       };
     });
     return this;
@@ -459,9 +459,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * copied as written, since a parsed number passes through a double, which loses digits a sheet's
    * decimals keep. simpleJSON copies it so, and reads a row holding an integer past 64 bits, which
    * JSONHas cannot parse; but it finds a key at any depth. Only a row's top-level keys count, as
-   * the warehouse reads a sheet's fields, so a sheet whose rows hold objects is read with JSONHas
-   * and JSONExtractRaw. A sheet whose schema lacks the field is not asked, so a page of many wide
-   * sheets stays within the store's query size.
+   * the warehouse reads a sheet's fields, so a sheet whose rows can hold objects, as an object or a
+   * mix of kinds in its schema says, is read with JSONHas and JSONExtractRaw. A sheet whose schema
+   * lacks the field is not asked, so a page of many wide sheets stays within the store's query
+   * size.
    */
   private metadataText(name: string): string {
     const key = this.escapeValue(name);
