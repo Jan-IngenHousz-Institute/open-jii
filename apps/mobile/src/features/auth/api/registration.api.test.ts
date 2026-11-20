@@ -1,47 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { completeRegistration } from "~/features/auth/api/registration.api";
 
-const { createUserProfile, getSession, notify } = vi.hoisted(() => ({
+const { createUserProfile, reloadSessionFromServer } = vi.hoisted(() => ({
   createUserProfile: vi.fn(),
-  getSession: vi.fn(),
-  notify: vi.fn(),
+  reloadSessionFromServer: vi.fn(),
 }));
 
 vi.mock("~/shared/api/orpc", () => ({
   orpcClient: { users: { createUserProfile }, newsletter: { subscribeDirect: vi.fn() } },
 }));
-vi.mock("~/features/auth/services/auth", () => ({
-  getAuthClient: () => ({ getSession, $store: { notify } }),
-}));
+vi.mock("~/features/auth/services/auth", () => ({ reloadSessionFromServer }));
 
 const profile = { firstName: "Ada", lastName: "Lovelace", avatarUrl: null };
 
 beforeEach(() => {
   createUserProfile.mockReset().mockResolvedValue({});
-  getSession.mockReset().mockResolvedValue({ data: { user: { registered: true } }, error: null });
-  notify.mockReset();
+  reloadSessionFromServer.mockReset().mockResolvedValue({ registered: true });
 });
 
 describe("completeRegistration", () => {
-  it("saves the profile, then re-reads the session past its cookie cache", async () => {
+  it("saves the profile, then reloads the session from the server", async () => {
     await completeRegistration(profile);
 
     expect(createUserProfile).toHaveBeenCalledWith(profile);
-    expect(getSession).toHaveBeenCalledWith({ query: { disableCookieCache: true } });
-    expect(notify).toHaveBeenCalledWith("$sessionSignal");
+    expect(reloadSessionFromServer).toHaveBeenCalledTimes(1);
   });
 
-  it("does not refresh the session when the profile could not be saved", async () => {
+  it("does not reload the session when the profile could not be saved", async () => {
     createUserProfile.mockRejectedValue(new Error("Bad Request"));
 
     await expect(completeRegistration(profile)).rejects.toThrow("Bad Request");
-    expect(getSession).not.toHaveBeenCalled();
+    expect(reloadSessionFromServer).not.toHaveBeenCalled();
   });
 
-  it("fails rather than leaving the user on a session that still reads unregistered", async () => {
-    getSession.mockResolvedValue({ data: { user: { registered: false } }, error: null });
-
+  it("fails rather than reporting success while the session still reads unregistered", async () => {
+    reloadSessionFromServer.mockResolvedValue({ registered: false });
     await expect(completeRegistration(profile)).rejects.toThrow();
-    expect(notify).not.toHaveBeenCalled();
+
+    reloadSessionFromServer.mockResolvedValue(null);
+    await expect(completeRegistration(profile)).rejects.toThrow();
   });
 });

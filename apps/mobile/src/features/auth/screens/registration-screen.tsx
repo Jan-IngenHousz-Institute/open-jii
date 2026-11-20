@@ -1,6 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  AppState,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -19,7 +20,9 @@ import { isValidEmail, validateRegistration } from "~/features/auth/domain/regis
 import { useLogout } from "~/features/auth/hooks/use-logout";
 import { useRegistration } from "~/features/auth/hooks/use-registration";
 import { useSession } from "~/features/auth/hooks/use-session";
+import { reloadSessionFromServer } from "~/features/auth/services/auth";
 import { useTranslation } from "~/shared/i18n";
+import { createLogger } from "~/shared/observability/logger";
 import { getEnvVar } from "~/shared/stores/environment-store";
 import { Button } from "~/shared/ui/Button";
 import { Checkbox } from "~/shared/ui/Checkbox";
@@ -27,7 +30,13 @@ import { Input } from "~/shared/ui/Input";
 import { OTPInput } from "~/shared/ui/OTPInput";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
+const log = createLogger("registration");
+
 const OTP_LENGTH = 6;
+const RESEND_COOLDOWN_SECONDS = 30;
+
+// Better Auth error codes that mean the person typed a wrong or stale code.
+const WRONG_CODE_ERRORS = new Set(["INVALID_OTP", "OTP_EXPIRED"]);
 
 const FIELD_ERROR_KEYS: Record<RegistrationFieldError, string> = {
   email: "auth:errors.invalidEmail",
@@ -59,8 +68,30 @@ export default function RegistrationScreen() {
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState<string | undefined>();
   const [isWorking, setIsWorking] = useState(false);
+  // A verified code is spent, so a retry after a failed profile save must not verify it again.
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
 
   const isBusy = isWorking || registration.isPending;
+  // Better Auth stores emails lowercased; the sign-in hook writes this value as given.
+  const email = values.email.trim().toLowerCase();
+
+  // The session cookie can say unregistered for a day after registering on the web or another
+  // phone, so the database decides each time this screen opens or the app returns.
+  useEffect(() => {
+    const recheck = () => void reloadSessionFromServer().catch(() => undefined);
+    recheck();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") recheck();
+    });
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setTimeout(() => setResendIn((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
 
   function update<K extends keyof RegistrationFormValues>(
     key: K,
@@ -92,9 +123,9 @@ export default function RegistrationScreen() {
     setIsWorking(true);
     try {
       if (needsEmail) {
-        const result = await sendEmailLoginOtp(values.email.trim());
-        if (result?.error) {
-          setErrors({ email: result.error.message ?? t("auth:errors.sendFailed") });
+        const sendError = await sendCode();
+        if (sendError) {
+          setErrors({ email: sendError });
           return;
         }
         setOtp("");
@@ -104,30 +135,64 @@ export default function RegistrationScreen() {
       }
       await register();
     } catch {
-      // useRegistration reports its own failure; a thrown OTP send lands here.
+      // useRegistration reports its own failure.
     } finally {
       setIsWorking(false);
     }
   }
 
-  async function onOtpChange(code: string) {
-    setOtp(code);
-    setOtpError(undefined);
-    if (code.length !== OTP_LENGTH || isBusy) return;
-
-    setIsWorking(true);
+  /** Returns a message to show when the code could not be sent. */
+  async function sendCode(): Promise<string | undefined> {
     try {
-      const result = await verifyEmailLoginOtp({ email: values.email.trim(), code });
-      if (result?.error) {
-        setOtpError(t("auth:errors.expiredOtp"));
-        return;
+      const result = await sendEmailLoginOtp(email);
+      if (result?.error) return result.error.message ?? t("auth:errors.sendFailed");
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+      return undefined;
+    } catch (error) {
+      log.warn("registration code send failed", { err: (error as Error)?.message });
+      return t("auth:errors.sendFailed");
+    }
+  }
+
+  async function onResend() {
+    if (isBusy || resendIn > 0) return;
+    setIsWorking(true);
+    setOtp("");
+    setOtpError(await sendCode());
+    setIsWorking(false);
+  }
+
+  async function verifyAndRegister(code: string) {
+    if (isBusy) return;
+    setIsWorking(true);
+    let verified = emailVerified;
+    try {
+      if (!verified) {
+        const result = await verifyEmailLoginOtp({ email, code });
+        if (result?.error) {
+          setOtpError(
+            WRONG_CODE_ERRORS.has(result.error.code ?? "")
+              ? t("auth:errors.expiredOtp")
+              : (result.error.message ?? t("auth:errors.verifyFailed")),
+          );
+          return;
+        }
+        verified = true;
+        setEmailVerified(true);
       }
       await register();
     } catch {
-      setOtpError(t("auth:errors.verifyFailed"));
+      // A thrown verify call lands here unverified; useRegistration reports a failed save.
+      if (!verified) setOtpError(t("auth:errors.verifyFailed"));
     } finally {
       setIsWorking(false);
     }
+  }
+
+  function onOtpChange(code: string) {
+    setOtp(code);
+    setOtpError(undefined);
+    if (code.length === OTP_LENGTH) void verifyAndRegister(code);
   }
 
   const submitTitle = needsEmail
@@ -165,6 +230,7 @@ export default function RegistrationScreen() {
                   editable={!isBusy}
                   error={errors.email}
                   helper={t("auth:registration.emailDescription")}
+                  accessibilityLabel={t("auth:registration.email")}
                 />
               ) : null}
 
@@ -177,6 +243,7 @@ export default function RegistrationScreen() {
                 autoComplete="given-name"
                 editable={!isBusy}
                 error={errors.firstName}
+                accessibilityLabel={t("auth:registration.firstName")}
               />
               <Input
                 label={t("auth:registration.lastName")}
@@ -187,6 +254,7 @@ export default function RegistrationScreen() {
                 autoComplete="family-name"
                 editable={!isBusy}
                 error={errors.lastName}
+                accessibilityLabel={t("auth:registration.lastName")}
               />
 
               <View className="mb-2 mt-2">
@@ -230,7 +298,9 @@ export default function RegistrationScreen() {
                 onPress={() => setStep("form")}
                 className="mb-4 self-start"
                 hitSlop={10}
-                disabled={isBusy}
+                disabled={isBusy || emailVerified}
+                accessibilityRole="button"
+                accessibilityLabel={t("auth:registration.back")}
               >
                 <MaterialIcons name="arrow-back" size={24} color={themeColors.onSurface} />
               </Pressable>
@@ -239,21 +309,43 @@ export default function RegistrationScreen() {
               </Text>
               <Text className="text-inactive mb-5 text-sm leading-5">
                 {t("auth:otpHelper")}
-                <Text className="text-on-surface font-semibold">{values.email.trim()}</Text>
+                <Text className="text-on-surface font-semibold">{email}</Text>
               </Text>
               <OTPInput
                 value={otp}
-                onChangeText={(code) => void onOtpChange(code)}
+                onChangeText={onOtpChange}
                 length={OTP_LENGTH}
-                editable={!isBusy}
+                editable={!isBusy && !emailVerified}
                 autoFocus
                 error={!!otpError}
               />
               {otpError ? <Text className="text-destructive mt-2 text-sm">{otpError}</Text> : null}
+              {emailVerified ? null : (
+                <Pressable
+                  onPress={() => void onResend()}
+                  disabled={isBusy || resendIn > 0}
+                  className="mt-5 self-start"
+                  accessibilityRole="button"
+                >
+                  <Text
+                    className={`text-sm font-semibold ${
+                      isBusy || resendIn > 0 ? "text-inactive" : "text-jii-primary"
+                    }`}
+                  >
+                    {resendIn > 0
+                      ? t("auth:resendCodeCountdown", { seconds: resendIn })
+                      : t("auth:resendCode")}
+                  </Text>
+                </Pressable>
+              )}
               <Button
-                title={t("auth:registration.verifyAndRegister")}
+                title={
+                  emailVerified
+                    ? t("auth:registration.register")
+                    : t("auth:registration.verifyAndRegister")
+                }
                 variant="primary"
-                onPress={() => void onOtpChange(otp)}
+                onPress={() => void verifyAndRegister(otp)}
                 isDisabled={isBusy || otp.length !== OTP_LENGTH}
                 isLoading={isBusy}
                 style={{ marginTop: 20 }}

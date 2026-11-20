@@ -5,8 +5,9 @@ import RegistrationScreen from "~/features/auth/screens/registration-screen";
 import auth from "~/shared/i18n/locales/en-US/auth.json";
 import { OTPInput } from "~/shared/ui/OTPInput";
 
-const { mutateAsync, logout, sendOtp, verifyOtp, session } = vi.hoisted(() => ({
+const { mutateAsync, logout, sendOtp, verifyOtp, reloadSession, session } = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
+  reloadSession: vi.fn(),
   logout: vi.fn(),
   sendOtp: vi.fn(),
   verifyOtp: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("~/features/auth/hooks/use-logout", () => ({ useLogout: () => logout }))
 vi.mock("~/features/auth/hooks/use-registration", () => ({
   useRegistration: () => ({ mutateAsync, isPending: false }),
 }));
+vi.mock("~/features/auth/services/auth", () => ({ reloadSessionFromServer: reloadSession }));
 vi.mock("~/features/auth/api/login.api", () => ({
   sendEmailLoginOtp: sendOtp,
   verifyEmailLoginOtp: verifyOtp,
@@ -43,6 +45,7 @@ beforeEach(() => {
   session.user.email = "ada@example.com";
   mutateAsync.mockReset().mockResolvedValue(undefined);
   logout.mockReset();
+  reloadSession.mockReset().mockResolvedValue(null);
   sendOtp.mockReset().mockResolvedValue({ data: { success: true }, error: null });
   verifyOtp.mockReset().mockResolvedValue({ data: {}, error: null });
 });
@@ -101,7 +104,7 @@ describe("RegistrationScreen", () => {
   it("verifies a new email first when the sign-in provider shared none", async () => {
     session.user.email = "0000-0002-1825-0097";
     render(<RegistrationScreen />);
-    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "ada@example.com");
+    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), " Ada@Example.com ");
     fillName();
 
     await settle(() =>
@@ -118,20 +121,69 @@ describe("RegistrationScreen", () => {
     );
   });
 
-  it("keeps the user on the code step when the code is wrong", async () => {
+  async function reachCodeStep() {
     session.user.email = "0000-0002-1825-0097";
-    verifyOtp.mockResolvedValue({ data: null, error: { message: "Invalid OTP" } });
     render(<RegistrationScreen />);
     fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "ada@example.com");
     fillName();
     await settle(() =>
       fireEvent.press(screen.getByText(auth.registration.continueWithEmailVerification)),
     );
+  }
+
+  it("keeps the user on the code step when the code is wrong", async () => {
+    verifyOtp.mockResolvedValue({
+      data: null,
+      error: { code: "INVALID_OTP", message: "Invalid OTP" },
+    });
+    await reachCodeStep();
 
     await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("000000"));
 
     expect(screen.getByText(auth.errors.expiredOtp)).toBeTruthy();
     expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("shows the server's reason when the email belongs to another account", async () => {
+    const message = "This email is already associated with another account";
+    verifyOtp.mockResolvedValue({ data: null, error: { status: 400, message } });
+    await reachCodeStep();
+
+    await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456"));
+
+    expect(screen.getByText(message)).toBeTruthy();
+  });
+
+  it("retries a failed profile save without spending the code again", async () => {
+    mutateAsync.mockRejectedValueOnce(new Error("Internal Server Error"));
+    await reachCodeStep();
+    await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456"));
+    expect(screen.queryByText(auth.errors.verifyFailed)).toBeNull();
+
+    await settle(() => fireEvent.press(screen.getByText(auth.registration.register)));
+
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
+    expect(mutateAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it("says so when the code cannot be sent", async () => {
+    session.user.email = "0000-0002-1825-0097";
+    sendOtp.mockRejectedValue(new Error("Network request failed"));
+    render(<RegistrationScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "ada@example.com");
+    fillName();
+
+    await settle(() =>
+      fireEvent.press(screen.getByText(auth.registration.continueWithEmailVerification)),
+    );
+
+    expect(screen.getByText(auth.errors.sendFailed)).toBeTruthy();
+  });
+
+  it("re-checks the session with the server when it opens", () => {
+    render(<RegistrationScreen />);
+
+    expect(reloadSession).toHaveBeenCalledTimes(1);
   });
 
   it("lets the user sign out to use another account", async () => {
