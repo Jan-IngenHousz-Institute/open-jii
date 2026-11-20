@@ -570,7 +570,7 @@ EOT
     for            = "5m"
 
     annotations = {
-      description      = "The backend refused calls from the pipeline that carried a key id. Macro results, contributor names and device metadata from those calls are missing."
+      description      = "The backend refused calls from the pipeline that carried a key id. Macro results from those calls are missing, and any project transfer among them is marked failed."
       summary          = "Backend is rejecting the pipeline's calls"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/webhook-failures.md"
       __dashboardUid__ = local.heartbeat_daily_uid
