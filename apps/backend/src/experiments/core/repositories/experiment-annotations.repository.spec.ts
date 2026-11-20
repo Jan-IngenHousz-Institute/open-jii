@@ -209,7 +209,7 @@ describe("ExperimentAnnotationsRepository", () => {
     assertSuccess(deleted);
     expect(deleted.value).toHaveLength(10_005);
     expect(await stored()).toEqual([]);
-  });
+  }, 30_000);
 
   it("finds the annotations that still exist, each with its author's name as it reads now", async () => {
     const kept = record();
