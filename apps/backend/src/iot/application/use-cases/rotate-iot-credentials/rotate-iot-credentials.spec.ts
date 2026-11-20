@@ -4,7 +4,6 @@ import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { AppError } from "../../../../common/utils/fp-utils";
 import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
-import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { RotateIotCredentialsUseCase } from "./rotate-iot-credentials";
@@ -258,47 +257,18 @@ describe("RotateIotCredentialsUseCase", () => {
     expect(result.error.message).toBe("policy failed");
   });
 
-  describe("the registry's lakehouse copy", () => {
-    const owed = () => testApp.database.select().from(experimentDataOutbox);
+  it("owes the registry's lakehouse copy nothing, since the copy holds no certificate", async () => {
+    vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(NEW_CERT));
+    vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+    const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
+    const device = await createDevice("active");
 
-    beforeEach(() => {
-      vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(NEW_CERT));
-      vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
-      vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
-      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
-      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
-    });
+    assertSuccess(await useCase.execute(device.id, userId));
 
-    it("is owed the rotation in the same transaction, and the worker nudged", async () => {
-      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
-      const device = await createDevice("active");
-
-      assertSuccess(await useCase.execute(device.id, userId));
-
-      expect(await owed()).toEqual([
-        expect.objectContaining({
-          recordType: "device",
-          recordId: device.id,
-          experimentId: null,
-          destination: "lakehouse",
-        }),
-      ]);
-      expect(nudge).toHaveBeenCalledTimes(1);
-    });
-
-    it("keeps the old certificate on the row when the copy it owes cannot be written", async () => {
-      vi.spyOn(testApp.module.get(ExperimentDataOutboxRepository), "owe").mockRejectedValue(
-        new Error("outbox unavailable"),
-      );
-      const nudge = vi.spyOn(testApp.module.get(ExperimentDataOutboxWorker), "nudge");
-      const device = await createDevice("active");
-
-      assertFailure(await useCase.execute(device.id, userId));
-
-      const stored = await repo.findById(device.id);
-      assertSuccess(stored);
-      expect(stored.value?.certificateId).toBe("cert-old");
-      expect(nudge).not.toHaveBeenCalled();
-    });
+    expect(await testApp.database.select().from(experimentDataOutbox)).toEqual([]);
+    expect(nudge).not.toHaveBeenCalled();
   });
 });
