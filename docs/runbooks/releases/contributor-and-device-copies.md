@@ -106,6 +106,30 @@ SELECT 'device', id, 'lakehouse' FROM iot_devices WHERE id IN ('<id>', '<id>')
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
 ```
 
+Then compare the other way, for devices the copy holds and Postgres no longer does. During the
+rolling deploy, or a rollback of the backend alone, a task of the previous release can delete a
+device without owing anything, and Centrum would keep naming measurements after it:
+
+```sql
+SELECT c.id FROM lakehouse_copies c
+LEFT JOIN iot_devices d ON d.id = c.id
+WHERE c.record_type = 'device' AND d.id IS NULL;
+```
+
+It lists no rows. Owe every device it lists: the copy finds no such device in Postgres, and deletes
+its row.
+
+```sql
+INSERT INTO experiment_data_outbox (record_type, record_id, destination)
+SELECT 'device'::experiment_data_record_type, c.id, 'lakehouse'::experiment_data_destination
+FROM lakehouse_copies c
+LEFT JOIN iot_devices d ON d.id = c.id
+WHERE c.record_type = 'device' AND d.id IS NULL
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+Profiles need no such check: closing an account keeps its profile row.
+
 The same step 2 insert refills either table if it is ever emptied. Delete `copies.csv` once the
 check is clean; it holds every account's id.
 
