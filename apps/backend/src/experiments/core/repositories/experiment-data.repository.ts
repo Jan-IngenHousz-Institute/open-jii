@@ -199,17 +199,15 @@ export class ExperimentDataRepository {
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
 
-    // Only the store's read builds the flag filter, so a read the warehouse would answer is refused.
+    // Only the store's read builds the flag filter, so a read of a table, or a joined table, the
+    // store does not hold is refused before any metadata is read.
+    const readsInStore = (table: string) =>
+      source === "store" && this.dataSource.readsFor(source).readsTable(table);
     const isFlaggedReadUnsupported =
       flagged !== undefined &&
-      (source !== "store" || !this.dataSource.readsFor(source).readsTable(tableName));
+      (!readsInStore(tableName) || (join !== undefined && !readsInStore(join.tableName)));
     if (isFlaggedReadUnsupported) {
-      return failure(
-        AppError.badRequest(
-          "Rows can be filtered by flags only on a page of a table the serving store holds",
-          "FLAGGED_READ_UNSUPPORTED",
-        ),
-      );
+      return this.flaggedReadUnsupported();
     }
 
     const read: ReadTrace = {
@@ -247,6 +245,10 @@ export class ExperimentDataRepository {
       shape = warehouse.value;
     }
     read.source = shape.source;
+    // A chart that moved to the warehouse above reads no flags there.
+    if (flagged !== undefined && shape.source !== "store") {
+      return this.flaggedReadUnsupported();
+    }
     if (flagged !== undefined) {
       const flaggedRows = await this.storeReads.flaggedRows(
         experimentId,
@@ -1342,6 +1344,15 @@ export class ExperimentDataRepository {
   /** A page the warehouse cut at its byte limit would come back short, and paging on would skip rows. */
   private pageTooLarge(): Result<TableDataDto[]> {
     return failure(AppError.badRequest(PAGE_TOO_LARGE_MESSAGE, ErrorCodes.PAGE_TOO_LARGE));
+  }
+
+  private flaggedReadUnsupported(): Result<TableDataDto[]> {
+    return failure(
+      AppError.badRequest(
+        "Rows can be filtered by flags only in a read the serving store answers",
+        "FLAGGED_READ_UNSUPPORTED",
+      ),
+    );
   }
 
   private tablePage(params: {

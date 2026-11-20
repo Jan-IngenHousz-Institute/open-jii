@@ -840,6 +840,49 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
       };
     }
 
+    it("counts only the flagged rows, or only the rest, under the reader's row policy", async () => {
+      const count = {
+        aggregation: { functions: [{ column: "*", function: "count" }] },
+      } satisfies Partial<StoreQueryParams>;
+
+      const flagged = await rowsOf(chartRead({ ...count, ...flaggedOnly }));
+      const unflagged = await rowsOf(
+        chartRead({ ...count, flagged: { kind: "exclude", addedRowIds: ["3"] } }),
+      );
+
+      expect(flagged.rows).toEqual([["2"]]);
+      expect(unflagged.rows).toEqual([["2"]]);
+    });
+
+    it("runs a running sum over the flagged rows it keeps first", async () => {
+      const data = await rowsOf(
+        chartRead({
+          ...flaggedOnly,
+          aggregation: { functions: [{ column: "*", function: "cumsum", alias: "running" }] },
+          ordering: { column: "timestamp", direction: "ASC" },
+          limit: 10,
+        }),
+      );
+
+      const id = data.columns.findIndex(({ name }) => name === "id");
+      const running = data.columns.findIndex(({ name }) => name === "running");
+      expect(data.rows.map((row) => [row[id], row[running]])).toEqual([
+        ["1", "1"],
+        ["3", "2"],
+      ]);
+    });
+
+    it("matches a flagged chart's second table by time to the flagged rows only", async () => {
+      const data = await rowsOf(
+        joinedRead({ experimentId: experiment, columns: ["id", "second__device"], ...flaggedOnly }),
+      );
+
+      expect(data.rows).toEqual([
+        ["1", '["reg-1","SN1"]'],
+        ["3", null],
+      ]);
+    });
+
     it("groups a chart by a sheet's field, the rows no sheet matches as null", async () => {
       const data = await rowsOf(chartRead({ ...sheet, ...countBySoil }));
 

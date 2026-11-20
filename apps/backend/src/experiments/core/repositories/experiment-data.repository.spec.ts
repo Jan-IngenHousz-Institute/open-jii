@@ -3110,19 +3110,26 @@ describe("ExperimentDataRepository", () => {
       }
     });
 
-    it("refuses a flagged read the warehouse would answer before reading any metadata: a chart, or a table the store lacks", async () => {
+    it("refuses a flagged read the warehouse would answer before reading any metadata: a table, or a joined table, the store lacks", async () => {
       const metadata = vi
         .spyOn(databricksPort, "getExperimentTableMetadata")
         .mockResolvedValue(failure(AppError.internal("Warehouse asleep")));
       const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
 
-      const chart = await repository.getTableData({
+      const joinedToDevices = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
+        join: {
+          tableName: "device",
+          matchColumn: "device_id",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
         aggregation: { groupBy: [{ column: "plot" }] },
         flagged: "only",
-        source: WAREHOUSE,
+        source: "store",
       });
       const warehousePage = await repository.getTableData({
         experimentId,
@@ -3143,12 +3150,74 @@ describe("ExperimentDataRepository", () => {
         source: "store",
       });
 
-      for (const result of [chart, warehousePage, deviceTable]) {
+      for (const result of [joinedToDevices, warehousePage, deviceTable]) {
         assertFailure(result);
         expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
       }
       expect(metadata).not.toHaveBeenCalled();
       expect(warehouse).not.toHaveBeenCalled();
+    });
+
+    it("filters a chart's read in the store by its flags, and counts it the same way", async () => {
+      const execute = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: storeColumns,
+          rows: [
+            ["2", "B2"],
+            ["4", "D4"],
+          ],
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
+      const chart = (limit: number) =>
+        repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          aggregation: { groupBy: [{ column: "plot" }] },
+          flagged: "exclude",
+          limit,
+          source: "store",
+        });
+
+      const result = await chart(100);
+      // A chart past its limit is counted, through the same flag filter.
+      const counted = await chart(1);
+
+      assertSuccess(result);
+      assertSuccess(counted);
+      const statements = execute.mock.calls.map(([query]) => query.sql);
+      expect(statements).toHaveLength(3);
+      for (const sql of statements) {
+        expect(sql).toContain("NOT (toString(id) IN (SELECT arrayJoin(__flagged_row_ids))");
+      }
+    });
+
+    it("refuses a flagged chart the warehouse would read, grouped by device and a raw x past the cap", async () => {
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: {
+          groupBy: [{ column: "timestamp" }, { column: "device" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+        flagged: "only",
+        source: "store",
+      });
+
+      assertFailure(result);
+      expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
+      expect(warehouse).not.toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
     });
 
     it("reads an aggregated and an unpaged read from the store as chart reads", async () => {
