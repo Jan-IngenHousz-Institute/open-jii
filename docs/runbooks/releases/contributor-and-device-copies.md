@@ -160,4 +160,30 @@ Before step 5, Centrum still runs the previous notebooks, unless it restarted on
 step 5, or after such a restart, restart Centrum once the previous bundle is out: its gold tables
 then call the backend again, and the previous backend serves them.
 
+This release copies annotations to the lakehouse without `user_name`, the column the previous
+release's enriched views read an annotation's author from. Once the previous backend is out, owe
+every annotation created or edited since this release's backend rollout began, so the previous
+backend writes the name again. If step 6 ran, leave out the `WHERE`: it cleared every annotation's
+name.
+
+```sql
+INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
+SELECT 'annotation'::experiment_data_record_type, id, experiment_id,
+       'lakehouse'::experiment_data_destination
+FROM experiment_annotations
+WHERE updated_at >= '<when the rollout began, in UTC>'
+ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+Wait until `SELECT count(*) FROM experiment_data_outbox WHERE record_type = 'annotation'` reads 0,
+then check the newest annotations in the SQL editor:
+
+```sql
+SELECT id, user_id, user_name, updated_at FROM open_jii_<env>.centrum.experiment_annotations
+ORDER BY updated_at DESC LIMIT 5;
+```
+
+Each names its author in `user_name`, as the previous release wrote it.
+
 When the release comes back, run steps 2 to 4 again: the copies missed every change made meanwhile.
+Run step 6 again too, since the previous release wrote names back.
