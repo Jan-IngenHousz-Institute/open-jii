@@ -3699,9 +3699,8 @@ locals {
   # a release has deployed a new notebook.
   ingest_healthcheck_notebooks = local.ingest_healthcheck_publishing ? ["/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks"] : []
 
-  # Flip after the first HealthcheckAgeMinutes datapoint appears, and not with the publisher: the
-  # stalled rule fires on no data, so switching it on earlier pages before any message is read.
-  ingest_healthcheck_alerting = false
+  # Needs a HealthcheckAgeMinutes datapoint here: the stalled rule fires on no data.
+  ingest_healthcheck_alerting = true
 }
 
 module "ingest_healthcheck" {
