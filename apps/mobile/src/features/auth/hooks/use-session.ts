@@ -2,7 +2,7 @@
  * Hook to access the current user session.
  *
  * Uses Better Auth's useSession() as the primary source. When offline,
- * Better Auth can't validate the session and returns null — in that case
+ * Better Auth can't validate the session and returns null; in that case
  * we fall back to the SecureStore cache written by the expo client plugin.
  */
 import { useEffect, useState } from "react";
@@ -44,8 +44,12 @@ export function useSession() {
       }
     : undefined;
 
+  // Only an explicit false gates: a cache written before the field existed must not lock anyone out.
+  const needsRegistration = !!activeSession && activeSession.user?.registered === false;
+
   return {
     session,
+    needsRegistration,
     isLoaded,
     isPending,
     error,
@@ -55,7 +59,7 @@ export function useSession() {
       try {
         await authClient.signOut();
       } catch {
-        // Network call may fail offline — that's fine,
+        // Network call may fail offline; that's fine,
         // the server session will expire on its own.
       }
     },

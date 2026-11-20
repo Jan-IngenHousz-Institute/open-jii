@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AlertsBar } from "~/features/alerts/components/alerts-container";
+import { usePostRegistrationRedirect } from "~/features/auth/hooks/use-post-registration-redirect";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { ForceUpdateGate } from "~/features/force-update/components/force-update-gate";
 import type { ForceUpdateGateStatus } from "~/features/force-update/hooks/use-force-update-gate";
@@ -36,8 +37,9 @@ installGlobalErrorHandlers();
 
 function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => void }) {
   const themeColors = useThemeColors();
-  const { session, isLoaded } = useSession();
+  const { session, isLoaded, needsRegistration } = useSession();
   const [everLoaded, setEverLoaded] = useState(false);
+  usePostRegistrationRedirect(!!session, needsRegistration);
 
   if (isLoaded && !everLoaded) {
     setEverLoaded(true);
@@ -57,6 +59,7 @@ function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => 
   }
 
   const isSignedIn = !!session;
+  const isRegistered = isSignedIn && !needsRegistration;
 
   return (
     <Stack
@@ -78,7 +81,7 @@ function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => 
         },
       }}
     >
-      <Stack.Protected guard={isSignedIn}>
+      <Stack.Protected guard={isRegistered}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen
           name="measurement-flow"
@@ -88,6 +91,9 @@ function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => 
         <Stack.Screen name="discover/index" options={{ headerShown: true }} />
         <Stack.Screen name="discover/[id]" options={{ headerShown: true }} />
         <Stack.Screen name="join/[code]" options={{ headerShown: true }} />
+      </Stack.Protected>
+      <Stack.Protected guard={isSignedIn && needsRegistration}>
+        <Stack.Screen name="(auth)/register" options={{ headerShown: false, animation: "none" }} />
       </Stack.Protected>
       <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: "none" }} />
