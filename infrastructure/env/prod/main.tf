@@ -2372,7 +2372,7 @@ module "cloud_trail" {
 module "play_review_sign_in" {
   source = "../../modules/play-review-sign-in"
 
-  enabled        = false
+  enabled        = true
   environment    = var.environment
   domain_name    = var.domain_name
   log_group_name = module.backend_ecs.cloudwatch_log_group_name
