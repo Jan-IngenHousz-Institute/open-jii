@@ -1791,6 +1791,41 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       expect(found).toEqual([["52"]]);
     });
 
+    it("reads only a row's own keys, never a key nested in one of its values", async () => {
+      const nested = "nested-e";
+      await admin.insert({
+        table: "measurements",
+        values: [{ ...reading(61, "N1", null), experiment_id: nested }],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          sheetRow("s-flat", "2026-09-01 08:00:00", "plot", "N1", { soil: "clay" }),
+          sheetRow("s-nested", "2026-09-02 08:00:00", "plot", "N1", { extra: { soil: "sand" } }),
+          sheetRow("s-nested", "2026-09-02 08:00:00", "plot", "N2", { soil: "silt" }),
+        ].map((row) => ({ ...row, experiment_id: nested })),
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_sheets",
+        values: [
+          sheet("s-flat", "2026-09-01 08:00:00", "plot", "OBJECT<soil: STRING>"),
+          sheet(
+            "s-nested",
+            "2026-09-02 08:00:00",
+            "plot",
+            "OBJECT<extra: OBJECT<soil: STRING>, soil: STRING>",
+          ),
+        ].map((row) => ({ ...row, experiment_id: nested })),
+        format: "JSONEachRow",
+      });
+
+      const rows = await page({ columns: ["id", "soil"], limit: 10 }, nested);
+
+      expect(rows).toEqual([["61", "clay"]]);
+    });
+
     it("reads integers past the 64-bit ranges as the warehouse does, with the rest of their row", async () => {
       const codes = "codes-e";
       const rows = [

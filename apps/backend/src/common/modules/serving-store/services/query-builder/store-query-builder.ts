@@ -425,14 +425,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /**
    * A field's JSON text in the newest sheet whose matched row holds it, null ones included. It is
    * copied as written, since a parsed number passes through a double, which loses digits a sheet's
-   * decimals keep. Sheet rows are flat, as simpleJSON needs: it finds a key at any depth.
+   * decimals keep. Only a row's top-level keys count, as the warehouse reads a sheet's fields.
    */
   private metadataText(name: string): string {
     const key = this.escapeValue(name);
     const newestFirst = this.matchedSheets().reverse();
     const branches = newestFirst.flatMap(({ alias }) => [
-      `simpleJSONHas(${alias}_fields, ${key})`,
-      `simpleJSONExtractRaw(${alias}_fields, ${key})`,
+      `JSONHas(${alias}_fields, ${key})`,
+      `JSONExtractRaw(${alias}_fields, ${key})`,
     ]);
     return branches.length === 0
       ? "CAST(NULL AS Nullable(String))"
