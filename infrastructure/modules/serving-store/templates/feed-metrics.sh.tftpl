@@ -23,12 +23,6 @@ query="
     (SELECT count() FROM store.feed_rejects
       WHERE source_table = 'uploads' AND rejected_at > now64(6) - INTERVAL 5 MINUTE)
   FROM store.uploads WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
-  UNION ALL
-  SELECT 'device_events', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
-    quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
-    (SELECT count() FROM store.feed_rejects
-      WHERE source_table = 'device_events' AND rejected_at > now64(6) - INTERVAL 5 MINUTE)
-  FROM store.device_events WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
 "
 
 # Read first, so a store that does not answer fails the run instead of sending no metrics.
@@ -46,6 +40,20 @@ if sheet_rows=$(clickhouse-client --user openjii_monitor --format TSV --query "
   rows+=$'\n'"$sheet_rows"
 else
   echo "metadata_rows metrics not sent: store.metadata_rows did not answer" >&2
+fi
+
+# A deploy starts this timer before the migration that creates store.device_events, so device
+# events are read on their own, and until the table exists only their metrics go unsent.
+if event_rows=$(clickhouse-client --user openjii_monitor --format TSV --query "
+  SELECT 'device_events', countIf(inserted_at > now64(6) - INTERVAL 1 MINUTE),
+    quantile(0.95)(dateDiff('millisecond', _commit_timestamp, inserted_at)) / 1000,
+    (SELECT count() FROM store.feed_rejects
+      WHERE source_table = 'device_events' AND rejected_at > now64(6) - INTERVAL 5 MINUTE)
+  FROM store.device_events WHERE inserted_at > now64(6) - INTERVAL 5 MINUTE
+"); then
+  rows+=$'\n'"$event_rows"
+else
+  echo "device_events metrics not sent: store.device_events did not answer" >&2
 fi
 
 metrics=""
