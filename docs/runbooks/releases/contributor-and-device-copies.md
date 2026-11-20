@@ -143,6 +143,12 @@ check is clean; it holds every account's id.
 
 ## 5. Restart Centrum
 
+First wait for this release's bundle. In the GitHub Actions run that deploys this release to the
+environment, the Deploy Databricks job must have succeeded. It needs Deploy Backend, so it can
+still be queued, or have failed, after step 1. A restart before it lands starts Centrum on the
+previous notebooks, and the checks below cannot tell, since the previous gold asks the backend's
+routes this release keeps. If the job failed, run it again, and restart only once it succeeds.
+
 Stop Centrum in the Databricks workspace, wait until it reads `IDLE`, and start it again, without a
 full refresh. It comes back on the new bundle's notebooks, which join the copies. A restart often
 takes more than ten minutes, and measurements wait in Kinesis meanwhile.
