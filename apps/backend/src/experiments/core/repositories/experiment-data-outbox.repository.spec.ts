@@ -288,18 +288,30 @@ describe("ExperimentDataOutboxRepository", () => {
     expect(wait).toBeGreaterThan(WAITS[2] - 3);
   });
 
-  it("drops a failed row whose record changed again while it was held", async () => {
+  it("drops a failed row whose record changed again while it was held, its twin taking over its age and attempts", async () => {
     const record = annotation();
     await owe(record);
     const [held] = await claim();
+    await testApp.database.execute(sql`
+      UPDATE experiment_data_outbox
+      SET created_at = created_at - make_interval(secs => 3600)
+      WHERE id = ${held.id}
+    `);
     await owe(record);
 
     assertSuccess(await repository.markRetry([held], WAITS, "Warehouse down"));
 
     const all = await rows();
     expect(all).toHaveLength(1);
-    expect(all[0]).toEqual(expect.objectContaining({ claimedAt: null, attempts: 0 }));
+    expect(all[0]).toEqual(
+      expect.objectContaining({ claimedAt: null, attempts: 1, lastError: "Warehouse down" }),
+    );
     expect(all[0].id).not.toBe(held.id);
+    const waiting = await repository.countWaiting();
+    assertSuccess(waiting);
+    expect(waiting.value.oldestWaitingSeconds).toBeGreaterThanOrEqual(3600);
+    // The change it carries is still due at once.
+    expect(await claim()).toHaveLength(1);
   });
 
   it("releases a row a stopped copy never reached as it was, due at once", async () => {

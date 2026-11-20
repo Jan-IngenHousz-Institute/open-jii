@@ -52,9 +52,9 @@ const CLAIM_STAMP = sql`date_trunc('milliseconds', now() AT TIME ZONE 'UTC')`;
  */
 /** What putting a row back changes besides its claim. */
 interface RetryChanges {
-  attempts?: SQL;
-  nextAttemptAt?: SQL;
-  lastError?: string;
+  attempts: SQL;
+  nextAttemptAt: SQL;
+  lastError: string;
 }
 
 @Injectable()
@@ -218,16 +218,18 @@ export class ExperimentDataOutboxRepository {
 
   /** Puts rows a stopped copy never reached back as they were, due at once, no attempt counted. */
   async release(claims: OutboxClaim[]): Promise<Result<number>> {
-    return this.putBack(claims, {});
+    return this.putBack(claims);
   }
 
   /**
    * Unclaims the rows with `changes` applied. A row whose record changed again while it was claimed
    * already has a waiting twin that will apply the newer state, so it is deleted instead, which also
-   * keeps the waiting index unique. A twin committed between the two statements still breaks that
-   * index; the transaction then runs once more, and finds the twin.
+   * keeps the waiting index unique. The twin first takes over the row's `created_at`, `attempts` and
+   * `last_error`, so the copy's age and its waits still count from when it was first owed. A twin
+   * committed after the delete still breaks that index; the transaction then runs once more, and
+   * finds the twin.
    */
-  private async putBack(claims: OutboxClaim[], changes: RetryChanges): Promise<Result<number>> {
+  private async putBack(claims: OutboxClaim[], changes?: RetryChanges): Promise<Result<number>> {
     const run = () => this.unclaim(claims, changes);
 
     return tryCatch(async () => {
@@ -242,16 +244,43 @@ export class ExperimentDataOutboxRepository {
     });
   }
 
-  private unclaim(claims: OutboxClaim[], changes: RetryChanges): Promise<number> {
+  private unclaim(claims: OutboxClaim[], changes?: RetryChanges): Promise<number> {
     return this.database.transaction(async (tx) => {
       let retried = 0;
 
       for (const [claimedAt, ids] of this.byClaim(claims)) {
+        const held = and(
+          inArray(experimentDataOutbox.id, ids),
+          eq(experimentDataOutbox.claimedAt, claimedAt),
+        );
+        if (changes !== undefined) {
+          await tx.update(experimentDataOutbox).set(changes).where(held);
+        }
+
+        const failed = alias(experimentDataOutbox, "failed");
+        await tx
+          .update(experimentDataOutbox)
+          .set({
+            createdAt: sql`least(${experimentDataOutbox.createdAt}, ${failed.createdAt})`,
+            attempts: failed.attempts,
+            lastError: failed.lastError,
+          })
+          .from(failed)
+          .where(
+            and(
+              inArray(failed.id, ids),
+              eq(failed.claimedAt, claimedAt),
+              isNull(experimentDataOutbox.claimedAt),
+              eq(experimentDataOutbox.recordType, failed.recordType),
+              eq(experimentDataOutbox.recordId, failed.recordId),
+              eq(experimentDataOutbox.destination, failed.destination),
+            ),
+          );
+
         const waiting = alias(experimentDataOutbox, "waiting");
         await tx.delete(experimentDataOutbox).where(
           and(
-            inArray(experimentDataOutbox.id, ids),
-            eq(experimentDataOutbox.claimedAt, claimedAt),
+            held,
             exists(
               tx
                 .select({ id: waiting.id })
@@ -270,13 +299,8 @@ export class ExperimentDataOutboxRepository {
 
         const rows = await tx
           .update(experimentDataOutbox)
-          .set({ claimedAt: null, ...changes })
-          .where(
-            and(
-              inArray(experimentDataOutbox.id, ids),
-              eq(experimentDataOutbox.claimedAt, claimedAt),
-            ),
-          )
+          .set({ claimedAt: null })
+          .where(held)
           .returning({ id: experimentDataOutbox.id });
         retried += rows.length;
       }
