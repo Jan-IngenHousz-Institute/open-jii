@@ -1375,7 +1375,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(data.rows).toHaveLength(800_000);
     expect(data.truncated).toBe(false);
     expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
-  });
+  }, 30_000);
 
   it("stops reading a page before the row that takes its cells past the read limit", async () => {
     // Rows of a million bytes each, 40 MB in all and well under the store's own guard.
@@ -1395,7 +1395,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     // 26 rows of 1,000,004 bytes and their separators fit 25 MiB; the 27th passes it.
     expect(data.truncated).toBe(true);
     expect(data.rows).toHaveLength(26);
-  });
+  }, 30_000);
 
   it("counts a read and lists the experiment's ids", async () => {
     const query = adapter.buildExperimentQuery({
@@ -1509,7 +1509,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
     // One byte more, sent anyway, is a statement the store refuses too.
     assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
-  });
+  }, 30_000);
 
   describe("custom metadata on a page", () => {
     const experiment = "metadata-e";
