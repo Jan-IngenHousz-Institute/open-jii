@@ -577,7 +577,6 @@ jobs:
       TF_VAR_mailchimp_community_kind: ${{ secrets.MAILCHIMP_COMMUNITY_KIND }}
       TF_VAR_mailchimp_community_id: ${{ secrets.MAILCHIMP_COMMUNITY_ID }}
       TF_VAR_mailchimp_community_name: ${{ secrets.MAILCHIMP_COMMUNITY_NAME }}
-      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
       TF_VAR_orcid_oauth_client_id: ${{ secrets.ORCID_OAUTH_CLIENT_ID }}
       TF_VAR_orcid_oauth_client_secret: ${{ secrets.ORCID_OAUTH_CLIENT_SECRET }}
       TF_VAR_posthog_key: ${{ secrets.POSTHOG_KEY }}
@@ -607,8 +606,9 @@ jobs:
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
 
-      # prod-plan's read-only role cannot create Grafana tokens, so the prod plan uses the stored
-      # Viewer token that the Rotate Grafana Token workflow keeps current.
+      # prod-plan's read-only role cannot create Grafana tokens, and its plan needs none: without a
+      # refresh, the Grafana provider calls the API only for data sources and imports, and the roots
+      # declare neither. Adding a Grafana data source would need a real token here again.
       - name: Create a Grafana token for this run
         id: grafana
         if: matrix.environment == 'dev'
@@ -620,7 +620,7 @@ jobs:
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
         env:
-          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token || secrets.GRAFANA_SERVICE_TOKEN }}
+          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token || 'unused-without-refresh' }}
         with:
           lock: false
           refresh: ${{ matrix.refresh }}
