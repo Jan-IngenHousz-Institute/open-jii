@@ -114,6 +114,12 @@ const MATCH_VARIANTS = [
   { columnName: "macro_output", schema: FIXTURE.matchSchema, suffix: "output" },
 ];
 
+const METADATA_VARIANT = {
+  columnName: "custom_metadata",
+  schema: "OBJECT<soil: STRING>",
+  suffix: "metadata",
+};
+
 /** The second table's columns a time-matched case reads, under the names the join gives them. */
 const MATCHED_COLUMNS = [
   { name: "w", alias: "w" },
@@ -726,6 +732,148 @@ describe.skipIf(STORE_URL === undefined)("StoreAggregation against a store", () 
         [null, "1"],
         ['[null,"Ambit (d2)"]', "1"],
         ['["reg-1","SN1"]', "1"],
+      ]);
+    });
+  });
+
+  describe("a chart's flags and custom metadata", () => {
+    const experiment = "flags-and-sheets";
+    const sheet = {
+      variants: [METADATA_VARIANT],
+      metadataSheets: [
+        { id: "s1", matchOn: "plot", schema: METADATA_VARIANT.schema, version: "1" },
+      ],
+    };
+    // Row 1 carries the phone's flag, row 3 one added afterwards, which Postgres holds.
+    const flaggedOnly = {
+      flagged: { kind: "only", addedRowIds: ["3"] },
+    } satisfies Partial<StoreQueryParams>;
+    const countBySoil = {
+      aggregation: {
+        groupBy: [{ column: "soil" }],
+        functions: [{ column: "*", function: "count" }],
+      },
+      ordering: { column: "soil", direction: "ASC" },
+    } satisfies Partial<StoreQueryParams>;
+
+    beforeAll(async () => {
+      const primary = { ...emptyMacroRow(experiment), macro_id: "m1" };
+      const second = { ...emptyMacroRow(experiment), macro_id: "m2" };
+      const reading = (id: number, deviceId: string, timestamp: string, plot: string) => ({
+        ...primary,
+        id,
+        raw_id: id,
+        device_id: deviceId,
+        timestamp,
+        questions_data: { plot },
+      });
+      await admin.insert({
+        table: "macro_results",
+        values: [
+          {
+            ...reading(1, "d1", "2026-09-07 10:00:00", "A1"),
+            annotations: [
+              {
+                id: "p1",
+                rowId: "1",
+                type: "flag",
+                content: { text: null, flagType: "outlier" },
+                createdBy: null,
+                createdByName: null,
+                createdAt: null,
+                updatedAt: null,
+              },
+            ],
+          },
+          reading(2, "d2", "2026-09-07 10:00:00", "B2"),
+          reading(3, "d1", "2026-09-07 11:00:00", "B2"),
+          reading(4, "d2", "2026-09-07 11:00:00", "C3"),
+          {
+            ...second,
+            id: 11,
+            raw_id: 11,
+            device_id: "d1",
+            client_id: "reg-1",
+            timestamp: "2026-09-07 09:30:00",
+          },
+          {
+            ...second,
+            id: 12,
+            raw_id: 12,
+            device_id: "d2",
+            client_id: "phone-a",
+            device_name: "Ambit",
+            timestamp: "2026-09-07 09:45:00",
+          },
+        ],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "metadata_rows",
+        values: [
+          ["A1", { soil: "clay" }],
+          ["B2", { soil: "sand" }],
+        ].map(([identifier, fields]) => ({
+          experiment_id: experiment,
+          sheet_id: "s1",
+          sheet_created_at: "2026-09-01 08:00:00",
+          match_on: "plot",
+          identifier,
+          fields: JSON.stringify(fields),
+          is_deleted: 0,
+          _commit_version: 1,
+          _commit_timestamp: "2026-09-01 08:00:01",
+        })),
+        format: "JSONEachRow",
+      });
+    });
+
+    function chartRead(read: Partial<StoreQueryParams>): StoreQueryParams {
+      return {
+        tableName: "m1",
+        tableType: "macro",
+        experimentId: experiment,
+        reservedColumns: STORE_COLUMNS,
+        isChartRead: true,
+        limit: CHART_LIMIT,
+        ...read,
+      };
+    }
+
+    it("groups a chart by a sheet's field, the rows no sheet matches as null", async () => {
+      const data = await rowsOf(chartRead({ ...sheet, ...countBySoil }));
+
+      expect(data.rows).toEqual([
+        [null, "1"],
+        ["clay", "1"],
+        ["sand", "2"],
+      ]);
+    });
+
+    it("joins the sheets under a second table matched by time, on a page and on a chart", async () => {
+      const page = await rowsOf(
+        joinedRead({
+          experimentId: experiment,
+          ...sheet,
+          isChartRead: false,
+          columns: ["id", "soil", "second__device"],
+          limit: 10,
+          offset: 0,
+        }),
+      );
+      const chart = await rowsOf(
+        joinedRead({ experimentId: experiment, ...sheet, ...countBySoil, ...flaggedOnly }),
+      );
+
+      expect(page.rows).toEqual([
+        ["1", "clay", '["reg-1","SN1"]'],
+        ["2", "sand", '["phone-a","Ambit (d2)"]'],
+        ["3", "sand", null],
+        ["4", null, null],
+      ]);
+      expect(chart.rows).toEqual([
+        ["clay", "1"],
+        ["sand", "1"],
       ]);
     });
   });

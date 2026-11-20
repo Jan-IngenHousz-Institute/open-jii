@@ -619,6 +619,35 @@ describe("ExperimentStoreReadsService", () => {
     expect(build).toHaveBeenNthCalledWith(4, expect.objectContaining({ metadataSheets: [] }));
   });
 
+  it("hands the store the sheets for a joined read that shows a field of its second table's, and reads none for any other", async () => {
+    const sheets = [{ id: "s1", matchOn: "plot", schema: "OBJECT<soil: STRING>", version: "4" }];
+    const read = vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const metadata = { columnName: "custom_metadata", schema: "OBJECT<soil: STRING>", suffix: "m" };
+    const joined = (secondaryColumn: string): ExperimentQueryParams => ({
+      ...page,
+      columns: ["id", "second_column"],
+      join: {
+        secondary: { tableName: "mac1", tableType: "macro", variants: [metadata] },
+        primaryColumns: ["id", "timestamp", "device_id"],
+        secondaryColumns: [{ name: secondaryColumn, alias: "second_column" }],
+        matchColumn: "device_id",
+        primaryTimeColumn: "timestamp",
+        primaryTimeType: "TIMESTAMP",
+        secondaryTimeColumn: "timestamp",
+        secondaryTimeType: "TIMESTAMP",
+        toleranceMinutes: 60,
+      },
+    });
+
+    assertSuccess(await reads.buildQuery(joined("soil")));
+    assertSuccess(await reads.buildQuery(joined("id")));
+
+    expect(read).toHaveBeenCalledOnce();
+    expect(build).toHaveBeenNthCalledWith(1, expect.objectContaining({ metadataSheets: sheets }));
+    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ metadataSheets: [] }));
+  });
+
   it("hands the store the sheets for a metadata field named like one of the store's own lists", async () => {
     const schema = "OBJECT<__order_ids: BIGINT>";
     const sheets = [{ id: "s1", matchOn: "plot", schema, version: "4" }];

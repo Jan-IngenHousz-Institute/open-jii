@@ -267,7 +267,8 @@ export class ServingStoreAdapter implements ServingStorePort {
     const builder = new StoreQueryBuilder()
       .readForChart(table, params.experimentId, identifier)
       .reserve(secondary.reservedColumns ?? [])
-      .serialNumbers(params.deviceSerials ?? []);
+      .serialNumbers(params.deviceSerials ?? [])
+      .metadataSheets(params.metadataSheets ?? []);
     for (const { columnName, schema, suffix } of secondary.variants ?? []) {
       builder.parseVariant(columnName, schema, suffix);
     }

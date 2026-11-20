@@ -102,6 +102,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private fromClause = "";
   /** The table a chart reads with FINAL, which an alias must come before. */
   private finalTable?: string;
+  /** An as-of read's second table, joined beside the rows every statement reads. */
+  private asOfJoin?: string;
   private joinsTable = false;
   private firstRows?: FirstRows & { count: number };
   private columns: StoreColumn[] = [];
@@ -635,17 +637,20 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * warehouse groups its struct by.
    */
   buildValues(): string {
-    const projection = this.outputColumns()
+    const outputs = this.outputColumns();
+    const projection = outputs
       .map((column) => `${this.valueOf(column)} AS ${this.quoteName(column.name)}`)
       .join(", ");
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const first = this.firstRows;
+    const isMetadataPicked = this.readsMetadata([...this.filterColumns, ...(first?.order ?? [])]);
+    const isMetadataRead = isMetadataPicked || this.readsMetadata(outputs.map(({ name }) => name));
     if (first === undefined) {
       return this.joinClauses([
         this.withClause(),
         `SELECT ${projection}`,
-        `FROM ${this.fromClause}`,
+        `FROM ${this.rowsFrom(isMetadataRead)}`,
         where,
       ]);
     }
@@ -662,7 +667,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       .join(", ");
     const firstKeys = this.joinClauses([
       `SELECT ${key}`,
-      `FROM ${this.fromClause}`,
+      `FROM ${this.rowsFrom(isMetadataPicked)}`,
       where,
       first.withTies ? `ORDER BY ${order}` : `ORDER BY ${order}, ${key}`,
       first.withTies ? `LIMIT ${first.count} WITH TIES` : `LIMIT ${first.count}`,
@@ -671,7 +676,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this.joinClauses([
       this.withClause(),
       `SELECT ${projection}`,
-      `FROM ${this.fromClause}`,
+      `FROM ${this.rowsFrom(isMetadataRead)}`,
       `WHERE ${conditions.join(" AND ")}`,
     ]);
   }
@@ -699,10 +704,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       ...values.flatMap(({ name, column }) => this.secondaryValuesOf(name, column)),
     ];
     const where = [...this.whereConditions, `${key} IS NOT NULL`, `${at} IS NOT NULL`];
+    const isMetadataRead = this.readsMetadata([
+      match.column,
+      match.time,
+      ...match.columns.map(({ name }) => name),
+    ]);
     const sql = this.joinClauses([
       this.withClause(),
       `SELECT ${projection.join(", ")}`,
-      `FROM ${this.fromClause}`,
+      `FROM ${this.rowsFrom(isMetadataRead)}`,
       `WHERE ${where.join(" AND ")}`,
       `ORDER BY ${ASOF_KEY}, ${ASOF_TIME}, ${this.columnExpression("id")} ASC`,
       `LIMIT 1 BY ${ASOF_KEY}, ${ASOF_TIME}`,
@@ -727,12 +737,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const at = this.instantOf(this.columnExpression(match.time));
     const isRecent = `${ASOF_SECONDARY}.${ASOF_FOUND} = 1 AND ${ASOF_SECONDARY}.${ASOF_TIME} >= ${at} - INTERVAL ${match.toleranceMinutes} MINUTE`;
     const on = `${key} = ${ASOF_SECONDARY}.${ASOF_KEY} AND ${at} >= ${ASOF_SECONDARY}.${ASOF_TIME}`;
-    const primary =
-      this.finalTable === undefined
-        ? `${this.fromClause} AS ${ASOF_PRIMARY}`
-        : `${this.finalTable} AS ${ASOF_PRIMARY} FINAL`;
-
-    this.fromClause = `${primary} ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
+    this.asOfJoin = `ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
     this.joinsTable = secondary.readsTable;
     this.columns = [
       ...this.columns,
@@ -897,7 +902,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       // on two pages or on none. The key, unique per row, fixes the order.
       const page = this.joinClauses([
         `SELECT ${key}`,
-        `FROM ${isMetadataFilteredOrSorted ? this.withMetadata("") : this.fromClause}`,
+        `FROM ${this.rowsFrom(isMetadataFilteredOrSorted)}`,
         where,
         `${order}, ${key}`,
         limitClause,
@@ -909,17 +914,23 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
           ? [
               this.withClause(),
               `SELECT ${projection}`,
-              `FROM ${this.withMetadata(pageRows)}`,
+              `FROM ${this.rowsFrom(true, pageRows)}`,
               order,
             ]
-          : [this.withClause(), `SELECT ${projection}`, `FROM ${this.fromClause}`, pageRows, order],
+          : [
+              this.withClause(),
+              `SELECT ${projection}`,
+              `FROM ${this.rowsFrom(false)}`,
+              pageRows,
+              order,
+            ],
       );
     }
 
     return this.joinClauses([
       this.withClause(),
       `${selectKeyword} ${projection}`,
-      `FROM ${isMetadataRead ? this.withMetadata("") : this.fromClause}`,
+      `FROM ${this.rowsFrom(isMetadataRead)}`,
       where,
       order,
       limitClause,
@@ -957,7 +968,24 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * The view's rows with the fields of the row each sheet matches, one LEFT JOIN per sheet. The
+   * What a statement reads its rows from: the table's own, with the sheets' fields where the
+   * statement reads custom metadata, and an as-of read's second table beside them. Without the
+   * sheets the statement applies `rowFilter` itself.
+   */
+  private rowsFrom(isMetadataRead: boolean, rowFilter = ""): string {
+    const rows = isMetadataRead ? this.withMetadata(rowFilter) : this.fromClause;
+    if (this.asOfJoin === undefined) {
+      return rows;
+    }
+    const primary =
+      isMetadataRead || this.finalTable === undefined
+        ? `${rows} AS ${ASOF_PRIMARY}`
+        : `${this.finalTable} AS ${ASOF_PRIMARY} FINAL`;
+    return `${primary} ${this.asOfJoin}`;
+  }
+
+  /**
+   * The table's rows with the fields of the row each sheet matches, one LEFT JOIN per sheet. The
    * joins see only the rows `rowFilter` keeps, written on the left side rather than left to the
    * store to push down.
    */

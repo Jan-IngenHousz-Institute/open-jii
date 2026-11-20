@@ -12,6 +12,7 @@ import type { Result } from "../../../common/utils/fp-utils";
 import { UserRepository } from "../../../users/core/repositories/user.repository";
 import type {
   ExperimentQueryParams,
+  ExperimentQuerySource,
   ExperimentTableMetadata,
   ExperimentTableType,
   FlaggedRows,
@@ -318,32 +319,51 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   /**
-   * Whether the read shows, filters or sorts by a custom metadata field, the only reads that join
-   * the sheets. A sheet's fields reach a read only through the custom metadata schema the listing
-   * gave it, and a read that names no columns shows them all.
+   * Whether the read shows, filters or sorts by a custom metadata field, or matches a second table
+   * by time on one of that table's, the only reads that join the sheets. A read that names no
+   * columns shows them all.
    */
   private readsSheets(params: ExperimentQueryParams): boolean {
-    if (!this.store.takesCustomMetadata(params.tableType, params.tableName)) {
-      return false;
-    }
-    const sources = (params.variants ?? []).map(({ columnName, schema, suffix }) => ({
-      column: columnName,
-      schema,
-      suffix: suffix ?? columnName,
-    }));
-    const reserved = [...this.store.reservedNames(), ...(params.reservedColumns ?? [])];
-    const fields = new Set(
-      FlattenedFields.resolve(reserved, sources)
-        .filter(({ column }) => column === "custom_metadata")
-        .map(({ key }) => key),
-    );
+    const fields = this.metadataFields(params);
     const isEveryColumnShown = (params.columns ?? []).length === 0;
     const named = [
       ...(params.filters ?? []).map(({ column }) => column),
       ...(params.columns ?? []),
       params.ordering?.column ?? "",
     ];
-    return (isEveryColumnShown && fields.size > 0) || named.some((name) => fields.has(name));
+    const readsOwnSheets =
+      (isEveryColumnShown && fields.size > 0) || named.some((name) => fields.has(name));
+    const { join } = params;
+    if (readsOwnSheets || join === undefined) {
+      return readsOwnSheets;
+    }
+
+    const matchedFields = this.metadataFields(join.secondary);
+    const matchedNames = [
+      join.matchColumn,
+      join.secondaryTimeColumn,
+      ...join.secondaryColumns.map(({ name }) => name),
+    ];
+    return matchedNames.some((name) => matchedFields.has(name));
+  }
+
+  /** A table's custom metadata fields by the names a read gives them, which reach it only through
+   *  the custom metadata schema the listing gave the table. */
+  private metadataFields(source: ExperimentQuerySource): Set<string> {
+    if (!this.store.takesCustomMetadata(source.tableType, source.tableName)) {
+      return new Set();
+    }
+    const sources = (source.variants ?? []).map(({ columnName, schema, suffix }) => ({
+      column: columnName,
+      schema,
+      suffix: suffix ?? columnName,
+    }));
+    const reserved = [...this.store.reservedNames(), ...(source.reservedColumns ?? [])];
+    return new Set(
+      FlattenedFields.resolve(reserved, sources)
+        .filter(({ column }) => column === "custom_metadata")
+        .map(({ key }) => key),
+    );
   }
 
   /** Every registered device, with only a serial a label shows; any other device reads none. */

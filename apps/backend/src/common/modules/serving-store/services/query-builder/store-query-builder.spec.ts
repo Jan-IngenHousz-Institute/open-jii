@@ -692,6 +692,59 @@ describe("StoreQueryBuilder", () => {
     expect(where).toContain("__asof_secondary.`__asof_label_second__device`");
   });
 
+  describe("custom metadata on a chart", () => {
+    const schema = "OBJECT<soil: STRING>";
+    const sheets = [{ id: "s1", matchOn: "plot", schema, version: "1" }];
+    const sheetJoin =
+      "LEFT JOIN (SELECT identifier, fields FROM experiment_metadata_rows(experiment = 'e1') WHERE sheet_id = 's1') AS sheet_0";
+    const withMetadata = (macroId: string) =>
+      new StoreQueryBuilder()
+        .readForChart(MACRO_RESULTS_TABLE, "e1", macroId)
+        .parseVariant("custom_metadata", schema, "metadata")
+        .metadataSheets(sheets);
+    const matched = (builder: StoreQueryBuilder, name: string) =>
+      builder.buildAsOfSecondary({
+        column: "device_id",
+        time: "timestamp",
+        columns: [{ name, alias: `second__${name}` }],
+      });
+    const match = { column: "device_id", time: "timestamp", toleranceMinutes: 60 };
+
+    it("reads a field from the sheets it joins to the table's own rows", () => {
+      const sql = withMetadata("m1").select(["soil"]).buildValues();
+
+      expect(sql).toContain(sheetJoin);
+      expect(sql).toContain("FROM (SELECT * FROM macro_results FINAL) AS base");
+    });
+
+    it("joins the sheets inside the first table of an as-of read, before the second", () => {
+      const secondary = matched(
+        new StoreQueryBuilder().readForChart(MACRO_RESULTS_TABLE, "e1", "m2"),
+        "id",
+      );
+      const sql = withMetadata("m1")
+        .joinAsOf(secondary, match)
+        .select(["soil", "second__id"])
+        .buildValues();
+
+      const primary = sql.indexOf(") AS __asof_primary ASOF LEFT JOIN (");
+      expect(sql.indexOf(sheetJoin)).toBeGreaterThan(-1);
+      expect(sql.indexOf(sheetJoin)).toBeLessThan(primary);
+    });
+
+    it("reads a second table's field from the sheets joined to that table's rows", () => {
+      const secondary = matched(withMetadata("m2"), "soil");
+      const sql = new StoreQueryBuilder()
+        .readForChart(MACRO_RESULTS_TABLE, "e1", "m1")
+        .joinAsOf(secondary, match)
+        .select(["id", "second__soil"])
+        .buildValues();
+
+      expect(secondary.sql).toContain(sheetJoin);
+      expect(sql).toContain("macro_results AS __asof_primary FINAL ASOF LEFT JOIN (");
+    });
+  });
+
   it("refuses a column the table does not have, and a struct field it cannot read", () => {
     expect(() => measurements().select(["nope"]).build()).toThrow(QueryBuilderInputError);
     expect(() =>
