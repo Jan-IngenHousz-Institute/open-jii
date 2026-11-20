@@ -25,7 +25,8 @@ The security group passed in must admit HTTPS from CloudFront. The shared ALB se
 VPC module admits the `com.amazonaws.global.cloudfront.origin-facing` prefix list, which is what
 AWS documents for an IPv4 VPC origin as well.
 
-Deletion protection is automatically enabled in `prod`.
+Deletion protection is on in `prod` and off elsewhere. `deletion_protection` overrides it, as for
+an ALB about to be removed.
 
 ## Usage
 
@@ -62,6 +63,7 @@ An internet-facing ALB takes public subnets and sets `cloudfront_header_value` i
 | `security_groups`         | Security groups attached to the ALB                           | —                   |
 | `certificate_arn`         | ACM certificate ARN for HTTPS                                 | `""`                |
 | `container_port`          | Port the backend container listens on                         | —                   |
+| `deletion_protection`     | Overrides deletion protection (on in prod only by default)    | `null`              |
 | `idle_timeout`            | Idle timeout in seconds                                       | `60`                |
 | `cloudfront_header_name`  | Custom header name for origin verification (internet-facing)  | `"X-Origin-Verify"` |
 | `cloudfront_header_value` | Custom header value for origin verification (internet-facing) | `null`              |

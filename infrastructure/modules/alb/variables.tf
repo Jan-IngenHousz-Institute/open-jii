@@ -35,6 +35,12 @@ variable "environment" {
   default     = "Dev"
 }
 
+variable "deletion_protection" {
+  description = "Override for deletion protection, which is otherwise on in prod only. Set false on an ALB about to be removed."
+  type        = bool
+  default     = null
+}
+
 variable "idle_timeout" {
   description = "The time in seconds that the connection is allowed to be idle. Default is 60 seconds."
   type        = number

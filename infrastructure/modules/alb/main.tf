@@ -24,7 +24,7 @@ resource "aws_lb" "app_alb" {
 
   # Deletion protection prevents accidental ALB deletion in production
   # Disabled in dev/staging for easier teardown
-  enable_deletion_protection = var.environment == "prod" ? true : false
+  enable_deletion_protection = var.deletion_protection != null ? var.deletion_protection : var.environment == "prod"
 
   # Access logs provide detailed request-level logging for debugging and analytics
   dynamic "access_logs" {
