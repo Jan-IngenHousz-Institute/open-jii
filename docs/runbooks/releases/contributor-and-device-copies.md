@@ -133,6 +133,19 @@ has deployed. It then joins copies that are still filling, and names read blank 
 drains. Finish steps 2 and 3: the names come back as the copies land, and this is no reason to
 roll back.
 
+## 6. Clear the names the annotations' copy kept
+
+Once step 5's checks read the same after the restart, the cutover is confirmed. The lakehouse's copy
+of annotations still holds the author names written before this release, which nothing writes or
+reads any more. A deactivated or closed account's real name would stay there, while
+`contributor_profiles` masks it. Clear them in the SQL editor:
+
+```sql
+UPDATE open_jii_<env>.centrum.experiment_annotations SET user_name = NULL;
+```
+
+A later release drops the column.
+
 ## Rolling back
 
 The previous release's tasks never claim a `contributor` or `device` row, so step 2's rows, and
