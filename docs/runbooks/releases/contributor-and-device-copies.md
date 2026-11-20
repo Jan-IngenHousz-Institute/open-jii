@@ -186,6 +186,13 @@ A later release drops the column.
 
 ## Rolling back
 
+Deploy the previous release with its infrastructure, not only its backend and bundle. OpenTofu
+applies the enriched views (`module "enriched_views"` in `infrastructure/env/<env>/main.tf`), and
+this release's views name an annotation's author from `contributor_profiles`, which the previous
+backend no longer updates. Without the infrastructure, the views, and every export, keep reading it.
+The previous release's plan also destroys `contributor_profiles` and `device_registry`, which it
+does not define.
+
 The previous release's tasks never claim a `contributor` or `device` row, so step 2's rows, and
 every copy the new tasks owed, would wait and fire `experiment-data-outbox-waiting`. Whenever the
 rollback comes, before step 5 or after it, delete them once it is out:
@@ -200,28 +207,30 @@ then call the backend again, and the previous backend serves them.
 
 This release copies annotations to the lakehouse without `user_name`, the column the previous
 release's enriched views read an annotation's author from. Once the previous backend is out, owe
-every annotation created or edited since this release's backend rollout began, so the previous
-backend writes the name again. If step 6 ran, leave out the `WHERE`: it cleared every annotation's
-name.
+every annotation, so the previous backend writes each author's name again. Owe all of them on every
+rollback, not only those changed since the rollout: this release owes no annotation when its
+author's profile changes, so an older annotation can still hold a name its author has since
+changed, or a real name since deactivated or closed, and an addition owed before the rollout can
+land without a name. Step 6, if it ran, cleared every name too.
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, experiment_id, destination)
 SELECT 'annotation'::experiment_data_record_type, id, experiment_id,
        'lakehouse'::experiment_data_destination
 FROM experiment_annotations
-WHERE updated_at >= '<when the rollout began, in UTC>'
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
 ```
 
 Wait until `SELECT count(*) FROM experiment_data_outbox WHERE record_type = 'annotation'` reads 0,
-then check the newest annotations in the SQL editor:
+then check a few annotations whose authors you know in the SQL editor, among them one whose author
+changed their name or deactivated their profile during the release, if there is one:
 
 ```sql
-SELECT id, user_id, user_name, updated_at FROM open_jii_<env>.centrum.experiment_annotations
-ORDER BY updated_at DESC LIMIT 5;
+SELECT id, user_id, user_name FROM open_jii_<env>.centrum.experiment_annotations
+WHERE id IN ('<id>', '<id>', '<id>');
 ```
 
-Each names its author in `user_name`, as the previous release wrote it.
+Each names its author as the platform shows them now, `Unknown User` for a deactivated profile.
 
 When the release comes back, run steps 2 to 4 again: the copies missed every change made meanwhile.
 Run step 6 again too, since the previous release wrote names back.
