@@ -76,6 +76,9 @@
       "showKeyboardShortcuts": "Show keyboard shortcuts",
       "openDocumentation": "Open documentation"
     },
+    "result": {
+      "inParent": "in {{title}}"
+    },
     "status": {
       "searching": "Searching...",
       "errorTitle": "Something went wrong",

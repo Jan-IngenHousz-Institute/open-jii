@@ -35,13 +35,13 @@ export const updateExperimentVisualizationSchema = createInsertSchema(experiment
     dataConfig: zExperimentChartDataConfig,
   });
 
-export const selectExperimentVisualizationSchema = createSelectSchema(
-  experimentVisualizations,
-).extend({
-  config: zExperimentChartConfig,
-  dataConfig: zExperimentChartDataConfig,
-  createdByName: z.string().optional(),
-});
+export const selectExperimentVisualizationSchema = createSelectSchema(experimentVisualizations)
+  .omit({ searchVector: true })
+  .extend({
+    config: zExperimentChartConfig,
+    dataConfig: zExperimentChartDataConfig,
+    createdByName: z.string().optional(),
+  });
 
 // Define the types
 export type CreateExperimentVisualizationDto = z.infer<typeof createExperimentVisualizationSchema>;

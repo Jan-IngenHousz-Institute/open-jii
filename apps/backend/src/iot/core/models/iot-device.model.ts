@@ -10,7 +10,7 @@ export const createIotDeviceSchema = createInsertSchema(iotDevices).omit({
   createdBy: true,
 });
 
-export const selectIotDeviceSchema = createSelectSchema(iotDevices);
+export const selectIotDeviceSchema = createSelectSchema(iotDevices).omit({ searchVector: true });
 
 export type CreateIotDeviceDto = z.infer<typeof createIotDeviceSchema>;
 export type IotDeviceDto = z.infer<typeof selectIotDeviceSchema>;

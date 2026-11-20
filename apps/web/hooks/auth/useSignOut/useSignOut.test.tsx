@@ -11,7 +11,7 @@ import {
 } from "@/hooks/sharing/sharing-query-keys";
 import { invitationsQueryKey } from "@/hooks/user-invitation/useUserInvitations/useUserInvitations";
 import { orpc } from "@/lib/orpc";
-import { createExperimentAccess } from "@/test/factories";
+import { createExperimentAccess, createSearchResult } from "@/test/factories";
 import { render, fireEvent, screen, waitFor } from "@/test/test-utils";
 import { renderHook, createTestQueryClient } from "@/test/test-utils";
 import { useEffect } from "react";
@@ -96,13 +96,12 @@ describe("useSignOut", () => {
     queryClient.setQueryData(deletionBlockersKey, { resources: [], organizations: [] });
     queryClient.setQueryData(globalSearchKey, {
       results: [
-        {
+        createSearchResult({
           type: "organization",
           id: "org-1",
           title: "Private Lab",
-          subtitle: null,
           meta: "research_institute",
-        },
+        }),
       ],
     });
     queryClient.setQueryData(myInvitationsKey, [{ id: "invitation-1" }]);

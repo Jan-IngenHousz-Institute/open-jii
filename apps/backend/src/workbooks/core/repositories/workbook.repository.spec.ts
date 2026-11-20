@@ -1,7 +1,8 @@
 import { StatusCodes } from "http-status-codes";
+import { randomUUID } from "node:crypto";
 
 import { contract } from "@repo/api/contract";
-import { and, eq, experiments, resourceGrants } from "@repo/database";
+import { and, eq, experiments, resourceGrants, sql } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -38,6 +39,120 @@ describe("WorkbookRepository", () => {
   };
 
   describe("findAll search coverage", () => {
+    it.each([
+      ["markdown", { id: "m1", type: "markdown", content: "Chloroplast observations" }],
+      [
+        "question",
+        {
+          id: "q1",
+          type: "question",
+          name: "observations",
+          question: { kind: "open_ended", text: "Describe chloroplast activity" },
+        },
+      ],
+    ])("matches text inside a %s cell", async (_type, cell) => {
+      const name = `Cell notebook ${randomUUID()}`;
+      await testApp.createWorkbook({ name, createdBy: testUserId, cells: [cell] });
+
+      expect(await searchWorkbooks("chloroplast")).toContain(name);
+    });
+
+    it.each([
+      [
+        "multi-choice option",
+        {
+          id: "q1",
+          type: "question",
+          name: "observations",
+          question: { kind: "multi_choice", text: "Select an organelle", options: ["Chloroplast"] },
+        },
+      ],
+      [
+        "question name",
+        {
+          id: "q1",
+          type: "question",
+          name: "chloroplast",
+          question: { kind: "open_ended", text: "Describe the sample" },
+        },
+      ],
+      [
+        "output cell",
+        { id: "o1", type: "output", producedBy: "p1", data: { result: "Chloroplast" } },
+      ],
+    ])("does not match text inside a %s", async (_field, cell) => {
+      const name = `Excluded cell notebook ${randomUUID()}`;
+      await testApp.createWorkbook({ name, createdBy: testUserId, cells: [cell] });
+
+      const matchingName = `Matching cell notebook ${randomUUID()}`;
+      await testApp.createWorkbook({
+        name: matchingName,
+        createdBy: testUserId,
+        cells: [{ id: "m1", type: "markdown", content: "Chloroplast" }],
+      });
+
+      const names = await searchWorkbooks("chloroplast");
+      expect(names).toContain(matchingName);
+      expect(names).not.toContain(name);
+    });
+
+    it("saves a two-megabyte markdown cell without exceeding the tsvector limit", async () => {
+      const content = Array.from(
+        { length: 180000 },
+        (_, index) => `lexeme${index.toString(36).padStart(5, "0")}`,
+      ).join(" ");
+      expect(Buffer.byteLength(content)).toBeGreaterThan(2 * 1024 * 1024);
+      await expect(
+        testApp.database.execute(sql`select to_tsvector('english', ${content})`),
+      ).rejects.toMatchObject({ cause: { code: "54000" } });
+
+      const result = await repository.create(
+        {
+          name: `Large cell notebook ${randomUUID()}`,
+          cells: [{ id: "m1", type: "markdown", content }],
+        },
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0].cells).toEqual([{ id: "m1", type: "markdown", content }]);
+    });
+
+    it("keeps words separated across escaped whitespace in cell text", async () => {
+      const name = `Whitespace notebook ${randomUUID()}`;
+      await testApp.createWorkbook({
+        name,
+        createdBy: testUserId,
+        cells: [{ id: "m1", type: "markdown", content: "Observe\nchloroplast\tactivity" }],
+      });
+
+      expect(await searchWorkbooks("chloroplast")).toContain(name);
+    });
+
+    it("ranks name above description above repeated cell text with the same creator", async () => {
+      const suffix = randomUUID();
+      const nameMatch = `Chloroplast notebook ${suffix}`;
+      const descriptionMatch = `Description notebook ${suffix}`;
+      const cellMatch = `Cell notebook ${suffix}`;
+      await testApp.createWorkbook({ name: nameMatch, createdBy: testUserId });
+      await testApp.createWorkbook({
+        name: descriptionMatch,
+        description: "Chloroplast",
+        createdBy: testUserId,
+      });
+      await testApp.createWorkbook({
+        name: cellMatch,
+        createdBy: testUserId,
+        cells: [{ id: "m1", type: "markdown", content: "Chloroplast ".repeat(40) }],
+      });
+
+      const names = await searchWorkbooks("chloroplast");
+
+      expect(names).toEqual(expect.arrayContaining([nameMatch, descriptionMatch, cellMatch]));
+      expect(names.indexOf(nameMatch)).toBeLessThan(names.indexOf(descriptionMatch));
+      expect(names.indexOf(descriptionMatch)).toBeLessThan(names.indexOf(cellMatch));
+    });
+
     it("matches the name", async () => {
       await testApp.createWorkbook({
         name: "Calibration helper workbook",

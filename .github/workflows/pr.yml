@@ -615,7 +615,7 @@ jobs:
         uses: ./.github/actions/tofu/grafana-token
         with:
           workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          service_account_id: ${{ vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
@@ -630,5 +630,5 @@ jobs:
         uses: ./.github/actions/tofu/grafana-token-delete
         with:
           workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          service_account_id: ${{ vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
           token_id: ${{ steps.grafana.outputs.token_id }}

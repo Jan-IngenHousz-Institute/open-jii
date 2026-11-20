@@ -4,17 +4,16 @@ import type { SQL, SQLWrapper } from "@repo/database";
 /**
  * Shared helpers for PostgreSQL full-text search (tsvector/tsquery) + pg_trgm fuzzy matching.
  *
- * Searchable entities (experiments, protocols, macros, workbooks, organizations) have a generated
- * `search_vector` weighting
- * name (A) above description (B). Queries combine FTS prefix matching on the vector (stemming +
- * "photo" -> "photosynthesis") with trigram similarity on the name (typos, "experimnt" ->
- * "experiment"). `ts_rank` + `setweight` make name hits outrank description hits; callers add small
- * capped bonuses for cross-table matches (creator/member names).
+ * Searchable entities have a generated `search_vector` weighting name (A) above description (B).
+ * Queries combine FTS prefix matching on the vector (stemming + "photo" -> "photosynthesis") with
+ * trigram similarity on the name (typos, "experimnt" -> "experiment"). `ts_rank` + `setweight` make
+ * name hits outrank description hits; callers add small capped bonuses for cross-table matches
+ * (creator/member names).
  */
 
 /** Fixed text-search config (English: stemming + stop-word removal). A single config is intentional
  * — no per-row language tracking. MUST match the `to_tsvector('english', …)` baked into the
- * generated `search_vector` columns (packages/database/src/postgres/schema.ts and the 0031 migration). */
+ * generated `search_vector` columns in packages/database/src/postgres/schema.ts. */
 const FTS_CONFIG = "english";
 
 /**
