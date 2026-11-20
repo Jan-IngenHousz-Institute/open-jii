@@ -57,7 +57,8 @@
         "type": "Type",
         "status": "Status",
         "lastSeen": "Last seen",
-        "created": "Registered"
+        "created": "Registered",
+        "family": "Family"
       },
       "status": {
         "registered": "Registered",
@@ -65,9 +66,6 @@
         "onboarded": "Onboarded",
         "revoked": "Revoked",
         "retired": "Retired"
-      },
-      "tabs": {
-        "all": "All"
       },
       "sections": {
         "groups": "Groups"
@@ -653,7 +651,6 @@
       "monitoring": {
         "filter": {
           "searchPlaceholder": "Search devices",
-          "all": "All",
           "offline": "Offline",
           "silent": "Silent",
           "noMatches": "No devices match the current filter."

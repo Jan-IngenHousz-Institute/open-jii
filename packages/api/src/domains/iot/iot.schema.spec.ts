@@ -7,6 +7,8 @@ import {
   zIotDeviceActivity,
   zIotDeviceDetail,
   zIotDeviceList,
+  zIotDeviceFilterQuery,
+  zIotDeviceListResponse,
   zRegisterIotDeviceBody,
   zIssueIotCredentialsResponse,
   zOnboardDeviceBody,
@@ -551,5 +553,65 @@ describe("Iot Schema", () => {
     it("rejects an empty install id", () => {
       expect(zEnsureMobileDeviceBody.safeParse({ installId: "" }).success).toBe(false);
     });
+  });
+});
+
+describe("IoT device listing compatibility", () => {
+  it("keeps every query input optional without injecting defaults", () => {
+    expect(zIotDeviceFilterQuery.parse({})).toEqual({});
+    expect(zIotDeviceListResponse.parse([])).toEqual([]);
+  });
+
+  it("accepts multiple rung and family values and ordered sort criteria", () => {
+    expect(
+      zIotDeviceFilterQuery.parse({
+        page: "2",
+        status: ["provisioned", "onboarded"],
+        family: "multispeq",
+        sort: [
+          { field: "status", direction: "asc" },
+          { field: "name", direction: "desc" },
+        ],
+      }),
+    ).toEqual({
+      page: 2,
+      status: ["provisioned", "onboarded"],
+      family: ["multispeq"],
+      sort: [
+        { field: "status", direction: "asc" },
+        { field: "name", direction: "desc" },
+      ],
+    });
+  });
+
+  it("requires every rung count in the paging envelope", () => {
+    const page = {
+      items: [],
+      page: 1,
+      pageSize: 20,
+      totalPages: 1,
+      totalCount: 0,
+      statusCounts: { registered: 0, provisioned: 0, onboarded: 0, revoked: 0, retired: 0 },
+    };
+    expect(zIotDeviceListResponse.safeParse(page).success).toBe(true);
+    expect(
+      zIotDeviceListResponse.safeParse({ ...page, statusCounts: { registered: 0 } }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    { page: 0 },
+    { pageSize: 101 },
+    { status: "active" },
+    { family: "unknown" },
+    { sort: [{ field: "connectivity", direction: "asc" }] },
+    {
+      sort: [
+        { field: "name", direction: "asc" },
+        { field: "name", direction: "desc" },
+      ],
+    },
+  ])("rejects unsupported listing inputs %j", (input) => {
+    expect(zIotDeviceFilterQuery.safeParse(input).success).toBe(false);
   });
 });

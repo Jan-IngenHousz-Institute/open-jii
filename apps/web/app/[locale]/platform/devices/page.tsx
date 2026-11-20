@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: DevicesPageProps): Promise<Me
 
 export default function DevicesPage() {
   // The fleet's warehouse panels stay in the browser: a slow read would hold the whole page.
+  // Fleet tiles need the full registry; the table fetches its own paginated view.
   return (
     <PrefetchedQueries queries={(utils) => [iotDevicesQuery(utils), iotDeviceGroupsQuery(utils)]}>
       <DevicesOverviewContent />

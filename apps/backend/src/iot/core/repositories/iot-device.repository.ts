@@ -1,7 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { IotDeviceFilterQuery, IotDeviceRung } from "@repo/api/domains/iot/iot.schema";
 import {
   and,
+  asc,
   desc,
   deleteResourceGrants,
   eq,
@@ -13,6 +15,7 @@ import {
   or,
   sql,
   ensurePersonalOrganization,
+  experimentDevices,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
@@ -27,12 +30,101 @@ import { CreateIotDeviceDto, IotDeviceDto, UpdateIotDeviceDto } from "../models/
 
 const { searchVector: _searchVector, ...deviceColumns } = getTableColumns(iotDevices);
 
+type DeviceListingParams = Omit<IotDeviceFilterQuery, "page" | "pageSize"> & { userId: string };
+
+export function deviceRungSql() {
+  const status = sql`${iotDevices}.${sql.identifier(iotDevices.status.name)}`;
+  const deviceId = sql`${iotDevices}.${sql.identifier(iotDevices.id.name)}`;
+  const boundDeviceId = sql`${experimentDevices}.${sql.identifier(experimentDevices.deviceId.name)}`;
+  return sql<IotDeviceRung>`case when ${status} = 'active' then
+    (case when exists (select 1 from ${experimentDevices}
+      where ${boundDeviceId} = ${deviceId})
+      then 'onboarded' else 'provisioned' end)
+    else ${status}::text end`;
+}
+
 @Injectable()
 export class IotDeviceRepository {
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
   ) {}
+
+  private buildListing({ userId, search, status, family, sort }: DeviceListingParams) {
+    const term = search?.trim();
+    const like = term ? `%${escapeLike(term)}%` : undefined;
+    const where = and(
+      this.visibleCondition(userId),
+      like ? or(ilike(iotDevices.name, like), ilike(iotDevices.serialNumber, like)) : undefined,
+      family?.length ? inArray(iotDevices.deviceType, family) : undefined,
+      status?.length ? inArray(deviceRungSql(), status) : undefined,
+    );
+    const rung = deviceRungSql();
+    const fields = {
+      name: sql`coalesce(${iotDevices.name}, ${iotDevices.serialNumber})`,
+      status: sql`case ${rung} when 'registered' then 0 when 'provisioned' then 1
+        when 'onboarded' then 2 when 'revoked' then 3 when 'retired' then 4 end`,
+      family: sql`${iotDevices.deviceType}::text`,
+      registered: iotDevices.createdAt,
+    };
+    const orderBy = [
+      ...(sort?.length
+        ? sort.map(
+            ({ field, direction }) =>
+              sql`${direction === "asc" ? asc(fields[field]) : desc(fields[field])} nulls last`,
+          )
+        : [sql`${desc(iotDevices.createdAt)} nulls last`]),
+      asc(iotDevices.id),
+    ];
+    return { where, orderBy };
+  }
+
+  async findAll(params: DeviceListingParams): Promise<Result<IotDeviceDto[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy } = this.buildListing(params);
+      return this.database
+        .select(deviceColumns)
+        .from(iotDevices)
+        .where(where)
+        .orderBy(...orderBy);
+    });
+  }
+
+  async findPage(params: DeviceListingParams, page: number, pageSize: number) {
+    return tryCatch(async () => {
+      const { where, orderBy } = this.buildListing(params);
+      const countsWhere = this.buildListing({ ...params, status: undefined }).where;
+      const rung = deviceRungSql();
+      const [items, counts] = await Promise.all([
+        this.database
+          .select(deviceColumns)
+          .from(iotDevices)
+          .where(where)
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        this.database
+          .select({ rung, count: sql<number>`count(*)::int` })
+          .from(iotDevices)
+          .where(countsWhere)
+          .groupBy(sql`1`),
+      ]);
+      const statusCounts: Record<IotDeviceRung, number> = {
+        registered: 0,
+        provisioned: 0,
+        onboarded: 0,
+        revoked: 0,
+        retired: 0,
+      };
+      for (const { rung, count } of counts) statusCounts[rung] = count;
+      const totalCount = counts.reduce(
+        (total, { rung, count }) =>
+          total + (!params.status?.length || params.status.includes(rung) ? count : 0),
+        0,
+      );
+      return { items, totalCount, statusCounts };
+    });
+  }
 
   async create(
     createIotDeviceDto: CreateIotDeviceDto,

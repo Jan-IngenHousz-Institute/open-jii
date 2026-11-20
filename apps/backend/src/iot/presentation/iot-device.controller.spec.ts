@@ -7,6 +7,7 @@ import type {
   IotDevice,
   IotDeviceDetail,
   IotDeviceList,
+  IotDevicePaginatedList,
 } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
@@ -299,14 +300,61 @@ describe("IotDeviceController", () => {
 
   describe("listIotDevices", () => {
     it("lists the user's devices (200)", async () => {
-      await testApp.createIotDevice({ createdBy: userId });
+      const { searchVector: _searchVector, ...device } = await testApp.createIotDevice({
+        createdBy: userId,
+      });
 
       const response: SuperTestResponse<IotDeviceList> = await testApp
         .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
         .withAuth(userId)
         .expect(StatusCodes.OK);
 
-      expect(response.body).toHaveLength(1);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body).toEqual([
+        {
+          ...device,
+          createdAt: device.createdAt.toISOString(),
+          updatedAt: device.updatedAt.toISOString(),
+          connectivity: null,
+          boundExperimentCount: 0,
+        },
+      ]);
+    });
+
+    it("returns the paged envelope and parses repeated filters and structured sort", async () => {
+      await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        deviceType: "multispeq",
+        name: "MSQ-2",
+      });
+      await testApp.createIotDevice({
+        createdBy: userId,
+        status: "revoked",
+        deviceType: "multispeq",
+        name: "MSQ-2 revoked",
+      });
+      const response: SuperTestResponse<IotDevicePaginatedList> = await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
+        .query({
+          page: 1,
+          search: "MSQ-2",
+          family: "multispeq",
+          status: ["onboarded", "provisioned"],
+          "sort[0][field]": "name",
+          "sort[0][direction]": "asc",
+        })
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+      expect(response.body).toMatchObject({
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+        totalCount: 1,
+        statusCounts: { registered: 0, provisioned: 1, onboarded: 0, revoked: 1, retired: 0 },
+      });
+      expect(response.body.items).toHaveLength(1);
+      expect(response.body.items[0].createdAt).toEqual(expect.any(String));
     });
 
     it("returns 401 when unauthenticated", async () => {

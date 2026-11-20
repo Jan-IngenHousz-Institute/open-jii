@@ -3,58 +3,60 @@
 import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
 import { DeviceIdentity } from "@/components/iot-devices/device-row";
 import { IotDeviceStatusBadge } from "@/components/iot-devices/iot-device-status-badge";
-import { Lock } from "lucide-react";
-import { useState } from "react";
+import { ListFilterBar } from "@/components/list-filter-bar";
+import { ListPagination } from "@/components/list-pagination";
+import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { ArrowDown, ArrowUp, ArrowUpDown, Layers, Lock } from "lucide-react";
 
 import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@repo/ui/components/pagination";
+import { Button } from "@repo/ui/components/button";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { SearchInput } from "@repo/ui/components/search-input";
 import { cn } from "@repo/ui/lib/utils";
 
-/** Matches the device registry's page size, so both device lists page alike. */
-const PAGE_SIZE = 25;
+import type { ExperimentDevicesListModel } from "./use-experiment-devices-list";
 
 interface ExperimentDevicesListProps {
-  devices: ExperimentDeviceEntry[];
+  list: ExperimentDevicesListModel;
   selectedClientId: string | null;
   onSelect: (clientId: string) => void;
 }
 
 /** Rows compose `DeviceIdentity`: `DeviceRow`'s `selection` prop is multi-select grammar. */
 export function ExperimentDevicesList({
-  devices,
+  list,
   selectedClientId,
   onSelect,
 }: ExperimentDevicesListProps) {
   const { t } = useTranslation("iot");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const { t: tCommon } = useTranslation("common");
+  const pageRows = list.data?.items ?? [];
 
-  const query = search.trim().toLowerCase();
-  const matching =
-    query === ""
-      ? devices
-      : devices.filter((entry) => {
-          const haystack = [entry.clientId, entry.device?.name, entry.device?.serialNumber];
-          return haystack.some((value) => value?.toLowerCase().includes(query));
-        });
-
-  const totalPages = Math.max(1, Math.ceil(matching.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = matching.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  const changeSearch = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
+  function renderSortHeader(field: "name" | "family", label: string) {
+    const index = list.sort.findIndex((item) => item.field === field);
+    const direction = list.sort.find((item) => item.field === field)?.direction;
+    const Icon = direction === "asc" ? ArrowUp : direction === "desc" ? ArrowDown : ArrowUpDown;
+    const state =
+      direction === "asc"
+        ? "sortAscending"
+        : direction === "desc"
+          ? "sortDescending"
+          : "sortUnsorted";
+    return (
+      <button
+        type="button"
+        className="hover:text-foreground inline-flex items-center gap-1 text-left text-[11px] font-semibold uppercase focus-visible:outline-2 focus-visible:outline-offset-2"
+        aria-label={`${label}: ${tCommon(`common.${state}`)}${index > 0 ? `, ${tCommon("common.sortSecondary")}` : ""}`}
+        onClick={(event) => list.toggleSort(field, event.shiftKey)}
+      >
+        {label}
+        <Icon aria-hidden className="size-3.5" />
+        {index > 0 && <span aria-hidden>2</span>}
+      </button>
+    );
+  }
 
   function renderRow(entry: ExperimentDeviceEntry) {
     const isSelected = entry.clientId === selectedClientId;
@@ -73,18 +75,25 @@ export function ExperimentDevicesList({
               "bg-muted before:bg-primary before:absolute before:inset-y-0 before:left-0 before:w-0.5",
           )}
         >
-          {entry.device === null ? (
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-medium">
-                {entry.reported?.deviceName ?? t("iot.experimentDevices.unregistered")}
+          <span className="flex w-full min-w-0 items-start justify-between gap-2">
+            {entry.device === null ? (
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium">
+                  {entry.reported?.deviceName ?? t("iot.experimentDevices.unregistered")}
+                </span>
+                <span className="text-muted-foreground truncate font-mono text-xs">
+                  {entry.clientId}
+                </span>
               </span>
-              <span className="text-muted-foreground truncate font-mono text-xs">
-                {entry.clientId}
+            ) : (
+              <DeviceIdentity device={entry.device} showSerial />
+            )}
+            {entry.device && (
+              <span className="text-muted-foreground shrink-0 text-xs">
+                {getSensorFamilyLabel(entry.device.deviceType)}
               </span>
-            </span>
-          ) : (
-            <DeviceIdentity device={entry.device} showSerial />
-          )}
+            )}
+          </span>
 
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             {entry.device !== null && (
@@ -117,54 +126,77 @@ export function ExperimentDevicesList({
 
   return (
     <div className="border-border overflow-hidden rounded-lg border">
-      <div className="p-3">
-        <SearchInput
-          value={search}
-          onChange={changeSearch}
-          placeholder={t("iot.experimentDevices.searchPlaceholder")}
-          className="w-full"
+      <div className="space-y-3 p-3">
+        <ListFilterBar
+          search={
+            <SearchInput
+              value={list.search}
+              onChange={list.setSearch}
+              isLoading={list.isSearchPending}
+              placeholder={t("iot.experimentDevices.searchPlaceholder")}
+              className="w-full"
+            />
+          }
+          filters={[
+            {
+              key: "deviceFamily",
+              label: t("iot.devices.columns.family"),
+              icon: Layers,
+              options: list.filterShape.deviceFamily.options.map((value) => ({
+                value,
+                label: getSensorFamilyLabel(value),
+              })),
+              selected: list.filters.deviceFamily,
+              onChange: (values) =>
+                list.setFilter("deviceFamily", list.filterShape.deviceFamily.array().parse(values)),
+            },
+          ]}
+          onClearFilters={list.clearFilters}
+          actions={
+            <ResetSortingButton active={list.sort.length > 0} onReset={() => list.setSort([])} />
+          }
         />
       </div>
+      <div className="border-border text-muted-foreground flex justify-between gap-2 border-t px-3 py-2">
+        {renderSortHeader("name", t("iot.devices.columns.name"))}
+        {renderSortHeader("family", t("iot.devices.columns.family"))}
+      </div>
 
-      {matching.length === 0 ? (
-        <p className="text-muted-foreground border-border border-t px-3 py-6 text-center text-sm">
-          {t("iot.experimentDevices.searchNoMatches")}
-        </p>
+      {pageRows.length === 0 ? (
+        <div className="text-muted-foreground border-border space-y-3 border-t px-3 py-6 text-center text-sm">
+          <p>
+            {t(
+              list.hasActiveFilters
+                ? "iot.devices.zeroResults.title"
+                : "iot.experimentDevices.searchNoMatches",
+            )}
+          </p>
+          {(list.hasActiveFilters || list.search.trim() !== "") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                list.clearFilters();
+                list.setSearch("");
+              }}
+            >
+              {tCommon("common.clearFilters")}
+            </Button>
+          )}
+        </div>
       ) : (
         <ScrollArea className="border-border max-h-128 overflow-y-auto border-t">
           <ul className="divide-border min-w-0 divide-y">{pageRows.map(renderRow)}</ul>
         </ScrollArea>
       )}
 
-      {totalPages > 1 && (
-        <div className="border-border flex items-center justify-between border-t px-3 py-2">
-          <span className="text-muted-foreground text-xs">
-            {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
-          </span>
-          <Pagination className="m-0 w-auto">
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  size="sm"
-                  onClick={() => {
-                    setPage(Math.max(1, currentPage - 1));
-                  }}
-                  aria-disabled={currentPage <= 1}
-                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-              <PaginationItem>
-                <PaginationNext
-                  size="sm"
-                  onClick={() => {
-                    setPage(Math.min(totalPages, currentPage + 1));
-                  }}
-                  aria-disabled={currentPage >= totalPages}
-                  className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+      {list.data && pageRows.length > 0 && (
+        <div className="border-border border-t px-3 py-2">
+          <ListPagination
+            page={list.data.page}
+            totalPages={list.data.totalPages}
+            onPageChange={list.setPage}
+          />
         </div>
       )}
     </div>

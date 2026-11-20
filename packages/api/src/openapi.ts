@@ -38,6 +38,10 @@ export async function generateOpenApiDocument() {
   // that wire format explicit in the published document for generated clients.
   for (const [path, example] of [
     [
+      "/api/v1/devices",
+      "sort[0][field]=registered&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
+    ],
+    [
       "/api/v1/experiments",
       "sort[0][field]=updated&sort[0][direction]=desc&sort[1][field]=owner&sort[1][direction]=asc",
     ],
