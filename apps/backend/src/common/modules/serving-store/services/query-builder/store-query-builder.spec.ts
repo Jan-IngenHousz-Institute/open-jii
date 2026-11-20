@@ -245,11 +245,19 @@ describe("StoreQueryBuilder", () => {
     expect(Buffer.byteLength(sql)).toBeLessThan(1_048_576);
   });
 
+  it("breaks ties by the row id under any sort, as the warehouse does", () => {
+    const sql = measurements()
+      .orderBy({ column: "device_name", direction: "DESC", rowId: "id" })
+      .build();
+
+    expect(sql).toMatch(/ORDER BY device_name DESC NULLS LAST, id ASC$/);
+  });
+
   it("sorts text that holds a number by its value, then by the text and the row id", () => {
     const sql = measurements()
       .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")
       .select(["plot"])
-      .orderBy({ column: "plot", direction: "DESC", mode: { kind: "numericString", rowId: "id" } })
+      .orderBy({ column: "plot", direction: "DESC", rowId: "id", mode: { kind: "numericString" } })
       .build();
 
     const answer = "questions_data['plot']";
@@ -264,7 +272,7 @@ describe("StoreQueryBuilder", () => {
       .filter({ column: "height", operator: "equals", value: "n/a" })
       .filter({ column: "height", operator: "greater_than", value: 10 })
       .filter({ column: "plot", operator: "equals", value: "007" })
-      .orderBy({ column: "height", direction: "DESC", mode: { kind: "number", rowId: "id" } })
+      .orderBy({ column: "height", direction: "DESC", rowId: "id", mode: { kind: "number" } })
       .build();
 
     const answer = "questions_data['height']";

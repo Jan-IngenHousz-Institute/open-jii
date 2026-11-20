@@ -314,7 +314,7 @@ describe("wrapWithAggregation", () => {
       const ordering = { column: "answer", direction: "DESC" as const };
       const sql = wrapWithAggregation("SELECT * FROM t", {
         aggregation,
-        ordering: { ...ordering, mode: { kind: "numericString", rowId: "id" } },
+        ordering: { ...ordering, rowId: "id", mode: { kind: "numericString" } },
       });
 
       expect(sql).toBe(wrapWithAggregation("SELECT * FROM t", { aggregation, ordering }));

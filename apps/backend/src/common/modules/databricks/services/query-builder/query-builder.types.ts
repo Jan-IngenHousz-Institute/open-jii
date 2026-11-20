@@ -95,10 +95,9 @@ export interface AggregationSpec {
 export interface QueryOrdering {
   column: string;
   direction?: "ASC" | "DESC";
-  mode?:
-    | { kind: "pseudonym"; salt: string }
-    | { kind: "numericString"; rowId?: string }
-    | { kind: "number"; rowId?: string };
+  /** Orders rows with equal sort values, so every read splits them across pages the same way. */
+  rowId?: string;
+  mode?: { kind: "pseudonym"; salt: string } | { kind: "numericString" } | { kind: "number" };
 }
 
 export interface AsOfJoin {
