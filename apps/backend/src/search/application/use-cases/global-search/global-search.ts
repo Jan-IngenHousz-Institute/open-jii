@@ -3,8 +3,11 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { SearchResult, SearchResultType } from "@repo/api/domains/search/search.schema";
 
 import { Result, isFailure, success } from "../../../../common/utils/fp-utils";
+import { ExperimentDashboardRepository } from "../../../../experiments/core/repositories/experiment-dashboard.repository";
+import { ExperimentVisualizationRepository } from "../../../../experiments/core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
 import { IotCalibrationDefinitionRepository } from "../../../../iot/core/repositories/iot-calibration-definition.repository";
+import { IotDeviceRepository } from "../../../../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { OrganizationRepository } from "../../../../organizations/core/repositories/organization.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
@@ -16,6 +19,7 @@ interface SearchableEntity {
   name: string;
   description: string | null;
   score: number;
+  parent?: SearchResult["parent"];
 }
 
 @Injectable()
@@ -29,6 +33,9 @@ export class GlobalSearchUseCase {
     private readonly workbookRepository: WorkbookRepository,
     private readonly calibrationDefinitionRepository: IotCalibrationDefinitionRepository,
     private readonly organizationRepository: OrganizationRepository,
+    private readonly deviceRepository: IotDeviceRepository,
+    private readonly dashboardRepository: ExperimentDashboardRepository,
+    private readonly visualizationRepository: ExperimentVisualizationRepository,
   ) {}
 
   async execute(
@@ -43,24 +50,36 @@ export class GlobalSearchUseCase {
     // by exactly the same rules: there is one search definition per entity, and global search
     // is purely a consumer of it. Overfetching `limit` per type removes any per-type recall
     // ceiling, so the 9th-best experiment can still outrank every macro.
-    const [experiments, protocols, macros, workbooks, calibrations, organizations] =
-      await Promise.all([
-        this.experimentRepository.findAll(userId, undefined, undefined, query, limit),
-        // Pass the caller so each findAll applies the same access scoping it uses
-        // for listing: global search must not surface private resources the caller
-        // cannot access.
-        this.protocolRepository.findAll(query, undefined, userId, limit),
-        this.macroRepository.findAll({ search: query, userId }, limit),
-        this.workbookRepository.findAll({ search: query, userId }, limit),
-        // A hidden feature's results would open a page that is not there, so it is not asked.
-        includeCalibrations
-          ? this.calibrationDefinitionRepository.search(query, userId, limit)
-          : Promise.resolve(success([])),
-        // Organizations are a grantee, never a grantable resource, so their boundary is
-        // the directory's own — public or the caller's, personal workspaces never —
-        // rather than the shared resource access scope.
-        this.organizationRepository.searchDirectory(userId, query, limit),
-      ]);
+    const [
+      experiments,
+      protocols,
+      macros,
+      workbooks,
+      calibrations,
+      organizations,
+      devices,
+      dashboards,
+      visualizations,
+    ] = await Promise.all([
+      this.experimentRepository.findAll(userId, undefined, undefined, query, limit),
+      // Pass the caller so each findAll applies the same access scoping it uses
+      // for listing: global search must not surface private resources the caller
+      // cannot access.
+      this.protocolRepository.findAll(query, undefined, userId, limit),
+      this.macroRepository.findAll({ search: query, userId }, limit),
+      this.workbookRepository.findAll({ search: query, userId }, limit),
+      // A hidden feature's results would open a page that is not there, so it is not asked.
+      includeCalibrations
+        ? this.calibrationDefinitionRepository.search(query, userId, limit)
+        : Promise.resolve(success([])),
+      // Organizations are a grantee, never a grantable resource, so their boundary is
+      // the directory's own — public or the caller's, personal workspaces never —
+      // rather than the shared resource access scope.
+      this.organizationRepository.searchDirectory(userId, query, limit),
+      this.deviceRepository.search(query, userId, limit),
+      this.dashboardRepository.search(query, userId, limit),
+      this.visualizationRepository.search(query, userId, limit),
+    ]);
 
     if (isFailure(experiments)) return experiments;
     if (isFailure(protocols)) return protocols;
@@ -68,6 +87,9 @@ export class GlobalSearchUseCase {
     if (isFailure(workbooks)) return workbooks;
     if (isFailure(calibrations)) return calibrations;
     if (isFailure(organizations)) return organizations;
+    if (isFailure(devices)) return devices;
+    if (isFailure(dashboards)) return dashboards;
+    if (isFailure(visualizations)) return visualizations;
 
     // The repositories compute one comparable score per row (same lexical base, same capped
     // cross-table bonus, same tier weight), so merging is a plain sort. `id` breaks ties, making
@@ -79,6 +101,23 @@ export class GlobalSearchUseCase {
       ...toResults(workbooks.value, "workbook", () => null),
       ...toResults(calibrations.value, "calibration_definition", (c) => c.family),
       ...toResults(organizations.value, "organization", (o) => o.type),
+      ...toResults(
+        dashboards.value.map((row) => ({
+          ...row,
+          parent: { type: "experiment" as const, ...row.parent },
+        })),
+        "dashboard",
+        () => null,
+      ),
+      ...toResults(
+        visualizations.value.map((row) => ({
+          ...row,
+          parent: { type: "experiment" as const, ...row.parent },
+        })),
+        "visualization",
+        () => null,
+      ),
+      ...toResults(devices.value, "device", (d) => d.deviceType),
     ]
       .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
       .slice(0, limit);
@@ -104,6 +143,7 @@ function toResults<T extends SearchableEntity>(
     title: row.name,
     subtitle: row.description,
     meta: meta(row),
+    parent: row.parent ?? null,
     score: row.score,
   }));
 }
