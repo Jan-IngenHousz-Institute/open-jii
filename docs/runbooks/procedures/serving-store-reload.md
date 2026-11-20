@@ -171,7 +171,7 @@ a small experiment only adds small parts, which reads handle.
 
 ## Metadata sheets
 
-The reload copies gold only. The store's `metadata_rows` and `metadata_sheets` come from the
+The reload copies gold and silver only. The store's `metadata_rows` and `metadata_sheets` come from the
 lakehouse's copy of the sheets, `centrum.experiment_custom_metadata`, which the backend's outbox keeps
 to Postgres: the Centrum feed reads that table's change feed and sends each sheet's rows, and the
 identifiers an edit dropped or a deletion removed as deleted rows, then the sheet itself with the
