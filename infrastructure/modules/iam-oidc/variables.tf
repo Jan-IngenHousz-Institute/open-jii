@@ -24,6 +24,12 @@ variable "thumbprint_list" {
 variable "role_name" {
   description = "Name of the OIDC IAM role."
   type        = string
+
+  # The foundation role's policy and the deploy role's guard match CI's roles by this prefix.
+  validation {
+    condition     = startswith(var.role_name, "GithubActions")
+    error_message = "role_name must start with GithubActions."
+  }
 }
 
 variable "repository" {
@@ -58,6 +64,40 @@ variable "plan_role_name" {
   description = "Name of the read-only plan role."
   type        = string
   default     = "GithubActionsPlanAccess"
+
+  validation {
+    condition     = startswith(var.plan_role_name, "GithubActions")
+    error_message = "plan_role_name must start with GithubActions."
+  }
+}
+
+variable "foundation_role_github_environment" {
+  description = "GitHub environment allowed to assume the role that applies the foundation root. Null skips the role."
+  type        = string
+  default     = null
+}
+
+variable "foundation_role_name" {
+  description = "Name of the role that applies the foundation root."
+  type        = string
+  default     = "GithubActionsFoundationAccess"
+
+  validation {
+    condition     = startswith(var.foundation_role_name, "GithubActions")
+    error_message = "foundation_role_name must start with GithubActions."
+  }
+}
+
+variable "foundation_role_allowed_refs" {
+  description = "Git refs allowed to assume the foundation role, wildcards allowed. Null allows any ref."
+  type        = list(string)
+  default     = null
+}
+
+variable "foundation_role_boundary_name" {
+  description = "Name of the permissions boundary on the foundation role. An admin creates it outside every root CI applies."
+  type        = string
+  default     = "CiFoundationBoundary"
 }
 
 variable "enabled_services" {

@@ -12,3 +12,8 @@ output "plan_role_arn" {
   description = "ARN of the read-only plan role, or null."
   value       = one(aws_iam_role.plan_role[*].arn)
 }
+
+output "foundation_role_arn" {
+  description = "ARN of the role that applies the foundation root, or null."
+  value       = one(aws_iam_role.foundation_role[*].arn)
+}
