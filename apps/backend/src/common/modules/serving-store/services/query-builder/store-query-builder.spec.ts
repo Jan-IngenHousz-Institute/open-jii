@@ -481,6 +481,32 @@ describe("StoreQueryBuilder", () => {
       expect(Buffer.byteLength(sql)).toBeLessThan(1024 * 1024);
     });
 
+    it("reads a payload, a reserved name or a sheet given after it first read the fields", () => {
+      const builder = measurements().parseVariant(
+        "questions_data",
+        "OBJECT<plot: STRING>",
+        "answer",
+      );
+      const names = () => builder.outputColumns().map(({ name }) => name);
+      expect(names()).toContain("plot");
+
+      builder.reserve(["plot"]);
+      expect(names()).toContain("plot_answer");
+
+      builder.parseVariant("custom_metadata", "OBJECT<soil: STRING>", "metadata");
+      expect(names()).toContain("soil");
+      expect(builder.build()).toContain(
+        "JSONExtract(CAST(NULL AS Nullable(String)), 'Nullable(String)') AS `soil`",
+      );
+
+      builder.metadataSheets([
+        { id: "s1", matchOn: "plot", schema: "OBJECT<soil: STRING>", version: "1" },
+      ]);
+      expect(builder.build()).toContain(
+        "JSONExtract(multiIf(simpleJSONHas(sheet_0_fields, 'soil'), simpleJSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+    });
+
     it("compares a decimal field with a plain number as Spark does, as a decimal of its own scale", () => {
       const sql = withMetadata()
         .select(["id"])

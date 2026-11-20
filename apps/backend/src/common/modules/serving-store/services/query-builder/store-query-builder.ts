@@ -82,6 +82,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
+  /** Kept until a payload, a reserved name or a sheet changes them. */
+  private fields?: Map<string, FlattenedField>;
+  private expressions?: Map<string, string>;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
     this.experiment = this.escapeValue(experimentId);
@@ -91,6 +94,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.phoneAnnotations = table.phoneAnnotations;
     this.takesCustomMetadata = table.takesCustomMetadata ?? false;
     this.reservedColumns.push(...StoreQueryBuilder.reservedNames);
+    this.forgetFields();
     this.from(`${table.view}(experiment = ${this.experiment})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
@@ -112,11 +116,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   parseVariant(column: string, schema: string, suffix = column): this {
     this.variantColumns.push({ column, schema, suffix });
+    this.forgetFields();
     return this;
   }
 
   reserve(columns: string[]): this {
     this.reservedColumns.push(...columns);
+    this.forgetFields();
     return this;
   }
 
@@ -141,6 +147,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         nestsObjects: fields.some(({ type }) => /OBJECT<|VARIANT/.test(type)),
       };
     });
+    this.forgetFields();
     return this;
   }
 
@@ -226,7 +233,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       throw new QueryBuilderInputError(`'${column}' is compared with a time given as text`);
     }
     const isTextAgainstNumber = isNumericType(type) && typeof value === "string";
-    const isField = this.flattenedFields().some(({ key }) => key === column);
+    const isField = this.flattenedFields().has(column);
     if (isTextAgainstNumber && isField) {
       return this.textAsDouble(this.escapeValue(value));
     }
@@ -265,7 +272,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   private isComparedAsDouble(column: string, value: FilterValue): boolean {
-    const field = this.flattenedFields().find(({ key }) => key === column);
+    const field = this.flattenedFields().get(column);
     const type = this.variantCastType(field?.field.type ?? "");
     const isNumberField = type === "BIGINT" || VariantSchema.decimalOf(type) !== null;
     const isText = (Array.isArray(value) ? value : [value]).some(
@@ -306,7 +313,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const base = this.columns
       .filter(({ name }) => !hidden.has(name))
       .map(({ name, type, idOf }) => ({ name, type, idOf }));
-    const flattened = this.flattenedFields();
+    const flattened = [...this.flattenedFields().values()];
     const fields = this.variantColumns.flatMap((variant) =>
       VariantSchema.isObject(variant.schema)
         ? flattened
@@ -408,7 +415,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       return false;
     }
     const fields = new Set(
-      this.flattenedFields()
+      [...this.flattenedFields().values()]
         .filter(({ column }) => column === CUSTOM_METADATA)
         .map(({ key }) => key),
     );
@@ -486,7 +493,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   private outputColumn(name: string): StoreOutputColumn {
-    const field = this.flattenedFields().find(({ key }) => key === name);
+    const field = this.flattenedFields().get(name);
     if (field !== undefined) {
       return {
         name,
@@ -645,7 +652,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** The warehouse type of a column a filter names. A struct's fields here are all text. */
   private typeOf(column: string): string {
-    const field = this.flattenedFields().find(({ key }) => key === column);
+    const field = this.flattenedFields().get(column);
     if (field !== undefined) {
       return this.variantCastType(field.field.type);
     }
@@ -653,17 +660,30 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return path === undefined ? this.baseColumn(name).type : "STRING";
   }
 
-  private fieldExpressions(): Map<string, string> {
-    return new Map(
-      this.flattenedFields().map(({ key, column, field }) => [
+  private fieldExpressions(): ReadonlyMap<string, string> {
+    this.expressions ??= new Map(
+      [...this.flattenedFields().values()].map(({ key, column, field }) => [
         key,
         this.fieldExpression(column, field),
       ]),
     );
+    return this.expressions;
   }
 
-  private flattenedFields(): FlattenedField[] {
-    return FlattenedFields.resolve(this.reservedColumns, this.variantColumns);
+  /** Each field by the name it reads as, which no two fields share. */
+  private flattenedFields(): ReadonlyMap<string, FlattenedField> {
+    this.fields ??= new Map(
+      FlattenedFields.resolve(this.reservedColumns, this.variantColumns).map((field) => [
+        field.key,
+        field,
+      ]),
+    );
+    return this.fields;
+  }
+
+  private forgetFields(): void {
+    this.fields = undefined;
+    this.expressions = undefined;
   }
 
   /**
