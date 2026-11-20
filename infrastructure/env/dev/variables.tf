@@ -31,13 +31,13 @@ variable "databricks_client_secret" {
 }
 
 variable "databricks_auth_type" {
-  description = "How the Databricks providers authenticate: oauth-m2m with the client secret, or github-oidc from a GitHub Actions job"
+  description = "How the Databricks providers authenticate: github-oidc from a GitHub Actions job, databricks-cli with your own `databricks auth login` for a local plan, or oauth-m2m with the client secret"
   type        = string
   default     = "oauth-m2m"
 
   validation {
-    condition     = contains(["oauth-m2m", "github-oidc"], var.databricks_auth_type)
-    error_message = "databricks_auth_type must be oauth-m2m or github-oidc."
+    condition     = contains(["oauth-m2m", "github-oidc", "databricks-cli"], var.databricks_auth_type)
+    error_message = "databricks_auth_type must be oauth-m2m, github-oidc or databricks-cli."
   }
 }
 
@@ -77,43 +77,6 @@ variable "backend_container_port" {
 }
 
 # Authentication secrets
-variable "auth_secret" {
-  description = "Authentication secret token"
-  type        = string
-  sensitive   = true
-
-}
-
-variable "notification_unsubscribe_secret" {
-  description = "Secret that signs notification email unsubscribe links"
-  type        = string
-  sensitive   = true
-}
-
-variable "github_oauth_client_id" {
-  description = "GitHub OAuth client ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "github_oauth_client_secret" {
-  description = "GitHub OAuth client secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "orcid_oauth_client_id" {
-  description = "ORCID OAuth client ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "orcid_oauth_client_secret" {
-  description = "ORCID OAuth client secret"
-  type        = string
-  sensitive   = true
-}
-
 # Backend x Databricks webhook secrets
 variable "backend_webhook_api_key_id" {
   description = "Databricks webhook API key ID"
@@ -152,67 +115,7 @@ variable "api_cloudfront_header_value" {
 }
 
 # Contentful configuration variables
-variable "contentful_space_id" {
-  description = "Contentful space ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "contentful_access_token" {
-  description = "Contentful access token"
-  type        = string
-  sensitive   = true
-}
-
-variable "contentful_preview_access_token" {
-  description = "Contentful preview access token"
-  type        = string
-  sensitive   = true
-}
-
-variable "contentful_preview_secret" {
-  description = "Contentful preview secret"
-  type        = string
-  sensitive   = true
-}
-
 # Mailchimp configuration variables
-variable "mailchimp_api_key" {
-  description = "Mailchimp API key"
-  type        = string
-  sensitive   = true
-}
-
-variable "mailchimp_server_prefix" {
-  description = "Mailchimp server prefix"
-  type        = string
-  sensitive   = true
-}
-
-variable "mailchimp_audience_id" {
-  description = "Mailchimp audience ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "mailchimp_community_kind" {
-  description = "Mailchimp community member type"
-  type        = string
-  sensitive   = true
-}
-
-variable "mailchimp_community_id" {
-  description = "Mailchimp community identifier"
-  type        = string
-  sensitive   = true
-}
-
-variable "mailchimp_community_name" {
-  description = "Mailchimp community name"
-  type        = string
-  sensitive   = true
-}
-
 variable "centralized_metastore_bucket_name" {
   description = "Name of the centralized S3 bucket for Unity Catalog metastore storage in data governance account"
   type        = string
@@ -222,7 +125,7 @@ variable "centralized_metastore_bucket_name" {
 variable "posthog_key" {
   description = "PostHog project API key"
   type        = string
-  sensitive   = true
+  default     = "phc_bAOjcJ4S1mw8I5bSlDHUDmNeOaLuo4dhPiqWmyNdWLd"
 }
 
 variable "posthog_host" {
@@ -247,13 +150,6 @@ variable "posthog_tofu_api_key" {
 
 variable "posthog_grafana_api_key" {
   description = "Read-only PostHog personal API key the daily report queries error tracking with; empty until the Infinity plugin is installed"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "status_slack_webhook_url" {
-  description = "Slack incoming webhook for the status channel, which receives the status page's changes. Empty leaves the Slack feed out."
   type        = string
   default     = ""
   sensitive   = true

@@ -53,7 +53,8 @@
     "cms:models": "pnpm --filter @repo/devkit cms:models --",
     "round:read": "pnpm --filter @repo/devkit round:read --",
     "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --",
-    "status:incident": "pnpm --filter @repo/devkit status:incident --"
+    "status:incident": "pnpm --filter @repo/devkit status:incident --",
+    "secrets:set": "pnpm --filter @repo/devkit secrets:set --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
