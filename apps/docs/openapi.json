@@ -3215,7 +3215,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "Specific columns to fetch. If provided with tableName, fetches full data for these columns only"
+              "description": "Specific columns to fetch. If provided with tableName, fetches full data for these columns only. A page the serving store answers shows custom metadata only as its fields, each a column of its own; the custom_metadata column itself reads null there"
             },
             "allowEmptyValue": true,
             "allowReserved": true

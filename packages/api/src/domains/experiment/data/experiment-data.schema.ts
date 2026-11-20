@@ -452,7 +452,7 @@ export const zExperimentDataQuery = z.object({
     .string()
     .optional()
     .describe(
-      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only",
+      "Specific columns to fetch. If provided with tableName, fetches full data for these columns only. A page the serving store answers shows custom metadata only as its fields, each a column of its own; the custom_metadata column itself reads null there",
     ),
   orderBy: z.string().optional().describe("Column name to order results by"),
   orderDirection: z.enum(["ASC", "DESC"]).optional().describe("Sort direction for ordering"),
