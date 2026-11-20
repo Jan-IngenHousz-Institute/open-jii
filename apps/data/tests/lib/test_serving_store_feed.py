@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from openjii.serving_store import feed
-from openjii.serving_store.tables import StoreTable
+from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -209,6 +209,16 @@ def test_a_batch_of_sheet_rows_sends_each_sheet_with_its_schema_once_its_rows_ha
         "is_deleted": 0,
         "_commit_version": 1,
     }
+
+
+def test_the_writer_may_insert_into_every_table_a_sink_writes(store_module) -> None:
+    written = {"feed_rejects"}
+    for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS, METADATA_ROWS):
+        written |= {table.name, table.schema_table}
+
+    granted = set(store_module.grants("writer"))
+
+    assert {f"GRANT INSERT ON store.{table}" for table in written} <= granted
 
 
 def test_a_batch_goes_to_the_store_as_its_tables_lines_with_fresh_credentials(

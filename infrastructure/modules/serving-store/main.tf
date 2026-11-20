@@ -76,7 +76,7 @@ locals {
       profile = "ingest"
       grants = concat(
         ["GRANT SELECT ON store.*"],
-        [for table in concat(local.reloaded_tables, ["feed_rejects"]) : "GRANT INSERT ON store.${table}"],
+        [for table in concat(local.reloaded_tables, ["metadata_rows", "metadata_sheets", "feed_rejects"]) : "GRANT INSERT ON store.${table}"],
       )
     }
     reloader = {
