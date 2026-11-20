@@ -2808,10 +2808,8 @@ module "backend_alb_private" {
     Component   = "backend"
   }
 
-  # The deploy role gains its VPC origin permissions in the same apply, and the logs bucket's
-  # policy admits the new prefix before access logging is switched on. Drop module.iam_oidc once
-  # CI's roles are applied from their own root.
-  depends_on = [module.iam_oidc, module.logs_bucket]
+  # The logs bucket's policy admits the new prefix before access logging is switched on.
+  depends_on = [module.logs_bucket]
 }
 
 module "backend_ecs" {
