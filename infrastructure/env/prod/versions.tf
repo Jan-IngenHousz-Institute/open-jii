@@ -39,11 +39,16 @@ provider "aws" {
   region = var.dr_region
 }
 
+locals {
+  # Under databricks-cli the CLI's own login signs in, as the person running the plan.
+  databricks_client_id = var.databricks_auth_type == "databricks-cli" ? null : var.databricks_client_id
+}
+
 provider "databricks" {
   alias         = "mws"
   host          = "https://accounts.cloud.databricks.com"
   account_id    = var.databricks_account_id
-  client_id     = var.databricks_client_id
+  client_id     = local.databricks_client_id
   client_secret = var.databricks_client_secret
   auth_type     = var.databricks_auth_type
 }
@@ -51,7 +56,7 @@ provider "databricks" {
 provider "databricks" {
   alias         = "workspace"
   host          = var.databricks_host
-  client_id     = var.databricks_client_id
+  client_id     = local.databricks_client_id
   client_secret = var.databricks_client_secret
   auth_type     = var.databricks_auth_type
   # The federation policies accept the account ID, not the workspace's token endpoint.

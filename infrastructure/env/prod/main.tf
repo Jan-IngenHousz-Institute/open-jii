@@ -2385,20 +2385,10 @@ module "play_review_sign_in" {
 
 # Authentication secrets
 module "auth_secrets" {
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-auth-secrets-${var.environment}"
   description = "Authentication and OAuth secrets for the openJII services"
-
-  # Store secrets as JSON using variables
-  secret_string = jsonencode({
-    AUTH_SECRET                     = var.auth_secret
-    NOTIFICATION_UNSUBSCRIBE_SECRET = var.notification_unsubscribe_secret
-    AUTH_GITHUB_ID                  = var.github_oauth_client_id
-    AUTH_GITHUB_SECRET              = var.github_oauth_client_secret
-    AUTH_ORCID_ID                   = var.orcid_oauth_client_id
-    AUTH_ORCID_SECRET               = var.orcid_oauth_client_secret
-  })
 
   tags = {
     Environment = var.environment
@@ -2440,18 +2430,10 @@ module "databricks_secrets" {
 
 # Contentful secrets
 module "contentful_secrets" {
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-contentful-secrets-${var.environment}"
   description = "Contentful API secrets for the openJII services"
-
-  # Store secrets as JSON using variables
-  secret_string = jsonencode({
-    CONTENTFUL_SPACE_ID             = var.contentful_space_id
-    CONTENTFUL_ACCESS_TOKEN         = var.contentful_access_token
-    CONTENTFUL_PREVIEW_ACCESS_TOKEN = var.contentful_preview_access_token
-    CONTENTFUL_PREVIEW_SECRET       = var.contentful_preview_secret
-  })
 
   tags = {
     Environment = var.environment
@@ -2464,20 +2446,10 @@ module "contentful_secrets" {
 
 # Mailchimp secrets
 module "mailchimp_secrets" {
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-mailchimp-secrets-${var.environment}"
   description = "Mailchimp API secrets for the openJII backend service"
-
-  # Store secrets as JSON using variables
-  secret_string = jsonencode({
-    MAILCHIMP_API_KEY        = var.mailchimp_api_key
-    MAILCHIMP_SERVER_PREFIX  = var.mailchimp_server_prefix
-    MAILCHIMP_AUDIENCE_ID    = var.mailchimp_audience_id
-    MAILCHIMP_COMMUNITY_KIND = var.mailchimp_community_kind
-    MAILCHIMP_COMMUNITY_ID   = var.mailchimp_community_id
-    MAILCHIMP_COMMUNITY_NAME = var.mailchimp_community_name
-  })
 
   tags = {
     Environment = var.environment
@@ -3711,15 +3683,10 @@ module "ingest_healthcheck" {
 
 # The status publisher's own Contentful credentials: the delivery token only, never the preview ones.
 module "status_contentful_secrets" {
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-status-contentful-${var.environment}"
   description = "Contentful delivery credentials for the status publisher"
-
-  secret_string = jsonencode({
-    CONTENTFUL_SPACE_ID     = var.contentful_space_id
-    CONTENTFUL_ACCESS_TOKEN = var.contentful_access_token
-  })
 
   tags = {
     Environment = var.environment
@@ -3755,21 +3722,21 @@ module "status_publisher" {
 }
 
 locals {
-  status_slack_enabled = nonsensitive(var.status_slack_webhook_url != "")
+  # Whether this environment posts to the status Slack channel. The webhook is set with
+  # `pnpm secrets:set prod status-slack`.
+  status_slack_enabled = false
 }
 
 # The webhook is the whole secret value, a plain address and not JSON.
 module "status_slack_secrets" {
   count  = local.status_slack_enabled ? 1 : 0
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-status-slack-${var.environment}"
   description = "Slack incoming webhook for the status channel"
 
-  secret_string = var.status_slack_webhook_url
-
-  # A name scheduled for deletion cannot be created again, so clearing the variable and setting it
-  # within the default week would fail. The value is only a copy of the GitHub secret.
+  # A name scheduled for deletion cannot be created again, so turning status_slack_enabled off and
+  # on again within the default week would fail.
   recovery_window_in_days = 0
 
   tags = {
