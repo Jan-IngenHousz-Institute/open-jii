@@ -1,0 +1,124 @@
+[
+  {
+    "name": "zero-vbat-healthy-vsys",
+    "capturedAt": "2026-01-01T01:00:00.000Z",
+    "entry": {
+      "schema": "ambyte.telemetry/1",
+      "health": {
+        "power": {
+          "valid": true,
+          "reason": "ok",
+          "battery_v": 0,
+          "system_v": 4.1,
+          "charge_status": 0,
+          "charge_ma": 0
+        },
+        "power_protect": {
+          "state": "normal",
+          "reason": "power_recovered",
+          "since_utc": 1767225600,
+          "skipped": {
+            "flash_runs": 0,
+            "ambit_runs": 0,
+            "ota": 0
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "no-flash-while-charging",
+    "capturedAt": "2026-01-01T01:00:00.000Z",
+    "entry": {
+      "schema": "ambyte.telemetry/1",
+      "health": {
+        "power": {
+          "valid": true,
+          "reason": "ok",
+          "battery_v": 3.7,
+          "system_v": 3.9,
+          "charge_status": 2,
+          "charge_ma": 227
+        },
+        "power_protect": {
+          "state": "no_flash",
+          "reason": "low_voltage",
+          "since_utc": 1767225600,
+          "skipped": {
+            "flash_runs": 3,
+            "ambit_runs": 0,
+            "ota": 0
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "hold-invalid-power",
+    "capturedAt": "2026-01-01T01:00:00.000Z",
+    "entry": {
+      "schema": "ambyte.telemetry/1",
+      "health": {
+        "power": {
+          "valid": false,
+          "reason": "implausible"
+        },
+        "power_protect": {
+          "state": "hold",
+          "reason": "brownout",
+          "since_utc": null,
+          "skipped": {
+            "flash_runs": 3,
+            "ambit_runs": 5,
+            "ota": 1
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "legacy-no-protection",
+    "capturedAt": "2026-01-01T01:00:00.000Z",
+    "entry": {
+      "schema": "ambyte.telemetry/1",
+      "health": {
+        "power": {
+          "valid": true,
+          "battery_v": 3.8,
+          "system_v": 4.0
+        }
+      }
+    }
+  },
+  {
+    "name": "missing-power-no-flash",
+    "capturedAt": "2026-01-01T01:00:00.000Z",
+    "entry": {
+      "schema": "ambyte.telemetry/1",
+      "health": {
+        "power_protect": {
+          "state": "no_flash",
+          "reason": "low_voltage",
+          "since_utc": null,
+          "skipped": {}
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown-protection",
+    "capturedAt": "2026-01-01T01:00:00.000Z",
+    "entry": {
+      "schema": "ambyte.telemetry/1",
+      "health": {
+        "power": {
+          "valid": false
+        },
+        "power_protect": {
+          "state": "new_state",
+          "reason": "new_reason"
+        }
+      }
+    }
+  }
+]

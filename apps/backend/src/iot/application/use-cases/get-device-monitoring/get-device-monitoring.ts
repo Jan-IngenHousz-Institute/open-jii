@@ -1,8 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { DeviceMonitoring, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { GetDeviceBatteryUseCase } from "../get-device-battery/get-device-battery";
 import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
@@ -27,6 +29,7 @@ export class GetDeviceMonitoringUseCase {
     private readonly getDevicePayloadStats: GetDevicePayloadStatsUseCase,
     private readonly getDeviceMeasurements: GetDeviceMeasurementsUseCase,
     private readonly getDeviceFirmwareHistory: GetDeviceFirmwareHistoryUseCase,
+    @Inject(IOT_DATABRICKS_PORT) private readonly databricks: DatabricksPort,
   ) {}
 
   async execute(
@@ -60,6 +63,7 @@ export class GetDeviceMonitoringUseCase {
       payloadResult,
       measurementsResult,
       firmwareResult,
+      powerResult,
     ] = await Promise.all([
       this.getDeviceSessions.execute(thingName, from, to),
       this.getDeviceThroughput.execute(thingName, from, to, bucket),
@@ -67,6 +71,9 @@ export class GetDeviceMonitoringUseCase {
       this.getDevicePayloadStats.execute(thingName, from, to),
       this.getDeviceMeasurements.execute(thingName, from, to),
       this.getDeviceFirmwareHistory.execute(thingName, from, to, bucket),
+      deviceResult.value.deviceType === "ambyte"
+        ? this.databricks.getDevicePower(thingName, from, to)
+        : undefined,
     ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);
@@ -87,8 +94,18 @@ export class GetDeviceMonitoringUseCase {
       return failure(firmwareResult.error);
     }
 
+    if (powerResult?.isFailure()) {
+      this.logger.warn({
+        msg: "Power telemetry lookup failed; monitoring renders power as unavailable",
+        operation: "getDeviceMonitoring",
+        deviceId,
+        errorCode: powerResult.error.code,
+      });
+    }
+
     return success({
       bucket,
+      power: powerResult?.isSuccess() ? powerResult.value : undefined,
       ...sessionsResult.value,
       throughput: throughputResult.value,
       battery: batteryResult.value,
