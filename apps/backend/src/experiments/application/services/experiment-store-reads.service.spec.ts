@@ -480,18 +480,29 @@ describe("ExperimentStoreReadsService", () => {
     expect(result.value[0].schemaRevision).toMatch(/^r1:[0-9a-f]{32}$/);
   });
 
-  it("hands the store the sheets for a read with the sheets' schema, and reads none for any other", async () => {
+  it("hands the store the sheets for a read that shows or filters by a metadata field, and reads none for any other", async () => {
     const sheets = [{ id: "s1", matchOn: "plot", schema: "OBJECT<area: BIGINT>", version: "4" }];
     const read = vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
     const build = vi.spyOn(store, "buildExperimentQuery");
     const metadata = { columnName: "custom_metadata", schema: "OBJECT<area: BIGINT>", suffix: "m" };
+    const ids = { ...page, variants: [metadata], columns: ["id"] };
 
     assertSuccess(await reads.buildQuery({ ...page, variants: [metadata] }));
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        filters: [{ column: "area", operator: "equals", value: 3 }],
+      }),
+    );
+    assertSuccess(await reads.buildQuery(ids));
     assertSuccess(await reads.buildQuery(page));
 
-    expect(read).toHaveBeenCalledExactlyOnceWith(page.experimentId);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledWith(page.experimentId);
     expect(build).toHaveBeenNthCalledWith(1, expect.objectContaining({ metadataSheets: sheets }));
-    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ metadataSheets: [] }));
+    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ metadataSheets: sheets }));
+    expect(build).toHaveBeenNthCalledWith(3, expect.objectContaining({ metadataSheets: [] }));
+    expect(build).toHaveBeenNthCalledWith(4, expect.objectContaining({ metadataSheets: [] }));
   });
 
   it("holds every table but the device table", () => {
