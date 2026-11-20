@@ -53,6 +53,13 @@ const STORE_SCALARS: Record<string, string> = {
  * field names and schema parsing a page depends on stay one implementation for both reads.
  */
 export class StoreQueryBuilder extends BaseQueryBuilder {
+  static readonly reservedNames: readonly string[] = [
+    ORDER_IDS,
+    DEVICE_CLIENT_IDS,
+    DEVICE_SERIALS,
+    FLAGGED_ROW_IDS,
+  ];
+
   private experiment = "";
   private fromClause = "";
   private columns: StoreColumn[] = [];
@@ -83,7 +90,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     this.payloadTexts = table.payloadTexts ?? {};
     this.phoneAnnotations = table.phoneAnnotations;
     this.takesCustomMetadata = table.takesCustomMetadata ?? false;
-    this.reservedColumns.push(ORDER_IDS, DEVICE_CLIENT_IDS, DEVICE_SERIALS, FLAGGED_ROW_IDS);
+    this.reservedColumns.push(...StoreQueryBuilder.reservedNames);
     this.from(`${table.view}(experiment = ${this.experiment})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
       this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);

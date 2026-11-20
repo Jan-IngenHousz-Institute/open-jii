@@ -262,8 +262,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       schema,
       suffix: suffix ?? columnName,
     }));
+    const reserved = [...this.store.reservedNames(), ...(params.reservedColumns ?? [])];
     const fields = new Set(
-      FlattenedFields.resolve(params.reservedColumns ?? [], sources)
+      FlattenedFields.resolve(reserved, sources)
         .filter(({ column }) => column === "custom_metadata")
         .map(({ key }) => key),
     );

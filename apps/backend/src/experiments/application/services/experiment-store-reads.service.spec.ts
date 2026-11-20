@@ -505,6 +505,34 @@ describe("ExperimentStoreReadsService", () => {
     expect(build).toHaveBeenNthCalledWith(4, expect.objectContaining({ metadataSheets: [] }));
   });
 
+  it("hands the store the sheets for a metadata field named like one of the store's own lists", async () => {
+    const schema = "OBJECT<__order_ids: BIGINT>";
+    const sheets = [{ id: "s1", matchOn: "plot", schema, version: "4" }];
+    vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const metadata = { columnName: "custom_metadata", schema, suffix: "m" };
+    const ids = { ...page, variants: [metadata], columns: ["id"] };
+
+    assertSuccess(await reads.buildQuery({ ...ids, columns: ["__order_ids_m"] }));
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        filters: [{ column: "__order_ids_m", operator: "equals", value: 3 }],
+      }),
+    );
+    assertSuccess(
+      await reads.buildQuery({ ...ids, ordering: { column: "__order_ids_m", direction: "ASC" } }),
+    );
+
+    expect(build).toHaveBeenCalledTimes(3);
+    for (const call of [1, 2, 3]) {
+      expect(build).toHaveBeenNthCalledWith(
+        call,
+        expect.objectContaining({ metadataSheets: sheets }),
+      );
+    }
+  });
+
   it("holds every table but the device table", () => {
     expect(reads.readsTable("raw_data")).toBe(true);
     expect(reads.readsTable("4f0c6b1e-macro")).toBe(true);

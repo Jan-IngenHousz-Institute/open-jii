@@ -62,6 +62,10 @@ export interface ServingStorePort {
   /** Whether the experiment's metadata sheets match the table's rows; an upload's they never do. */
   takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean;
 
+  /** The names every store read holds for itself, so a payload field named alike reads under
+   *  another, as one named like a column does. */
+  reservedNames(): readonly string[];
+
   /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
   getMetadataSheets(experimentId: string): Promise<Result<StoreMetadataSheet[]>>;
 

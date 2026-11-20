@@ -47,6 +47,10 @@ export class ServingStoreAdapter implements ServingStorePort {
     return StoreTables.of(tableType, tableName)?.takesCustomMetadata === true;
   }
 
+  reservedNames(): readonly string[] {
+    return StoreQueryBuilder.reservedNames;
+  }
+
   async getMetadataSheets(experimentId: string): Promise<Result<StoreMetadataSheet[]>> {
     const experiment = this.experimentArgument(experimentId);
     const sql = `SELECT sheet_id, match_on, schema, toString(_commit_version) FROM experiment_metadata_sheets(${experiment}) ORDER BY sheet_created_at, sheet_id`;
