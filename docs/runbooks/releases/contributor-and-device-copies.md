@@ -93,8 +93,7 @@ WHERE c.id IS NULL;
 ```
 
 It lists no rows. A record created after the export can show here; step 3 then shows its copy
-owed, and it is gone from the list once that lands. Owe any other listed record again, naming the
-ids:
+owed. Owe any other listed record again, naming the ids:
 
 ```sql
 INSERT INTO experiment_data_outbox (record_type, record_id, destination)
@@ -104,6 +103,15 @@ ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NO
 INSERT INTO experiment_data_outbox (record_type, record_id, destination)
 SELECT 'device', id, 'lakehouse' FROM iot_devices WHERE id IN ('<id>', '<id>')
 ON CONFLICT (record_type, record_id, destination) WHERE claimed_at IS NULL DO NOTHING;
+```
+
+The check compares Postgres with the export, not with the lakehouse as it is now, so a record
+repaired since keeps showing until the export is taken again. Before checking again, download
+`copies.csv` anew and reload it:
+
+```sql
+TRUNCATE lakehouse_copies;
+\copy lakehouse_copies FROM 'copies.csv' WITH (FORMAT csv, HEADER)
 ```
 
 Then compare the other way, for devices the copy holds and Postgres no longer does. During the
