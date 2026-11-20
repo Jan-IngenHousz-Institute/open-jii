@@ -1,5 +1,9 @@
 import { expoClient } from "@better-auth/expo/client";
-import { emailOTPClient, organizationClient } from "better-auth/client/plugins";
+import {
+  emailOTPClient,
+  inferAdditionalFields,
+  organizationClient,
+} from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
 const SCHEME = "openjii";
@@ -13,6 +17,10 @@ export function createOpenJiiAuthClient(backendUrl: string, storage: SecureStora
   return createAuthClient({
     baseURL: `${backendUrl}/api/v1/auth`,
     plugins: [
+      // Declared by hand: inferring from `../server` would pull the server's types into the app build.
+      inferAdditionalFields({
+        user: { registered: { type: "boolean", required: false } },
+      }),
       emailOTPClient(),
       organizationClient({ teams: { enabled: true } }),
       expoClient({

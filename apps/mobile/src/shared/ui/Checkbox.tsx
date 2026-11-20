@@ -37,6 +37,9 @@ export function Checkbox({ value, text, onChange, textSize = "base", icon }: Che
       key={renderId}
       className="flex-row items-center gap-2"
       onPress={() => onChange(!value)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={text}
     >
       {checkbox}
       <View className="flex-row items-center gap-1">

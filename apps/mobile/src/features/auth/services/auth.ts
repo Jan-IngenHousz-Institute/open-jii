@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import { syncSessionFromServer } from "~/features/auth/services/session-reload";
 import { getEnvVar, useEnvVar } from "~/shared/stores/environment-store";
 
 import { createOpenJiiAuthClient } from "@repo/auth/client.native";
@@ -17,6 +18,10 @@ export function getAuthClient() {
   authClients[backendUri] ??= createOpenJiiAuthClient(backendUri, SecureStore);
 
   return authClients[backendUri];
+}
+
+export function reloadSessionFromServer() {
+  return syncSessionFromServer(getAuthClient());
 }
 
 // Tests that swap BACKEND_URI or assert client construction reset here
