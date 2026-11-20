@@ -68,7 +68,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private filterColumns: string[] = [];
   private deviceSerials: [string, string][] = [];
   private flaggedRowIds?: string[];
-  private sheets: StoreMetadataSheet[] = [];
+  private sheets: (StoreMetadataSheet & { fields: ReadonlySet<string> })[] = [];
   private ordering?: StoreOrdering;
   private limitValue?: number;
   private offsetValue?: number;
@@ -123,7 +123,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** The experiment's metadata sheets, oldest first, which a read of custom metadata joins. */
   metadataSheets(sheets: StoreMetadataSheet[]): this {
-    this.sheets = sheets;
+    this.sheets = sheets.map((sheet) => ({
+      ...sheet,
+      fields: new Set(sheet.schema === null ? [] : VariantSchema.topLevelFieldNames(sheet.schema)),
+    }));
     return this;
   }
 
@@ -410,10 +413,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /** The sheets, oldest first, that match a question's answer or the device; a sheet matching any
    *  other column matches no row. */
-  private matchedSheets(): { id: string; match: string; alias: string }[] {
-    return this.sheets.flatMap(({ id, matchOn }, index) => {
+  private matchedSheets(): {
+    id: string;
+    match: string;
+    alias: string;
+    fields: ReadonlySet<string>;
+  }[] {
+    return this.sheets.flatMap(({ id, matchOn, fields }, index) => {
       const match = this.sheetMatch(matchOn);
-      return match === null ? [] : [{ id, match, alias: `sheet_${index}` }];
+      return match === null ? [] : [{ id, match, alias: `sheet_${index}`, fields }];
     });
   }
 
@@ -429,11 +437,15 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /**
    * A field's JSON text in the newest sheet whose matched row holds it, null ones included. It is
    * copied as written, since a parsed number passes through a double, which loses digits a sheet's
-   * decimals keep. Only a row's top-level keys count, as the warehouse reads a sheet's fields.
+   * decimals keep. Only a row's top-level keys count, as the warehouse reads a sheet's fields. A
+   * sheet whose schema lacks the field is not asked, so a page of many wide sheets stays within the
+   * store's query size.
    */
   private metadataText(name: string): string {
     const key = this.escapeValue(name);
-    const newestFirst = this.matchedSheets().reverse();
+    const newestFirst = this.matchedSheets()
+      .filter(({ fields }) => fields.has(name))
+      .reverse();
     const branches = newestFirst.flatMap(({ alias }) => [
       `JSONHas(${alias}_fields, ${key})`,
       `JSONExtractRaw(${alias}_fields, ${key})`,

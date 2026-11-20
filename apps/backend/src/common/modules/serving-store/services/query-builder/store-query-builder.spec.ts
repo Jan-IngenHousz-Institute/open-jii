@@ -384,9 +384,14 @@ describe("StoreQueryBuilder", () => {
 
   describe("custom metadata", () => {
     const sheets = [
-      { id: "s1", matchOn: "plot", schema: null, version: "1" },
-      { id: "s2", matchOn: "column:device_id", schema: null, version: "2" },
-      { id: "s3", matchOn: "column:timezone", schema: null, version: "3" },
+      {
+        id: "s1",
+        matchOn: "plot",
+        schema: "OBJECT<area: DECIMAL(4,2), soil: STRING>",
+        version: "1",
+      },
+      { id: "s2", matchOn: "column:device_id", schema: "OBJECT<area: BIGINT>", version: "2" },
+      { id: "s3", matchOn: "column:timezone", schema: "OBJECT<soil: STRING>", version: "3" },
     ];
     const withMetadata = () =>
       measurements()
@@ -402,6 +407,36 @@ describe("StoreQueryBuilder", () => {
       expect(sql).toContain(
         `toDecimalString(accurateCastOrNull(${text}, 'Decimal(4, 2)'), 2) AS \`area\``,
       );
+    });
+
+    it("asks only the sheets whose schema holds the field", () => {
+      const sql = withMetadata().select(["soil"]).build();
+
+      expect(sql).toContain(
+        "JSONExtract(multiIf(JSONHas(sheet_0_fields, 'soil'), JSONExtractRaw(sheet_0_fields, 'soil'), NULL), 'Nullable(String)') AS `soil`",
+      );
+    });
+
+    it("keeps a page of many wide sheets within the store's query size", () => {
+      const wide = Array.from({ length: 20 }, (_, sheet) => {
+        const fields = Array.from({ length: 32 }, (_, field) => `s${sheet}_field_${field}: DOUBLE`);
+        return {
+          id: `s${sheet}`,
+          matchOn: "plot",
+          schema: `OBJECT<${fields.join(", ")}>`,
+          version: "1",
+        };
+      });
+      const schema = `OBJECT<${wide.map(({ schema }) => schema.slice("OBJECT<".length, -1)).join(", ")}>`;
+
+      const sql = measurements()
+        .parseVariant("custom_metadata", schema, "metadata")
+        .metadataSheets(wide)
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(20)
+        .build();
+
+      expect(Buffer.byteLength(sql)).toBeLessThan(1024 * 1024);
     });
 
     it("compares a decimal field with a plain number as Spark does, as a decimal of its own scale", () => {
@@ -436,13 +471,10 @@ describe("StoreQueryBuilder", () => {
     });
 
     it("unquotes a text field, keeps a mix of kinds as its JSON, and reads null as none only where typed", () => {
+      const mixedSchema = "OBJECT<mixed: VARIANT, soil: STRING, tags: ARRAY<STRING>>";
       const sql = measurements()
-        .parseVariant(
-          "custom_metadata",
-          "OBJECT<mixed: VARIANT, soil: STRING, tags: ARRAY<STRING>>",
-          "metadata",
-        )
-        .metadataSheets(sheets.slice(0, 1))
+        .parseVariant("custom_metadata", mixedSchema, "metadata")
+        .metadataSheets([{ id: "s1", matchOn: "plot", schema: mixedSchema, version: "1" }])
         .select(["soil", "mixed", "tags"])
         .build();
 
