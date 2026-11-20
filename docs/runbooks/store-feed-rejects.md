@@ -69,7 +69,10 @@ A row that only the feed's normalisation can fix cannot be sent as it is, and ne
 message says it was cut. Once the feed's code can send them, a
 [reload](procedures/serving-store-reload.md) of their experiments does. A reload leaves the sheets
 alone: a refused `metadata_rows` row goes again once its sheet is owed to the lakehouse, as
-[Metadata sheets](procedures/serving-store-reload.md#metadata-sheets) describes.
+[Metadata sheets](procedures/serving-store-reload.md#metadata-sheets) describes. Owing a sheet
+sends only the rows it holds now, so a refused deletion, `is_deleted` set for an identifier an edit
+dropped or a deleted sheet, never comes back that way. If it cannot be sent as it is,
+[reset the sheets' sink](store-feed-stalled.md#resetting-the-sheets-sink).
 
 ## Closing
 

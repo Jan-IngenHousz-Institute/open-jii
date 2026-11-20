@@ -82,7 +82,9 @@ the sheets' rows are filled by owing every sheet to the lakehouse once
 batches in each pipeline's driver log (`[serving store] measurements batch 0: ... inserted`). A
 first batch numbered 0 means the sink started at its start version, and rows gold gained while the
 feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number
-means it resumed from its checkpoint. In the first two hours the stall alert can fire once if gold's
+means it resumed from its checkpoint. For `metadata_rows`, a batch 0 after the feed was off means
+the deletions made meanwhile were skipped, so [reset the sheets' sink](#resetting-the-sheets-sink)
+instead of only owing the sheets. In the first two hours the stall alert can fire once if gold's
 newest half hour gained rows before the start versions; it clears as soon as new rows arrive.
 
 ## Resetting a sink's checkpoint
@@ -94,7 +96,8 @@ behind, either keeps a reload from running. Empty a store table only with `TRUNC
 `DELETE` the store still holds the dedup tokens of the deleted rows' inserts, and drops those rows
 when the feed sends them again. `payload_schemas` holds every table's schemas, so once the feed has
 caught up, [reload](procedures/serving-store-reload.md) every table for `all`; that also brings back
-the rows gold gained before the new start version.
+the rows gold gained before the new start version. This clears neither of the sheets' tables, so
+reset `metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead.
 
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.
@@ -110,6 +113,24 @@ the rows gold gained before the new start version.
    pipeline if it fails.
 
 3. Switch the pipeline back to continuous.
+
+## Resetting the sheets' sink
+
+Needed when `metadata_rows`' checkpoint starts again: after the feed was off, or when
+`centrum.experiment_custom_metadata` was recreated. Its sink starts at `latest`, so it never sees a
+sheet deleted, or an identifier an edit dropped, before it started. Owing the sheets again cannot
+send those deletions either, because only the sheets Postgres still holds are owed, and the store
+keeps the removed rows. A recreated copy also restarts its commit versions, and under `FINAL` a
+sheet's schema stored at an old, higher version beats the rebuilt one in `metadata_sheets`, while
+the sheet counts still match. A complete backfill therefore clears both of the sheets' tables first:
+
+1. Unless the sink already started again at batch 0, reset the flow's checkpoint as above, by its
+   full name `open_jii_<env>.centrum.serving_store_metadata_rows_changes`, leaving `latest` in the
+   map.
+2. As the admin, `TRUNCATE TABLE store.metadata_rows` and `TRUNCATE TABLE store.metadata_sheets`.
+   Leave `payload_schemas`, which holds none of the sheets' schemas.
+3. Owe every sheet to the lakehouse again, and compare the counts, as
+   [Metadata sheets](procedures/serving-store-reload.md#metadata-sheets) describes.
 
 ## Refreshing gold
 
