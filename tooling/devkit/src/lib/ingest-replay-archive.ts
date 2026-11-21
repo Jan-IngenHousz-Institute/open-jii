@@ -65,26 +65,23 @@ export async function windowObjects(
   const since = new Date(window.from.getTime() - margin);
   const until = new Date(window.to.getTime() + margin);
 
-  const listed: ArchiveObject[] = [];
-  for (const prefix of dayPrefixes(root, since, until)) {
-    listed.push(...(await archive.list(prefix)));
-  }
-
   const objects: ArchiveObject[] = [];
   const late: string[] = [];
-  for (const object of listed) {
-    if (object.lastModified < window.from) {
-      continue;
-    }
-    if (object.lastModified <= until) {
-      objects.push(object);
-      continue;
-    }
-    const bufferStart = isArchive ? bufferStartOf(object.key) : null;
-    const isLate = bufferStart !== null && bufferStart >= since && bufferStart <= window.to;
-    if (isLate) {
-      objects.push(object);
-      late.push(object.key);
+  for (const prefix of dayPrefixes(root, since, until)) {
+    for (const object of await archive.list(prefix)) {
+      if (object.lastModified < window.from) {
+        continue;
+      }
+      if (object.lastModified <= until) {
+        objects.push(object);
+        continue;
+      }
+      const bufferStart = isArchive ? bufferStartOf(object.key) : null;
+      const isLate = bufferStart !== null && bufferStart >= since && bufferStart <= window.to;
+      if (isLate) {
+        objects.push(object);
+        late.push(object.key);
+      }
     }
   }
   return { objects, late };
