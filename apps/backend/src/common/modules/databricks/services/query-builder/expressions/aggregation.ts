@@ -142,6 +142,8 @@ export function wrapWithAggregation(
   opts: {
     columnNames?: string[];
     columns?: string[];
+    /** Flattened payload fields the inner query exposes, each under one name that may hold a dot. */
+    fieldNames?: string[];
     aggregation?: AggregationSpec;
     ordering?: QueryOrdering;
     limit?: number;
@@ -232,9 +234,10 @@ export function wrapWithAggregation(
   if (groupByClauses.length === 0 && selectClauses.length === 0) {
     // Raw series plot from these rows, so keep the columns they name. Every column of a wide
     // table would overrun the warehouse's inline result limit long before the row ceiling.
+    const fields = new Set(opts.fieldNames ?? []);
     const kept = [...new Set(opts.columns ?? [])]
       .filter((name) => name.length > 0 && name !== "*")
-      .map((name) => builder.escapeIdentifier(name));
+      .map((name) => (fields.has(name) ? builder.quoteName(name) : builder.escapeIdentifier(name)));
     if (kept.length > 0 && explode !== undefined) kept.push(quoteAlias(explode.alias));
     const raw = kept.length > 0 ? kept.join(", ") : "*";
     sql = `SELECT ${raw}, ${windowProjections.join(", ")} FROM ${from}`;

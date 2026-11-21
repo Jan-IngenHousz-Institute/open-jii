@@ -9,6 +9,7 @@ import { timestampExpression } from "./expressions/time";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
 import type { AsOfJoin, CountQueryParams, QueryParams } from "./query-builder.types";
 import { QueryBuilderInputError } from "./query-builder.types";
+import { FlattenedFields } from "./schema/flattened-fields";
 
 /**
  * Domain-agnostic SQL builder for Databricks. Composes filters, variant
@@ -51,10 +52,20 @@ export class QueryBuilderService {
           ? this.buildVariantSelectQuery(innerParams)
           : this.buildSelectQuery(innerParams);
 
+      const fieldNames = FlattenedFields.resolve(
+        query.reservedColumns ?? [],
+        (query.variants ?? []).map(({ columnName, schema, suffix }) => ({
+          column: columnName,
+          schema,
+          suffix: suffix ?? columnName,
+        })),
+      ).map(({ key }) => key);
+
       return success(
         wrapWithAggregation(innerSql, {
           columnNames: query.columnNames,
           columns: query.columns,
+          fieldNames,
           aggregation: query.aggregation,
           ordering: query.ordering,
           limit: query.limit,

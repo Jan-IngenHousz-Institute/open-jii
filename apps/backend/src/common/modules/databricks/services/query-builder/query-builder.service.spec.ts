@@ -395,6 +395,28 @@ describe("QueryBuilderService", () => {
       expect(sql.indexOf("AS `Uptime`")).toBeGreaterThan(sql.indexOf(" FROM ("));
     });
 
+    it("names a flattened field with a dot in its key as one column under a row window", () => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "t",
+          columns: ["timestamp", "sensor.value", "device.serial_number"],
+          variants: [
+            {
+              columnName: "macro_output",
+              schema: "OBJECT<`sensor.value`: DOUBLE, Uptime: BIGINT>",
+            },
+          ],
+          whereConditions: [["experiment_id", "exp-1"]],
+          aggregation: {
+            functions: [{ column: "Uptime", function: "previous", orderColumn: "timestamp" }],
+          },
+        }),
+      );
+
+      expect(sql).toMatch(/^SELECT `timestamp`, `sensor\.value`, `device`\.`serial_number`, CASE /);
+      expect(sql).toContain("AS `sensor.value`");
+    });
+
     it("emits explicit projections (no SELECT *) when row aggregates are also active", () => {
       // Mixing a row aggregate with a window forces GROUP BY, and the
       // SELECT must list only groupBy columns plus aggregate expressions.
