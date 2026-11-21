@@ -300,6 +300,7 @@ describe("ExperimentDataTable", () => {
   describe("landed rows", () => {
     const readAt = "2026-11-19T09:00:00.000Z";
     const nextReadAt = "2026-11-19T09:00:30.000Z";
+    const thirdReadAt = "2026-11-19T09:01:00.000Z";
     const arrived = { id: "3", name: "Row 3", value: 30, processed_timestamp: nextReadAt };
     const movedIn = { id: "0", name: "Row 0", value: 0, processed_timestamp: readAt };
     const secondPage = [
@@ -323,6 +324,19 @@ describe("ExperimentDataTable", () => {
 
       setupHook({ tableRows: [movedIn, ...mockTableRows] });
       rerender(<ExperimentDataTable {...defaultProps} latestRowAt={nextReadAt} />);
+
+      expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
+    });
+
+    it("tints nothing for a row that arrived during a read that left the open page as it was", () => {
+      setupHook({ dataUpdatedAt: 1 });
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
+
+      setupHook({ dataUpdatedAt: 2 });
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={nextReadAt} />);
+
+      setupHook({ tableRows: [arrived, ...mockTableRows], dataUpdatedAt: 3 });
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={thirdReadAt} />);
 
       expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
     });

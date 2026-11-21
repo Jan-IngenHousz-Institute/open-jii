@@ -162,17 +162,18 @@ export function ExperimentDataTable({
     setRowSelection({});
   }
 
-  const { tableMetadata, tableRows, isLoading, isRefreshing, error } = useExperimentData({
-    experimentId,
-    page: pagination.pageIndex + 1,
-    pageSize: pagination.pageSize,
-    tableName,
-    orderBy: sortColumn,
-    orderDirection: sortDirection,
-    filters: activeFilters,
-    errorColumn,
-    keepPreviousPage: true,
-  });
+  const { tableMetadata, tableRows, dataUpdatedAt, isLoading, isRefreshing, error } =
+    useExperimentData({
+      experimentId,
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+      tableName,
+      orderBy: sortColumn,
+      orderDirection: sortDirection,
+      filters: activeFilters,
+      errorColumn,
+      keepPreviousPage: true,
+    });
 
   const viewKey = [
     pagination.pageIndex,
@@ -182,7 +183,12 @@ export function ExperimentDataTable({
     filtersKey,
   ].join("|");
   // The previous page stands in while the next one loads, so it is no baseline for the new view.
-  const landedRowIds = useLandedRowIds(isRefreshing ? undefined : tableRows, viewKey, latestRowAt);
+  const landedRowIds = useLandedRowIds(
+    isRefreshing ? undefined : tableRows,
+    viewKey,
+    latestRowAt,
+    dataUpdatedAt,
+  );
 
   const handlePaginationChange = useCallback<typeof setPagination>((updaterOrValue) => {
     setPagination(updaterOrValue);
