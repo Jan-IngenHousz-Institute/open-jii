@@ -87,7 +87,8 @@
       "expo-audio",
       "expo-secure-store",
       "expo-sharing",
-      "expo-sqlite"
+      "expo-sqlite",
+      "./plugins/with-optional-android-hardware"
     ],
     "experiments": {
       "autolinkingModuleResolution": true
