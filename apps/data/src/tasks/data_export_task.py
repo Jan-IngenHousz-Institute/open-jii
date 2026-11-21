@@ -15,9 +15,9 @@ from datetime import datetime, timezone
 
 from openjii.helpers import ExperimentTable, TableMetadataNotFound
 from pyspark.dbutils import DBUtils
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, concat, lit, sha2, struct, substring, to_json, upper, when
-from pyspark.sql.types import ArrayType, MapType, StringType, StructType, VariantType
+from pyspark.sql import Column, DataFrame, SparkSession
+from pyspark.sql.functions import col, concat, lit, sha2, struct, substring, to_json, transform, upper, when
+from pyspark.sql.types import ArrayType, DecimalType, LongType, MapType, StringType, StructType, VariantType
 
 
 # Use print() for logging - Databricks captures stdout/stderr from the
@@ -131,27 +131,27 @@ def _is_contributor_field(field) -> bool:
     return all(isinstance(f.dataType, StringType) for f in field.dataType.fields)
 
 
+def _contributor_pseudonym(experiment_id: str, user_id: Column) -> Column:
+    # Match the API's ContributorAnonymizerService.pseudonymFor.
+    digest = sha2(concat(lit(experiment_id), lit(":"), user_id), 256)
+    return concat(lit("Contributor-"), upper(substring(digest, 1, 6)))
+
+
+def _anonymize_annotation(annotation: Column, experiment_id: str) -> Column:
+    author = annotation.getField("createdBy")
+    pseudonym = _contributor_pseudonym(experiment_id, author)
+    return when(
+        author.isNotNull(),
+        annotation.withField("createdBy", pseudonym).withField("createdByName", pseudonym),
+    ).otherwise(annotation)
+
+
 def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
-    """
-    Rewrite every CONTRIBUTOR-typed column in the dataframe to a deterministic
-    pseudonym, matching the API's `ContributorAnonymizerService` exactly:
-
-        Contributor-{upper(substring(sha256(experimentId:userId), 1, 6))}
-
-    `id` and `name` both receive the pseudonym (no side-channel back to the
-    real identity); `avatar` is nulled out. Null cells pass through.
-
-    The Spark expression mirrors the JS `createHash("sha256").update(...).digest("hex").slice(0,6).toUpperCase()`
-    pipeline: `sha2(..., 256)` returns lowercase hex, `substring(_, 1, 6)`
-    takes the first 6 chars, `upper(_)` matches the `.toUpperCase()`.
-    """
+    """Use the same per-experiment pseudonym for contributors and annotation authors."""
     contributor_fields = [f for f in df.schema.fields if _is_contributor_field(f)]
-    if not contributor_fields:
-        return df
     for field in contributor_fields:
         col_name = field.name
-        digest = sha2(concat(lit(experiment_id), lit(":"), col(col_name).getField("id")), 256)
-        pseudonym = concat(lit("Contributor-"), upper(substring(digest, 1, 6)))
+        pseudonym = _contributor_pseudonym(experiment_id, col(col_name).getField("id"))
         df = df.withColumn(
             col_name,
             when(
@@ -164,6 +164,13 @@ def anonymize_contributors(df: DataFrame, experiment_id: str) -> DataFrame:
             ).otherwise(col(col_name)),
         )
         log(f"Anonymised contributor column: {col_name}")
+
+    for col_name in ("annotations", "payload_annotations"):
+        if col_name in df.columns:
+            df = df.withColumn(
+                col_name,
+                transform(col(col_name), lambda annotation: _anonymize_annotation(annotation, experiment_id)),
+            )
     return df
 
 
@@ -226,7 +233,17 @@ def write_parts(df):
 
         w = WorkspaceClient()
         buf = io.BytesIO()
-        flatten_complex_columns(df).toPandas().to_excel(buf, index=False, engine="openpyxl")
+        # Excel keeps 15 significant digits. Cast before pandas can round nullable BIGINTs as floats.
+        flat = flatten_complex_columns(df)
+        integer_text = {}
+        for field in flat.schema.fields:
+            dtype = field.dataType
+            if isinstance(dtype, LongType) or (
+                isinstance(dtype, DecimalType) and dtype.scale == 0 and dtype.precision > 15
+            ):
+                quoted_name = field.name.replace("`", "``")
+                integer_text[field.name] = col(f"`{quoted_name}`").cast("string")
+        flat.withColumns(integer_text).toPandas().to_excel(buf, index=False, engine="openpyxl")
         buf.seek(0)
         w.files.create_directory(OUTPUT_PATH)
         w.files.upload(f"{OUTPUT_PATH}/part-00000.xlsx", buf, overwrite=True)
@@ -272,7 +289,7 @@ def take_snapshot(table):
     (docs.databricks.com/aws/en/compute/serverless/dataframe-cache). The payloads stay VARIANT in
     the files, because a parsed payload can hold an empty struct or ARRAY<VOID>, which parquet
     cannot. The files are read with the rows' own schema, so a VARIANT reads back as one whatever
-    their footers say. An anonymised export's files hold only pseudonyms.
+    their footers say. Anonymisation runs before the snapshot is written.
     """
     rows = table.rows()
     if ANONYMIZE_CONTRIBUTORS:
