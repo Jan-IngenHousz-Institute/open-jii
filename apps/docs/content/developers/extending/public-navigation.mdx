@@ -20,6 +20,10 @@ Published navigation is cached for an hour, so allow about an hour and a fresh p
 
 Button labels are localized in Contentful. Edit Label for each supported locale; missing translations use the CMS fallback locale. The link list and URLs are shared across locales, with locale-relative destinations resolved by the website.
 
+## The openJII Lab link
+
+The header and the footer menu link to [openJII Lab](https://lab.openjii.org), JII's equipment and seed register, through one Button entry labelled openJII Lab. The same Button sits in both Public header links and Menu buttons. `pnpm cms:lab-navigation` adds it: `inspect` shows the change and `apply` makes it, publishing only the Button and the Footer entry. The [devkit README](https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main/tooling/devkit/README.md#the-openjii-lab-link-in-the-public-navigation) lists its refusals. Editing by hand with the steps above gives the same result.
+
 ## About JII
 
 JII has a short section in the homepage mission content and an external footer link to the institute website. The old `/{locale}/about` route permanently redirects to `/{locale}#about-jii` and no longer appears in the sitemap. The About content type and its entry are no longer in Contentful; `packages/cms/content-archive/pageAbout.json` keeps a copy of both. The removal is permanent; that copy is no guarantee that browsers will forget the permanent redirect if the route is restored.

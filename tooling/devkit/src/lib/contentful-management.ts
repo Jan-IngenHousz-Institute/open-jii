@@ -36,8 +36,13 @@ const entrySchema = z.object({
 
 const entryListSchema = z.object({ total: z.number(), items: z.array(entrySchema) });
 
+const localeListSchema = z.object({
+  items: z.array(z.object({ code: z.string(), default: z.boolean() })),
+});
+
 export type Entry = z.output<typeof entrySchema>;
 export type EntryList = z.output<typeof entryListSchema>;
+export type Locale = z.output<typeof localeListSchema>["items"][number];
 
 type Method = "GET" | "POST" | "PUT";
 
@@ -164,6 +169,10 @@ export class ContentfulManagement {
 
   async getEntry(id: string): Promise<Entry> {
     return this.receive("GET", this.entryPath(id), entrySchema);
+  }
+
+  async getLocales(): Promise<Locale[]> {
+    return (await this.receive("GET", "locales", localeListSchema)).items;
   }
 
   async listEntries(contentType: string, query: Record<string, string> = {}): Promise<EntryList> {

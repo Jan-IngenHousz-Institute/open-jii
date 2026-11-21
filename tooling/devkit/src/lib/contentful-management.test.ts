@@ -90,6 +90,29 @@ describe("a write log that cannot be written", () => {
   });
 });
 
+describe("getLocales", () => {
+  it("returns each locale code and which one is the default", async () => {
+    const request = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        Response.json({
+          items: [
+            { code: "en-US", default: true, name: "English" },
+            { code: "de-DE", default: false, name: "German" },
+          ],
+        }),
+      ),
+    );
+    const client = new ContentfulManagement(config, request);
+
+    expect(await client.getLocales()).toEqual([
+      { code: "en-US", default: true },
+      { code: "de-DE", default: false },
+    ]);
+    const [url] = request.mock.calls[0] ?? [];
+    expect(url).toBe("https://api.contentful.com/spaces/space1/environments/master/locales");
+  });
+});
+
 describe("loadContentfulConfig", () => {
   async function rootWith(file: string) {
     const root = await mkdtemp(join(tmpdir(), "devkit-contentful-"));
