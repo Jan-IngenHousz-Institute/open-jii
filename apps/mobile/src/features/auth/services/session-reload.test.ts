@@ -66,4 +66,45 @@ describe("syncSessionFromServer", () => {
     await expect(syncSessionFromServer(client)).resolves.toBeNull();
     expect(refetch).not.toHaveBeenCalled();
   });
+
+  it("starts a second read only after the first has finished, so a slow stale answer cannot land last", async () => {
+    const answers: ((user: User) => void)[] = [];
+    let current: User = unregistered;
+    const getSession = vi.fn(
+      () =>
+        new Promise((resolve) =>
+          answers.push((user) => {
+            current = user;
+            resolve({ data: { user }, error: null });
+          }),
+        ),
+    );
+    const client = {
+      getSession,
+      $store: {
+        atoms: { session: { get: () => ({ data: { user: current }, refetch: vi.fn() }) } },
+      },
+    } as never;
+
+    const onOpen = syncSessionFromServer(client);
+    const afterSave = syncSessionFromServer(client);
+    await vi.waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getSession).toHaveBeenCalledTimes(1);
+
+    answers[0]?.(unregistered);
+    await expect(onOpen).resolves.toEqual(unregistered);
+    await vi.waitFor(() => expect(getSession).toHaveBeenCalledTimes(2));
+
+    answers[1]?.(registered);
+    await expect(afterSave).resolves.toEqual(registered);
+  });
+
+  it("still runs the next read when the previous one threw", async () => {
+    const { client, getSession } = fakeClient(registered, registered, []);
+    getSession.mockRejectedValueOnce(new Error("Network request failed"));
+
+    await expect(syncSessionFromServer(client)).rejects.toThrow("Network request failed");
+    await expect(syncSessionFromServer(client)).resolves.toEqual(registered);
+  });
 });

@@ -1,15 +1,20 @@
 import { ORPCError } from "@orpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { toast } from "sonner-native";
-import type { CompleteRegistrationInput } from "~/features/auth/api/registration.api";
-import { completeRegistration, subscribeToNewsletter } from "~/features/auth/api/registration.api";
+import type { ProfileInput } from "~/features/auth/api/registration.api";
+import {
+  confirmRegistered,
+  saveProfile,
+  subscribeToNewsletter,
+} from "~/features/auth/api/registration.api";
 import { orpc } from "~/shared/api/orpc";
 import { useTranslation } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 
 const log = createLogger("registration");
 
-export interface RegisterInput extends CompleteRegistrationInput {
+export interface RegisterInput extends ProfileInput {
   newsletterOptIn: boolean;
 }
 
@@ -24,27 +29,31 @@ function isForgottenNewsletterEmail(error: unknown): boolean {
 export function useRegistration() {
   const { t } = useTranslation("auth");
   const queryClient = useQueryClient();
+  // A retry after a failed session refresh must not subscribe a second time.
+  const newsletterRequested = useRef(false);
+
+  function requestNewsletter() {
+    newsletterRequested.current = true;
+    subscribeToNewsletter().catch((error: unknown) => {
+      log.warn("newsletter opt-in failed", { err: (error as Error)?.message });
+      toast.error(
+        isForgottenNewsletterEmail(error)
+          ? t("registration.newsletterForgottenEmail")
+          : t("registration.newsletterOptInError"),
+      );
+    });
+  }
 
   return useMutation({
     mutationFn: async ({ newsletterOptIn, ...profile }: RegisterInput) => {
-      await completeRegistration(profile);
-      return { newsletterOptIn };
-    },
-    onSuccess: ({ newsletterOptIn }) => {
-      // The greeting and profile screen cached a 404 for the profile that now exists.
+      await saveProfile(profile);
+      // The account is registered from here on, even if refreshing the session below fails.
       void queryClient.invalidateQueries({ queryKey: orpc.users.getUserProfile.key() });
+      if (newsletterOptIn && !newsletterRequested.current) requestNewsletter();
 
-      if (newsletterOptIn) {
-        subscribeToNewsletter().catch((error: unknown) => {
-          log.warn("newsletter opt-in failed", { err: (error as Error)?.message });
-          toast.error(
-            isForgottenNewsletterEmail(error)
-              ? t("registration.newsletterForgottenEmail")
-              : t("registration.newsletterOptInError"),
-          );
-        });
-      }
-
+      await confirmRegistered();
+    },
+    onSuccess: () => {
       toast.success(t("registration.successMessage"));
     },
     onError: (error) => {
