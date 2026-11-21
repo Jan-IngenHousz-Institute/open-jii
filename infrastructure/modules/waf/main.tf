@@ -98,6 +98,16 @@ resource "aws_wafv2_web_acl" "main" {
           }
         }
 
+        dynamic "rule_action_override" {
+          for_each = var.allow_local_equipment_callback ? [1] : []
+          content {
+            action_to_use {
+              count {}
+            }
+            name = "EC2MetaDataSSRF_QUERYARGUMENTS"
+          }
+        }
+
         # Exclude configured paths from this rule group entirely via scope-down.
         # Uses local.managed_rules_scope_down_statement so both managed rule groups
         # share identical scope-down logic without duplication.
@@ -394,13 +404,90 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  dynamic "rule" {
+    for_each = var.allow_local_equipment_callback ? [1] : []
+    content {
+      name     = "BlockMetadataQueryArgumentsRule"
+      priority = 8
+
+      action {
+        block {}
+      }
+
+      statement {
+        and_statement {
+          statement {
+            label_match_statement {
+              scope = "LABEL"
+              key   = "awswaf:managed:aws:core-rule-set:EC2MetaDataSSRF_QueryArguments"
+            }
+          }
+
+          statement {
+            not_statement {
+              statement {
+                and_statement {
+                  statement {
+                    byte_match_statement {
+                      search_string         = "GET"
+                      positional_constraint = "EXACTLY"
+                      field_to_match {
+                        method {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+
+                  statement {
+                    regex_match_statement {
+                      regex_string = local.equipment_auth_path
+                      field_to_match {
+                        uri_path {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+
+                  statement {
+                    regex_match_statement {
+                      regex_string = local.equipment_callback_query
+                      field_to_match {
+                        query_string {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "BlockMetadataQueryArgumentsRuleMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
   # Allow rule for large body bypass routes - runs AFTER all security checks
   # Only allows large body requests if they pass all other security rules first
   dynamic "rule" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = 6 # Run after all security checks including geographic blocking
+      priority = var.allow_local_equipment_callback ? 9 : 6 # Keep the label-based block ahead of a terminating allow.
 
       action {
         allow {}

@@ -72,6 +72,17 @@ variable "allow_page_regeneration" {
   default     = false
 }
 
+variable "allow_local_equipment_callback" {
+  description = "Allow the local Equipment sign-in callback through the query-argument SSRF rule on the dev OpenNext distribution."
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = !var.allow_local_equipment_callback || (var.environment == "dev" && var.service_name == "opennext")
+    error_message = "The local Equipment callback exception is only available for the dev OpenNext distribution."
+  }
+}
+
 variable "enable_bot_control" {
   description = "Enable AWS Managed Bot Control rule set. Adds ~$10/month + $1/million requests."
   type        = bool

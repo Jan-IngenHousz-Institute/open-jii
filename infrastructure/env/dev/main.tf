@@ -2609,8 +2609,9 @@ module "opennext_waf" {
   log_retention_days = 365
   enable_bot_control = true
 
-  managed_rules_excluded_paths = ["/ingest"]
-  allow_page_regeneration      = true
+  managed_rules_excluded_paths   = ["/ingest"]
+  allow_page_regeneration        = true
+  allow_local_equipment_callback = true
 
   tags = {
     Environment = var.environment
