@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
+import { AppState, Linking } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import RegistrationScreen from "~/features/auth/screens/registration-screen";
 import auth from "~/shared/i18n/locales/en-US/auth.json";
@@ -184,6 +185,91 @@ describe("RegistrationScreen", () => {
     render(<RegistrationScreen />);
 
     expect(reloadSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-checks the session when the app returns to the foreground, tolerating a failed read", async () => {
+    reloadSession.mockRejectedValue(new Error("Network request failed"));
+    const listen = vi.spyOn(AppState, "addEventListener");
+    render(<RegistrationScreen />);
+    const onChange = listen.mock.calls.at(-1)?.[1];
+
+    await settle(() => onChange?.("background"));
+    expect(reloadSession).toHaveBeenCalledTimes(1);
+
+    await settle(() => onChange?.("active"));
+    expect(reloadSession).toHaveBeenCalledTimes(2);
+    listen.mockRestore();
+  });
+
+  it("clears a field's error as soon as the person types in it", async () => {
+    render(<RegistrationScreen />);
+    await settle(() => fireEvent.press(screen.getByText(auth.registration.register)));
+
+    fireEvent.changeText(screen.getByPlaceholderText(auth.registration.firstNamePlaceholder), "A");
+
+    expect(screen.queryByText(auth.registration.firstNameError)).toBeNull();
+    expect(screen.getByText(auth.registration.lastNameError)).toBeTruthy();
+  });
+
+  it("opens the terms and conditions on the web", () => {
+    const openURL = vi.spyOn(Linking, "openURL").mockResolvedValue(true);
+    render(<RegistrationScreen />);
+
+    fireEvent.press(screen.getByText(auth.registration.readTerms));
+
+    expect(openURL).toHaveBeenCalledWith("https://example.test/terms-and-conditions");
+    openURL.mockRestore();
+  });
+
+  it("shows the server's reason under the email when the code is refused", async () => {
+    session.user.email = "0000-0002-1825-0097";
+    sendOtp.mockResolvedValue({ data: null, error: { message: "Too many requests" } });
+    render(<RegistrationScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "ada@example.com");
+    fillName();
+
+    await settle(() =>
+      fireEvent.press(screen.getByText(auth.registration.continueWithEmailVerification)),
+    );
+
+    expect(screen.getByText("Too many requests")).toBeTruthy();
+    expect(screen.queryByText(auth.checkEmailTitle)).toBeNull();
+  });
+
+  it("says the code could not be verified when the request itself fails", async () => {
+    verifyOtp.mockRejectedValue(new Error("Network request failed"));
+    await reachCodeStep();
+
+    await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456"));
+
+    expect(screen.getByText(auth.errors.verifyFailed)).toBeTruthy();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("goes back to the form from the code step", async () => {
+    await reachCodeStep();
+
+    fireEvent.press(screen.getByLabelText(auth.registration.back));
+
+    expect(screen.getByText(auth.registration.title)).toBeTruthy();
+  });
+
+  it("offers a new code once the 30-second wait is over", async () => {
+    vi.useFakeTimers();
+    try {
+      await reachCodeStep();
+      expect(screen.getByText("Re-send code ({{seconds}}s)")).toBeTruthy();
+
+      for (let second = 0; second < 30; second++) {
+        act(() => vi.advanceTimersByTime(1000));
+      }
+      await settle(() => fireEvent.press(screen.getByText(auth.resendCode)));
+
+      expect(sendOtp).toHaveBeenCalledTimes(2);
+      expect(screen.getByText("Re-send code ({{seconds}}s)")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("lets the user sign out to use another account", async () => {

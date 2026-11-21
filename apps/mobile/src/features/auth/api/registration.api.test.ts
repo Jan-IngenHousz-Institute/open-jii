@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { completeRegistration } from "~/features/auth/api/registration.api";
+import { completeRegistration, subscribeToNewsletter } from "~/features/auth/api/registration.api";
 
-const { createUserProfile, reloadSessionFromServer } = vi.hoisted(() => ({
+const { createUserProfile, subscribeDirect, reloadSessionFromServer } = vi.hoisted(() => ({
   createUserProfile: vi.fn(),
+  subscribeDirect: vi.fn(),
   reloadSessionFromServer: vi.fn(),
 }));
 
 vi.mock("~/shared/api/orpc", () => ({
-  orpcClient: { users: { createUserProfile }, newsletter: { subscribeDirect: vi.fn() } },
+  orpcClient: { users: { createUserProfile }, newsletter: { subscribeDirect } },
 }));
 vi.mock("~/features/auth/services/auth", () => ({ reloadSessionFromServer }));
 
@@ -39,5 +40,14 @@ describe("completeRegistration", () => {
 
     reloadSessionFromServer.mockResolvedValue(null);
     await expect(completeRegistration(profile)).rejects.toThrow();
+  });
+});
+
+describe("subscribeToNewsletter", () => {
+  it("subscribes the signed-in account directly", async () => {
+    subscribeDirect.mockResolvedValue({ status: "subscribed" });
+
+    await expect(subscribeToNewsletter()).resolves.toEqual({ status: "subscribed" });
+    expect(subscribeDirect).toHaveBeenCalledTimes(1);
   });
 });
