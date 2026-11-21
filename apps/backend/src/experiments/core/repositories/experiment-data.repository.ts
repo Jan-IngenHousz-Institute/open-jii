@@ -818,17 +818,6 @@ export class ExperimentDataRepository {
       }
     }
 
-    if (variants.length === 0 && tableType === "upload") {
-      return success({
-        source,
-        metadata,
-        variants,
-        exceptColumns,
-        reservedColumns: [],
-        phoneAnnotationsFrom,
-      });
-    }
-
     const viewColumnsResult = await this.viewColumns(source, tableType, identifier);
     if (viewColumnsResult.isFailure()) {
       return viewColumnsResult;

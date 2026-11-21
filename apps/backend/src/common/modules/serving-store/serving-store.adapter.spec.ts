@@ -840,9 +840,19 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       experimentId: EXPERIMENT,
       columns: ["id"],
       ordering: { column: "contributor.name", direction: "ASC", rowId: "id" },
-      orderByIds: [BEN, ADA],
+      orderByIds: [[BEN], [ADA]],
     });
     expect(byName.rows).toEqual([["2"], ["1"]]);
+
+    const byEqualNames = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: EXPERIMENT,
+      columns: ["id"],
+      ordering: { column: "contributor.name", direction: "ASC", rowId: "id" },
+      orderByIds: [[BEN, ADA]],
+    });
+    expect(byEqualNames.rows).toEqual([["1"], ["2"]]);
 
     const pseudonym = (id: string) =>
       `Contributor-${createHash("sha256").update(`${EXPERIMENT}:${id}`).digest("hex").slice(0, 6).toUpperCase()}`;
@@ -1180,7 +1190,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           ...read,
           columns: ["id"],
           ordering: { column: "device", direction, rowId: "id" },
-          orderByIds: ["c1", "blank-phone"],
+          orderByIds: [["c1"], ["blank-phone"]],
           deviceSerials: serials,
           limit: 11,
         });

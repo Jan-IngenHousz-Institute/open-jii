@@ -1560,6 +1560,14 @@ describe("ExperimentDataRepository", () => {
       customMetadataSchema: null,
     };
     const emptyData = { columns: [], rows: [], totalRows: 0, truncated: false };
+    const schemaLessUpload: ExperimentTableMetadata = {
+      identifier: "upload_1",
+      tableType: "upload",
+      displayName: null,
+      rowCount: 5,
+      latestRowAt: null,
+      schemaRevision: null,
+    };
 
     it("runs an aggregation over the table with its payload flattened", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
@@ -1617,6 +1625,28 @@ describe("ExperimentDataRepository", () => {
         expect(build.mock.calls[0][0].ordering?.rowId).toBe(rowId);
       },
     );
+
+    it("breaks ties by the row id on an upload table with no schema", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([schemaLessUpload]),
+      );
+      const build = vi
+        .spyOn(databricksPort, "buildExperimentQuery")
+        .mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
+
+      const result = await repository.getTableData({
+        ...readParams,
+        tableName: "upload_1",
+        page: 1,
+        pageSize: 5,
+        orderBy: "uploaded_at",
+      });
+
+      assertSuccess(result);
+      expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledWith("upload", "upload_1");
+      expect(build.mock.calls[0][0].ordering?.rowId).toBe("id");
+    });
 
     it("passes on a query-builder failure for an aggregation and for a chart read", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
@@ -1678,18 +1708,9 @@ describe("ExperimentDataRepository", () => {
       );
     });
 
-    it("hides an upload table's payload when it has no schema, and looks up no columns", async () => {
+    it("hides an upload table's payload when it has no schema", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([
-          {
-            identifier: "upload_1",
-            tableType: "upload",
-            displayName: null,
-            rowCount: 5,
-            latestRowAt: null,
-            schemaRevision: null,
-          },
-        ]),
+        success([schemaLessUpload]),
       );
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
@@ -1697,7 +1718,6 @@ describe("ExperimentDataRepository", () => {
       await repository.getTableData({ ...readParams, tableName: "upload_1" });
 
       const [query] = vi.mocked(databricksPort.buildExperimentQuery).mock.calls[0];
-      expect(databricksPort.getExperimentTableColumns).not.toHaveBeenCalled();
       expect(query.variants).toBeUndefined();
       expect(query.exceptColumns).toContain("uploaded_data");
       expect(query.exceptColumns).toContain("custom_metadata");
