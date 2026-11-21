@@ -348,6 +348,53 @@ describe("QueryBuilderService", () => {
       expect(sql).not.toContain("GROUP BY");
     });
 
+    it("returns only the named columns from a row window, while the window reads the whole row", () => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "t",
+          columns: ["timestamp", "device_id"],
+          whereConditions: [["experiment_id", "exp-1"]],
+          aggregation: {
+            functions: [
+              {
+                column: "uptime",
+                function: "change_from_previous",
+                partitionColumn: "device_id",
+                orderColumn: "timestamp",
+                tieBreaker: "id",
+              },
+            ],
+          },
+          ordering: { column: "timestamp" },
+        }),
+      );
+
+      expect(sql).toMatch(/^SELECT `timestamp`, `device_id`, CASE WHEN /);
+      expect(sql).toContain("LAG(`uptime`) OVER (PARTITION BY `device_id`");
+      expect(sql).toContain(
+        "FROM (SELECT * FROM t WHERE `experiment_id` = 'exp-1') ORDER BY `timestamp` ASC",
+      );
+    });
+
+    it("keeps a flattened payload whole under a row window that names only some fields", () => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "t",
+          columns: ["timestamp", "Battery"],
+          variants: [
+            { columnName: "macro_output", schema: "OBJECT<Battery: DOUBLE, Uptime: BIGINT>" },
+          ],
+          whereConditions: [["experiment_id", "exp-1"]],
+          aggregation: {
+            functions: [{ column: "Uptime", function: "previous", orderColumn: "timestamp" }],
+          },
+        }),
+      );
+
+      expect(sql).toMatch(/^SELECT `timestamp`, `Battery`, CASE WHEN .* LAG\(`Uptime`\)/);
+      expect(sql.indexOf("AS `Uptime`")).toBeGreaterThan(sql.indexOf(" FROM ("));
+    });
+
     it("emits explicit projections (no SELECT *) when row aggregates are also active", () => {
       // Mixing a row aggregate with a window forces GROUP BY, and the
       // SELECT must list only groupBy columns plus aggregate expressions.

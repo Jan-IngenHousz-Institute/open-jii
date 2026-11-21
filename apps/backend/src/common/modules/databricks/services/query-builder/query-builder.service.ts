@@ -36,10 +36,11 @@ export class QueryBuilderService {
       }
 
       // Aggregation: build the inner with filters baked in so filtering
-      // happens pre-aggregation. Drop ordering/limit from the inner; the
-      // outer wrapper applies them on aggregated columns.
+      // happens pre-aggregation. Drop columns, ordering and limit from the inner; the
+      // outer wrapper applies them, and the windows read columns the caller did not name.
       const innerParams: QueryParams = {
         ...query,
+        columns: undefined,
         ordering: undefined,
         limit: undefined,
         offset: undefined,
@@ -53,6 +54,7 @@ export class QueryBuilderService {
       return success(
         wrapWithAggregation(innerSql, {
           columnNames: query.columnNames,
+          columns: query.columns,
           aggregation: query.aggregation,
           ordering: query.ordering,
           limit: query.limit,

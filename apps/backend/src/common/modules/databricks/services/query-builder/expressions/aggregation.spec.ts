@@ -79,7 +79,7 @@ describe("buildAggregateExpression", () => {
     expect(alias).toBe("a_corr_b");
   });
 
-  it("rejects cumsum — that's the window-function path's job", () => {
+  it("rejects cumsum: that's the window-function path's job", () => {
     expect(() =>
       buildAggregateExpression({ column: "value", function: "cumsum" }, builder),
     ).toThrow(QueryBuilderInputError);
@@ -207,6 +207,51 @@ describe("wrapWithAggregation", () => {
     // aggregated series can still find their values, append the cumsum.
     expect(sql).toContain("SELECT *, SUM(`value`) OVER (ORDER BY `ts`)");
     expect(sql).not.toContain("GROUP BY");
+  });
+
+  it("window-only path keeps only the named columns beside its windows", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      columns: ["ts", "value", "device", "value", "", "*"],
+      aggregation: {
+        functions: [
+          {
+            column: "uptime",
+            function: "change_from_previous",
+            partitionColumn: "device",
+            orderColumn: "ts",
+            alias: "uptime_change",
+          },
+        ],
+      },
+      ordering: { column: "ts" },
+    });
+    expect(sql).toMatch(/^SELECT `ts`, `value`, `device`, CASE WHEN /);
+    expect(sql).toContain("LAG(`uptime`) OVER (PARTITION BY `device`");
+    expect(sql).not.toMatch(/^SELECT \*/);
+    expect(sql).toContain("AS `uptime_change` FROM (SELECT * FROM t) ORDER BY `ts` ASC");
+  });
+
+  it("window-only path keeps an exploded element beside the named columns", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      columns: ["ts"],
+      aggregation: {
+        explode: { column: "readings", alias: "reading" },
+        functions: [{ column: "reading", function: "cumsum" }],
+      },
+      ordering: { column: "ts" },
+    });
+    expect(sql).toMatch(/^SELECT `ts`, `reading`, SUM\(`reading`\)/);
+  });
+
+  it("grouped path ignores named columns and projects only its groups and aggregates", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      columns: ["ts", "value"],
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "value", function: "avg" }],
+      },
+    });
+    expect(sql).toMatch(/^SELECT `device` AS `device`, AVG\(`value`\) AS `value_avg` FROM/);
   });
 
   it("cumsum routes through window-only when no groupBy / orderBy given as anchor", () => {

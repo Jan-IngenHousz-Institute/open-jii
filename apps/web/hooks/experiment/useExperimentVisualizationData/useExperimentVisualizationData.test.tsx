@@ -233,12 +233,7 @@ describe("useExperimentVisualizationData", () => {
   });
 
   it("passes orderBy through unchanged for window-only aggregation (cumsum-only)", async () => {
-    // Regression: cumsum without a groupBy is a window-only path; the
-    // SQL builder emits `SELECT *, <window>` so any inner column is in
-    // scope for the OVER (ORDER BY ...) driver. The hook used to drop
-    // orderBy whenever it wasn't in groupBy / functions; that left the
-    // backend with no ordering signal and 400'd the request. Window-only
-    // aggregations now pass orderBy through unchanged.
+    // A window-only read keeps raw rows, so a raw orderBy still resolves; dropping it 400'd cumsum.
     const spy = server.mount(contract.experiments.getExperimentData, {
       body: [createExperimentDataTable({ name: "device" })],
     });
@@ -260,6 +255,53 @@ describe("useExperimentVisualizationData", () => {
     await waitFor(() => expect(spy.called).toBe(true));
     expect(spy.calls.at(-1)?.query.orderBy).toBe("device_id");
     expect(spy.calls.at(-1)?.query.orderDirection).toBe("ASC");
+  });
+
+  it("names the plotted columns on a row-window read so a wide table is not returned whole", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [createExperimentDataTable({ name: "telemetry" })],
+    });
+
+    renderHook(() =>
+      useExperimentVisualizationData("exp-123", {
+        tableName: "telemetry",
+        columns: ["timestamp", "device_id", "uptime"],
+        aggregation: {
+          functions: [
+            {
+              column: "uptime",
+              function: "change_from_previous",
+              partitionColumn: "device_id",
+              orderColumn: "timestamp",
+              alias: "uptime_change_from_previous_s2",
+            },
+          ],
+        },
+      }),
+    );
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls.at(-1)?.query.columns).toBe("timestamp,device_id,uptime");
+  });
+
+  it("leaves the columns off a grouped read, which returns only its aggregates", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [createExperimentDataTable({ name: "telemetry" })],
+    });
+
+    renderHook(() =>
+      useExperimentVisualizationData("exp-123", {
+        tableName: "telemetry",
+        columns: ["device_id", "battery"],
+        aggregation: {
+          groupBy: [{ column: "device_id" }],
+          functions: [{ column: "battery", function: "avg", alias: "battery_avg_s1" }],
+        },
+      }),
+    );
+
+    await waitFor(() => expect(spy.called).toBe(true));
+    expect(spy.calls.at(-1)?.query.columns).toBeUndefined();
   });
 
   it("still drops orderBy when window functions coexist with row aggregates", async () => {
