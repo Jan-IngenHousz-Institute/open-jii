@@ -6,6 +6,8 @@ import { ExperimentRepository } from "../../../../experiments/core/repositories/
 import type { ExperimentDeviceDto } from "../../../core/models/experiment-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { EXPERIMENT_DEVICE_WAREHOUSE_CACHE } from "../../../core/ports/experiment-device-warehouse-cache.port";
+import type { ExperimentDeviceWarehouseCache } from "../../../core/ports/experiment-device-warehouse-cache.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { ListExperimentDevicesUseCase } from "./list-experiment-devices";
@@ -61,6 +63,12 @@ describe("ListExperimentDevicesUseCase row access", () => {
           },
         },
         { provide: AuthorizationService, useValue: { can } },
+        {
+          provide: EXPERIMENT_DEVICE_WAREHOUSE_CACHE,
+          useValue: {
+            getOrLoad: (_experimentId, load) => load(),
+          } satisfies ExperimentDeviceWarehouseCache,
+        },
         {
           provide: AWS_PORT,
           useValue: { searchThingsConnectivity: vi.fn().mockResolvedValue(success(new Map())) },
