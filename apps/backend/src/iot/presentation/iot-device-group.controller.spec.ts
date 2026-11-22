@@ -486,7 +486,7 @@ describe("IotDeviceGroupController", () => {
       ]);
     });
 
-    it("pages the roster while retaining matching chart data for devices off the page", async () => {
+    it("pages the roster and shares telemetry across views of the same window", async () => {
       const group = await createGroup();
       const devices = await Promise.all(
         Array.from({ length: 21 }, (_, index) =>
@@ -505,16 +505,20 @@ describe("IotDeviceGroupController", () => {
 
       const awsAdapter = testApp.module.get(AwsAdapter);
       const databricksAdapter = testApp.module.get(DatabricksAdapter);
-      vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
-      vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
-      vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(
-        success([
-          { bucketStart: "2026-08-17T10:00:00.000Z", clientId: devices[0].thingName, count: 7 },
-        ]),
-      );
-      vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
-      vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
-      vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([]));
+      const telemetry = [
+        vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map())),
+        vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map())),
+        vi
+          .spyOn(databricksAdapter, "getDevicesThroughput")
+          .mockResolvedValue(
+            success([
+              { bucketStart: "2026-08-17T10:00:00.000Z", clientId: devices[0].thingName, count: 7 },
+            ]),
+          ),
+        vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([])),
+        vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([])),
+        vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([])),
+      ];
 
       const path = testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
         groupId: group.id,
@@ -556,6 +560,32 @@ describe("IotDeviceGroupController", () => {
       expect(second.body.throughput).toHaveLength(1);
       expect(filtered.body.throughput).toEqual([]);
       expect(filtered.body.pagination).toMatchObject({ groupSize: 21, totalCount: 1, unknown: 1 });
+      for (const read of telemetry) expect(read).toHaveBeenCalledTimes(1);
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...query, page: 1, bucket: "day" })
+        .expect(StatusCodes.OK);
+      for (const read of telemetry) expect(read).toHaveBeenCalledTimes(2);
+
+      await testApp
+        .delete(
+          testApp.resolveOrpcPath(contract.iot.removeIotDeviceGroupMember, {
+            groupId: group.id,
+            deviceId: devices[20].id,
+          }),
+        )
+        .withAuth(userId)
+        .expect(StatusCodes.NO_CONTENT);
+      const afterRemoval: SuperTestResponse<IotDeviceGroupMonitoring> = await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...query, page: 2 })
+        .expect(StatusCodes.OK);
+      expect(afterRemoval.body.members).toEqual([]);
+      expect(afterRemoval.body.pagination).toMatchObject({ groupSize: 20, totalPages: 1 });
+      for (const read of telemetry) expect(read).toHaveBeenCalledTimes(3);
     });
 
     it("accepts a window of exactly 31 days (200)", async () => {

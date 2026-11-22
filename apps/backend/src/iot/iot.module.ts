@@ -1,9 +1,13 @@
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
+import type { Cache } from "cache-manager";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
+import { CacheAdapter } from "../common/modules/cache/cache.adapter";
+import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { GithubAdapter } from "../common/modules/github/github.adapter";
@@ -75,6 +79,7 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { GITHUB_PORT } from "./core/ports/github.port";
+import { GROUP_MONITORING_CACHE } from "./core/ports/group-monitoring-cache.port";
 import { ExperimentDeviceRepository } from "./core/repositories/experiment-device.repository";
 import { IotCalibrationDefinitionRepository } from "./core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "./core/repositories/iot-calibration-run.repository";
@@ -91,6 +96,7 @@ import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [
+    CacheModule,
     AwsModule,
     AnalyticsModule,
     DatabricksModule,
@@ -186,6 +192,12 @@ import { IotController } from "./presentation/iot.controller";
     {
       provide: GITHUB_PORT,
       useExisting: GithubAdapter,
+    },
+    {
+      provide: GROUP_MONITORING_CACHE,
+      useFactory: (cache: Cache) =>
+        new CacheAdapter(cache, { prefix: "iot:group-monitoring:", ttlMs: 30_000 }),
+      inject: [CACHE_MANAGER],
     },
     {
       provide: IOT_DATABRICKS_PORT,

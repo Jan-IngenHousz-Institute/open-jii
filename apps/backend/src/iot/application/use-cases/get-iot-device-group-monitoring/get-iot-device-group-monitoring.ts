@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { createHash } from "node:crypto";
 
 import type {
   GroupMonitoringListQuery,
@@ -6,6 +7,7 @@ import type {
 } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
+import type { IotDeviceGroupMemberThingDto } from "../../../core/models/iot-device-group.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort, ThingConnectivity } from "../../../core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -16,6 +18,8 @@ import type {
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../core/ports/databricks.port";
+import { GROUP_MONITORING_CACHE } from "../../../core/ports/group-monitoring-cache.port";
+import type { GroupMonitoringCache } from "../../../core/ports/group-monitoring-cache.port";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { groupMonitoringPage } from "./group-monitoring-page";
 
@@ -55,6 +59,8 @@ export class GetIotDeviceGroupMonitoringUseCase {
 
   constructor(
     private readonly groupRepository: IotDeviceGroupRepository,
+    @Inject(GROUP_MONITORING_CACHE)
+    private readonly cache: GroupMonitoringCache,
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     @Inject(IOT_DATABRICKS_PORT)
@@ -72,22 +78,27 @@ export class GetIotDeviceGroupMonitoringUseCase {
     }
 
     const members = membersResult.value;
-    const now = Date.now();
+    const load = () => this.loadMonitoring(members, window);
+    // The roster signature keeps membership and device labels current even within the TTL.
+    const roster = createHash("sha256").update(JSON.stringify(members)).digest("hex");
+    const key = JSON.stringify([groupId, window.from, window.to, window.bucket, roster]);
+    const monitoring = (await this.cache.tryCache(key, load)) ?? (await load());
+    return success(groupMonitoringPage(monitoring, query, Date.now()));
+  }
+
+  private async loadMonitoring(
+    members: IotDeviceGroupMemberThingDto[],
+    window: MonitoringWindow,
+  ): Promise<IotDeviceGroupMonitoring> {
     if (members.length === 0) {
-      return success(
-        groupMonitoringPage(
-          {
-            members: [],
-            throughput: [],
-            dataByExperiment: [],
-            firmware: [],
-            events: [],
-            pipelineUnavailable: false,
-          },
-          query,
-          now,
-        ),
-      );
+      return {
+        members: [],
+        throughput: [],
+        dataByExperiment: [],
+        firmware: [],
+        events: [],
+        pipelineUnavailable: false,
+      };
     }
 
     const thingNames = members.map((member) => member.thingName);
@@ -114,50 +125,42 @@ export class GetIotDeviceGroupMonitoringUseCase {
     const toDeviceId = (clientId: string | null) =>
       clientId === null ? null : (deviceIdByThing.get(clientId) ?? null);
 
-    return success(
-      groupMonitoringPage(
-        {
-          members: members.map((member) => {
-            const thing = connectivity?.get(member.thingName);
-            return {
-              deviceId: member.deviceId,
-              name: member.name,
-              serialNumber: member.serialNumber,
-              deviceType: member.deviceType,
-              connectivity: thing
-                ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt }
-                : null,
-              lastDataAt: activity?.get(member.thingName) ?? null,
-            };
-          }),
-          throughput: (throughput ?? []).map((row) => ({
-            bucketStart: row.bucketStart,
-            deviceId: toDeviceId(row.clientId),
-            count: row.count,
-          })),
-          dataByExperiment: dataByExperiment ?? [],
-          firmware: this.latestFirmwarePerMember(firmware ?? []).map((row) => ({
-            deviceId: toDeviceId(row.clientId),
-            version: row.version,
-            lastSeen: row.lastSeen,
-          })),
-          events: (events ?? []).map((row) => ({
-            deviceId: toDeviceId(row.clientId),
-            eventType: row.eventType,
-            eventTimestamp: row.eventTimestamp,
-            disconnectReason: row.disconnectReason,
-          })),
-          pipelineUnavailable:
-            activity === null ||
-            throughput === null ||
-            dataByExperiment === null ||
-            firmware === null ||
-            events === null,
-        },
-        query,
-        now,
-      ),
-    );
+    return {
+      members: members.map((member) => {
+        const thing = connectivity?.get(member.thingName);
+        return {
+          deviceId: member.deviceId,
+          name: member.name,
+          serialNumber: member.serialNumber,
+          deviceType: member.deviceType,
+          connectivity: thing ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt } : null,
+          lastDataAt: activity?.get(member.thingName) ?? null,
+        };
+      }),
+      throughput: (throughput ?? []).map((row) => ({
+        bucketStart: row.bucketStart,
+        deviceId: toDeviceId(row.clientId),
+        count: row.count,
+      })),
+      dataByExperiment: dataByExperiment ?? [],
+      firmware: this.latestFirmwarePerMember(firmware ?? []).map((row) => ({
+        deviceId: toDeviceId(row.clientId),
+        version: row.version,
+        lastSeen: row.lastSeen,
+      })),
+      events: (events ?? []).map((row) => ({
+        deviceId: toDeviceId(row.clientId),
+        eventType: row.eventType,
+        eventTimestamp: row.eventTimestamp,
+        disconnectReason: row.disconnectReason,
+      })),
+      pipelineUnavailable:
+        activity === null ||
+        throughput === null ||
+        dataByExperiment === null ||
+        firmware === null ||
+        events === null,
+    };
   }
 
   private async lookupConnectivity(
