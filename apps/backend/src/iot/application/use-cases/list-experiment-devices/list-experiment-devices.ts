@@ -21,6 +21,11 @@ import type {
   ExperimentDeviceStatsRow,
   ExperimentPublisherRow,
 } from "../../../core/ports/databricks.port";
+import { EXPERIMENT_DEVICE_WAREHOUSE_CACHE } from "../../../core/ports/experiment-device-warehouse-cache.port";
+import type {
+  ExperimentDeviceWarehouseCache,
+  ExperimentDeviceWarehouseFacts,
+} from "../../../core/ports/experiment-device-warehouse-cache.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { experimentDevicesPage } from "./experiment-devices-page";
@@ -54,6 +59,8 @@ export class ListExperimentDevicesUseCase {
     private readonly awsPort: AwsPort,
     @Inject(IOT_DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,
+    @Inject(EXPERIMENT_DEVICE_WAREHOUSE_CACHE)
+    private readonly warehouseCache: ExperimentDeviceWarehouseCache,
   ) {}
 
   async execute(
@@ -91,11 +98,6 @@ export class ListExperimentDevicesUseCase {
       );
     }
 
-    const window = {
-      from: new Date(now.getTime() - OBSERVATION_WINDOW_MS).toISOString(),
-      to: now.toISOString(),
-    };
-
     const bindingsResult = await this.experimentDeviceRepository.listByExperiment(experimentId);
     if (bindingsResult.isFailure()) {
       return failure(bindingsResult.error);
@@ -105,9 +107,11 @@ export class ListExperimentDevicesUseCase {
 
     // Unpaged callers can start bound-device activity while publisher discovery runs.
     // Paged callers fetch activity once they know which rows to return.
-    const [publishers, stats, boundActivity] = await Promise.all([
-      this.lookupPublishers(experimentId, window),
-      this.lookupDeviceStats(experimentId),
+    const loadWarehouse = () => this.lookupWarehouseFacts(experimentId, now);
+    const [{ publishers, stats, window }, boundActivity] = await Promise.all([
+      query.page === undefined
+        ? loadWarehouse()
+        : this.warehouseCache.getOrLoad(experimentId, loadWarehouse),
       query.page === undefined
         ? this.lookupActivity([...boundThings])
         : new Map<string, string | null>(),
@@ -289,6 +293,21 @@ export class ListExperimentDevicesUseCase {
 
   // Every lookup below is an enrichment, never a gate: a failure degrades to
   // null so the roster still renders, with the warehouse ones flagged.
+  private async lookupWarehouseFacts(
+    experimentId: string,
+    now: Date,
+  ): Promise<ExperimentDeviceWarehouseFacts> {
+    const window = {
+      from: new Date(now.getTime() - OBSERVATION_WINDOW_MS).toISOString(),
+      to: now.toISOString(),
+    };
+    const [publishers, stats] = await Promise.all([
+      this.lookupPublishers(experimentId, window),
+      this.lookupDeviceStats(experimentId),
+    ]);
+    return { window, publishers, stats };
+  }
+
   private async lookupDeviceStats(
     experimentId: string,
   ): Promise<ExperimentDeviceStatsRow[] | null> {

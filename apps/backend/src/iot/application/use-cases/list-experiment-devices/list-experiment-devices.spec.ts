@@ -116,6 +116,57 @@ describe("ListExperimentDevicesUseCase", () => {
     expect(activity).toHaveBeenCalledTimes(1);
   });
 
+  it("reuses experiment warehouse facts for paging and an off-page selection", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const publishers = vi.spyOn(databricksAdapter, "getExperimentPublishers").mockResolvedValue(
+      success([
+        { clientId: "first", count: 3, lastDataAt: "2026-09-02T00:00:00.000Z" },
+        { clientId: "second", count: 2, lastDataAt: "2026-09-01T00:00:00.000Z" },
+      ]),
+    );
+    const stats = vi.spyOn(databricksAdapter, "getExperimentDeviceStats");
+
+    const first = await useCase.execute(experiment.id, userId, NOW, { page: 1, pageSize: 1 });
+    const later = new Date(NOW.getTime() + 1000);
+    const second = await useCase.execute(experiment.id, userId, later, {
+      page: 2,
+      pageSize: 1,
+      selectedClientId: "first",
+    });
+
+    assertSuccess(first);
+    assertSuccess(second);
+    expect(first.value.devices.map(({ clientId }) => clientId)).toEqual(["first"]);
+    expect(second.value.devices.map(({ clientId }) => clientId)).toEqual(["second"]);
+    expect(second.value.pagination?.selected?.clientId).toBe("first");
+    expect(second.value.window).toEqual(first.value.window);
+    expect(publishers).toHaveBeenCalledTimes(1);
+    expect(stats).toHaveBeenCalledTimes(1);
+
+    const unpaged = await useCase.execute(experiment.id, userId, later);
+    assertSuccess(unpaged);
+    expect(unpaged.value.window.to).toBe(later.toISOString());
+    expect(publishers).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries the experiment warehouse lookups after a partial failure", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const publishers = vi.spyOn(databricksAdapter, "getExperimentPublishers");
+    const stats = vi
+      .spyOn(databricksAdapter, "getExperimentDeviceStats")
+      .mockResolvedValueOnce(failure(AppError.internal("Warehouse unavailable")));
+
+    const failed = await useCase.execute(experiment.id, userId, NOW, { page: 1 });
+    const retried = await useCase.execute(experiment.id, userId, NOW, { page: 1 });
+
+    assertSuccess(failed);
+    assertSuccess(retried);
+    expect(failed.value.pipelineUnavailable).toBe(true);
+    expect(retried.value.pipelineUnavailable).toBe(false);
+    expect(publishers).toHaveBeenCalledTimes(2);
+    expect(stats).toHaveBeenCalledTimes(2);
+  });
+
   it("joins fleet-index and warehouse facts onto a bound device", async () => {
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
     const device = await testApp.createIotDevice({ createdBy: userId });

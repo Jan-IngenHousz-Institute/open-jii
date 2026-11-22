@@ -28,6 +28,7 @@ const filters = {
 
 const options = { filters, sort: zExperimentSort, searchKey: null };
 const withSearch = { filters, sort: zExperimentSort, searchKey: "q" as const };
+const withPage = { ...withSearch, pageKey: "page" as const };
 
 const sortParam = (value: unknown) => `sort=${encodeURIComponent(JSON.stringify(value))}`;
 
@@ -116,6 +117,45 @@ describe("useListUrlState", () => {
       act(() => result.current.clearFilters());
 
       expect(replace).toHaveBeenCalledWith("/list", { scroll: false });
+    });
+  });
+
+  describe("pagination", () => {
+    it.each(["0", "abc", "-1", "1e3", "9007199254740992"])(
+      "falls back to the first page for page=%s",
+      (page) => {
+        setSearchParams(`page=${page}&q=wheat`);
+        const { result } = renderHook(() => useListUrlState(withPage));
+
+        expect(result.current.page).toBe(1);
+        expect(replace).toHaveBeenCalledExactlyOnceWith("/list?q=wheat", { scroll: false });
+      },
+    );
+
+    it("leaves the page parameter alone when the list does not own it", () => {
+      setSearchParams("page=4");
+      const { result } = renderHook(() => useListUrlState(options));
+
+      expect(result.current.page).toBe(1);
+      expect(replace).not.toHaveBeenCalled();
+      act(() => result.current.setFilter("status", ["active"]));
+      expect(replace).toHaveBeenCalledExactlyOnceWith("/list?page=4&status=active", {
+        scroll: false,
+      });
+    });
+
+    it("restores the page on back and forward", () => {
+      setSearchParams("page=3&q=wheat");
+      const { result, rerender } = renderHook(() => useListUrlState(withPage));
+      expect(result.current.page).toBe(3);
+
+      for (const page of [2, 3]) {
+        setSearchParams(`page=${page}&q=wheat`);
+        act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+        rerender();
+        expect(result.current.page).toBe(page);
+      }
+      expect(replace).not.toHaveBeenCalled();
     });
   });
 

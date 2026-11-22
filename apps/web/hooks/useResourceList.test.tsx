@@ -185,6 +185,34 @@ describe("useResourceList", () => {
     await waitFor(() => expect(result.current.page).toBe(2));
   });
 
+  it("keeps the restored page while the URL search is debouncing", async () => {
+    openOnUrl("/list", "q=old");
+    const { result, rerender } = renderList(
+      (view) => envelope([], view.page, view.search === "old" ? 1 : 4),
+      "q",
+    );
+    await waitFor(() => expect(result.current.data?.page).toBe(1));
+
+    vi.useFakeTimers();
+    try {
+      openOnUrl("/list", "q=new&page=3");
+      act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+      rerender();
+      await act(() => vi.advanceTimersByTimeAsync(50));
+
+      expect(result.current.debouncedSearch).toBe("old");
+      expect(result.current.data).toMatchObject({ page: 3, totalPages: 1 });
+      expect(result.current.page).toBe(3);
+
+      await act(() => vi.advanceTimersByTimeAsync(300));
+      await act(() => vi.advanceTimersByTimeAsync(50));
+      expect(result.current.debouncedSearch).toBe("new");
+      expect(result.current.data).toMatchObject({ page: 3, totalPages: 4 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("pages an unpaged response 20 rows at a time", async () => {
     const { result } = renderList(() => rows(45));
     await waitFor(() => expect(result.current.data).toBeDefined());
