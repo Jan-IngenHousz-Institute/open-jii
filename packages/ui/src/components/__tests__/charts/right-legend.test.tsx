@@ -3,6 +3,7 @@ import type { Layout, PlotData } from "plotly.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CartesianChart } from "../../charts/cartesian-chart";
+import type { CartesianSeries, FacetGridConfig } from "../../charts/cartesian-chart";
 import { PieChart } from "../../charts/pie-chart";
 import { ScatterChart } from "../../charts/scatter-chart";
 
@@ -33,6 +34,33 @@ vi.mock("../../charts/plotly-chart", () => ({
 
 const name = "W".repeat(120);
 const series = { x: [1, 2], y: [1, 2], name };
+const facetCells = [
+  { title: "Low", xaxisId: "x", yaxisId: "y", secondaryYaxisId: "y3" },
+  { title: "High", xaxisId: "x2", yaxisId: "y2", secondaryYaxisId: "y4" },
+];
+const facetSeries: CartesianSeries[] = facetCells.flatMap((cell, index) => [
+  {
+    ...series,
+    name: "Primary assay",
+    traceType: "scatter",
+    marker: { color: [1, 2] },
+    xaxisId: cell.xaxisId,
+    yaxisId: cell.yaxisId,
+    showlegend: index === 0,
+  },
+  {
+    ...series,
+    name: "Secondary reference",
+    traceType: "scatter",
+    marker: { color: [1, 2] },
+    axis: "secondary",
+    xaxisId: cell.xaxisId,
+    yaxisId: cell.secondaryYaxisId,
+    showlegend: index === 0,
+  },
+]);
+const sideBySide: FacetGridConfig = { rows: 1, columns: 2, cells: facetCells };
+
 function figure(): { data: PlotData[]; layout: Partial<Layout> } {
   return JSON.parse(screen.getByTestId("figure").getAttribute("data-figure") ?? "{}");
 }
@@ -183,6 +211,72 @@ describe("right legends at the Plotly boundary", () => {
     expect(figure().layout.legend).toMatchObject({ xref: "container", orientation: "v" });
     expect(figure().data[0]?.name).toBe("Yield");
   });
+
+  it("moves an inside legend below when the faceted plot is too narrow for the entries", () => {
+    measurement.width = 368;
+    const chart = () => (
+      <CartesianChart
+        data={facetSeries}
+        colorAxis={{ showscale: true }}
+        config={{ legendPosition: "inside-top-left", y2AxisTitle: "Secondary reading" }}
+        subplots={{ ...sideBySide, sharedYTitle: true }}
+      />
+    );
+    const { rerender } = render(chart());
+    expect(figure().layout.legend).toMatchObject({ orientation: "h", y: 0 });
+
+    measurement.width = 560;
+    rerender(chart());
+    expect(figure().layout.legend).toMatchObject({ orientation: "v", x: 0.02, y: 0.98 });
+  });
+
+  it("gives a shared primary Y title the left gutter on a faceted chart with a colour bar", () => {
+    measurement.width = 560;
+    render(
+      <CartesianChart
+        data={facetSeries.map((trace) => ({
+          ...trace,
+          name: trace.axis === "secondary" ? "Reference" : "Yield",
+        }))}
+        colorAxis={{ showscale: true }}
+        config={{ legendPosition: "left", yAxisTitle: "Primary reading" }}
+        subplots={{ ...sideBySide, sharedYTitle: true }}
+      />,
+    );
+    expect(figure().layout.legend).toMatchObject({ orientation: "h", y: 0 });
+    expect(figure().layout.annotations).toContainEqual(
+      expect.objectContaining({ text: "Primary reading", x: 0 }),
+    );
+  });
+
+  it.each([
+    { legendPosition: "top", titled: "yaxis3", untitled: "yaxis4" },
+    { legendPosition: "bottom", titled: "yaxis4", untitled: "yaxis3" },
+  ] as const)(
+    "labels a shared secondary Y scale once with a $legendPosition legend",
+    ({ legendPosition, titled, untitled }) => {
+      render(
+        <CartesianChart
+          data={facetSeries}
+          colorAxis={{ showscale: true }}
+          config={{
+            legendPosition,
+            title: "Assays",
+            xAxisTitle: "Sample index",
+            y2AxisTitle: "Secondary reading",
+          }}
+          subplots={{ rows: 2, columns: 1, cells: facetCells, sharedY: true, sharedXTitle: true }}
+        />,
+      );
+      const { layout } = figure();
+      expect(layout).toMatchObject({
+        yaxis3: { showticklabels: true },
+        yaxis4: { showticklabels: true, matches: "y3" },
+        [titled]: { title: { text: "Secondary reading" } },
+      });
+      expect(layout).not.toHaveProperty(`${untitled}.title`);
+    },
+  );
 
   it("respects inside and hidden legends even with secondary-axis names", () => {
     const data = [{ ...series, traceType: "line" as const, axis: "secondary" as const }];

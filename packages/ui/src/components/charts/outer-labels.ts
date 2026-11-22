@@ -5,7 +5,7 @@ import type { ChartTierOptions } from "./utils";
 import { effectiveLegendPosition, legendAnchorFor, responsiveChrome } from "./utils";
 
 export const HORIZONTAL_LEGEND_HEIGHT = 64;
-const LEGEND_PADDING = 56;
+export const LEGEND_PADDING = 56;
 const MIN_SIDE_TEXT_WIDTH = 96;
 
 let textContext: CanvasRenderingContext2D | null | undefined;

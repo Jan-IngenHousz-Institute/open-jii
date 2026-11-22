@@ -1089,6 +1089,8 @@ function applyAxisOverrides(
   return result;
 }
 
+export const SHARED_FACET_Y_TITLE_GUTTER = 80;
+
 /**
  * Extend a single-canvas layout with a facet grid spec. Reads the
  * existing `xaxis` / `yaxis` configs as style templates, generates
@@ -1264,7 +1266,9 @@ export function extendLayoutForFacets(
     out.margin = {
       ...existingMargin,
       ...(sharedXTitleOn ? { b: Math.max(existingMargin.b ?? 0, 90) } : {}),
-      ...(sharedYTitleOn ? { l: Math.max(existingMargin.l ?? 0, 80) } : {}),
+      ...(sharedYTitleOn
+        ? { l: Math.max(existingMargin.l ?? 0, SHARED_FACET_Y_TITLE_GUTTER) }
+        : {}),
     };
   }
 

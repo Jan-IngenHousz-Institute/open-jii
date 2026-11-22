@@ -7,6 +7,7 @@ import { cn } from "../../lib/utils";
 import {
   chartTextWidth,
   HORIZONTAL_LEGEND_HEIGHT,
+  LEGEND_PADDING,
   withBoundedHorizontalLegend,
   withBoundedRightLegend,
 } from "./outer-labels";
@@ -32,6 +33,7 @@ import {
   getPlotType,
   getRenderer,
   refineAxisType,
+  SHARED_FACET_Y_TITLE_GUTTER,
   truncateCategoryTicks,
   cellPosition,
 } from "./utils";
@@ -166,6 +168,30 @@ const FACET_HEADING_OFFSET = 4;
 // The shared X title is drawn 50 px below the plot, plus a line of text and padding.
 const FACET_X_TITLE_BAND = 72;
 
+function facetedLegendPlotWidth(
+  width: number,
+  sharedYTitle: boolean,
+  secondaryTitle: string | undefined,
+  colorbar: CartesianColorAxis["colorbar"],
+  subplots: FacetGridConfig,
+): number {
+  const primaryGutter = sharedYTitle ? SHARED_FACET_Y_TITLE_GUTTER : 56;
+  const secondaryGutter = secondaryTitle ? 64 : 48;
+  const title = colorbar?.title;
+  const rightTitleWidth = title?.text && title.side === "right" ? 24 : 0;
+  const horizontalTitleWidth =
+    title?.text && title.side !== "right"
+      ? chartTextWidth(title.text, title.font?.size ?? 14) + 24
+      : 0;
+  const colorbarGutter = Math.max(
+    (colorbar?.thickness ?? 30) + 56 + rightTitleWidth,
+    horizontalTitleWidth,
+  );
+  const plotWidth = width - primaryGutter - secondaryGutter - colorbarGutter;
+  // A legend in an outside corner must also clear the interior Y ticks of an unshared facet.
+  return subplots.sharedY === false ? plotWidth / Math.max(1, subplots.columns) : plotWidth;
+}
+
 export interface CartesianChartProps extends BaseChartProps {
   data: CartesianSeries[];
   /** Continuous scatter marker scale, shared when the chart has multiple traces. */
@@ -242,13 +268,35 @@ export function CartesianChart({
       : [];
     const showLegend = config.showLegend !== false && legendTraces.length > 0;
     const requestedLegend = config.legendPosition ?? "right";
+    const sharedYTitle = sizing.cellVeryCompact || subplots?.sharedYTitle === true;
+    const showSharedYTitle = sharedYTitle && !sizing.cellUltraCompact;
+    const longestLegendName = Math.max(
+      0,
+      ...legendTraces.map((series) => chartTextWidth(series.name ?? "", 12)),
+    );
     const wideLeftLegend =
       requestedLegend === "left" &&
       (sizing.compact ||
-        legendTraces.some((series) => chartTextWidth(series.name ?? "", 12) > chartWidth / 4));
+        longestLegendName > chartWidth / 4 ||
+        Boolean(subplots && showSharedYTitle && config.yAxisTitle));
+    const wideInsideLegend =
+      showLegend &&
+      subplots &&
+      requestedLegend.startsWith("inside-") &&
+      longestLegendName + LEGEND_PADDING >
+        facetedLegendPlotWidth(
+          chartWidth,
+          showSharedYTitle,
+          config.y2AxisTitle,
+          sharedColorAxis?.colorbar,
+          subplots,
+        ) *
+          0.96;
     // Plotly's container margins can squeeze the colour bar when both side gutters are occupied.
     const legendConfig =
-      hasOuterColorbar && showLegend && (requestedLegend === "right" || wideLeftLegend)
+      hasOuterColorbar &&
+      showLegend &&
+      (requestedLegend === "right" || wideLeftLegend || wideInsideLegend)
         ? { ...config, legendPosition: "bottom" as const }
         : config;
     const tiers = {
@@ -309,14 +357,13 @@ export function CartesianChart({
       // regardless of the user's toggle.
       const forceSharedTitles = sizing.cellVeryCompact;
       const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-      const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
       const faceted = extendLayoutForFacets(next, subplots.cells, {
         rows: subplots.rows,
         columns: subplots.columns,
         sharedX: subplots.sharedX,
         sharedY: subplots.sharedY,
         sharedXTitle: effectiveSharedXTitle,
-        sharedYTitle: effectiveSharedYTitle,
+        sharedYTitle,
         roworder: subplots.roworder,
         titleFontSize: cellTitleFontSize,
         ...(hasOuterColorbar ? { cellTitleOffset: FACET_HEADING_OFFSET } : {}),
@@ -438,8 +485,7 @@ export function CartesianChart({
  * Faceted dual-Y: for every cell with a secondary series, emit an overlay
  * `yaxisN` that shares the cell's y-domain (`overlaying`) and hangs its ticks
  * on the right. Mirrors the single-canvas secondary styling per cell. When the
- * Y scale is shared, only the rightmost column shows the secondary ticks/title
- * and the other cells' secondaries match it so the scale stays comparable.
+ * Y scale is shared, the rightmost panels keep their ticks and share one title.
  */
 function applyFacetSecondaryAxes(
   layout: Partial<Layout>,
@@ -450,6 +496,18 @@ function applyFacetSecondaryAxes(
   const layoutRecord = layout as unknown as Record<string, unknown>;
   const firstSecondaryId = subplots.cells.find((c) => c.secondaryYaxisId)?.secondaryYaxisId;
   const sharedY = subplots.sharedY !== false;
+  const rightEdge = subplots.cells.filter(
+    (cell, index) =>
+      cell.secondaryYaxisId && cellPosition(index, subplots.rows, subplots.columns).isLastColumn,
+  );
+  // On an even stack, use the middle panel nearer the larger margin so the rotated title can fit.
+  const preferBottom = (layout.margin?.b ?? 0) > (layout.margin?.t ?? 0);
+  const bottomFirst = subplots.roworder === "bottom to top";
+  const middleRow =
+    preferBottom === bottomFirst
+      ? Math.floor((rightEdge.length - 1) / 2)
+      : Math.floor(rightEdge.length / 2);
+  const sharedTitleId = rightEdge[middleRow]?.secondaryYaxisId;
 
   subplots.cells.forEach((cell, i) => {
     const secondaryId = cell.secondaryYaxisId;
@@ -473,10 +531,11 @@ function applyFacetSecondaryAxes(
       linecolor: primary.linecolor,
       tickcolor: primary.tickcolor,
       showline: true,
-      // With a shared scale only the rightmost column carries ticks + title;
-      // the rest match it so every cell reads on the same secondary range.
       showticklabels: sharedY ? isLastColumn : true,
-      title: isLastColumn && config.y2AxisTitle ? { text: config.y2AxisTitle } : undefined,
+      title:
+        isLastColumn && config.y2AxisTitle && (!sharedY || secondaryId === sharedTitleId)
+          ? { text: config.y2AxisTitle }
+          : undefined,
       matches: sharedY && secondaryId !== firstSecondaryId ? firstSecondaryId : undefined,
     };
     const key = `yaxis${secondaryId.slice(1)}`;
