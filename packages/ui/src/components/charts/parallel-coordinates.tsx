@@ -92,13 +92,16 @@ const HEADING_EDGE_PADDING = 12;
 // Plotly offsets a parcoords heading 28 px from its axis endpoint.
 const ROTATED_HEADING_OFFSET = 28;
 
+function isVisibleSeries(series: ParallelCoordinatesSeriesData): boolean {
+  return series.visible !== false && series.visible !== "legendonly";
+}
+
 function parallelColorbarGutter(series: ParallelCoordinatesSeriesData, fontSize: number): number {
   const line = series.line;
   if (
     !line ||
     line.showscale === false ||
-    series.visible === false ||
-    series.visible === "legendonly" ||
+    !isVisibleSeries(series) ||
     !Array.isArray(line.color || series.color)
   ) {
     return 0;
@@ -124,7 +127,8 @@ function fitParallelHeadings(
   margin: { l: number; r: number },
   edgePadding: number,
 ) {
-  const widths = data.map((series) =>
+  const visibleSeries = data.filter(isVisibleSeries);
+  const widths = visibleSeries.map((series) =>
     series.dimensions
       .filter((dim) => dim.visible !== false)
       .map((dim) => chartTextWidth(dim.label, fontSize))
@@ -138,7 +142,7 @@ function fitParallelHeadings(
     edge,
     mustRotate: widths.some(
       ([first = 0, second, ...rest], index) =>
-        !data[index]?.labelangle &&
+        visibleSeries[index]?.labelangle == null &&
         second !== undefined &&
         (first + second) / 2 + 3 > axisWidth / (rest.length + 1),
     ),
@@ -192,7 +196,7 @@ export function ParallelCoordinates({
   const labelledSeries = useMemo(
     () =>
       data.map((series) =>
-        rotateLabels && !series.labelangle
+        rotateLabels && series.labelangle == null
           ? {
               ...series,
               dimensions: series.dimensions.map((dim) =>
@@ -248,7 +252,7 @@ export function ParallelCoordinates({
                 },
 
             // Label configuration; defaults shrink with the container tier.
-            labelangle: series.labelangle || (rotateLabels ? 90 : 0),
+            labelangle: series.labelangle ?? (rotateLabels ? 90 : 0),
             labelside: series.labelside || "top",
             labelfont: { size: fontSize },
             rangefont: series.rangefont || {
@@ -281,11 +285,13 @@ export function ParallelCoordinates({
     };
     if (rotateLabels) {
       for (const series of labelledSeries) {
+        if (!isVisibleSeries(series)) continue;
+
         const labels = series.dimensions
           .filter((dim) => dim.visible !== false)
           .map((dim) => dim.label);
         const longestLine = Math.max(0, ...labels.map((label) => chartTextWidth(label, fontSize)));
-        if (series.labelangle) {
+        if (series.labelangle != null) {
           const edge = HEADING_EDGE_PADDING + longestLine / 2;
           margin.l = Math.max(margin.l, edge);
           margin.r = Math.max(margin.r, edge);

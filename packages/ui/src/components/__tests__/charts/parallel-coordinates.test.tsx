@@ -169,6 +169,63 @@ describe("ParallelCoordinates", () => {
     });
   });
 
+  it.each([false, "legendonly"] as const)(
+    "keeps a series with visibility %s in the data without measuring its headings",
+    (visible) => {
+      const short = ["A", "B"].map((label) => ({ label, values: [1, 2] }));
+      const long = ["primary_assay_measurement", "secondary_reference_measurement"].map(
+        (label) => ({ label, values: [1, 2] }),
+      );
+      const hidden = {
+        visible,
+        dimensions: long.map((dim) => ({ ...dim, label: dim.label.repeat(5) })),
+      };
+      const config = { width: 350 };
+      const { getByTestId, rerender } = render(
+        <ParallelCoordinates data={[{ dimensions: short }, hidden]} config={config} />,
+      );
+
+      const traces = JSON.parse(getByTestId("chart-data").textContent || "[]");
+      expect(traces).toHaveLength(2);
+      expect(traces[0].labelangle).toBe(0);
+      expect(traces[1].visible).toBe(visible);
+
+      rerender(<ParallelCoordinates data={[{ dimensions: long }]} config={config} />);
+      const layout = getByTestId("chart-layout").textContent;
+      expect(JSON.parse(getByTestId("chart-data").textContent || "[]")[0].labelangle).toBe(90);
+
+      rerender(
+        <ParallelCoordinates
+          data={[{ dimensions: long }, { ...hidden, labelangle: 45 }]}
+          config={config}
+        />,
+      );
+      expect(getByTestId("chart-layout").textContent).toBe(layout);
+    },
+  );
+
+  it("preserves horizontal, unwrapped headings for an explicit zero angle", () => {
+    const dimensions = ["primary_assay_measurement", "secondary_reference_measurement"].map(
+      (label) => ({ label, values: [1, 2] }),
+    );
+    const horizontal = { dimensions, labelangle: 0 };
+    const config = { width: 350 };
+    const { getByTestId, rerender } = render(
+      <ParallelCoordinates data={[horizontal]} config={config} />,
+    );
+
+    expect(JSON.parse(getByTestId("chart-data").textContent || "[]")[0]).toMatchObject({
+      labelangle: 0,
+      labelfont: { size: 14 },
+      dimensions,
+    });
+
+    rerender(<ParallelCoordinates data={[{ dimensions }, horizontal]} config={config} />);
+    const traces = JSON.parse(getByTestId("chart-data").textContent || "[]");
+    expect(traces[0].labelangle).toBe(90);
+    expect(traces[1]).toMatchObject({ labelangle: 0, dimensions });
+  });
+
   it("handles custom dimension configuration", () => {
     const customData: ParallelCoordinatesSeriesData[] = [
       {
