@@ -125,15 +125,10 @@ export function RegistrationForm({
   });
 
   const completeRegistration = async (newsletterOptIn = false) => {
-    const res = await updateUser.mutateAsync({ registered: true });
-
-    if (res.error) {
-      toast({ description: t("registration.errorMessage") || "Registration failed" });
-      setIsPending(false);
-      return;
-    }
-
     const destination = getAuthCallback(callbackUrl);
+    // Saving `registered` revalidates the register page, which sends a sibling-app sign-in back to
+    // its app as a full page load and aborts any request still in flight. So the opt-in is sent
+    // first, and only a cross-origin destination waits for it, before registration is saved.
     if (newsletterOptIn) {
       const subscription = subscribeNewsletter.mutateAsync(undefined).catch((error: unknown) => {
         const isForgottenEmail = parseApiError(error)?.code === "MAILCHIMP_FORGOTTEN_EMAIL";
@@ -143,8 +138,15 @@ export function RegistrationForm({
             : t("registration.newsletterOptInError"),
         });
       });
-      // Only a cross-origin page load aborts the request, so only that waits for it.
       if (leavesThisOrigin(destination)) await settleWithin(subscription, NEWSLETTER_WAIT_MS);
+    }
+
+    const res = await updateUser.mutateAsync({ registered: true });
+
+    if (res.error) {
+      toast({ description: t("registration.errorMessage") || "Registration failed" });
+      setIsPending(false);
+      return;
     }
 
     toast({ description: t("registration.successMessage") });
