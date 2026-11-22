@@ -33,6 +33,7 @@ _NAMES = {
     "_anonymize_annotation",
     "anonymize_contributors",
     "flatten_complex_columns",
+    "_excel_integer",
     "write_parts",
     "take_snapshot",
     "open_table",
@@ -48,6 +49,7 @@ _ANNOTATIONS = """ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING,
     content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING,
     createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>"""
 _ROW_ID = 3676402656019468888
+_FIFTEEN_DIGIT_ID = -999_999_999_999_999
 _WIDE_INTEGER = Decimal("-12345678901234567890")
 
 
@@ -106,8 +108,12 @@ def export_rows(spark: SparkSession) -> DataFrame:
         ("mobile-note", str(_ROW_ID), "comment", ("From the field", None), None, None, created, created),
     ]
     return spark.createDataFrame(
-        [(_ROW_ID, _WIDE_INTEGER, 7, 0.5, notes), (None, None, 8, 0.25, [])],
-        f"id BIGINT, `whole.number` DECIMAL(20, 0), sample_count INT, reading DOUBLE, annotations {_ANNOTATIONS}",
+        [
+            (_ROW_ID, _WIDE_INTEGER, 7, 0.5, notes),
+            (_FIFTEEN_DIGIT_ID, Decimal("42"), 8, 0.25, []),
+            (None, None, 9, 0.125, []),
+        ],
+        f"id BIGINT, `whole.number` DECIMAL(20, 0), sample_count BIGINT, reading DOUBLE, annotations {_ANNOTATIONS}",
     ).coalesce(1)
 
 
@@ -171,13 +177,14 @@ def test_export_files_keep_integer_values_and_use_the_same_comment_pseudonyms(
     task["write_parts"](task["anonymize_contributors"](export_rows, _EXPERIMENT_ID))
 
     rows = _read_export(spark, export_format, output)
-    assert len(rows) == 2
-    row, blank = sorted(rows, key=lambda value: int(value["sample_count"]))
+    row, boundary, blank = sorted(rows, key=lambda value: int(value["sample_count"]))
     assert row["id"] == (str(_ROW_ID) if export_format in ("csv", "xlsx") else _ROW_ID)
+    assert boundary["id"] == (str(_FIFTEEN_DIGIT_ID) if export_format == "csv" else _FIFTEEN_DIGIT_ID)
     assert int(row["whole.number"]) == _WIDE_INTEGER
     assert blank.get("id") == ("" if export_format == "csv" else None)
     if export_format == "xlsx":
         assert row["whole.number"] == str(_WIDE_INTEGER)
+        assert boundary["whole.number"] == 42
         assert row["sample_count"] == 7
         assert row["reading"] == 0.5
 

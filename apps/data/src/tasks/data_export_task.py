@@ -191,6 +191,12 @@ def flatten_complex_columns(df):
     return df
 
 
+def _excel_integer(value: object) -> int | str | None:
+    if not isinstance(value, str):
+        return None
+    return int(value) if len(value.lstrip("-")) <= 15 else value
+
+
 def write_parts(df):
     """
     Write the table to OUTPUT_PATH. Spark formats write one part per partition of ``df``, which
@@ -229,6 +235,7 @@ def write_parts(df):
     elif FORMAT == "xlsx":
         # Serverless has no Spark Excel writer; build the workbook in memory and upload it
         # via the Files API (binary-safe, uses the volume's UC grant like csv/parquet).
+        import pandas as pd
         from databricks.sdk import WorkspaceClient
 
         w = WorkspaceClient()
@@ -243,7 +250,12 @@ def write_parts(df):
             ):
                 quoted_name = field.name.replace("`", "``")
                 integer_text[field.name] = col(f"`{quoted_name}`").cast("string")
-        flat.withColumns(integer_text).toPandas().to_excel(buf, index=False, engine="openpyxl")
+        frame = flat.withColumns(integer_text).toPandas()
+        for name in integer_text:
+            frame[name] = pd.Series(
+                (_excel_integer(value) for value in frame[name]), index=frame.index, dtype=object
+            )
+        frame.to_excel(buf, index=False, engine="openpyxl")
         buf.seek(0)
         w.files.create_directory(OUTPUT_PATH)
         w.files.upload(f"{OUTPUT_PATH}/part-00000.xlsx", buf, overwrite=True)
