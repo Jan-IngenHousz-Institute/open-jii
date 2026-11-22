@@ -55,11 +55,13 @@ beforeEach(() => {
 function SizingProbe({
   grid,
   trackWidth,
+  trackHeight,
 }: {
   grid?: { rows: number; columns: number };
   trackWidth?: boolean;
+  trackHeight?: boolean;
 }) {
-  const [ref, sizing] = useChartSizing<HTMLDivElement>({ grid, trackWidth });
+  const [ref, sizing] = useChartSizing<HTMLDivElement>({ grid, trackWidth, trackHeight });
   return (
     <div ref={ref} data-testid="probe">
       {JSON.stringify(sizing)}
@@ -85,6 +87,17 @@ describe("useChartSizing", () => {
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(368);
     act(() => observers[0]?.fire(420, 560));
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(416);
+  });
+
+  it("tracks height changes within a tier when captions need the available height", () => {
+    const { getByTestId } = render(<SizingProbe trackHeight />);
+    act(() => observers[0]?.fire(380, 560));
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}").height).toBe(560);
+    act(() => observers[0]?.fire(380, 570));
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}").height).toBe(560);
+    act(() => observers[0]?.fire(380, 585));
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}")).toMatchObject({ height: 576 });
+    expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBeUndefined();
   });
 
   it("settles outer tiers when the observer fires a wide container", () => {

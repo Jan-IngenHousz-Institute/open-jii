@@ -32,8 +32,9 @@ const CELL_VERY_COMPACT_BREAKPOINT = { width: 160, height: 110 };
 const CELL_ULTRA_COMPACT_BREAKPOINT = { width: 120, height: 80 };
 
 export interface ChartSizing {
-  /** Conservative width in 16px steps for charts opting into text wrapping. */
+  /** Conservative container dimensions in 16px steps for charts that opt in. */
   width?: number;
+  height?: number;
 
   // OUTER tiers, measured against the chart container. Drive chart-level
   // chrome: legend position, modebar, chart title, top-level margins.
@@ -102,6 +103,7 @@ function tierFlags(
 
 interface UseChartSizingOptions {
   trackWidth?: boolean;
+  trackHeight?: boolean;
 
   /**
    * Divide the measured container size by this grid before comparing to
@@ -119,7 +121,7 @@ interface UseChartSizingOptions {
 /**
  * Watch a DOM element and emit responsive tier flags. When `options.grid`
  * is set, the comparison runs against per-cell size so faceted cells each
- * shrink to fit. State only updates on tier flips unless `trackWidth` is enabled.
+ * shrink to fit. State only updates on tier flips unless a dimension is tracked.
  *
  * Also subscribes to theme flips: the layout helpers resolve chart colours
  * from CSS custom properties at render time, and this hook is the one place
@@ -148,6 +150,7 @@ export function useChartSizing<T extends HTMLElement>(
   const gridRows = options.grid?.rows ?? 1;
   const gridCols = options.grid?.columns ?? 1;
   const trackWidth = options.trackWidth === true;
+  const trackHeight = options.trackHeight === true;
 
   useEffect(() => {
     const el = ref.current;
@@ -169,8 +172,10 @@ export function useChartSizing<T extends HTMLElement>(
         isFaceted ? CELL_BREAKPOINTS : OUTER_BREAKPOINTS,
       );
       const textWidth = Math.floor(width / 16) * 16;
+      const textHeight = Math.floor(height / 16) * 16;
       setSizing((prev) =>
         (!trackWidth || prev.width === textWidth) &&
+        (!trackHeight || prev.height === textHeight) &&
         prev.snug === outer.snug &&
         prev.compact === outer.compact &&
         prev.veryCompact === outer.veryCompact &&
@@ -182,6 +187,7 @@ export function useChartSizing<T extends HTMLElement>(
           ? prev
           : {
               ...(trackWidth ? { width: textWidth } : {}),
+              ...(trackHeight ? { height: textHeight } : {}),
               snug: outer.snug,
               compact: outer.compact,
               veryCompact: outer.veryCompact,
@@ -234,7 +240,7 @@ export function useChartSizing<T extends HTMLElement>(
       observer.disconnect();
       screenObserver?.disconnect();
     };
-  }, [gridRows, gridCols, trackWidth]);
+  }, [gridRows, gridCols, trackWidth, trackHeight]);
 
   return [ref, sizing] as const;
 }

@@ -289,4 +289,53 @@ describe("right legends at the Plotly boundary", () => {
     expect(figure().layout.showlegend).toBe(false);
     expect(figure().data[0]?.name).toBe(name);
   });
+
+  it("keeps independent secondary ranges and combines titles only when stacked captions cannot fit", () => {
+    const chart = (height: number) => (
+      <CartesianChart
+        data={facetSeries}
+        colorAxis={{ showscale: true }}
+        config={{
+          height,
+          legendPosition: "top",
+          title: "Assays",
+          xAxisTitle: "Sample index",
+          y2AxisTitle: "Reference Y",
+        }}
+        subplots={{ rows: 2, columns: 1, cells: facetCells, sharedY: false, sharedXTitle: true }}
+      />
+    );
+    const { rerender } = render(chart(325));
+    expect(figure().layout).toMatchObject({
+      yaxis3: { title: { text: "Reference Y" }, showticklabels: true },
+      yaxis4: { showticklabels: true },
+    });
+    expect(figure().layout).not.toHaveProperty("yaxis4.title");
+    expect(figure().layout).not.toHaveProperty("yaxis4.matches");
+
+    rerender(chart(517));
+    expect(figure().layout).toMatchObject({
+      yaxis3: { title: { text: "Reference Y" }, showticklabels: true },
+      yaxis4: { title: { text: "Reference Y" }, showticklabels: true },
+    });
+    expect(figure().layout).not.toHaveProperty("yaxis4.matches");
+  });
+
+  it("gives facing tick labels room between side-by-side independent axes", () => {
+    measurement.width = 560;
+    render(
+      <CartesianChart
+        data={facetSeries}
+        colorAxis={{ showscale: true }}
+        config={{ legendPosition: "top", y2AxisTitle: "Reference Y" }}
+        subplots={{ ...sideBySide, sharedY: false }}
+      />,
+    );
+    expect(figure().layout.grid?.xgap).toBeGreaterThan(0.2);
+    expect(figure().layout).toMatchObject({
+      yaxis3: { showticklabels: true },
+      yaxis4: { showticklabels: true },
+    });
+    expect(figure().layout).not.toHaveProperty("yaxis4.matches");
+  });
 });

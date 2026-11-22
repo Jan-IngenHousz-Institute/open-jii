@@ -34,6 +34,7 @@ import {
   getRenderer,
   refineAxisType,
   SHARED_FACET_Y_TITLE_GUTTER,
+  tierAxisFontSizes,
   truncateCategoryTicks,
   cellPosition,
 } from "./utils";
@@ -167,13 +168,13 @@ export type CartesianColorAxis = Pick<MarkerConfig, "colorscale" | "showscale"> 
 const FACET_HEADING_OFFSET = 4;
 // The shared X title is drawn 50 px below the plot, plus a line of text and padding.
 const FACET_X_TITLE_BAND = 72;
+const DEFAULT_FACET_COLUMN_GAP = 0.2;
 
-function facetedLegendPlotWidth(
+function estimateFacetedPlotWidth(
   width: number,
   sharedYTitle: boolean,
   secondaryTitle: string | undefined,
   colorbar: CartesianColorAxis["colorbar"],
-  subplots: FacetGridConfig,
 ): number {
   const primaryGutter = sharedYTitle ? SHARED_FACET_Y_TITLE_GUTTER : 56;
   const secondaryGutter = secondaryTitle ? 64 : 48;
@@ -187,9 +188,15 @@ function facetedLegendPlotWidth(
     (colorbar?.thickness ?? 30) + 56 + rightTitleWidth,
     horizontalTitleWidth,
   );
-  const plotWidth = width - primaryGutter - secondaryGutter - colorbarGutter;
-  // A legend in an outside corner must also clear the interior Y ticks of an unshared facet.
-  return subplots.sharedY === false ? plotWidth / Math.max(1, subplots.columns) : plotWidth;
+  return width - primaryGutter - secondaryGutter - colorbarGutter;
+}
+
+function independentFacetGap(plotWidth: number, columns: number, tickSize: number): number {
+  const tickGap = 2 * chartTextWidth("0,000", tickSize) + 12;
+  // Only widen the inner tick gutters when each panel can keep at least 60 px of plot.
+  if (plotWidth < 60 * columns + tickGap * (columns - 1)) return DEFAULT_FACET_COLUMN_GAP;
+  // Plotly converts the gap fraction to pixels as plotWidth * gap / (columns - gap).
+  return Math.max(DEFAULT_FACET_COLUMN_GAP, (tickGap * columns) / (plotWidth + tickGap));
 }
 
 export interface CartesianChartProps extends BaseChartProps {
@@ -231,6 +238,11 @@ export function CartesianChart({
   // per-cell area (a 4x2 grid in an 800x500 box has ~200x250 cells).
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
     trackWidth: true,
+    trackHeight:
+      !config.height &&
+      subplots?.sharedY === false &&
+      subplots.rows > 1 &&
+      Boolean(config.y2AxisTitle),
     ...(subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {}),
   });
   const themeVersion = useChartThemeRefresh();
@@ -270,6 +282,30 @@ export function CartesianChart({
     const requestedLegend = config.legendPosition ?? "right";
     const sharedYTitle = sizing.cellVeryCompact || subplots?.sharedYTitle === true;
     const showSharedYTitle = sharedYTitle && !sizing.cellUltraCompact;
+    const facetPlotWidth =
+      hasOuterColorbar && subplots
+        ? estimateFacetedPlotWidth(
+            chartWidth,
+            showSharedYTitle,
+            config.y2AxisTitle,
+            sharedColorAxis.colorbar,
+          )
+        : Infinity;
+    const independentColumns = subplots?.sharedY === false ? subplots.columns : 1;
+    const columnGap =
+      hasOuterColorbar && independentColumns > 1
+        ? independentFacetGap(
+            facetPlotWidth,
+            independentColumns,
+            tierAxisFontSizes({
+              snug: sizing.cellSnug,
+              compact: sizing.cellCompact,
+              veryCompact: sizing.cellVeryCompact,
+            }).tick,
+          )
+        : DEFAULT_FACET_COLUMN_GAP;
+    // An inside legend must also clear the interior Y ticks of a panel on an independent scale.
+    const insidePlotWidth = (facetPlotWidth * (1 - columnGap)) / (independentColumns - columnGap);
     const longestLegendName = Math.max(
       0,
       ...legendTraces.map((series) => chartTextWidth(series.name ?? "", 12)),
@@ -283,15 +319,7 @@ export function CartesianChart({
       showLegend &&
       subplots &&
       requestedLegend.startsWith("inside-") &&
-      longestLegendName + LEGEND_PADDING >
-        facetedLegendPlotWidth(
-          chartWidth,
-          showSharedYTitle,
-          config.y2AxisTitle,
-          sharedColorAxis?.colorbar,
-          subplots,
-        ) *
-          0.96;
+      longestLegendName + LEGEND_PADDING > insidePlotWidth * 0.96;
     // Plotly's container margins can squeeze the colour bar when both side gutters are occupied.
     const legendConfig =
       hasOuterColorbar &&
@@ -371,6 +399,9 @@ export function CartesianChart({
       });
       Object.assign(next, faceted);
       if (hasOuterColorbar) {
+        if (columnGap > DEFAULT_FACET_COLUMN_GAP && next.grid) {
+          next.grid = { ...next.grid, xgap: columnGap };
+        }
         const topLegendBand = topLegend ? HORIZONTAL_LEGEND_HEIGHT : 0;
         const titleBand = next.title ? (next.title.font?.size ?? 14) * 1.5 + 12 : 0;
         const panelBand =
@@ -401,7 +432,7 @@ export function CartesianChart({
     if (hasSecondary && subplots) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
-      applyFacetSecondaryAxes(next, data, subplots, config);
+      applyFacetSecondaryAxes(next, data, subplots, config, config.height || sizing.height);
     } else if (hasSecondary) {
       const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
       // Mirror tick/line styling from primary so the two axes look like a
@@ -485,13 +516,15 @@ export function CartesianChart({
  * Faceted dual-Y: for every cell with a secondary series, emit an overlay
  * `yaxisN` that shares the cell's y-domain (`overlaying`) and hangs its ticks
  * on the right. Mirrors the single-canvas secondary styling per cell. When the
- * Y scale is shared, the rightmost panels keep their ticks and share one title.
+ * Y scale is shared, or repeated titles would collide, the rightmost panels
+ * use one title. Independent axes still keep their own ticks and ranges.
  */
 function applyFacetSecondaryAxes(
   layout: Partial<Layout>,
   data: CartesianSeries[],
   subplots: FacetGridConfig,
   config: PlotlyChartConfig,
+  chartHeight?: number,
 ): void {
   const layoutRecord = layout as unknown as Record<string, unknown>;
   const firstSecondaryId = subplots.cells.find((c) => c.secondaryYaxisId)?.secondaryYaxisId;
@@ -500,6 +533,15 @@ function applyFacetSecondaryAxes(
     (cell, index) =>
       cell.secondaryYaxisId && cellPosition(index, subplots.rows, subplots.columns).isLastColumn,
   );
+  const plotHeight = (chartHeight ?? Infinity) - (layout.margin?.t ?? 0) - (layout.margin?.b ?? 0);
+  // Plotly's independent grid spaces row centres by plotHeight / (rows - ygap).
+  const rowSpacing = plotHeight / (subplots.rows - (layout.grid?.ygap ?? 0.3));
+  // Plotly defaults an axis title to 120% of the layout font, rounded to a pixel.
+  const captionSpan = chartTextWidth(
+    config.y2AxisTitle ?? "",
+    Math.round((layout.font?.size ?? 12) * 1.2),
+  );
+  const useColumnTitle = sharedY || (rightEdge.length > 1 && captionSpan + 4 > rowSpacing);
   // On an even stack, use the middle panel nearer the larger margin so the rotated title can fit.
   const preferBottom = (layout.margin?.b ?? 0) > (layout.margin?.t ?? 0);
   const bottomFirst = subplots.roworder === "bottom to top";
@@ -507,7 +549,7 @@ function applyFacetSecondaryAxes(
     preferBottom === bottomFirst
       ? Math.floor((rightEdge.length - 1) / 2)
       : Math.floor(rightEdge.length / 2);
-  const sharedTitleId = rightEdge[middleRow]?.secondaryYaxisId;
+  const columnTitleId = rightEdge[middleRow]?.secondaryYaxisId;
 
   subplots.cells.forEach((cell, i) => {
     const secondaryId = cell.secondaryYaxisId;
@@ -533,7 +575,7 @@ function applyFacetSecondaryAxes(
       showline: true,
       showticklabels: sharedY ? isLastColumn : true,
       title:
-        isLastColumn && config.y2AxisTitle && (!sharedY || secondaryId === sharedTitleId)
+        isLastColumn && config.y2AxisTitle && (!useColumnTitle || secondaryId === columnTitleId)
           ? { text: config.y2AxisTitle }
           : undefined,
       matches: sharedY && secondaryId !== firstSecondaryId ? firstSecondaryId : undefined,
