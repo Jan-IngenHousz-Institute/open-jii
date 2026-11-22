@@ -51,7 +51,7 @@ module "backend_waf" {
 | `bot_control_inspection_level`   | `COMMON` or `TARGETED`                                                                                                     | `string`       | `COMMON` | no       |
 | `large_body_bypass_routes`       | Routes that bypass body size restrictions                                                                                  | `list(object)` | `[]`     | no       |
 | `allow_page_regeneration`        | Let OpenNext's regeneration HEAD requests through `NoUserAgent_HEADER`, and block every other request without a User-Agent | `bool`         | `false`  | no       |
-| `allow_local_equipment_callback` | Let the dev OpenNext distribution accept Equipment's local return URL on login and registration GETs.                      | `bool`         | `false`  | no       |
+| `allow_local_equipment_callback` | Allow Equipment's local return URL on dev auth pages and OAuth starts through the applicable SSRF rule.                    | `bool`         | `false`  | no       |
 | `tags`                           | Tags to apply to resources                                                                                                 | `map(string)`  | `{}`     | no       |
 
 ## Outputs

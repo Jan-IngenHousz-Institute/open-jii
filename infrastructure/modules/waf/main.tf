@@ -104,7 +104,7 @@ resource "aws_wafv2_web_acl" "main" {
             action_to_use {
               count {}
             }
-            name = "EC2MetaDataSSRF_QUERYARGUMENTS"
+            name = local.equipment_callback_managed_rule
           }
         }
 
@@ -404,59 +404,59 @@ resource "aws_wafv2_web_acl" "main" {
     }
   }
 
+  # Label the narrow exception first so the two query patterns fit the provider's nesting limit.
   dynamic "rule" {
     for_each = var.allow_local_equipment_callback ? [1] : []
     content {
-      name     = "BlockMetadataQueryArgumentsRule"
+      name     = "CountLocalEquipmentCallback"
       priority = 8
 
       action {
-        block {}
+        count {}
+      }
+
+      rule_label {
+        name = "LocalEquipmentCallback"
       }
 
       statement {
         and_statement {
           statement {
-            label_match_statement {
-              scope = "LABEL"
-              key   = "awswaf:managed:aws:core-rule-set:EC2MetaDataSSRF_QueryArguments"
+            byte_match_statement {
+              search_string         = local.equipment_callback_is_backend ? "POST" : "GET"
+              positional_constraint = "EXACTLY"
+              field_to_match {
+                method {}
+              }
+              text_transformation {
+                priority = 0
+                type     = "NONE"
+              }
             }
           }
 
           statement {
-            not_statement {
-              statement {
-                and_statement {
-                  statement {
-                    byte_match_statement {
-                      search_string         = "GET"
-                      positional_constraint = "EXACTLY"
-                      field_to_match {
-                        method {}
-                      }
-                      text_transformation {
-                        priority = 0
-                        type     = "NONE"
-                      }
-                    }
-                  }
+            regex_match_statement {
+              regex_string = local.equipment_callback_is_backend ? "\\A/api/v1/auth/sign-in/social\\z" : local.equipment_auth_path
+              field_to_match {
+                uri_path {}
+              }
+              text_transformation {
+                priority = 0
+                type     = "NONE"
+              }
+            }
+          }
 
-                  statement {
+          dynamic "statement" {
+            for_each = local.equipment_callback_is_backend ? [] : [1]
+            content {
+              or_statement {
+                dynamic "statement" {
+                  for_each = local.equipment_callback_queries
+                  content {
                     regex_match_statement {
-                      regex_string = local.equipment_auth_path
-                      field_to_match {
-                        uri_path {}
-                      }
-                      text_transformation {
-                        priority = 0
-                        type     = "NONE"
-                      }
-                    }
-                  }
-
-                  statement {
-                    regex_match_statement {
-                      regex_string = local.equipment_callback_query
+                      regex_string = statement.value
                       field_to_match {
                         query_string {}
                       }
@@ -470,12 +470,90 @@ resource "aws_wafv2_web_acl" "main" {
               }
             }
           }
+
+          dynamic "statement" {
+            for_each = local.equipment_callback_is_backend ? [1] : []
+            content {
+              regex_match_statement {
+                regex_string = local.equipment_oauth_body
+                field_to_match {
+                  body {
+                    oversize_handling = "MATCH"
+                  }
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
+
+          # A body the regex cannot inspect must fail the exception's size check.
+          dynamic "statement" {
+            for_each = local.equipment_callback_is_backend ? [1] : []
+            content {
+              size_constraint_statement {
+                comparison_operator = "LE"
+                size                = 8192
+                field_to_match {
+                  body {
+                    oversize_handling = "NO_MATCH"
+                  }
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
+              }
+            }
+          }
         }
       }
 
       visibility_config {
         cloudwatch_metrics_enabled = true
-        metric_name                = "BlockMetadataQueryArgumentsRuleMetric"
+        metric_name                = "CountLocalEquipmentCallbackMetric"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.allow_local_equipment_callback ? [1] : []
+    content {
+      name     = local.equipment_callback_block
+      priority = 9
+
+      action {
+        block {}
+      }
+
+      statement {
+        and_statement {
+          statement {
+            label_match_statement {
+              scope = "LABEL"
+              key   = "awswaf:managed:aws:core-rule-set:${local.equipment_callback_label}"
+            }
+          }
+
+          statement {
+            not_statement {
+              statement {
+                label_match_statement {
+                  scope = "LABEL"
+                  key   = "LocalEquipmentCallback"
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "${local.equipment_callback_block}Metric"
         sampled_requests_enabled   = true
       }
     }
@@ -487,7 +565,7 @@ resource "aws_wafv2_web_acl" "main" {
     for_each = length(var.large_body_bypass_routes) > 0 ? [1] : []
     content {
       name     = "AllowLargeBodyRule"
-      priority = var.allow_local_equipment_callback ? 9 : 6 # Keep the label-based block ahead of a terminating allow.
+      priority = var.allow_local_equipment_callback ? 10 : 6 # Keep the label-based block ahead of a terminating allow.
 
       action {
         allow {}

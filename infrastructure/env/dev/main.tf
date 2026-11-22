@@ -3321,6 +3321,8 @@ module "backend_waf" {
   log_retention_days = 365
   enable_bot_control = true
 
+  allow_local_equipment_callback = true
+
   large_body_bypass_routes = [
     {
       search_string         = "/upload"

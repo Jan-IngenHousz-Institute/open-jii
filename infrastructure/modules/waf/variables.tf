@@ -73,13 +73,13 @@ variable "allow_page_regeneration" {
 }
 
 variable "allow_local_equipment_callback" {
-  description = "Allow the local Equipment sign-in callback through the query-argument SSRF rule on the dev OpenNext distribution."
+  description = "Allow the local Equipment sign-in callback through the matching SSRF rule on the dev OpenNext or backend distribution."
   type        = bool
   default     = false
 
   validation {
-    condition     = !var.allow_local_equipment_callback || (var.environment == "dev" && var.service_name == "opennext")
-    error_message = "The local Equipment callback exception is only available for the dev OpenNext distribution."
+    condition     = !var.allow_local_equipment_callback || (var.environment == "dev" && contains(["opennext", "backend"], var.service_name))
+    error_message = "The local Equipment callback exception is only available for the dev OpenNext and backend distributions."
   }
 }
 
