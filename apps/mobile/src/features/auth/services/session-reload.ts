@@ -1,3 +1,5 @@
+import { AUTH_REQUEST_TIMEOUT_MS } from "~/features/auth/services/auth-request-timeout";
+
 import type { createOpenJiiAuthClient } from "@repo/auth/client.native";
 
 type AuthClient = Pick<ReturnType<typeof createOpenJiiAuthClient>, "getSession" | "$store">;
@@ -16,23 +18,51 @@ const pendingSyncs = new WeakMap<AuthClient, Promise<unknown>>();
  */
 export function syncSessionFromServer(client: AuthClient) {
   const previous = pendingSyncs.get(client) ?? Promise.resolve();
-  const next = previous.catch(() => undefined).then(() => readAndApply(client));
+  const next = previous.catch(() => undefined).then(() => readWithinDeadline(client));
   pendingSyncs.set(client, next);
-  return next;
+  return next.finally(() => {
+    if (pendingSyncs.get(client) === next) pendingSyncs.delete(client);
+  });
 }
 
-async function readAndApply(client: AuthClient) {
+async function readWithinDeadline(client: AuthClient) {
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve(null);
+      controller.abort();
+    }, AUTH_REQUEST_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([readAndApply(client, controller.signal), timeout]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function readAndApply(client: AuthClient, signal: AbortSignal) {
   // A plain call, so no later store fetch can cancel it before it answers.
-  const fresh = await client.getSession({ query: { disableCookieCache: true } });
-  if (fresh.error || !fresh.data) return null;
-  const registered = fresh.data.user.registered;
+  const fresh = await client.getSession({
+    query: { disableCookieCache: true },
+    fetchOptions: { signal },
+  });
+  if (signal.aborted || fresh.error || !fresh.data) return null;
+  const freshUser = fresh.data.user;
 
   const sessionAtom = client.$store.atoms.session;
-  for (let attempt = 0; attempt < MAX_STORE_SYNC_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < MAX_STORE_SYNC_ATTEMPTS && !signal.aborted; attempt++) {
     const user = sessionAtom.get().data?.user;
-    if (user && user.registered === registered) return user;
+    if (
+      user?.id === freshUser.id &&
+      user.email === freshUser.email &&
+      user.registered === freshUser.registered
+    ) {
+      return user;
+    }
     // The fresh response rewrote the cookie cache, so an ordinary fetch now reads the new value.
     await sessionAtom.get().refetch();
   }
-  return sessionAtom.get().data?.user ?? null;
+  return signal.aborted ? null : (sessionAtom.get().data?.user ?? null);
 }

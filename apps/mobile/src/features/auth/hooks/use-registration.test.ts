@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -74,6 +74,18 @@ describe("useRegistration", () => {
 
     expect(subscribeToNewsletter).toHaveBeenCalledTimes(1);
     expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed save without waiting for the online manager to resume the mutation", async () => {
+    onlineManager.setOnline(false);
+    saveProfile.mockRejectedValueOnce(new Error("Network request failed"));
+    try {
+      await renderRegistration()(false);
+      expect(saveProfile).toHaveBeenCalledTimes(1);
+      expect(toastError).toHaveBeenCalledWith("registration.errorMessage");
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it("keeps the newsletter opt-in when the profile saves but the session refresh fails", async () => {

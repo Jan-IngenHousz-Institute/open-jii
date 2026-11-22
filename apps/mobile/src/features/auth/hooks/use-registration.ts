@@ -45,6 +45,7 @@ export function useRegistration() {
   }
 
   return useMutation({
+    networkMode: "always",
     mutationFn: async ({ newsletterOptIn, ...profile }: RegisterInput) => {
       await saveProfile(profile);
       // The account is registered from here on, even if refreshing the session below fails.

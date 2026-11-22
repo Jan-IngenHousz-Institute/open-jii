@@ -6,14 +6,17 @@ import RegistrationScreen from "~/features/auth/screens/registration-screen";
 import auth from "~/shared/i18n/locales/en-US/auth.json";
 import { OTPInput } from "~/shared/ui/OTPInput";
 
-const { mutateAsync, logout, sendOtp, verifyOtp, reloadSession, session } = vi.hoisted(() => ({
-  mutateAsync: vi.fn(),
-  reloadSession: vi.fn(),
-  logout: vi.fn(),
-  sendOtp: vi.fn(),
-  verifyOtp: vi.fn(),
-  session: { user: { email: "ada@example.com", image: "https://example.test/a.png" } },
-}));
+const { mutateAsync, logout, sendOtp, verifyOtp, reloadSession, session, connection, refetch } =
+  vi.hoisted(() => ({
+    mutateAsync: vi.fn(),
+    reloadSession: vi.fn(),
+    logout: vi.fn(),
+    sendOtp: vi.fn(),
+    verifyOtp: vi.fn(),
+    session: { user: { email: "ada@example.com", image: "https://example.test/a.png" } },
+    connection: { online: true },
+    refetch: vi.fn(),
+  }));
 
 vi.mock("~/features/auth/hooks/use-session", () => ({ useSession: () => session }));
 vi.mock("~/features/auth/hooks/use-logout", () => ({ useLogout: () => logout }));
@@ -21,12 +24,16 @@ vi.mock("~/features/auth/hooks/use-registration", () => ({
   useRegistration: () => ({ mutateAsync, isPending: false }),
 }));
 vi.mock("~/features/auth/services/auth", () => ({ reloadSessionFromServer: reloadSession }));
-vi.mock("~/features/auth/api/login.api", () => ({
-  sendEmailLoginOtp: sendOtp,
-  verifyEmailLoginOtp: verifyOtp,
+vi.mock("~/features/auth/api/registration.api", () => ({
+  requestRegistrationEmailCode: sendOtp,
+  verifyRegistrationEmailCode: verifyOtp,
+}));
+vi.mock("~/shared/ui/hooks/use-is-online", () => ({
+  useIsOnline: () => ({ data: connection.online, refetch }),
 }));
 vi.mock("~/shared/stores/environment-store", () => ({
   getEnvVar: () => "https://example.test",
+  useEnvVar: () => "https://example.test",
 }));
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
@@ -44,6 +51,8 @@ vi.mock("@expo/vector-icons/MaterialIcons", () => ({ default: () => null }));
 
 beforeEach(() => {
   session.user.email = "ada@example.com";
+  connection.online = true;
+  refetch.mockReset().mockResolvedValue(undefined);
   mutateAsync.mockReset().mockResolvedValue(undefined);
   logout.mockReset();
   reloadSession.mockReset().mockResolvedValue(null);
@@ -116,7 +125,7 @@ describe("RegistrationScreen", () => {
 
     await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456"));
 
-    expect(verifyOtp).toHaveBeenCalledWith({ email: "ada@example.com", code: "123456" });
+    expect(verifyOtp).toHaveBeenCalledWith("ada@example.com", "123456");
     expect(mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ firstName: "Ada", lastName: "Lovelace" }),
     );
@@ -131,6 +140,46 @@ describe("RegistrationScreen", () => {
       fireEvent.press(screen.getByText(auth.registration.continueWithEmailVerification)),
     );
   }
+
+  it("shows the connection problem without submitting or blocking account switching", async () => {
+    connection.online = false;
+    const { rerender } = render(<RegistrationScreen />);
+    fillName();
+
+    expect(screen.getByText("serverUnreachable")).toBeTruthy();
+    await settle(() => fireEvent.press(screen.getByText(auth.registration.register)));
+    expect(mutateAsync).not.toHaveBeenCalled();
+    await settle(() => fireEvent.press(screen.getByText(auth.registration.signOut)));
+    expect(logout).toHaveBeenCalledTimes(1);
+    await settle(() => fireEvent.press(screen.getByText("retry")));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    connection.online = true;
+    rerender(<RegistrationScreen />);
+    expect(screen.queryByText("serverUnreachable")).toBeNull();
+    await settle(() => fireEvent.press(screen.getByText(auth.registration.register)));
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a code entered offline so it can be submitted when the connection returns", async () => {
+    session.user.email = "0000-0002-1825-0097";
+    const { rerender } = render(<RegistrationScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "ada@example.com");
+    fillName();
+    await settle(() =>
+      fireEvent.press(screen.getByText(auth.registration.continueWithEmailVerification)),
+    );
+
+    connection.online = false;
+    rerender(<RegistrationScreen />);
+    await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456"));
+    expect(verifyOtp).not.toHaveBeenCalled();
+
+    connection.online = true;
+    rerender(<RegistrationScreen />);
+    await settle(() => fireEvent.press(screen.getByText(auth.registration.verifyAndRegister)));
+    expect(verifyOtp).toHaveBeenCalledExactlyOnceWith("ada@example.com", "123456");
+  });
 
   it("keeps the user on the code step when the code is wrong", async () => {
     verifyOtp.mockResolvedValue({

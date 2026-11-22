@@ -1,4 +1,5 @@
 import { getAuthClient } from "~/features/auth/services/auth";
+import { AUTH_REQUEST_TIMEOUT_MS } from "~/features/auth/services/auth-request-timeout";
 import { getSessionToken } from "~/shared/api/session-cookie";
 
 interface InFlightRefresh {
@@ -15,10 +16,6 @@ function release(token: string, entry: InFlightRefresh) {
   if (refreshesInFlight.get(token) === entry) refreshesInFlight.delete(token);
 }
 
-// Bounded so an offline `getSession` can't keep the fetcher stuck on a 401
-// retry beyond the per-request fetch budget.
-const REFRESH_TIMEOUT_MS = 8_000;
-
 /**
  * Single-flight session re-validation.
  *
@@ -31,7 +28,7 @@ const REFRESH_TIMEOUT_MS = 8_000;
  * parallel requests on a stale session each tried to refresh
  * independently.
  *
- * Each caller is bounded by REFRESH_TIMEOUT_MS via Promise.race, from before
+ * Each caller is bounded by AUTH_REQUEST_TIMEOUT_MS via Promise.race, from before
  * the session cookie is read; the timeout also aborts the shared upstream fetch
  * through fetchOptions.signal so the underlying request actually stops. The
  * in-flight entry is released
@@ -52,7 +49,7 @@ export async function refreshSession(): Promise<boolean> {
         release(joined.token, joined.entry);
       }
       resolve(false);
-    }, REFRESH_TIMEOUT_MS);
+    }, AUTH_REQUEST_TIMEOUT_MS);
   });
 
   const refresh = authClient.getCookie().then((cookie) => {

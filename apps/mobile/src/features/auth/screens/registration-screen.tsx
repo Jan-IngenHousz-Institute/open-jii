@@ -11,7 +11,11 @@ import {
   Text,
   View,
 } from "react-native";
-import { sendEmailLoginOtp, verifyEmailLoginOtp } from "~/features/auth/api/login.api";
+import {
+  requestRegistrationEmailCode,
+  verifyRegistrationEmailCode,
+} from "~/features/auth/api/registration.api";
+import { OfflineBanner } from "~/features/auth/components/offline-banner";
 import type {
   RegistrationFieldError,
   RegistrationFormValues,
@@ -28,6 +32,7 @@ import { Button } from "~/shared/ui/Button";
 import { Checkbox } from "~/shared/ui/Checkbox";
 import { Input } from "~/shared/ui/Input";
 import { OTPInput } from "~/shared/ui/OTPInput";
+import { useIsOnline } from "~/shared/ui/hooks/use-is-online";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 const log = createLogger("registration");
@@ -51,6 +56,7 @@ export default function RegistrationScreen() {
   const { user } = useSession();
   const logout = useLogout();
   const registration = useRegistration();
+  const { data: online, refetch } = useIsOnline({ confirm: true });
   const webBaseUrl = getEnvVar("NEXT_AUTH_URI");
 
   // ORCID accounts without a public email carry the ORCID iD in the email column.
@@ -71,10 +77,16 @@ export default function RegistrationScreen() {
   // A verified code is spent, so a retry after a failed profile save must not verify it again.
   const [emailVerified, setEmailVerified] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  const [retryingConnection, setRetryingConnection] = useState(false);
 
   const isBusy = isWorking || registration.isPending;
-  // Better Auth stores emails lowercased; the sign-in hook writes this value as given.
+  const actionDisabled = isBusy || online === false;
   const email = values.email.trim().toLowerCase();
+
+  function retryConnection() {
+    setRetryingConnection(true);
+    void refetch().finally(() => setRetryingConnection(false));
+  }
 
   // The session cookie can say unregistered for a day after registering on the web or another
   // phone, so the database decides each time this screen opens or the app returns.
@@ -111,7 +123,7 @@ export default function RegistrationScreen() {
   }
 
   async function onSubmit() {
-    if (isBusy) return;
+    if (actionDisabled) return;
     const fieldErrors = validateRegistration(values, { needsEmail });
     if (fieldErrors.length > 0) {
       setErrors(
@@ -144,7 +156,7 @@ export default function RegistrationScreen() {
   /** Returns a message to show when the code could not be sent. */
   async function sendCode(): Promise<string | undefined> {
     try {
-      const result = await sendEmailLoginOtp(email);
+      const result = await requestRegistrationEmailCode(email);
       if (result?.error) return result.error.message ?? t("auth:errors.sendFailed");
       setResendIn(RESEND_COOLDOWN_SECONDS);
       return undefined;
@@ -155,7 +167,7 @@ export default function RegistrationScreen() {
   }
 
   async function onResend() {
-    if (isBusy || resendIn > 0) return;
+    if (actionDisabled || resendIn > 0) return;
     setIsWorking(true);
     setOtp("");
     setOtpError(await sendCode());
@@ -163,12 +175,12 @@ export default function RegistrationScreen() {
   }
 
   async function verifyAndRegister(code: string) {
-    if (isBusy) return;
+    if (actionDisabled) return;
     setIsWorking(true);
     let verified = emailVerified;
     try {
       if (!verified) {
-        const result = await verifyEmailLoginOtp({ email, code });
+        const result = await verifyRegistrationEmailCode(email, code);
         if (result?.error) {
           setOtpError(
             WRONG_CODE_ERRORS.has(result.error.code ?? "")
@@ -209,6 +221,7 @@ export default function RegistrationScreen() {
           contentContainerStyle={{ flexGrow: 1, paddingTop: 48, padding: 24 }}
           keyboardShouldPersistTaps="handled"
         >
+          <OfflineBanner online={online} checking={retryingConnection} onRetry={retryConnection} />
           {step === "form" ? (
             <>
               <Text className="text-on-surface mb-2 text-2xl font-bold">
@@ -288,7 +301,7 @@ export default function RegistrationScreen() {
                 title={submitTitle}
                 variant="primary"
                 onPress={() => void onSubmit()}
-                isDisabled={isBusy}
+                isDisabled={actionDisabled}
                 isLoading={isBusy}
               />
             </>
@@ -323,13 +336,13 @@ export default function RegistrationScreen() {
               {emailVerified ? null : (
                 <Pressable
                   onPress={() => void onResend()}
-                  disabled={isBusy || resendIn > 0}
+                  disabled={actionDisabled || resendIn > 0}
                   className="mt-5 self-start"
                   accessibilityRole="button"
                 >
                   <Text
                     className={`text-sm font-semibold ${
-                      isBusy || resendIn > 0 ? "text-inactive" : "text-jii-primary"
+                      actionDisabled || resendIn > 0 ? "text-inactive" : "text-jii-primary"
                     }`}
                   >
                     {resendIn > 0
@@ -346,7 +359,7 @@ export default function RegistrationScreen() {
                 }
                 variant="primary"
                 onPress={() => void verifyAndRegister(otp)}
-                isDisabled={isBusy || otp.length !== OTP_LENGTH}
+                isDisabled={actionDisabled || otp.length !== OTP_LENGTH}
                 isLoading={isBusy}
                 style={{ marginTop: 20 }}
               />

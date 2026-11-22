@@ -3,6 +3,7 @@ import { syncSessionFromServer } from "~/features/auth/services/session-reload";
 
 interface User {
   id: string;
+  email?: string;
   registered: boolean;
 }
 
@@ -36,7 +37,10 @@ describe("syncSessionFromServer", () => {
 
     await syncSessionFromServer(client);
 
-    expect(getSession).toHaveBeenCalledWith({ query: { disableCookieCache: true } });
+    expect(getSession).toHaveBeenCalledWith({
+      query: { disableCookieCache: true },
+      fetchOptions: { signal: expect.any(AbortSignal) },
+    });
   });
 
   it("keeps fetching when the store's fetch is cancelled by the cookie-change refetch", async () => {
@@ -51,6 +55,15 @@ describe("syncSessionFromServer", () => {
 
     await expect(syncSessionFromServer(client)).resolves.toEqual(registered);
     expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it("updates an email change even when the registration flag has not changed", async () => {
+    const previous = { ...unregistered, email: "0000-0002-1825-0097" };
+    const updated = { ...unregistered, email: "ada@example.com" };
+    const { client, refetch } = fakeClient(previous, updated, [updated]);
+
+    await expect(syncSessionFromServer(client)).resolves.toEqual(updated);
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it("reports the store's view when it never catches up", async () => {
@@ -106,5 +119,47 @@ describe("syncSessionFromServer", () => {
 
     await expect(syncSessionFromServer(client)).rejects.toThrow("Network request failed");
     await expect(syncSessionFromServer(client)).resolves.toEqual(registered);
+  });
+
+  it("aborts a stalled read at the deadline and starts the queued read", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, getSession } = fakeClient(registered, registered, []);
+      getSession.mockImplementationOnce(() => new Promise(() => undefined));
+
+      const opening = syncSessionFromServer(client);
+      const afterSave = syncSessionFromServer(client);
+      await vi.advanceTimersByTimeAsync(7999);
+      expect(getSession).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(opening).resolves.toBeNull();
+      expect(getSession).toHaveBeenNthCalledWith(1, {
+        query: { disableCookieCache: true },
+        fetchOptions: { signal: expect.objectContaining({ aborted: true }) },
+      });
+      await expect(afterSave).resolves.toEqual(registered);
+      expect(getSession).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("also releases the queue if the session store refetch stalls", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, refetch } = fakeClient(unregistered, registered, [registered]);
+      refetch.mockImplementationOnce(() => new Promise(() => undefined));
+
+      const opening = syncSessionFromServer(client);
+      const afterSave = syncSessionFromServer(client);
+      await vi.advanceTimersByTimeAsync(8000);
+
+      await expect(opening).resolves.toBeNull();
+      await expect(afterSave).resolves.toEqual(registered);
+      expect(refetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
