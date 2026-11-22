@@ -9,7 +9,7 @@ import type {
   DeviceExperimentList,
   DeviceOnboardingConfig,
 } from "@repo/api/domains/iot/iot.schema";
-import { eq, experiments } from "@repo/database";
+import { eq, experiments, iotDevices } from "@repo/database";
 
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
@@ -144,6 +144,74 @@ describe("ExperimentDeviceController", () => {
       .withAuth(userId)
       .expect(StatusCodes.OK);
     expect(after.body.devices).toEqual([]);
+  });
+
+  it("pages matching experiment devices before connectivity lookup and counts all facet matches", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Paged experiment", userId });
+    const thingNames: string[] = [];
+    for (let index = 0; index < 21; index += 1) {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        name: `Bench ${String(index).padStart(2, "0")}`,
+        deviceType: "ambyte",
+        status: "active",
+      });
+      thingNames.push(device.thingName);
+      await testApp
+        .post(onboardPath(device.id))
+        .withAuth(userId)
+        .send({ experimentIds: [experiment.id] })
+        .expect(StatusCodes.OK);
+    }
+    const retired = await testApp.createIotDevice({
+      createdBy: userId,
+      name: "Bench retired",
+      deviceType: "ambyte",
+      status: "active",
+    });
+    await testApp
+      .post(onboardPath(retired.id))
+      .withAuth(userId)
+      .send({ experimentIds: [experiment.id] })
+      .expect(StatusCodes.OK);
+    await testApp.database
+      .update(iotDevices)
+      .set({ status: "retired" })
+      .where(eq(iotDevices.id, retired.id));
+
+    const path = testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, {
+      id: experiment.id,
+    });
+    const query = {
+      search: "Bench",
+      family: "ambyte",
+      status: "onboarded",
+      "sort[0][field]": "registered",
+      "sort[0][direction]": "asc",
+    };
+    const first: SuperTestResponse<ExperimentDevicesOverview> = await testApp
+      .get(path)
+      .withAuth(userId)
+      .query({ ...query, page: 1 })
+      .expect(StatusCodes.OK);
+    const second: SuperTestResponse<ExperimentDevicesOverview> = await testApp
+      .get(path)
+      .withAuth(userId)
+      .query({ ...query, page: 2 })
+      .expect(StatusCodes.OK);
+
+    expect(first.body.devices).toHaveLength(20);
+    expect(second.body.devices.map(({ clientId }) => clientId)).toEqual([thingNames[20]]);
+    expect(second.body.pagination).toMatchObject({
+      page: 2,
+      pageSize: 20,
+      totalPages: 2,
+      totalCount: 21,
+      statusCounts: { onboarded: 21, retired: 1 },
+      summary: { total: 22, onboarded: 22 },
+    });
+    const connectivity = vi.spyOn(testApp.module.get(AwsAdapter), "searchThingsConnectivity");
+    expect(connectivity).toHaveBeenLastCalledWith([thingNames[20]]);
   });
 
   it("detaches a device from a since-archived experiment (204)", async () => {

@@ -4,12 +4,12 @@ import { MetricStatCard } from "@/components/metrics/metric-stat-card";
 import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
-import { useExperimentDevices } from "@/hooks/experiment/useExperimentDevices/useExperimentDevices";
 import { useLocale } from "@/hooks/useLocale";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { AlertTriangle, Cpu, Loader2 } from "lucide-react";
 import { useState } from "react";
 
+import { summarizeExperimentDevices } from "@repo/api/domains/experiment/devices/experiment-devices-summary";
 import type {
   ExperimentDeviceIdentity,
   ExperimentDevicesOverview,
@@ -32,7 +32,6 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentDeviceDetail } from "./experiment-device-detail";
 import { ExperimentDevicesList } from "./experiment-devices-list";
-import { summarizeExperimentDevices } from "./experiment-devices-summary";
 import { useExperimentDevicesList } from "./use-experiment-devices-list";
 
 export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
@@ -40,11 +39,10 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
 
-  const { data, dataUpdatedAt, isLoading, isError, refetch } = useExperimentDevices(experimentId);
-  const list = useExperimentDevicesList({ experimentId, devices: data?.devices, dataUpdatedAt });
-
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const list = useExperimentDevicesList(experimentId, selectedClientId);
+  const data = list.response?.overview;
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
     onSuccess: () => {
@@ -69,11 +67,11 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   };
 
-  if (isLoading) {
+  if (list.isLoading) {
     return <ExperimentDevicesSkeleton />;
   }
 
-  if (isError || data === undefined) {
+  if (list.error || data === undefined) {
     return (
       <EmptyState
         variant="error"
@@ -83,7 +81,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
             variant="outline"
             size="sm"
             onClick={() => {
-              void refetch();
+              void list.refetch();
             }}
           >
             {t("iot.onboarding.retry")}
@@ -93,7 +91,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
-  if (data.devices.length === 0) {
+  if ((data.pagination?.summary.total ?? data.devices.length) === 0) {
     return (
       <EmptyState
         icon={<Cpu aria-hidden />}
@@ -114,7 +112,9 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const selectedEntry =
     selectedClientId === null
       ? list.data?.items[0]
-      : (data.devices.find((entry) => entry.clientId === selectedClientId) ?? list.data?.items[0]);
+      : (data.devices.find((entry) => entry.clientId === selectedClientId) ??
+        data.pagination?.selected ??
+        list.data?.items[0]);
 
   return (
     <>
@@ -242,14 +242,12 @@ function ExperimentDevicesSkeleton() {
 function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverview }) {
   const locale = useLocale();
   const { t } = useTranslation("iot");
-  const summary = summarizeExperimentDevices(overview);
+  const summary = overview.pagination?.summary ?? summarizeExperimentDevices(overview.devices);
 
   // Warehouse facts unknown: the data-derived counts stay blank rather than
   // claiming silence from missing data.
   const dataValue = (value: number) =>
     overview.pipelineUnavailable ? t("iot.experimentDevices.lastDataUnavailable") : value;
-
-  const total = overview.devices.length;
 
   return (
     <div className={metricsBandGrid}>
@@ -257,7 +255,7 @@ function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverv
         locale={locale}
         label={t("iot.experimentDevices.stats.onboarded")}
         value={summary.onboarded}
-        note={t("iot.experimentDevices.stats.ofTotal", { count: total })}
+        note={t("iot.experimentDevices.stats.ofTotal", { count: summary.total })}
         className="bg-card"
       />
 

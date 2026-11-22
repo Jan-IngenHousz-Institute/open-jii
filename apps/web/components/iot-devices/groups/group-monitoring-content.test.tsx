@@ -1,6 +1,7 @@
 import { BarChart } from "@/components/charts/bar-chart";
 import { createDeviceGroupMemberHealth } from "@/test/factories";
-import { openOnUrl } from "@/test/list-request";
+import { arrayParam, openOnUrl } from "@/test/list-request";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -8,7 +9,14 @@ import { useParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import {
+  filterGroupMembers,
+  memberStatus,
+  summarizeGroupHealth,
+} from "@repo/api/domains/iot/device-group/group-health";
+import { zGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type { IotDeviceGroupMonitoring } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+import { zDeviceType } from "@repo/api/domains/iot/iot.schema";
 
 import { GroupMonitoringContent } from "./group-monitoring-content";
 
@@ -26,14 +34,50 @@ type MonitoringBody = Pick<IotDeviceGroupMonitoring, "members"> &
 
 function mountMonitoring(body: MonitoringBody) {
   server.mount(contract.experiments.listExperiments, { body: [] });
-  server.mount(contract.iot.getIotDeviceGroupMonitoring, {
-    body: {
-      throughput: [],
-      dataByExperiment: [],
-      firmware: [],
-      events: [],
-      pipelineUnavailable: false,
-      ...body,
+  return server.mount(contract.iot.getIotDeviceGroupMonitoring, {
+    body: ({ query, url }: SpyCall): IotDeviceGroupMonitoring => {
+      const page = Number(query.page ?? 1);
+      const now = Date.now();
+      const pipelineUnavailable = body.pipelineUnavailable ?? false;
+      const members = filterGroupMembers(
+        body.members,
+        {
+          search: query.search ?? "",
+          families: zDeviceType.array().parse(arrayParam(url, "family")),
+          statuses: zGroupMemberHealth.array().parse(arrayParam(url, "health")),
+        },
+        pipelineUnavailable,
+        now,
+        (member) => member.name ?? member.serialNumber,
+      );
+      if (query["sort[0][field]"] === "name") {
+        members.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+      }
+      if (query["sort[0][field]"] === "health") {
+        members.sort((a, b) => memberStatus(a).localeCompare(memberStatus(b)));
+      }
+      const includes = (row: { deviceId: string | null }) =>
+        members.some((member) => member.deviceId === row.deviceId);
+      return {
+        members: members.slice((page - 1) * 20, page * 20),
+        throughput: body.throughput?.filter(includes) ?? [],
+        dataByExperiment: body.dataByExperiment ?? [],
+        firmware: body.firmware?.filter(includes) ?? [],
+        events: body.events?.filter(includes) ?? [],
+        pipelineUnavailable,
+        pagination: {
+          ...summarizeGroupHealth(members, pipelineUnavailable, now),
+          groupSize: body.members.length,
+          totalCount: members.length,
+          totalPages: Math.max(1, Math.ceil(members.length / 20)),
+          page,
+          pageSize: 20,
+          labels: Object.fromEntries(
+            members.map((member) => [member.deviceId, member.name ?? member.serialNumber]),
+          ),
+          freshest: members.find((member) => member.lastDataAt)?.lastDataAt ?? null,
+        },
+      };
     },
   });
 }
@@ -157,7 +201,9 @@ describe("GroupMonitoringContent", () => {
     await user.click(screen.getByRole("option", { name: "iot.devices.columns.family" }));
     await user.click(screen.getByRole("option", { name: "Mobile" }));
     await user.keyboard("{Escape}{Escape}");
-    expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "Alpha" })).not.toBeInTheDocument(),
+    );
     expect(screen.getByRole("link", { name: "Beta" })).toBeInTheDocument();
     expect(screen.queryByText("iot.groups.monitoring.silentCount")).not.toBeInTheDocument();
     expect(screen.queryByText("iot.groups.monitoring.mixedFirmware")).not.toBeInTheDocument();
@@ -191,7 +237,9 @@ describe("GroupMonitoringContent", () => {
     await user.click(screen.getByRole("option", { name: "iot.groups.monitoring.filter.silent" }));
 
     expect(screen.getByRole("link", { name: "Online One" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Ghost" })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("link", { name: "Ghost" })).not.toBeInTheDocument(),
+    );
   });
 
   it("pages and sorts only the roster while summary panels keep all matching members", async () => {
@@ -203,7 +251,7 @@ describe("GroupMonitoringContent", () => {
       }),
     );
     const offPage = members[20];
-    mountMonitoring({
+    const request = mountMonitoring({
       members,
       throughput: [{ bucketStart: new Date().toISOString(), deviceId: offPage.deviceId, count: 7 }],
       firmware: [{ deviceId: offPage.deviceId, version: "7.0.0", lastSeen: STALE }],
@@ -226,10 +274,13 @@ describe("GroupMonitoringContent", () => {
       expect.objectContaining({ name: "Gateway 01" }),
     ]);
     await user.click(screen.getByRole("button", { name: "pagination.next" }));
-    expect(screen.getByRole("link", { name: "Gateway 01" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Gateway 01" })).toBeInTheDocument();
+    expect(request.calls.map(({ query }) => query.page)).toEqual(["1", "2"]);
     expect(screen.queryByRole("link", { name: "Gateway 21" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /iot.groups.deviceColumn:/ }));
-    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled(),
+    );
     expect(screen.getAllByRole("link")[0]).toHaveTextContent("Gateway 01");
     expect(screen.queryByRole("link", { name: "Gateway 21" })).not.toBeInTheDocument();
     expect(screen.getByTitle("7")).toBeInTheDocument();
@@ -237,7 +288,7 @@ describe("GroupMonitoringContent", () => {
       expect.objectContaining({ name: "Gateway 01" }),
     ]);
     await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
-    expect(screen.getAllByRole("link")[0]).toHaveTextContent("Gateway 21");
+    expect(await screen.findByRole("link", { name: "Gateway 21" })).toBeInTheDocument();
   });
 
   it("restores list state across range changes and preserves an unowned URL parameter", async () => {

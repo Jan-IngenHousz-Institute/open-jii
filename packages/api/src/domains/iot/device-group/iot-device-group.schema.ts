@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zListFilter, zListSort, zPageInfo, zPaginationQuery } from "../../../shared/listing";
 import { zResourceCapabilities } from "../../authorization/capabilities.schema";
 import {
   zDeviceOnboardingConfig,
@@ -103,8 +104,27 @@ export const zIotDeviceGroupLifecycleEvent = z.object({
   disconnectReason: z.string().nullable(),
 });
 
+export const zGroupMemberHealth = z.enum(["online", "offline", "unknown", "silent"]);
+export const zGroupMonitoringSort = zListSort(z.enum(["name", "health", "family"]));
+export const zGroupMonitoringListQuery = zPaginationQuery.extend({
+  search: z.string().optional(),
+  health: zListFilter(zGroupMemberHealth).optional(),
+  family: zListFilter(zDeviceType).optional(),
+  sort: zGroupMonitoringSort.optional(),
+});
+
+export const zGroupMonitoringPage = zPageInfo.extend({
+  groupSize: z.number().int().nonnegative(),
+  online: z.number().int().nonnegative(),
+  unknown: z.number().int().nonnegative(),
+  silent: z.number().int().nonnegative(),
+  freshest: z.string().datetime().nullable(),
+  labels: z.record(z.string().guid(), z.string()),
+});
+
 export const zIotDeviceGroupMonitoring = z.object({
   members: z.array(zIotDeviceGroupMemberHealth),
+  pagination: zGroupMonitoringPage.optional(),
   throughput: z.array(zIotDeviceGroupThroughputBucket),
   dataByExperiment: z.array(zIotDeviceGroupExperimentBucket),
   firmware: z.array(zIotDeviceGroupFirmware),
@@ -209,6 +229,7 @@ export const zIotDeviceGroupMonitoringQuery = zIotDeviceGroupPathParam
     to: z.string().datetime(),
     bucket: zMonitoringBucket,
   })
+  .merge(zGroupMonitoringListQuery)
   .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
     message: "from must be before to",
     path: ["from"],
@@ -240,3 +261,5 @@ export type IotDeviceGroupExperimentBucket = z.infer<typeof zIotDeviceGroupExper
 export type IotDeviceGroupFirmware = z.infer<typeof zIotDeviceGroupFirmware>;
 export type CreateIotDeviceGroupBody = z.infer<typeof zCreateIotDeviceGroupBody>;
 export type UpdateIotDeviceGroupBody = z.infer<typeof zUpdateIotDeviceGroupBody>;
+
+export type GroupMonitoringListQuery = z.infer<typeof zGroupMonitoringListQuery>;

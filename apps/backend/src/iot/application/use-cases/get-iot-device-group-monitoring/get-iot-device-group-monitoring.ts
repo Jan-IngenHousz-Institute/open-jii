@@ -1,7 +1,11 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import type {
+  GroupMonitoringListQuery,
+  IotDeviceGroupMonitoring,
+} from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+
 import { Result, success } from "../../../../common/utils/fp-utils";
-import { IotDeviceGroupMemberThingDto } from "../../../core/models/iot-device-group.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort, ThingConnectivity } from "../../../core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
@@ -13,34 +17,12 @@ import type {
   GroupThroughputRow,
 } from "../../../core/ports/databricks.port";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
+import { groupMonitoringPage } from "./group-monitoring-page";
 
 export interface MonitoringWindow {
   from: string;
   to: string;
   bucket: "hour" | "day";
-}
-
-export interface IotDeviceGroupMemberHealthDto {
-  deviceId: string;
-  name: string | null;
-  serialNumber: string;
-  deviceType: IotDeviceGroupMemberThingDto["deviceType"];
-  connectivity: { connected: boolean; lastSeenAt: string | null } | null;
-  lastDataAt: string | null;
-}
-
-export interface IotDeviceGroupMonitoringDto {
-  members: IotDeviceGroupMemberHealthDto[];
-  throughput: { bucketStart: string | null; deviceId: string | null; count: number }[];
-  dataByExperiment: { bucketStart: string | null; experimentId: string | null; count: number }[];
-  firmware: { deviceId: string | null; version: string | null; lastSeen: string | null }[];
-  events: {
-    deviceId: string | null;
-    eventType: string | null;
-    eventTimestamp: string | null;
-    disconnectReason: string | null;
-  }[];
-  pipelineUnavailable: boolean;
 }
 
 /** Latest-first event cap: enough for a busy window without unbounded payloads. */
@@ -82,22 +64,30 @@ export class GetIotDeviceGroupMonitoringUseCase {
   async execute(
     groupId: string,
     window: MonitoringWindow,
-  ): Promise<Result<IotDeviceGroupMonitoringDto>> {
+    query: GroupMonitoringListQuery = {},
+  ): Promise<Result<IotDeviceGroupMonitoring>> {
     const membersResult = await this.groupRepository.listMemberThings(groupId);
     if (membersResult.isFailure()) {
       return membersResult;
     }
 
     const members = membersResult.value;
+    const now = Date.now();
     if (members.length === 0) {
-      return success({
-        members: [],
-        throughput: [],
-        dataByExperiment: [],
-        firmware: [],
-        events: [],
-        pipelineUnavailable: false,
-      });
+      return success(
+        groupMonitoringPage(
+          {
+            members: [],
+            throughput: [],
+            dataByExperiment: [],
+            firmware: [],
+            events: [],
+            pipelineUnavailable: false,
+          },
+          query,
+          now,
+        ),
+      );
     }
 
     const thingNames = members.map((member) => member.thingName);
@@ -124,42 +114,50 @@ export class GetIotDeviceGroupMonitoringUseCase {
     const toDeviceId = (clientId: string | null) =>
       clientId === null ? null : (deviceIdByThing.get(clientId) ?? null);
 
-    return success({
-      members: members.map((member) => {
-        const thing = connectivity?.get(member.thingName);
-        return {
-          deviceId: member.deviceId,
-          name: member.name,
-          serialNumber: member.serialNumber,
-          deviceType: member.deviceType,
-          connectivity: thing ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt } : null,
-          lastDataAt: activity?.get(member.thingName) ?? null,
-        };
-      }),
-      throughput: (throughput ?? []).map((row) => ({
-        bucketStart: row.bucketStart,
-        deviceId: toDeviceId(row.clientId),
-        count: row.count,
-      })),
-      dataByExperiment: dataByExperiment ?? [],
-      firmware: this.latestFirmwarePerMember(firmware ?? []).map((row) => ({
-        deviceId: toDeviceId(row.clientId),
-        version: row.version,
-        lastSeen: row.lastSeen,
-      })),
-      events: (events ?? []).map((row) => ({
-        deviceId: toDeviceId(row.clientId),
-        eventType: row.eventType,
-        eventTimestamp: row.eventTimestamp,
-        disconnectReason: row.disconnectReason,
-      })),
-      pipelineUnavailable:
-        activity === null ||
-        throughput === null ||
-        dataByExperiment === null ||
-        firmware === null ||
-        events === null,
-    });
+    return success(
+      groupMonitoringPage(
+        {
+          members: members.map((member) => {
+            const thing = connectivity?.get(member.thingName);
+            return {
+              deviceId: member.deviceId,
+              name: member.name,
+              serialNumber: member.serialNumber,
+              deviceType: member.deviceType,
+              connectivity: thing
+                ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt }
+                : null,
+              lastDataAt: activity?.get(member.thingName) ?? null,
+            };
+          }),
+          throughput: (throughput ?? []).map((row) => ({
+            bucketStart: row.bucketStart,
+            deviceId: toDeviceId(row.clientId),
+            count: row.count,
+          })),
+          dataByExperiment: dataByExperiment ?? [],
+          firmware: this.latestFirmwarePerMember(firmware ?? []).map((row) => ({
+            deviceId: toDeviceId(row.clientId),
+            version: row.version,
+            lastSeen: row.lastSeen,
+          })),
+          events: (events ?? []).map((row) => ({
+            deviceId: toDeviceId(row.clientId),
+            eventType: row.eventType,
+            eventTimestamp: row.eventTimestamp,
+            disconnectReason: row.disconnectReason,
+          })),
+          pipelineUnavailable:
+            activity === null ||
+            throughput === null ||
+            dataByExperiment === null ||
+            firmware === null ||
+            events === null,
+        },
+        query,
+        now,
+      ),
+    );
   }
 
   private async lookupConnectivity(

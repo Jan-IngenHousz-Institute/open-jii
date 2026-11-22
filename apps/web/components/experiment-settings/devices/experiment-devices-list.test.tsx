@@ -1,214 +1,104 @@
 import { createExperimentDeviceEntry, createIotDevice } from "@/test/factories";
-import { openOnUrl } from "@/test/list-request";
-import { act, render, renderHook, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { arrayParam, openOnUrl } from "@/test/list-request";
+import type { SpyCall } from "@/test/msw/mount";
+import { server } from "@/test/msw/server";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+import { contract } from "@repo/api/contract";
 
 import { ExperimentDevicesList } from "./experiment-devices-list";
 import { useExperimentDevicesList } from "./use-experiment-devices-list";
 
-const devices: ExperimentDeviceEntry[] = [
-  createExperimentDeviceEntry({
-    device: createIotDevice({ name: "Zulu", deviceType: "ambyte", serialNumber: "AA:11" }),
-    clientId: "zulu",
-  }),
-  createExperimentDeviceEntry({
-    device: createIotDevice({ name: "Alpha", deviceType: "mobile", serialNumber: "BB:22" }),
-    clientId: "alpha",
-  }),
-  createExperimentDeviceEntry({
-    device: null,
-    clientId: "unregistered-publisher",
-    recentData: { measurementCount: 4, lastDataAt: null },
-    canView: false,
-  }),
-];
-const names = () =>
-  within(screen.getByRole("list"))
-    .getAllByRole("button")
-    .map((button) => button.textContent);
+const EXPERIMENT_ID = "11111111-1111-4111-8111-111111111111";
+const PATH = `/platform/experiments/${EXPERIMENT_ID}/devices`;
 
-function List({
-  devices,
-  dataUpdatedAt = 1,
-  onSelect = vi.fn(),
-}: {
-  devices: ExperimentDeviceEntry[];
-  dataUpdatedAt?: number;
-  onSelect?: (clientId: string) => void;
-}) {
-  const list = useExperimentDevicesList({ experimentId: "exp", devices, dataUpdatedAt });
-  return <ExperimentDevicesList list={list} selectedClientId="zulu" onSelect={onSelect} />;
+const bench = createExperimentDeviceEntry({
+  device: createIotDevice({ name: "Bench", deviceType: "ambyte", serialNumber: "AA:11" }),
+  clientId: "bench",
+});
+const publisher = createExperimentDeviceEntry({ clientId: "unregistered-publisher", device: null });
+
+function mountList() {
+  return server.mount(contract.experiments.listExperimentDevices, {
+    body: ({ query }: SpyCall) => ({
+      devices: query["status[0]"] === "registered" || query.search ? [bench] : [bench, publisher],
+      window: { from: "2026-08-04T12:00:00.000Z", to: "2026-09-03T12:00:00.000Z" },
+      pipelineUnavailable: false,
+      pagination: {
+        page: Number(query.page),
+        pageSize: 20,
+        totalCount: 21,
+        totalPages: 2,
+        summary: { total: 21, onboarded: 0, sending: 1, onboardedSilent: 0, sendingUnbound: 1 },
+        statusCounts: { registered: 12, provisioned: 0, onboarded: 9, revoked: 0, retired: 0 },
+      },
+    }),
+  });
 }
 
-function renderList(rows = devices) {
-  const onSelect = vi.fn();
-  return {
-    ...render(<List devices={rows} onSelect={onSelect} />),
-    onSelect,
-  };
+function List({ onSelect = vi.fn() }: { onSelect?: (id: string) => void }) {
+  const list = useExperimentDevicesList(EXPERIMENT_ID, null);
+  return <ExperimentDevicesList list={list} selectedClientId="bench" onSelect={onSelect} />;
 }
 
 describe("ExperimentDevicesList", () => {
-  it("preserves the source order and observed publishers, and selects from the filtered list", async () => {
+  it("shows server status counts and requests the selected status from page one", async () => {
     const user = userEvent.setup();
-    const { onSelect } = renderList();
-    expect(names()[0]).toContain("Zulu");
-    expect(screen.getByText("unregistered-publisher")).toBeInTheDocument();
+    openOnUrl(PATH, "other=1&page=2");
+    const request = mountList();
+    const { router } = render(<List />);
+    await screen.findByText("unregistered-publisher");
+    expect(request.calls[0].query.page).toBe("2");
+
+    await user.click(screen.getByRole("button", { name: "common.filter" }));
+    await user.click(screen.getByRole("option", { name: "iot.devices.columns.status" }));
+    await user.click(screen.getByRole("option", { name: /iot.devices.status.registered.*12/ }));
+    await waitFor(() => expect(request.calls.at(-1)?.query.page).toBe("1"));
+    expect(arrayParam(request.url, "status")).toEqual(["registered"]);
+    expect(router.replace).toHaveBeenLastCalledWith(`${PATH}?other=1&status=registered`, {
+      scroll: false,
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("unregistered-publisher")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.getByRole("option", { name: /iot.devices.status.onboarded.*9/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("sends debounced search and selects a row from the server response", async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const request = mountList();
+    render(<List onSelect={onSelect} />);
+    await screen.findByText("unregistered-publisher");
     await user.type(
       screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
-      "BB:22",
+      "AA:11",
     );
-    await waitFor(() => expect(names()).toHaveLength(1));
-    await user.click(screen.getByRole("button", { name: /Alpha/ }));
-    expect(onSelect).toHaveBeenCalledWith("alpha");
+
+    await waitFor(() => expect(request.calls.at(-1)?.query.search).toBe("AA:11"));
+    await waitFor(() =>
+      expect(within(screen.getByRole("list")).getAllByRole("button")).toHaveLength(1),
+    );
+    await user.click(screen.getByRole("button", { name: /Bench/ }));
+    expect(onSelect).toHaveBeenCalledWith("bench");
   });
 
-  it("finds an unregistered publisher by its reported device name", async () => {
+  it("sends registered-date and status sort in shift-click order and can reset it", async () => {
     const user = userEvent.setup();
-    renderList([
-      createExperimentDeviceEntry({
-        device: null,
-        clientId: "cognito-abc",
-        reported: {
-          deviceName: "shed-logger",
-          firmware: null,
-          version: null,
-          battery: null,
-          totalMeasurements: 4,
-          lastReportedAt: null,
-        },
-        canView: false,
-      }),
-      devices[0],
-    ]);
-    await user.type(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"), "shed");
-    await waitFor(() => expect(names()).toHaveLength(1));
-    expect(names()[0]).toContain("shed-logger");
-  });
-
-  it("filters by family and clears the removable filter", async () => {
-    const user = userEvent.setup();
-    renderList();
-    await user.click(screen.getByRole("button", { name: "common.filter" }));
-    await user.click(screen.getByRole("option", { name: "iot.devices.columns.family" }));
-    await user.click(screen.getByRole("option", { name: "Mobile" }));
-    expect(names()).toHaveLength(1);
-    expect(names()[0]).toContain("Alpha");
-    await user.keyboard("{Escape}{Escape}");
-    await user.click(screen.getByRole("button", { name: "common.removeFilterValue" }));
-    expect(names()).toHaveLength(3);
-  });
-
-  it("cycles name sorting, supports a secondary family sort, and resets to the source order", async () => {
-    const user = userEvent.setup();
-    renderList();
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
-    expect(names()[0]).toContain("Alpha");
+    const request = mountList();
+    render(<List />);
+    await screen.findByText("unregistered-publisher");
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.created:/ }));
     await user.keyboard("{Shift>}");
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
+    await user.click(screen.getByRole("button", { name: /iot.devices.columns.status:/ }));
     await user.keyboard("{/Shift}");
-    expect(
-      screen.getByRole("button", { name: /iot.devices.columns.family:.*common.sortSecondary/ }),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(request.calls.at(-1)?.query["sort[1][field]"]).toBe("status"));
+    expect(request.calls.at(-1)?.query["sort[0][field]"]).toBe("registered");
+
     await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
-    expect(names()[0]).toContain("Zulu");
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
-    expect(names()[0]).toContain("Zulu");
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
-    expect(screen.queryByRole("button", { name: "common.resetSorting" })).not.toBeInTheDocument();
-  });
-
-  it("sorts families in both directions, keeping equal families stable and unregistered publishers visible", async () => {
-    const user = userEvent.setup();
-    renderList([
-      devices[1],
-      {
-        ...devices[1],
-        device: createIotDevice({ name: "Beta", deviceType: "mobile" }),
-        clientId: "beta",
-      },
-      devices[2],
-      devices[0],
-    ]);
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
-    expect(names()).toEqual([
-      expect.stringContaining("unregistered-publisher"),
-      expect.stringContaining("Zulu"),
-      expect.stringContaining("Alpha"),
-      expect.stringContaining("Beta"),
-    ]);
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.family:/ }));
-    expect(names()).toEqual([
-      expect.stringContaining("Alpha"),
-      expect.stringContaining("Beta"),
-      expect.stringContaining("Zulu"),
-      expect.stringContaining("unregistered-publisher"),
-    ]);
-  });
-
-  it("returns the loaded experiment devices when explicitly refetched", async () => {
-    const { result } = renderHook(() =>
-      useExperimentDevicesList({ experimentId: "exp", devices, dataUpdatedAt: 1 }),
-    );
-    await act(async () => {
-      const refreshed = await result.current.refetch();
-      expect(refreshed.data).toEqual(devices);
-      expect(refreshed.error).toBeNull();
-    });
-    expect(result.current.data?.items).toEqual(devices);
-  });
-
-  it("restores search, family and sort from the URL without removing an unowned parameter", () => {
-    openOnUrl(
-      "/platform/experiments/exp/devices",
-      `other=1&deviceFamily=mobile&q=BB&sort=${encodeURIComponent(JSON.stringify([{ field: "name", direction: "desc" }]))}`,
-    );
-    const { router } = renderList();
-    expect(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder")).toHaveValue(
-      "BB",
-    );
-    expect(names()).toHaveLength(1);
-    expect(names()[0]).toContain("Alpha");
-    expect(
-      screen.getByRole("button", { name: /iot.devices.columns.name: common.sortDescending/ }),
-    ).toBeInTheDocument();
-    expect(router.replace).not.toHaveBeenCalled();
-  });
-
-  it("clears search and family filters from the zero-results action", async () => {
-    const user = userEvent.setup();
-    openOnUrl("/platform/experiments/exp/devices", "deviceFamily=mobile&q=missing");
-    renderList();
-    expect(screen.queryByRole("list")).not.toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "common.clearFilters" })[1]);
-    expect(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder")).toHaveValue("");
-    await waitFor(() => expect(names()).toHaveLength(3));
-  });
-
-  it("updates the loaded roster when the parent receives new devices", () => {
-    const { rerender } = renderList();
-    expect(names()).toHaveLength(3);
-    rerender(<List devices={[devices[1]]} dataUpdatedAt={2} />);
-    expect(names()).toHaveLength(1);
-    expect(names()[0]).toContain("Alpha");
-  });
-
-  it("pages at 20 and resets the page on filter changes", async () => {
-    const user = userEvent.setup();
-    const rows = Array.from({ length: 21 }, (_, index) => ({
-      ...devices[2],
-      clientId: `publisher-${index}`,
-    }));
-    renderList(rows);
-    expect(names()).toHaveLength(20);
-    await user.click(screen.getByRole("button", { name: "pagination.next" }));
-    expect(names()).toHaveLength(1);
-    expect(screen.getByText("publisher-20")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
-    expect(names()).toHaveLength(20);
-    expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
+    await waitFor(() => expect(request.calls.at(-1)?.query["sort[0][field]"]).toBeUndefined());
   });
 });

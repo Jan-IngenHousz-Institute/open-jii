@@ -1,5 +1,6 @@
 import { createIotDevice } from "@/test/factories";
 import { openOnUrl } from "@/test/list-request";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -101,6 +102,34 @@ function overview(
   return { devices, window: WINDOW, pipelineUnavailable };
 }
 
+function view(
+  devices: ExperimentDeviceEntry[],
+  matches: ExperimentDeviceEntry[],
+  selectedClientId?: string,
+): ExperimentDevicesOverview {
+  const selected = matches.some((entry) => entry.clientId === selectedClientId)
+    ? undefined
+    : devices.find((entry) => entry.clientId === selectedClientId);
+  return {
+    ...overview(matches),
+    pagination: {
+      page: 1,
+      pageSize: 20,
+      totalCount: matches.length,
+      totalPages: 1,
+      summary: {
+        total: devices.length,
+        onboarded: 0,
+        sending: 0,
+        onboardedSilent: 0,
+        sendingUnbound: 0,
+      },
+      statusCounts: { registered: 0, provisioned: 0, onboarded: 0, revoked: 0, retired: 0 },
+      selected,
+    },
+  };
+}
+
 describe("ExperimentDevicesPanel", () => {
   beforeEach(() => {
     // The detail pane fetches a series for whichever device is selected.
@@ -152,7 +181,12 @@ describe("ExperimentDevicesPanel", () => {
   it("filters the list by search, leaving an explicitly selected device open", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperimentDevices, {
-      body: overview([bound, observedPhone]),
+      body: ({ query }: SpyCall) => {
+        const all = [bound, observedPhone];
+        const matches =
+          query.search === "Field" ? [observedPhone] : query.search === "zzz" ? [] : all;
+        return view(all, matches, query.selectedClientId);
+      },
     });
 
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
@@ -171,7 +205,7 @@ describe("ExperimentDevicesPanel", () => {
       expect(within(screen.getByRole("list")).queryByText("Bench sensor")).not.toBeInTheDocument(),
     );
     expect(within(screen.getByRole("list")).getByText("Field phone")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
 
     await user.clear(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"));
     await user.type(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"), "zzz");
@@ -184,7 +218,7 @@ describe("ExperimentDevicesPanel", () => {
       `deviceFamily=mobile&q=Field&sort=${encodeURIComponent(JSON.stringify([{ field: "name", direction: "asc" }]))}`,
     );
     server.mount(contract.experiments.listExperimentDevices, {
-      body: overview([bound, observedPhone]),
+      body: view([bound, observedPhone], [observedPhone]),
     });
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
     expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
@@ -194,12 +228,16 @@ describe("ExperimentDevicesPanel", () => {
   it("follows sorting and search until the user picks a device", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperimentDevices, {
-      body: overview([observedPhone, bound]),
+      body: ({ query }: SpyCall) => {
+        const all = [observedPhone, bound];
+        if (query.search === "missing") return view(all, []);
+        return view(all, query["sort[0][field]"] === "name" ? [bound, observedPhone] : all);
+      },
     });
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
     expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /iot.devices.columns.name:/ }));
-    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
     await user.type(
       screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
       "missing",
@@ -323,7 +361,10 @@ describe("ExperimentDevicesPanel", () => {
   it("falls back to the first visible row when an explicitly selected device is detached", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.listExperimentDevices, {
-      body: overview([bound, unregisteredNamed, observedPhone]),
+      body: ({ query }: SpyCall) => {
+        const all = [bound, unregisteredNamed, observedPhone];
+        return view(all, query.search === "Field" ? [observedPhone] : all, query.selectedClientId);
+      },
     });
     server.mount(contract.experiments.removeExperimentDevice, { status: 204, body: undefined });
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
@@ -342,7 +383,7 @@ describe("ExperimentDevicesPanel", () => {
     expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
 
     server.mount(contract.experiments.listExperimentDevices, {
-      body: overview([unregisteredNamed, observedPhone]),
+      body: view([unregisteredNamed, observedPhone], [observedPhone]),
     });
     await user.click(screen.getByRole("button", { name: "iot.experimentDevices.detach" }));
     await user.click(
@@ -418,7 +459,29 @@ describe("ExperimentDevicesPanel", () => {
       ...unregistered,
       clientId: `publisher-${String(index)}`,
     }));
-    server.mount(contract.experiments.listExperimentDevices, { body: overview(many) });
+    const request = server.mount(contract.experiments.listExperimentDevices, {
+      body: ({ query }: SpyCall) => {
+        const page = Number(query.page ?? 1);
+        const start = (page - 1) * 20;
+        return {
+          ...overview(many.slice(start, start + 20)),
+          pagination: {
+            page,
+            pageSize: 20,
+            totalCount: many.length,
+            totalPages: 2,
+            summary: {
+              total: many.length,
+              onboarded: 0,
+              sending: many.length,
+              onboardedSilent: 0,
+              sendingUnbound: many.length,
+            },
+            statusCounts: { registered: 0, provisioned: 0, onboarded: 0, revoked: 0, retired: 0 },
+          },
+        };
+      },
+    });
 
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
@@ -432,6 +495,7 @@ describe("ExperimentDevicesPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "pagination.next" }));
 
     await waitFor(() => expect(screen.getAllByText("publisher-20")).toHaveLength(2));
+    expect(request.calls.map(({ query }) => query.page)).toEqual(["1", "2"]);
     expect(
       within(screen.getByRole("list")).getByRole("button", { current: true }),
     ).toHaveTextContent("publisher-20");

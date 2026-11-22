@@ -61,13 +61,14 @@ export class ExperimentDeviceRepository {
             deviceType: iotDevices.deviceType,
             status: iotDevices.status,
           },
+          registeredAt: iotDevices.createdAt,
           addedBy: experimentDevices.addedBy,
           addedAt: experimentDevices.createdAt,
         })
         .from(experimentDevices)
         .innerJoin(iotDevices, eq(experimentDevices.deviceId, iotDevices.id))
         .where(eq(experimentDevices.experimentId, experimentId))
-        .orderBy(desc(experimentDevices.createdAt));
+        .orderBy(desc(experimentDevices.createdAt), experimentDevices.deviceId);
       return rows;
     });
   }

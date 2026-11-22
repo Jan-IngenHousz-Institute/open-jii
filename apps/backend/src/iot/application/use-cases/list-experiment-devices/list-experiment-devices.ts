@@ -1,5 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import type { ExperimentDevicesQuery } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
@@ -21,6 +23,7 @@ import type {
 } from "../../../core/ports/databricks.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { experimentDevicesPage } from "./experiment-devices-page";
 
 /** "Currently sending" means inside this window. */
 const OBSERVATION_WINDOW_MS = 30 * 86_400_000;
@@ -57,6 +60,7 @@ export class ListExperimentDevicesUseCase {
     experimentId: string,
     userId: string,
     now: Date = new Date(),
+    query: Omit<ExperimentDevicesQuery, "id"> = {},
   ): Promise<Result<ExperimentDevicesOverviewDto>> {
     this.logger.log({
       msg: "Listing experiment devices",
@@ -104,7 +108,9 @@ export class ListExperimentDevicesUseCase {
     const [publishers, stats, boundActivity] = await Promise.all([
       this.lookupPublishers(experimentId, window),
       this.lookupDeviceStats(experimentId),
-      this.lookupActivity([...boundThings]),
+      query.page === undefined
+        ? this.lookupActivity([...boundThings])
+        : new Map<string, string | null>(),
     ]);
     const observed = new Map<string, ExperimentPublisherRow>();
     for (const row of publishers ?? []) {
@@ -132,13 +138,6 @@ export class ListExperimentDevicesUseCase {
       return failure(bindingCountsResult.error);
     }
     const bindingCounts = bindingCountsResult.value;
-    const [connectivity, unboundActivity] = await Promise.all([
-      this.lookupConnectivity(thingNames),
-      this.lookupActivity(unboundDevices.map((device) => device.thingName)),
-    ]);
-    const activity =
-      boundActivity && unboundActivity ? new Map([...boundActivity, ...unboundActivity]) : null;
-    const pipelineUnavailable = publishers === null || activity === null || stats === null;
     const reportedByClientId = this.foldDeviceStats(stats ?? []);
 
     const entryFor = (
@@ -146,7 +145,6 @@ export class ListExperimentDevicesUseCase {
       binding: ExperimentDeviceEntryDto["binding"],
       canView: boolean,
     ): ExperimentDeviceEntryDto => {
-      const thing = connectivity?.get(device.thingName);
       const recent = observed.get(device.thingName);
       const identity: ExperimentDeviceIdentityDto = {
         ...device,
@@ -156,8 +154,8 @@ export class ListExperimentDevicesUseCase {
         device: identity,
         clientId: device.thingName,
         binding,
-        connectivity: thing ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt } : null,
-        lastDataAt: activity?.get(device.thingName) ?? null,
+        connectivity: null,
+        lastDataAt: null,
         recentData: recent
           ? { measurementCount: recent.count, lastDataAt: recent.lastDataAt }
           : null,
@@ -172,11 +170,7 @@ export class ListExperimentDevicesUseCase {
       entryFor(binding.device, { addedBy: binding.addedBy, addedAt: binding.addedAt }, true),
     );
 
-    const unbound = await Promise.all(
-      unboundDevices.map(async (device) =>
-        entryFor(toIdentity(device), null, await this.canViewDevice(userId, device.id)),
-      ),
-    );
+    const unbound = unboundDevices.map((device) => entryFor(toIdentity(device), null, false));
 
     const registered = new Set(thingNames);
     const unregistered: ExperimentDeviceEntryDto[] = [];
@@ -195,10 +189,47 @@ export class ListExperimentDevicesUseCase {
       }
     }
 
+    const candidates = [...bound, ...byFreshest(unbound), ...byFreshest(unregistered)];
+    const registeredAt = new Map([
+      ...bindings.map(({ device, registeredAt }) => [device.thingName, registeredAt] as const),
+      ...unboundDevices.map((device) => [device.thingName, device.createdAt] as const),
+    ]);
+    const view =
+      query.page === undefined
+        ? undefined
+        : experimentDevicesPage(candidates, registeredAt, { ...query, page: query.page });
+    const devices = view?.items ?? candidates;
+    const selected = view?.selected;
+    const visible = selected ? [...devices, selected] : devices;
+    const visibleThings = visible.flatMap(({ device }) => (device ? [device.thingName] : []));
+
+    const [connectivity, activity] = await Promise.all([
+      this.lookupConnectivity(visibleThings),
+      this.lookupActivity(view ? visibleThings : unboundDevices.map((device) => device.thingName)),
+      Promise.all(
+        visible.map(async (entry) => {
+          if (entry.device && !entry.binding) {
+            entry.canView = await this.canViewDevice(userId, entry.device.id);
+          }
+        }),
+      ),
+    ]);
+    const lastActivity =
+      boundActivity && activity ? new Map([...boundActivity, ...activity]) : null;
+    for (const entry of visible) {
+      if (!entry.device) continue;
+      const thing = connectivity?.get(entry.clientId);
+      entry.connectivity = thing
+        ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt }
+        : null;
+      entry.lastDataAt = lastActivity?.get(entry.clientId) ?? null;
+    }
+
     return success({
-      devices: [...bound, ...byFreshest(unbound), ...byFreshest(unregistered)],
+      devices,
+      ...(view && { pagination: { ...view.pagination, ...(selected && { selected }) } }),
       window,
-      pipelineUnavailable,
+      pipelineUnavailable: publishers === null || lastActivity === null || stats === null,
     });
   }
 

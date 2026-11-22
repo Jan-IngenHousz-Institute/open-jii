@@ -79,6 +79,22 @@ describe("useResourceList", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it("opens a shared page and writes the next page alongside the existing URL parameters", async () => {
+    openOnUrl("/list", "view=compact&status=stale&page=2");
+    const { result, router, views } = renderList((view) => envelope(rows(2), view.page, 4));
+
+    await waitFor(() => expect(result.current.data?.page).toBe(2));
+    expect(views[0]?.page).toBe(2);
+    act(() => result.current.setPage(3));
+    expect(router.replace).toHaveBeenLastCalledWith("/list?view=compact&status=stale&page=3", {
+      scroll: false,
+    });
+    act(() => result.current.setFilter("status", ["active"]));
+    expect(router.replace).toHaveBeenLastCalledWith("/list?view=compact&status=active", {
+      scroll: false,
+    });
+  });
+
   it("marks activity unavailable when the response says so, and keeps the URL sort", async () => {
     openOnUrl(
       "/list",

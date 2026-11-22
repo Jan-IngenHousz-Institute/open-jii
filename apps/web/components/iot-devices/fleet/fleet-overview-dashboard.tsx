@@ -17,6 +17,7 @@ import { formatLocaleNumber } from "@/util/format-locale-number";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
+import { summarizeGroupHealth } from "@repo/api/domains/iot/device-group/group-health";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
@@ -26,7 +27,6 @@ import { MetricStatCard } from "../../metrics/metric-stat-card";
 import { MetricTrendCard } from "../../metrics/metric-trend-card";
 import { metricsBandGrid } from "../../metrics/metrics-band-grid";
 import { buildGroupActivity } from "../groups/group-activity";
-import { summarizeGroupHealth } from "../groups/group-health";
 import { GroupThroughputPanel } from "../groups/group-throughput-panel";
 import { bucketAxis, foldBucketSeries, peakBucketDate } from "../monitoring/monitoring-buckets";
 import { FleetAttentionList } from "./fleet-attention-list";

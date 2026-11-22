@@ -2,7 +2,6 @@
 
 import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import type { z } from "zod";
 
 import type { ListResponse, PaginatedList } from "@repo/api/shared/listing";
@@ -83,7 +82,7 @@ function pageRows<Item>(rows: Item[], page: number): PaginatedList<Item> {
 }
 
 /**
- * One resource list's state and rows: filters, sort and optional search in the URL, a 300 ms
+ * One resource list's state and rows: filters, sort, page and optional search in the URL, a 300 ms
  * search debounce, and a page that returns to 1 whenever search, filters or sort change and
  * snaps back into range when a real response has fewer pages.
  */
@@ -98,8 +97,9 @@ export function useResourceList<
     filters: options.filters,
     sort: options.sort,
     searchKey: options.searchKey,
+    pageKey: "page",
   });
-  const [page, setPage] = useState(1);
+  const { page, setPage } = url;
   const [debouncedSearch] = useDebounce(url.search, 300);
 
   const queryOptions: UseQueryOptions<
@@ -129,45 +129,37 @@ export function useResourceList<
 
   // A mutation or background update can shrink the result set under the current
   // page; snap back into range once a real (non-placeholder) response says so.
-  if (data && !query.isPlaceholderData && page > Math.max(1, data.totalPages)) {
+  if (
+    data &&
+    !query.isPlaceholderData &&
+    url.search === debouncedSearch &&
+    page > Math.max(1, data.totalPages)
+  ) {
     setPage(Math.max(1, data.totalPages));
   }
 
   return {
     data,
+    response: query.data as QueryData<Q> | undefined,
     isLoading: query.isPending,
+    isFetching: query.isFetching,
     isPlaceholderData: query.isPlaceholderData,
     isSearchPending,
     error: query.error,
     refetch: query.refetch,
     search: url.search,
     debouncedSearch,
-    setSearch: (value: string) => {
-      url.setSearch(value);
-      setPage(1);
-    },
+    setSearch: url.setSearch,
     page,
     setPage,
     sort: url.sort,
     activityUnavailable,
-    setSort: (next: T[]) => {
-      url.setSort(next);
-      setPage(1);
-    },
-    toggleSort: (field: T["field"], multi: boolean) => {
-      url.toggleSort(field, multi);
-      setPage(1);
-    },
+    setSort: url.setSort,
+    toggleSort: url.toggleSort,
     filterShape: options.filters,
     filters: url.filters,
-    setFilter: <K extends keyof S>(key: K, values: z.infer<S[K]>[]) => {
-      url.setFilter(key, values);
-      setPage(1);
-    },
-    clearFilters: () => {
-      url.clearFilters();
-      setPage(1);
-    },
+    setFilter: url.setFilter,
+    clearFilters: url.clearFilters,
     hasActiveFilters: url.hasActiveFilters,
   };
 }
