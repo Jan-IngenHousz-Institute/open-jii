@@ -7,8 +7,23 @@ import { PieChart } from "../../charts/pie-chart";
 import { ScatterChart } from "../../charts/scatter-chart";
 
 const measurement = vi.hoisted(() => ({ width: 272 }));
-vi.mock("../../charts/use-is-compact", () => ({
-  useChartSizing: () => [{ current: null }, { width: measurement.width }],
+vi.mock(import("../../charts/use-is-compact"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useChartSizing: () =>
+    [
+      { current: null },
+      {
+        width: measurement.width,
+        snug: false,
+        compact: false,
+        veryCompact: false,
+        ultraCompact: false,
+        cellSnug: false,
+        cellCompact: false,
+        cellVeryCompact: false,
+        cellUltraCompact: false,
+      },
+    ] as const,
 }));
 vi.mock("../../charts/plotly-chart", () => ({
   PlotlyChart: ({ data, layout }: { data: PlotData[]; layout: Partial<Layout> }) => (
@@ -99,6 +114,64 @@ describe("right legends at the Plotly boundary", () => {
       yaxis2: { side: "right" },
     });
   });
+
+  it("preserves a trace-local palette for a single scatter series", () => {
+    const colorAxis = { colorscale: "Viridis", showscale: true };
+    render(
+      <CartesianChart
+        data={[{ ...series, traceType: "scatter", marker: { color: [1, 2] } }]}
+        colorAxis={colorAxis}
+      />,
+    );
+
+    expect(figure().data[0]?.marker).toMatchObject(colorAxis);
+    expect(figure().layout).not.toHaveProperty("coloraxis");
+  });
+
+  it.each(["top", "bottom"] as const)(
+    "reserves room for facet headings and wraps the %s legend beside a shared scale",
+    (legendPosition) => {
+      measurement.width = 566;
+      const data = [
+        { ...series, traceType: "scatter" as const, marker: { color: [1, 2] } },
+        {
+          ...series,
+          name: "Reference",
+          traceType: "scatter" as const,
+          axis: "secondary" as const,
+          marker: { color: [1, 2] },
+        },
+      ];
+      render(
+        <CartesianChart
+          data={data}
+          colorAxis={{ showscale: true }}
+          config={{ legendPosition, title: "Assay results", xAxisTitle: "Sample index" }}
+          subplots={{
+            rows: 1,
+            columns: 2,
+            sharedXTitle: true,
+            cells: [
+              { title: "Low", xaxisId: "x", yaxisId: "y" },
+              { title: "High", xaxisId: "x2", yaxisId: "y2" },
+            ],
+          }}
+        />,
+      );
+
+      const { data: traces, layout } = figure();
+      expect(traces[0]?.name).toContain("<br>");
+      expect(layout.legend).toMatchObject({ xref: "container", maxheight: 64 });
+      expect(layout.title).toMatchObject({
+        yref: "container",
+        pad: { t: legendPosition === "top" ? 72 : 8 },
+      });
+      expect(layout.annotations).toContainEqual(
+        expect.objectContaining({ text: "Low", y: 1, yshift: 4 }),
+      );
+      expect(layout.margin?.[legendPosition === "top" ? "t" : "b"]).toBeGreaterThan(100);
+    },
+  );
 
   it("keeps short secondary-axis names beside the plot", () => {
     measurement.width = 992;

@@ -141,6 +141,45 @@ describe("transformCartesianData", () => {
     ).toMatchObject({ showscale: false });
   });
 
+  it.each(["bar", "line", "area"] as const)(
+    "keeps the shared scale as the only colour bar when a secondary series renders as %s",
+    (traceType) => {
+      const rows = [
+        { x: 1, a: 10, b: 100, c: 0.1, site: "A" },
+        { x: 2, a: 20, b: 200, c: 0.9, site: "B" },
+      ];
+      const sources = [
+        ds("x", "x"),
+        ds("y", "a"),
+        { ...ds("y", "b"), axis: "secondary" as const, traceType },
+        ds("color", "c"),
+        ds("facet", "site"),
+      ];
+      const marker = {
+        color: "purple",
+        showscale: true,
+        colorscale: "Viridis",
+        colorbar: { title: { text: "Assay signal" } },
+      };
+      const { chartSeries, colorAxis } = transformCartesianData(
+        rows,
+        sources,
+        { marker, mode: "lines+markers" },
+        { ...baseOptions, supportsContinuousColor: true },
+      );
+
+      expect(colorAxis?.showscale).toBe(true);
+      const secondary = chartSeries.filter((series) => series.traceType === traceType);
+      expect(secondary).toHaveLength(2);
+      for (const { marker } of secondary) {
+        expect(marker?.color).toBe("purple");
+        expect(marker?.showscale).toBe(false);
+        expect(marker?.colorbar).toBeUndefined();
+        expect(marker?.colorscale).toBeUndefined();
+      }
+    },
+  );
+
   it("builds subplots when facet column is set", () => {
     const rows = [
       { x: 1, v: 10, site: "A" },

@@ -92,6 +92,31 @@ const HEADING_EDGE_PADDING = 12;
 // Plotly offsets a parcoords heading 28 px from its axis endpoint.
 const ROTATED_HEADING_OFFSET = 28;
 
+function parallelColorbarGutter(series: ParallelCoordinatesSeriesData, fontSize: number): number {
+  const line = series.line;
+  if (
+    !line ||
+    line.showscale === false ||
+    series.visible === false ||
+    series.visible === "legendonly" ||
+    !Array.isArray(line.color || series.color)
+  ) {
+    return 0;
+  }
+
+  const bar = line.colorbar;
+  const tickSize = bar?.tickfont?.size ?? fontSize;
+  const ticks = bar?.ticktext ?? ["−0.0000", ...(bar?.tickvals ?? []).map(String)];
+  const tickWidth = Math.max(0, ...ticks.map((tick) => chartTextWidth(tick, tickSize)));
+  const title = bar?.title ?? (bar ? undefined : { text: "Value", side: "right" });
+  const rotatedTitle = title?.text && title.side === "right" ? fontSize * 1.5 : 0;
+  const horizontalTitle =
+    title?.text && title.side !== "right" ? chartTextWidth(title.text, fontSize) : 0;
+  const barWidth = (bar?.thickness ?? 30) + tickWidth + rotatedTitle;
+  // Plotly adds 10 px of padding on each side, plus space between the axis and bar.
+  return Math.ceil(Math.max(barWidth, horizontalTitle) + 32);
+}
+
 function fitParallelHeadings(
   data: ParallelCoordinatesSeriesData[],
   chartWidth: number,
@@ -144,7 +169,13 @@ export function ParallelCoordinates({
     mustRotate: rotateLabels,
   } = useMemo(() => {
     const width = config.width || sizing.width || Infinity;
-    const margin = { l: base.margin?.l ?? 0, r: base.margin?.r ?? 0 };
+    const margin = {
+      l: base.margin?.l ?? 0,
+      r: Math.max(
+        base.margin?.r ?? 0,
+        ...data.map((series) => parallelColorbarGutter(series, base.font?.size ?? 12)),
+      ),
+    };
     const regular = fitParallelHeadings(
       data,
       width,
@@ -156,7 +187,7 @@ export function ParallelCoordinates({
 
     const tighter = fitParallelHeadings(data, width, fontSizes.axisTitle - 1, margin, 4);
     return tighter.mustRotate ? regular : tighter;
-  }, [base.margin, config.width, data, fontSizes.axisTitle, sizing.width]);
+  }, [base.font?.size, base.margin, config.width, data, fontSizes.axisTitle, sizing.width]);
 
   const labelledSeries = useMemo(
     () =>

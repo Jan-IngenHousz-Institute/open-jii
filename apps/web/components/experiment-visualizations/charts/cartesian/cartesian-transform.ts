@@ -698,6 +698,13 @@ function buildSeries({
   const traceType = isFirstSeries ? defaultTraceType : (source.traceType ?? defaultTraceType);
   const axis = isFirstSeries ? "primary" : (source.axis ?? "primary");
   const orientation = traceType === "bar" ? (chartConfig.orientation ?? "v") : undefined;
+  const isScatter = traceType === "scatter";
+  const markerStyle = chartConfig.marker;
+  const marker = isScatter
+    ? buildMarker({ chartConfig, fallbackColor, continuousColorValues, sizeContext })
+    : continuousColorValues && markerStyle
+      ? { ...markerStyle, colorscale: undefined, showscale: false, colorbar: undefined }
+      : markerStyle;
 
   if (traceType === "area") {
     const stackMode = chartConfig.stackMode ?? "none";
@@ -716,7 +723,7 @@ function buildSeries({
       fill: stackgroup ? undefined : "tozeroy",
       fillcolor: withAlpha(fallbackColor, fillOpacity),
       line: chartConfig.line,
-      marker: chartConfig.marker,
+      marker,
       mode: toAreaMode(chartConfig.mode),
       connectgaps: chartConfig.connectgaps,
       stackgroup,
@@ -729,11 +736,6 @@ function buildSeries({
       error_y: errorY,
     };
   }
-
-  const isScatter = traceType === "scatter";
-  const marker = isScatter
-    ? buildMarker({ chartConfig, fallbackColor, continuousColorValues, sizeContext })
-    : chartConfig.marker;
 
   const seriesMode = resolveSeriesMode(traceType, chartConfig.mode);
 

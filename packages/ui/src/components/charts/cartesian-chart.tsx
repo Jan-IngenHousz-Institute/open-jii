@@ -4,7 +4,12 @@ import type { ColorBar, Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { withBoundedRightLegend } from "./outer-labels";
+import {
+  chartTextWidth,
+  HORIZONTAL_LEGEND_HEIGHT,
+  withBoundedHorizontalLegend,
+  withBoundedRightLegend,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type {
   BaseChartProps,
@@ -22,6 +27,7 @@ import {
   createBaseLayout,
   createPlotlyConfig,
   detectAxisType,
+  effectiveLegendPosition,
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
@@ -156,9 +162,13 @@ export type CartesianColorAxis = Pick<MarkerConfig, "colorscale" | "showscale"> 
   colorbar?: Partial<ColorBar>;
 };
 
+const FACET_HEADING_OFFSET = 4;
+// The shared X title is drawn 50 px below the plot, plus a line of text and padding.
+const FACET_X_TITLE_BAND = 72;
+
 export interface CartesianChartProps extends BaseChartProps {
   data: CartesianSeries[];
-  /** One continuous marker colour scale shared by all scatter traces. */
+  /** Continuous scatter marker scale, shared when the chart has multiple traces. */
   colorAxis?: CartesianColorAxis;
   /**
    * Optional facet grid spec. When present, traces are routed to the
@@ -201,10 +211,15 @@ export function CartesianChart({
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
 
-  const hasSharedColorAxis = colorAxis !== undefined;
+  const traceColorScale = data.length === 1 ? colorAxis : undefined;
+  const sharedColorAxis = traceColorScale ? undefined : colorAxis;
+  const hasSharedColorAxis = sharedColorAxis !== undefined;
   const plotData: PlotData[] = useMemo(
-    () => data.map((series) => buildTrace(series, scatterPlotType, hasSharedColorAxis)),
-    [data, scatterPlotType, hasSharedColorAxis],
+    () =>
+      data.map((series) =>
+        buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale),
+      ),
+    [data, scatterPlotType, hasSharedColorAxis, traceColorScale],
   );
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
@@ -218,26 +233,40 @@ export function CartesianChart({
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
   }, [data]);
 
-  const layout = useMemo(() => {
+  const { layout, boundHorizontalLegend } = useMemo(() => {
     const hasSecondary = data.some((series) => series.axis === "secondary");
-    const hasOuterColorbar = hasSecondary && colorAxis?.showscale === true;
-    // Plotly lets a container-anchored bar and legend claim the same right gutter.
-    const moveRightLegend = hasOuterColorbar && (config.legendPosition ?? "right") === "right";
-    const legendConfig = moveRightLegend
-      ? { ...config, legendPosition: "bottom" as const }
-      : config;
+    const hasOuterColorbar = hasSecondary && sharedColorAxis?.showscale === true;
+    const chartWidth = config.width || sizing.width || 720;
+    const legendTraces = hasOuterColorbar
+      ? data.filter((series) => series.visible !== false && series.showlegend !== false)
+      : [];
+    const showLegend = config.showLegend !== false && legendTraces.length > 0;
+    const requestedLegend = config.legendPosition ?? "right";
+    const wideLeftLegend =
+      requestedLegend === "left" &&
+      (sizing.compact ||
+        legendTraces.some((series) => chartTextWidth(series.name ?? "", 12) > chartWidth / 4));
+    // Plotly's container margins can squeeze the colour bar when both side gutters are occupied.
+    const legendConfig =
+      hasOuterColorbar && showLegend && (requestedLegend === "right" || wideLeftLegend)
+        ? { ...config, legendPosition: "bottom" as const }
+        : config;
+    const tiers = {
+      ...sizing,
+      hasSecondaryAxis: hasSecondary,
+      hasColorbar: colorAxis?.showscale || data.some((series) => series.marker?.showscale),
+    };
+    const legendPosition = showLegend ? effectiveLegendPosition(legendConfig, tiers) : undefined;
+    const topLegend = legendPosition === "top";
+    const bottomLegend = legendPosition === "bottom";
     const next: Partial<Layout> & { coloraxis?: CartesianColorAxis } = createBaseLayout(
       legendConfig,
-      {
-        ...sizing,
-        hasSecondaryAxis: hasSecondary,
-        hasColorbar: colorAxis?.showscale || data.some((series) => series.marker?.showscale),
-      },
+      tiers,
     );
-    if (colorAxis) {
+    if (sharedColorAxis) {
       next.coloraxis = hasOuterColorbar
-        ? { ...colorAxis, colorbar: { ...colorAxis.colorbar, xref: "container" } }
-        : colorAxis;
+        ? { ...sharedColorAxis, colorbar: { ...sharedColorAxis.colorbar, xref: "container" } }
+        : sharedColorAxis;
     }
     if (hasOuterColorbar && next.title) {
       next.title = { ...next.title, xref: "paper", x: 0.5 };
@@ -290,17 +319,34 @@ export function CartesianChart({
         sharedYTitle: effectiveSharedYTitle,
         roworder: subplots.roworder,
         titleFontSize: cellTitleFontSize,
+        ...(hasOuterColorbar ? { cellTitleOffset: FACET_HEADING_OFFSET } : {}),
         ultraCompactCells: sizing.cellUltraCompact,
       });
       Object.assign(next, faceted);
-      if (moveRightLegend && !sizing.cellUltraCompact) {
-        // Facet headings and the shared X title are annotations outside the plot.
+      if (hasOuterColorbar) {
+        const topLegendBand = topLegend ? HORIZONTAL_LEGEND_HEIGHT : 0;
+        const titleBand = next.title ? (next.title.font?.size ?? 14) * 1.5 + 12 : 0;
+        const panelBand =
+          !sizing.cellUltraCompact && subplots.cells.some((cell) => cell.title)
+            ? cellTitleFontSize * 1.5 + FACET_HEADING_OFFSET
+            : 0;
+        const bottomBand =
+          bottomLegend && !sizing.cellUltraCompact && effectiveSharedXTitle && config.xAxisTitle
+            ? HORIZONTAL_LEGEND_HEIGHT + FACET_X_TITLE_BAND
+            : 0;
+        if (next.title) {
+          next.title = {
+            ...next.title,
+            yref: "container",
+            y: 1,
+            yanchor: "top",
+            pad: { t: topLegendBand + 8 },
+          };
+        }
         next.margin = {
           ...next.margin,
-          ...(next.title ? { t: Math.max(next.margin?.t ?? 0, 56) } : {}),
-          ...(effectiveSharedXTitle && config.xAxisTitle && next.showlegend !== false
-            ? { b: Math.max(next.margin?.b ?? 0, 136) }
-            : {}),
+          t: Math.max(next.margin?.t ?? 0, Math.ceil(topLegendBand + titleBand + panelBand)),
+          b: Math.max(next.margin?.b ?? 0, bottomBand),
         };
       }
     }
@@ -346,13 +392,26 @@ export function CartesianChart({
       next.uirevision = uirevision;
     }
 
-    return moveRightLegend ? { ...next, legend: { ...next.legend, maxheight: 64 } } : next;
+    return { layout: next, boundHorizontalLegend: topLegend || bottomLegend };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, axisScan, colorAxis, subplots, uirevision, themeVersion]);
+  }, [
+    config,
+    sizing,
+    data,
+    axisScan,
+    colorAxis,
+    sharedColorAxis,
+    subplots,
+    uirevision,
+    themeVersion,
+  ]);
 
   const bounded = useMemo(
-    () => withBoundedRightLegend(layout, config, plotData, sizing.width),
-    [layout, config, plotData, sizing.width],
+    () =>
+      boundHorizontalLegend
+        ? withBoundedHorizontalLegend(layout, plotData, config.width || sizing.width || 720)
+        : withBoundedRightLegend(layout, config, plotData, sizing.width),
+    [boundHorizontalLegend, layout, config, plotData, sizing.width],
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   const handleRelayout = React.useCallback(
@@ -434,6 +493,7 @@ function buildTrace(
   series: CartesianSeries,
   scatterPlotType: string,
   hasSharedColorAxis: boolean,
+  traceColorScale?: CartesianColorAxis,
 ): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
   // charts pin each trace to its cell) wins over the legacy `axis:
@@ -498,11 +558,11 @@ function buildTrace(
         opacity: series.marker?.opacity ?? series.opacity ?? 1,
         ...(hasSharedColorAxis
           ? { coloraxis: "coloraxis" }
-          : {
+          : (traceColorScale ?? {
               colorscale: series.marker?.colorscale,
               showscale: series.marker?.showscale ?? false,
               colorbar: series.marker?.colorbar,
-            }),
+            })),
         line: series.marker?.line,
         // Bubble sizing; Plotly ignores these when `marker.size` is a
         // scalar.

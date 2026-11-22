@@ -141,6 +141,34 @@ describe("ParallelCoordinates", () => {
     });
   });
 
+  it("accounts for the colour bar before laying out the headings", () => {
+    const dimensions = [
+      "canopyHeight",
+      "leafTempMean",
+      "branchWidth",
+      "leafBladeLen",
+      "sample_index",
+    ].map((label) => ({ label, values: [1, 2] }));
+    const line = { color: [0.12, 0.79], colorbar: { title: { text: "Assay signal" } } };
+    const config = { width: 566, title: "Seasonal assay measurements" };
+    const { getByTestId, rerender } = render(
+      <ParallelCoordinates data={[{ dimensions, line }]} config={config} />,
+    );
+
+    expect(JSON.parse(getByTestId("chart-data").textContent || "[]")[0]).toMatchObject({
+      labelangle: 90,
+    });
+    rerender(
+      <ParallelCoordinates
+        data={[{ dimensions, line: { ...line, showscale: false } }]}
+        config={config}
+      />,
+    );
+    expect(JSON.parse(getByTestId("chart-data").textContent || "[]")[0]).toMatchObject({
+      labelangle: 0,
+    });
+  });
+
   it("handles custom dimension configuration", () => {
     const customData: ParallelCoordinatesSeriesData[] = [
       {

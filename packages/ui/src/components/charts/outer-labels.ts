@@ -4,7 +4,7 @@ import type { PlotlyChartConfig } from "./types";
 import type { ChartTierOptions } from "./utils";
 import { effectiveLegendPosition, legendAnchorFor, responsiveChrome } from "./utils";
 
-const HORIZONTAL_LEGEND_HEIGHT = 64;
+export const HORIZONTAL_LEGEND_HEIGHT = 64;
 const LEGEND_PADDING = 56;
 const MIN_SIDE_TEXT_WIDTH = 96;
 
@@ -149,6 +149,28 @@ export function withBoundedRightLegend(
         ? { margin: { ...layout.margin, b: (layout.margin?.b ?? 36) + HORIZONTAL_LEGEND_HEIGHT } }
         : {}),
     },
+  };
+}
+
+export function withBoundedHorizontalLegend(
+  layout: Partial<Layout>,
+  traces: PlotData[],
+  width: number,
+): { layout: Partial<Layout>; data: PlotData[] } {
+  const font = layout.legend?.font?.size ?? 12;
+  const available = Math.max(16, width - LEGEND_PADDING);
+  const legend = {
+    ...layout.legend,
+    xref: "container" as const,
+    maxheight: HORIZONTAL_LEGEND_HEIGHT,
+  };
+  return {
+    layout: { ...layout, legend },
+    data: traces.map((trace) =>
+      trace.name && chartTextWidth(trace.name, font) > available
+        ? { ...trace, name: wrapChartLabel(trace.name, font, available) }
+        : trace,
+    ),
   };
 }
 
