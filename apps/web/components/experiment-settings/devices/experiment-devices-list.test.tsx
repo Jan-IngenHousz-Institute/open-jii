@@ -6,6 +6,7 @@ import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 
 import { ExperimentDevicesList } from "./experiment-devices-list";
 import { useExperimentDevicesList } from "./use-experiment-devices-list";
@@ -37,8 +38,8 @@ function mountList() {
   });
 }
 
-function List({ onSelect = vi.fn() }: { onSelect?: (id: string) => void }) {
-  const list = useExperimentDevicesList(EXPERIMENT_ID, null);
+function List({ onSelect = vi.fn() }: { onSelect?: (entry: ExperimentDeviceEntry) => void }) {
+  const list = useExperimentDevicesList(EXPERIMENT_ID);
   return <ExperimentDevicesList list={list} selectedClientId="bench" onSelect={onSelect} />;
 }
 
@@ -83,7 +84,7 @@ describe("ExperimentDevicesList", () => {
       expect(within(screen.getByRole("list")).getAllByRole("button")).toHaveLength(1),
     );
     await user.click(screen.getByRole("button", { name: /Bench/ }));
-    expect(onSelect).toHaveBeenCalledWith("bench");
+    expect(onSelect).toHaveBeenCalledWith(bench);
   });
 
   it("sends registered-date and status sort in shift-click order and can reset it", async () => {

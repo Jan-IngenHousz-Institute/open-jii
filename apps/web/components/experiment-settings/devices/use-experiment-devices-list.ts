@@ -7,7 +7,7 @@ import { zDeviceType, zIotDeviceRung, zIotDeviceSort } from "@repo/api/domains/i
 
 const FILTERS = { status: zIotDeviceRung, deviceFamily: zDeviceType };
 
-export function useExperimentDevicesList(experimentId: string, selectedClientId: string | null) {
+export function useExperimentDevicesList(experimentId: string) {
   return useResourceList({
     searchKey: "q",
     filters: FILTERS,
@@ -21,7 +21,6 @@ export function useExperimentDevicesList(experimentId: string, selectedClientId:
           status: filters.status.length ? filters.status : undefined,
           family: filters.deviceFamily.length ? filters.deviceFamily : undefined,
           sort: sort.length ? sort : undefined,
-          selectedClientId: selectedClientId ?? undefined,
         },
         select: (overview) => ({
           items: overview.devices,

@@ -159,7 +159,7 @@ describe("ExperimentDevicesPanel", () => {
 
   it("shows the selected device's facts and swaps them when another is picked", async () => {
     const user = userEvent.setup();
-    server.mount(contract.experiments.listExperimentDevices, {
+    const listRequest = server.mount(contract.experiments.listExperimentDevices, {
       body: overview([bound, observedPhone]),
     });
 
@@ -173,6 +173,7 @@ describe("ExperimentDevicesPanel", () => {
 
     expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
     expect(screen.getAllByText("PH-1").length).toBeGreaterThan(0);
+    expect(listRequest.callCount).toBe(1);
     // The phone is not viewable, so it offers no link out.
     expect(screen.queryByText("iot.experimentDevices.openMonitoring")).not.toBeInTheDocument();
     expect(screen.getAllByText("iot.experimentDevices.noAccess").length).toBeGreaterThan(0);
@@ -180,7 +181,7 @@ describe("ExperimentDevicesPanel", () => {
 
   it("filters the list by search, leaving an explicitly selected device open", async () => {
     const user = userEvent.setup();
-    server.mount(contract.experiments.listExperimentDevices, {
+    const listRequest = server.mount(contract.experiments.listExperimentDevices, {
       body: ({ query }: SpyCall) => {
         const all = [bound, observedPhone];
         const matches =
@@ -210,6 +211,11 @@ describe("ExperimentDevicesPanel", () => {
     await user.clear(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"));
     await user.type(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"), "zzz");
     expect(await screen.findByText("iot.experimentDevices.searchNoMatches")).toBeInTheDocument();
+    expect(
+      listRequest.calls
+        .filter(({ query }) => query.selectedClientId)
+        .map(({ query }) => query.selectedClientId),
+    ).toEqual([bound.clientId]);
   });
 
   it("defaults the detail pane to the first filtered and sorted row from a shared URL", async () => {

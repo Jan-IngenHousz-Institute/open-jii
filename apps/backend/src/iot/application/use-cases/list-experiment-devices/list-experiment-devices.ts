@@ -103,8 +103,8 @@ export class ListExperimentDevicesUseCase {
     const bindings = bindingsResult.value;
     const boundThings = new Set(bindings.map((binding) => binding.device.thingName));
 
-    // Stats and the bound devices' activity need nothing the publisher lookup returns, so the three
-    // warehouse reads run together; only devices publishing without a binding need a second read.
+    // Unpaged callers can start bound-device activity while publisher discovery runs.
+    // Paged callers fetch activity once they know which rows to return.
     const [publishers, stats, boundActivity] = await Promise.all([
       this.lookupPublishers(experimentId, window),
       this.lookupDeviceStats(experimentId),

@@ -5,12 +5,15 @@ import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
 import { resolveDeviceLabel } from "@/util/device-presentation";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Cpu, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 import { summarizeExperimentDevices } from "@repo/api/domains/experiment/devices/experiment-devices-summary";
 import type {
+  ExperimentDeviceEntry,
   ExperimentDeviceIdentity,
   ExperimentDevicesOverview,
 } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
@@ -40,9 +43,30 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const locale = useLocale();
 
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const list = useExperimentDevicesList(experimentId, selectedClientId);
+  const [selection, setSelection] = useState<{
+    experimentId: string;
+    entry: ExperimentDeviceEntry;
+  } | null>(null);
+  const list = useExperimentDevicesList(experimentId);
   const data = list.response?.overview;
+  const selected = selection?.experimentId === experimentId ? selection.entry : undefined;
+  const onPage = data?.devices.find((entry) => entry.clientId === selected?.clientId);
+  const offPage = useQuery(
+    orpc.experiments.listExperimentDevices.queryOptions({
+      input: {
+        id: experimentId,
+        page: 1,
+        pageSize: 1,
+        search: selected?.clientId,
+        selectedClientId: selected?.clientId,
+      },
+      enabled: selected !== undefined && data !== undefined && !onPage,
+      select: (overview) =>
+        overview.devices.find((entry) => entry.clientId === selected?.clientId) ??
+        overview.pagination?.selected ??
+        null,
+    }),
+  );
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
     onSuccess: () => {
@@ -108,13 +132,8 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
-  // Derived each render so a refetch cannot leave the pane on a stale entry.
   const selectedEntry =
-    selectedClientId === null
-      ? list.data?.items[0]
-      : (data.devices.find((entry) => entry.clientId === selectedClientId) ??
-        data.pagination?.selected ??
-        list.data?.items[0]);
+    onPage ?? (offPage.isPending ? selected : offPage.data) ?? data.devices.at(0);
 
   return (
     <>
@@ -132,7 +151,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
           <ExperimentDevicesList
             list={list}
             selectedClientId={selectedEntry?.clientId ?? null}
-            onSelect={setSelectedClientId}
+            onSelect={(entry) => setSelection({ experimentId, entry })}
           />
         </div>
 

@@ -22,7 +22,7 @@ import type { ExperimentDevicesListModel } from "./use-experiment-devices-list";
 interface ExperimentDevicesListProps {
   list: ExperimentDevicesListModel;
   selectedClientId: string | null;
-  onSelect: (clientId: string) => void;
+  onSelect: (entry: ExperimentDeviceEntry) => void;
 }
 
 /** Rows compose `DeviceIdentity`: `DeviceRow`'s `selection` prop is multi-select grammar. */
@@ -68,7 +68,7 @@ export function ExperimentDevicesList({
           type="button"
           aria-current={isSelected ? "true" : undefined}
           onClick={() => {
-            onSelect(entry.clientId);
+            onSelect(entry);
           }}
           className={cn(
             "hover:bg-muted/50 relative flex w-full min-w-0 flex-col gap-1.5 px-3 py-2.5 text-left transition-colors",
