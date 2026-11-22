@@ -1089,6 +1089,8 @@ function applyAxisOverrides(
   return result;
 }
 
+export const SHARED_FACET_Y_TITLE_GUTTER = 80;
+
 /**
  * Extend a single-canvas layout with a facet grid spec. Reads the
  * existing `xaxis` / `yaxis` configs as style templates, generates
@@ -1124,6 +1126,8 @@ export function extendLayoutForFacets(
      * full) so titles shrink as cells get smaller.
      */
     titleFontSize?: number;
+    /** Fixed gap above a cell when the figure reserves a separate heading band. */
+    cellTitleOffset?: number;
     /** cellUltraCompact tier: drop all axis / cell / shared titles, ticks only. */
     ultraCompactCells?: boolean;
   },
@@ -1200,7 +1204,9 @@ export function extendLayoutForFacets(
       xref: `${cell.xaxisId} domain`,
       yref: `${cell.yaxisId} domain`,
       x: 0.5,
-      y: 1.05,
+      ...(options.cellTitleOffset === undefined
+        ? { y: 1.05 }
+        : { y: 1, yshift: options.cellTitleOffset }),
       xanchor: "center",
       yanchor: "bottom",
       showarrow: false,
@@ -1260,7 +1266,9 @@ export function extendLayoutForFacets(
     out.margin = {
       ...existingMargin,
       ...(sharedXTitleOn ? { b: Math.max(existingMargin.b ?? 0, 90) } : {}),
-      ...(sharedYTitleOn ? { l: Math.max(existingMargin.l ?? 0, 80) } : {}),
+      ...(sharedYTitleOn
+        ? { l: Math.max(existingMargin.l ?? 0, SHARED_FACET_Y_TITLE_GUTTER) }
+        : {}),
     };
   }
 

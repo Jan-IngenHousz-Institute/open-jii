@@ -1,10 +1,16 @@
 "use client";
 
-import type { Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
+import type { ColorBar, Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { withBoundedRightLegend } from "./outer-labels";
+import {
+  chartTextWidth,
+  HORIZONTAL_LEGEND_HEIGHT,
+  LEGEND_PADDING,
+  withBoundedHorizontalLegend,
+  withBoundedRightLegend,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type {
   BaseChartProps,
@@ -22,10 +28,13 @@ import {
   createBaseLayout,
   createPlotlyConfig,
   detectAxisType,
+  effectiveLegendPosition,
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
   refineAxisType,
+  SHARED_FACET_Y_TITLE_GUTTER,
+  tierAxisFontSizes,
   truncateCategoryTicks,
   cellPosition,
 } from "./utils";
@@ -152,8 +161,48 @@ export interface FacetGridConfig {
   roworder?: "top to bottom" | "bottom to top";
 }
 
+export type CartesianColorAxis = Pick<MarkerConfig, "colorscale" | "showscale"> & {
+  colorbar?: Partial<ColorBar>;
+};
+
+const FACET_HEADING_OFFSET = 4;
+// The shared X title is drawn 50 px below the plot, plus a line of text and padding.
+const FACET_X_TITLE_BAND = 72;
+const DEFAULT_FACET_COLUMN_GAP = 0.2;
+
+function estimateFacetedPlotWidth(
+  width: number,
+  sharedYTitle: boolean,
+  secondaryTitle: string | undefined,
+  colorbar: CartesianColorAxis["colorbar"],
+): number {
+  const primaryGutter = sharedYTitle ? SHARED_FACET_Y_TITLE_GUTTER : 56;
+  const secondaryGutter = secondaryTitle ? 64 : 48;
+  const title = colorbar?.title;
+  const rightTitleWidth = title?.text && title.side === "right" ? 24 : 0;
+  const horizontalTitleWidth =
+    title?.text && title.side !== "right"
+      ? chartTextWidth(title.text, title.font?.size ?? 14) + 24
+      : 0;
+  const colorbarGutter = Math.max(
+    (colorbar?.thickness ?? 30) + 56 + rightTitleWidth,
+    horizontalTitleWidth,
+  );
+  return width - primaryGutter - secondaryGutter - colorbarGutter;
+}
+
+function independentFacetGap(plotWidth: number, columns: number, tickSize: number): number {
+  const tickGap = 2 * chartTextWidth("0,000", tickSize) + 12;
+  // Only widen the inner tick gutters when each panel can keep at least 60 px of plot.
+  if (plotWidth < 60 * columns + tickGap * (columns - 1)) return DEFAULT_FACET_COLUMN_GAP;
+  // Plotly converts the gap fraction to pixels as plotWidth * gap / (columns - gap).
+  return Math.max(DEFAULT_FACET_COLUMN_GAP, (tickGap * columns) / (plotWidth + tickGap));
+}
+
 export interface CartesianChartProps extends BaseChartProps {
   data: CartesianSeries[];
+  /** Continuous scatter marker scale, shared when the chart has multiple traces. */
+  colorAxis?: CartesianColorAxis;
   /**
    * Optional facet grid spec. When present, traces are routed to the
    * cells via their `xaxisId` / `yaxisId` and the layout emits a
@@ -175,6 +224,7 @@ export interface CartesianChartProps extends BaseChartProps {
  */
 export function CartesianChart({
   data,
+  colorAxis,
   config = {},
   className,
   loading,
@@ -188,15 +238,26 @@ export function CartesianChart({
   // per-cell area (a 4x2 grid in an 800x500 box has ~200x250 cells).
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
     trackWidth: true,
+    trackHeight:
+      !config.height &&
+      subplots?.sharedY === false &&
+      subplots.rows > 1 &&
+      Boolean(config.y2AxisTitle),
     ...(subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {}),
   });
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
 
+  const traceColorScale = data.length === 1 ? colorAxis : undefined;
+  const sharedColorAxis = traceColorScale ? undefined : colorAxis;
+  const hasSharedColorAxis = sharedColorAxis !== undefined;
   const plotData: PlotData[] = useMemo(
-    () => data.map((series) => buildTrace(series, scatterPlotType)),
-    [data, scatterPlotType],
+    () =>
+      data.map((series) =>
+        buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale),
+      ),
+    [data, scatterPlotType, hasSharedColorAxis, traceColorScale],
   );
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
@@ -210,12 +271,82 @@ export function CartesianChart({
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
   }, [data]);
 
-  const layout = useMemo(() => {
-    const next = createBaseLayout(config, {
+  const { layout, boundHorizontalLegend } = useMemo(() => {
+    const hasSecondary = data.some((series) => series.axis === "secondary");
+    const hasOuterColorbar = hasSecondary && sharedColorAxis?.showscale === true;
+    const chartWidth = config.width || sizing.width || 720;
+    const legendTraces = hasOuterColorbar
+      ? data.filter((series) => series.visible !== false && series.showlegend !== false)
+      : [];
+    const showLegend = config.showLegend !== false && legendTraces.length > 0;
+    const requestedLegend = config.legendPosition ?? "right";
+    const sharedYTitle = sizing.cellVeryCompact || subplots?.sharedYTitle === true;
+    const showSharedYTitle = sharedYTitle && !sizing.cellUltraCompact;
+    const facetPlotWidth =
+      hasOuterColorbar && subplots
+        ? estimateFacetedPlotWidth(
+            chartWidth,
+            showSharedYTitle,
+            config.y2AxisTitle,
+            sharedColorAxis.colorbar,
+          )
+        : Infinity;
+    const independentColumns = subplots?.sharedY === false ? subplots.columns : 1;
+    const columnGap =
+      hasOuterColorbar && independentColumns > 1
+        ? independentFacetGap(
+            facetPlotWidth,
+            independentColumns,
+            tierAxisFontSizes({
+              snug: sizing.cellSnug,
+              compact: sizing.cellCompact,
+              veryCompact: sizing.cellVeryCompact,
+            }).tick,
+          )
+        : DEFAULT_FACET_COLUMN_GAP;
+    // An inside legend must also clear the interior Y ticks of a panel on an independent scale.
+    const insidePlotWidth = (facetPlotWidth * (1 - columnGap)) / (independentColumns - columnGap);
+    const longestLegendName = Math.max(
+      0,
+      ...legendTraces.map((series) => chartTextWidth(series.name ?? "", 12)),
+    );
+    const wideLeftLegend =
+      requestedLegend === "left" &&
+      (sizing.compact ||
+        longestLegendName > chartWidth / 4 ||
+        Boolean(subplots && showSharedYTitle && config.yAxisTitle));
+    const wideInsideLegend =
+      showLegend &&
+      subplots &&
+      requestedLegend.startsWith("inside-") &&
+      longestLegendName + LEGEND_PADDING > insidePlotWidth * 0.96;
+    // Plotly's container margins can squeeze the colour bar when both side gutters are occupied.
+    const legendConfig =
+      hasOuterColorbar &&
+      showLegend &&
+      (requestedLegend === "right" || wideLeftLegend || wideInsideLegend)
+        ? { ...config, legendPosition: "bottom" as const }
+        : config;
+    const tiers = {
       ...sizing,
-      hasSecondaryAxis: data.some((series) => series.axis === "secondary"),
-      hasColorbar: data.some((series) => series.marker?.showscale),
-    });
+      hasSecondaryAxis: hasSecondary,
+      hasColorbar: colorAxis?.showscale || data.some((series) => series.marker?.showscale),
+    };
+    const legendPosition = showLegend ? effectiveLegendPosition(legendConfig, tiers) : undefined;
+    const topLegend = legendPosition === "top";
+    const bottomLegend = legendPosition === "bottom";
+    const next: Partial<Layout> & { coloraxis?: CartesianColorAxis } = createBaseLayout(
+      legendConfig,
+      tiers,
+    );
+    if (sharedColorAxis) {
+      next.coloraxis = hasOuterColorbar
+        ? { ...sharedColorAxis, colorbar: { ...sharedColorAxis.colorbar, xref: "container" } }
+        : sharedColorAxis;
+    }
+    if (hasOuterColorbar && next.title) {
+      next.title = { ...next.title, xref: "paper", x: 0.5 };
+    }
 
     const xAxisValues = axisScan.x;
     const primaryYValues = axisScan.y;
@@ -254,26 +385,54 @@ export function CartesianChart({
       // regardless of the user's toggle.
       const forceSharedTitles = sizing.cellVeryCompact;
       const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-      const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
       const faceted = extendLayoutForFacets(next, subplots.cells, {
         rows: subplots.rows,
         columns: subplots.columns,
         sharedX: subplots.sharedX,
         sharedY: subplots.sharedY,
         sharedXTitle: effectiveSharedXTitle,
-        sharedYTitle: effectiveSharedYTitle,
+        sharedYTitle,
         roworder: subplots.roworder,
         titleFontSize: cellTitleFontSize,
+        ...(hasOuterColorbar ? { cellTitleOffset: FACET_HEADING_OFFSET } : {}),
         ultraCompactCells: sizing.cellUltraCompact,
       });
       Object.assign(next, faceted);
+      if (hasOuterColorbar) {
+        if (columnGap > DEFAULT_FACET_COLUMN_GAP && next.grid) {
+          next.grid = { ...next.grid, xgap: columnGap };
+        }
+        const topLegendBand = topLegend ? HORIZONTAL_LEGEND_HEIGHT : 0;
+        const titleBand = next.title ? (next.title.font?.size ?? 14) * 1.5 + 12 : 0;
+        const panelBand =
+          !sizing.cellUltraCompact && subplots.cells.some((cell) => cell.title)
+            ? cellTitleFontSize * 1.5 + FACET_HEADING_OFFSET
+            : 0;
+        const bottomBand =
+          bottomLegend && !sizing.cellUltraCompact && effectiveSharedXTitle && config.xAxisTitle
+            ? HORIZONTAL_LEGEND_HEIGHT + FACET_X_TITLE_BAND
+            : 0;
+        if (next.title) {
+          next.title = {
+            ...next.title,
+            yref: "container",
+            y: 1,
+            yanchor: "top",
+            pad: { t: topLegendBand + 8 },
+          };
+        }
+        next.margin = {
+          ...next.margin,
+          t: Math.max(next.margin?.t ?? 0, Math.ceil(topLegendBand + titleBand + panelBand)),
+          b: Math.max(next.margin?.b ?? 0, bottomBand),
+        };
+      }
     }
 
-    const hasSecondary = data.some((s) => s.axis === "secondary");
     if (hasSecondary && subplots) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
-      applyFacetSecondaryAxes(next, data, subplots, config);
+      applyFacetSecondaryAxes(next, data, subplots, config, config.height || sizing.height);
     } else if (hasSecondary) {
       const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
       // Mirror tick/line styling from primary so the two axes look like a
@@ -311,13 +470,26 @@ export function CartesianChart({
       next.uirevision = uirevision;
     }
 
-    return next;
+    return { layout: next, boundHorizontalLegend: topLegend || bottomLegend };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, axisScan, subplots, uirevision, themeVersion]);
+  }, [
+    config,
+    sizing,
+    data,
+    axisScan,
+    colorAxis,
+    sharedColorAxis,
+    subplots,
+    uirevision,
+    themeVersion,
+  ]);
 
   const bounded = useMemo(
-    () => withBoundedRightLegend(layout, config, plotData, sizing.width),
-    [layout, config, plotData, sizing.width],
+    () =>
+      boundHorizontalLegend
+        ? withBoundedHorizontalLegend(layout, plotData, config.width || sizing.width || 720)
+        : withBoundedRightLegend(layout, config, plotData, sizing.width),
+    [boundHorizontalLegend, layout, config, plotData, sizing.width],
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   const handleRelayout = React.useCallback(
@@ -344,18 +516,40 @@ export function CartesianChart({
  * Faceted dual-Y: for every cell with a secondary series, emit an overlay
  * `yaxisN` that shares the cell's y-domain (`overlaying`) and hangs its ticks
  * on the right. Mirrors the single-canvas secondary styling per cell. When the
- * Y scale is shared, only the rightmost column shows the secondary ticks/title
- * and the other cells' secondaries match it so the scale stays comparable.
+ * Y scale is shared, or repeated titles would collide, the rightmost panels
+ * use one title. Independent axes still keep their own ticks and ranges.
  */
 function applyFacetSecondaryAxes(
   layout: Partial<Layout>,
   data: CartesianSeries[],
   subplots: FacetGridConfig,
   config: PlotlyChartConfig,
+  chartHeight?: number,
 ): void {
   const layoutRecord = layout as unknown as Record<string, unknown>;
   const firstSecondaryId = subplots.cells.find((c) => c.secondaryYaxisId)?.secondaryYaxisId;
   const sharedY = subplots.sharedY !== false;
+  const rightEdge = subplots.cells.filter(
+    (cell, index) =>
+      cell.secondaryYaxisId && cellPosition(index, subplots.rows, subplots.columns).isLastColumn,
+  );
+  const plotHeight = (chartHeight ?? Infinity) - (layout.margin?.t ?? 0) - (layout.margin?.b ?? 0);
+  // Plotly's independent grid spaces row centres by plotHeight / (rows - ygap).
+  const rowSpacing = plotHeight / (subplots.rows - (layout.grid?.ygap ?? 0.3));
+  // Plotly defaults an axis title to 120% of the layout font, rounded to a pixel.
+  const captionSpan = chartTextWidth(
+    config.y2AxisTitle ?? "",
+    Math.round((layout.font?.size ?? 12) * 1.2),
+  );
+  const useColumnTitle = sharedY || (rightEdge.length > 1 && captionSpan + 4 > rowSpacing);
+  // On an even stack, use the middle panel nearer the larger margin so the rotated title can fit.
+  const preferBottom = (layout.margin?.b ?? 0) > (layout.margin?.t ?? 0);
+  const bottomFirst = subplots.roworder === "bottom to top";
+  const middleRow =
+    preferBottom === bottomFirst
+      ? Math.floor((rightEdge.length - 1) / 2)
+      : Math.floor(rightEdge.length / 2);
+  const columnTitleId = rightEdge[middleRow]?.secondaryYaxisId;
 
   subplots.cells.forEach((cell, i) => {
     const secondaryId = cell.secondaryYaxisId;
@@ -379,10 +573,11 @@ function applyFacetSecondaryAxes(
       linecolor: primary.linecolor,
       tickcolor: primary.tickcolor,
       showline: true,
-      // With a shared scale only the rightmost column carries ticks + title;
-      // the rest match it so every cell reads on the same secondary range.
       showticklabels: sharedY ? isLastColumn : true,
-      title: isLastColumn && config.y2AxisTitle ? { text: config.y2AxisTitle } : undefined,
+      title:
+        isLastColumn && config.y2AxisTitle && (!useColumnTitle || secondaryId === columnTitleId)
+          ? { text: config.y2AxisTitle }
+          : undefined,
       matches: sharedY && secondaryId !== firstSecondaryId ? firstSecondaryId : undefined,
     };
     const key = `yaxis${secondaryId.slice(1)}`;
@@ -395,7 +590,12 @@ function applyFacetSecondaryAxes(
  * here (rather than parameterising `LineChart`/`BarChart` etc.) lets a
  * single chart hold mixed traces while keeping each branch readable.
  */
-function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData {
+function buildTrace(
+  series: CartesianSeries,
+  scatterPlotType: string,
+  hasSharedColorAxis: boolean,
+  traceColorScale?: CartesianColorAxis,
+): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
   // charts pin each trace to its cell) wins over the legacy `axis:
   // "secondary"` flag (single-canvas dual-Y). When both are unset the
@@ -457,9 +657,13 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
         size: series.marker?.size ?? 6,
         symbol: series.marker?.symbol ?? "circle",
         opacity: series.marker?.opacity ?? series.opacity ?? 1,
-        colorscale: series.marker?.colorscale,
-        showscale: series.marker?.showscale ?? false,
-        colorbar: series.marker?.colorbar,
+        ...(hasSharedColorAxis
+          ? { coloraxis: "coloraxis" }
+          : (traceColorScale ?? {
+              colorscale: series.marker?.colorscale,
+              showscale: series.marker?.showscale ?? false,
+              colorbar: series.marker?.colorbar,
+            })),
         line: series.marker?.line,
         // Bubble sizing; Plotly ignores these when `marker.size` is a
         // scalar.

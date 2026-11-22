@@ -125,7 +125,7 @@ export function CartesianRenderer({
 
   // KEEP IN SYNC with field reads in `transformCartesianData` and its helpers.
   // Re-derive: `grep -oE 'chartConfig\\.[a-zA-Z_]+' cartesian-transform.ts | sort -u`.
-  const { chartSeries, subplots, useIndexForX } = useMemo(() => {
+  const { chartSeries, subplots, colorAxis, useIndexForX } = useMemo(() => {
     return transformCartesianData(drawnRows, dataSources, chartConfig, {
       defaultTraceType,
       supportsContinuousColor,
@@ -226,6 +226,7 @@ export function CartesianRenderer({
           data={reduction.series}
           config={effectiveConfig}
           subplots={subplots}
+          colorAxis={colorAxis}
           uirevision={`${visualization.id}:${xColumn ?? ""}`}
           onRelayout={onRelayout}
         />
