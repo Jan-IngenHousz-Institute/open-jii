@@ -37,6 +37,13 @@ exports keep their existing behavior.
    notification when it is ready or has failed, so you can close the dialog meanwhile.
 6. Return to the export list and download it when its status is **Completed**.
 
+An anonymized export uses pseudonyms for contributors and row comment authors.
+They match the pseudonyms shown in the Data tab when the experiment is
+anonymized. Notes recorded in the mobile app keep their content and have no author.
+
+Excel stores integers with more than 15 digits as text to preserve every digit.
+Integers with up to 15 digits stay numeric.
+
 Each export in the list shows its number, its status (**Queued**, **Pending**,
 **Preparing**, **Completed**, **Failed** or **Expired**), its format and when it was
 created, with the row count and size once they are known. A failed export says why it

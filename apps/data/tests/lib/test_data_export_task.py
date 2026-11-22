@@ -1,10 +1,19 @@
 import ast
+import csv
+import gzip
+import json
+import sys
+from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from openjii.helpers import TableMetadataNotFound
-from pyspark.sql import SparkSession
+from openpyxl import load_workbook
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.functions import col
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/data_export_task.py"
 _NAMES = {
@@ -20,7 +29,13 @@ _NAMES = {
     "is_part_file",
     "CONTRIBUTOR_STRUCT_FIELDS",
     "_is_contributor_field",
+    "_contributor_pseudonym",
+    "_anonymize_annotation",
     "anonymize_contributors",
+    "flatten_complex_columns",
+    "_excel_integer",
+    "write_parts",
+    "take_snapshot",
     "open_table",
 }
 
@@ -30,6 +45,12 @@ _USER_ID = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01"
 _PSEUDONYM = "Contributor-AC2F1B"
 
 _CONTRIBUTOR = "STRUCT<id: STRING, name: STRING, avatar: STRING>"
+_ANNOTATIONS = """ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING,
+    content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING,
+    createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>"""
+_ROW_ID = 3676402656019468888
+_FIFTEEN_DIGIT_ID = -999_999_999_999_999
+_WIDE_INTEGER = Decimal("-12345678901234567890")
 
 
 def _defined_name(node: ast.stmt) -> str | None:
@@ -76,6 +97,106 @@ def test_an_experiment_id_reaches_the_pseudonym_as_a_value_not_as_sql(task, spar
     [row, _] = task["anonymize_contributors"](_contributors(spark), "e'1").collect()
 
     assert row.contributor.id == "Contributor-57AC94"
+
+
+@pytest.fixture
+def export_rows(spark: SparkSession) -> DataFrame:
+    created = datetime(2026, 11, 21, 12)
+    edited = datetime(2026, 11, 21, 13)
+    notes = [
+        ("web-comment", str(_ROW_ID), "comment", ("Review this row", None), _USER_ID, "Ada", created, edited),
+        ("mobile-note", str(_ROW_ID), "comment", ("From the field", None), None, None, created, created),
+    ]
+    return spark.createDataFrame(
+        [
+            (_ROW_ID, _WIDE_INTEGER, 7, 0.5, notes),
+            (_FIFTEEN_DIGIT_ID, Decimal("42"), 8, 0.25, []),
+            (None, None, 9, 0.125, []),
+        ],
+        f"id BIGINT, `whole.number` DECIMAL(20, 0), sample_count BIGINT, reading DOUBLE, annotations {_ANNOTATIONS}",
+    ).coalesce(1)
+
+
+@pytest.mark.parametrize("anonymize", [True, False])
+def test_snapshot_applies_the_export_setting_to_both_annotation_columns_without_a_contributor_column(
+    task, spark: SparkSession, export_rows: DataFrame, anonymize: bool, tmp_path: Path, monkeypatch
+) -> None:
+    source = export_rows.withColumn("payload_annotations", col("annotations"))
+    monkeypatch.setitem(task, "spark", spark)
+    monkeypatch.setitem(task, "EXPERIMENT_ID", _EXPERIMENT_ID)
+    monkeypatch.setitem(task, "ANONYMIZE_CONTRIBUTORS", anonymize)
+    monkeypatch.setitem(task, "SNAPSHOT_PATH", str(tmp_path / "snapshot"))
+    monkeypatch.setitem(task, "WRITES_IN_PARTS", True)
+
+    snapshot = task["take_snapshot"](SimpleNamespace(rows=lambda: source))
+
+    expected = [row.asDict(recursive=True) for row in source.orderBy("sample_count").collect()]
+    if anonymize:
+        for name in ("annotations", "payload_annotations"):
+            expected[0][name][0].update(createdBy=_PSEUDONYM, createdByName=_PSEUDONYM)
+    assert [row.asDict(recursive=True) for row in snapshot.orderBy("sample_count").collect()] == expected
+
+
+def _read_export(spark: SparkSession, export_format: str, output: Path) -> list[dict[str, Any]]:
+    if export_format == "parquet":
+        return [row.asDict(recursive=True) for row in spark.read.parquet(str(output)).collect()]
+    [part] = output.glob("part-*")
+    if export_format == "xlsx":
+        workbook = load_workbook(part, read_only=True)
+        try:
+            headers, *values = workbook["Sheet1"].values
+            names = [str(header) for header in headers]
+            return [dict(zip(names, row, strict=True)) for row in values]
+        finally:
+            workbook.close()
+    if export_format == "json-array":
+        return json.loads(part.read_text())
+    with gzip.open(part, "rt", encoding="utf-8") as file:
+        if export_format == "csv":
+            return list(csv.DictReader(file))
+        return [json.loads(line) for line in file]
+
+
+@pytest.mark.parametrize("export_format", ["csv", "ndjson", "json-array", "parquet", "xlsx"])
+def test_export_files_keep_integer_values_and_use_the_same_comment_pseudonyms(
+    task, spark: SparkSession, export_rows: DataFrame, export_format: str, tmp_path: Path, monkeypatch
+) -> None:
+    output = tmp_path / "export"
+    mock_files = SimpleNamespace(
+        create_directory=lambda path: Path(path).mkdir(parents=True, exist_ok=True),
+        upload=lambda path, payload, overwrite: Path(path).write_bytes(payload.read()),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "databricks.sdk",
+        SimpleNamespace(WorkspaceClient=lambda: SimpleNamespace(files=mock_files)),
+    )
+    monkeypatch.setitem(task, "FORMAT", export_format)
+    monkeypatch.setitem(task, "OUTPUT_PATH", str(output))
+
+    task["write_parts"](task["anonymize_contributors"](export_rows, _EXPERIMENT_ID))
+
+    rows = _read_export(spark, export_format, output)
+    row, boundary, blank = sorted(rows, key=lambda value: int(value["sample_count"]))
+    assert row["id"] == (str(_ROW_ID) if export_format in ("csv", "xlsx") else _ROW_ID)
+    assert boundary["id"] == (str(_FIFTEEN_DIGIT_ID) if export_format == "csv" else _FIFTEEN_DIGIT_ID)
+    assert int(row["whole.number"]) == _WIDE_INTEGER
+    assert blank.get("id") == ("" if export_format == "csv" else None)
+    if export_format == "xlsx":
+        assert row["whole.number"] == str(_WIDE_INTEGER)
+        assert boundary["whole.number"] == 42
+        assert row["sample_count"] == 7
+        assert row["reading"] == 0.5
+
+    annotations = row["annotations"]
+    if isinstance(annotations, str):
+        annotations = json.loads(annotations)
+    web_comment, mobile_note = annotations
+    assert (web_comment["createdBy"], web_comment["createdByName"]) == (_PSEUDONYM, _PSEUDONYM)
+    assert web_comment["content"]["text"] == "Review this row"
+    assert mobile_note.get("createdBy") is None
+    assert mobile_note.get("createdByName") is None
+    assert mobile_note["content"]["text"] == "From the field"
 
 
 @pytest.mark.parametrize(
