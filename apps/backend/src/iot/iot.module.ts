@@ -1,13 +1,9 @@
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
-import type { Cache } from "cache-manager";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
-import { CacheAdapter } from "../common/modules/cache/cache.adapter";
-import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { GithubAdapter } from "../common/modules/github/github.adapter";
@@ -85,6 +81,7 @@ import { IotCalibrationDefinitionRepository } from "./core/repositories/iot-cali
 import { IotCalibrationRunRepository } from "./core/repositories/iot-calibration-run.repository";
 import { IotDeviceGroupRepository } from "./core/repositories/iot-device-group.repository";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
+import { GroupMonitoringCacheAdapter } from "./infrastructure/group-monitoring-cache.adapter";
 import { DeviceRegistryWebhookController } from "./presentation/device-registry-webhook.controller";
 import { ExperimentDeviceController } from "./presentation/experiment-device.controller";
 import { IotCalibrationRunController } from "./presentation/iot-calibration-run.controller";
@@ -96,7 +93,6 @@ import { IotController } from "./presentation/iot.controller";
 
 @Module({
   imports: [
-    CacheModule,
     AwsModule,
     AnalyticsModule,
     DatabricksModule,
@@ -195,9 +191,7 @@ import { IotController } from "./presentation/iot.controller";
     },
     {
       provide: GROUP_MONITORING_CACHE,
-      useFactory: (cache: Cache) =>
-        new CacheAdapter(cache, { prefix: "iot:group-monitoring:", ttlMs: 30_000 }),
-      inject: [CACHE_MANAGER],
+      useClass: GroupMonitoringCacheAdapter,
     },
     {
       provide: IOT_DATABRICKS_PORT,

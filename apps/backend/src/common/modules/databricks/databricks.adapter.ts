@@ -27,6 +27,7 @@ import type {
   GroupFirmwareRow,
   GroupLifecycleEventRow,
   GroupThroughputRow,
+  MonitoringReadOptions,
 } from "../../../iot/core/ports/databricks.port";
 import type {
   ActivityWindowsRow,
@@ -178,15 +179,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   }
 
   /** Batched last data arrival, keyed by thing name; absent rows mean no data yet. */
-  async getDevicesLastActivity(thingNames: string[]): Promise<Result<Map<string, string | null>>> {
+  async getDevicesLastActivity(
+    thingNames: string[],
+    options?: MonitoringReadOptions,
+  ): Promise<Result<Map<string, string | null>>> {
     if (thingNames.length === 0) {
       return success(new Map());
     }
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
-      columns: ["client_id", "last_data_at"],
-      filters: [{ column: "client_id", operator: "in", value: thingNames }],
-    });
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
+        columns: ["client_id", "last_data_at"],
+        filters: [{ column: "client_id", operator: "in", value: thingNames }],
+      },
+      options,
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
@@ -209,24 +216,28 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     to: string,
     bucket: "hour" | "day",
     limit: number,
+    options?: MonitoringReadOptions,
   ): Promise<Result<GroupThroughputRow[]>> {
     if (thingNames.length === 0) {
       return success([]);
     }
     const bucketAlias = `timestamp_${bucket}`;
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      filters: [
-        { column: "client_id", operator: "in", value: thingNames },
-        { column: "timestamp", operator: "between", value: [from, to] },
-      ],
-      aggregation: {
-        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "client_id" }],
-        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+        filters: [
+          { column: "client_id", operator: "in", value: thingNames },
+          { column: "timestamp", operator: "between", value: [from, to] },
+        ],
+        aggregation: {
+          groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "client_id" }],
+          functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+        },
+        ordering: { column: bucketAlias, direction: "ASC" },
+        limit,
       },
-      ordering: { column: bucketAlias, direction: "ASC" },
-      limit,
-    });
+      options,
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
@@ -253,19 +264,22 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return success([]);
     }
     const bucketAlias = `timestamp_${bucket}`;
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      filters: [
-        { column: "client_id", operator: "in", value: thingNames },
-        { column: "timestamp", operator: "between", value: [from, to] },
-      ],
-      aggregation: {
-        groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
-        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+        filters: [
+          { column: "client_id", operator: "in", value: thingNames },
+          { column: "timestamp", operator: "between", value: [from, to] },
+        ],
+        aggregation: {
+          groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
+          functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+        },
+        ordering: { column: bucketAlias, direction: "ASC" },
+        limit,
       },
-      ordering: { column: bucketAlias, direction: "ASC" },
-      limit,
-    });
+      { requireComplete: true },
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
@@ -290,20 +304,23 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     if (thingNames.length === 0) {
       return success([]);
     }
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      filters: [
-        { column: "client_id", operator: "in", value: thingNames },
-        { column: "timestamp", operator: "between", value: [from, to] },
-      ],
-      aggregation: {
-        groupBy: [{ column: "client_id" }, { column: "device_version" }],
-        functions: [{ column: "timestamp", function: "max", alias: "last_seen" }],
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+        filters: [
+          { column: "client_id", operator: "in", value: thingNames },
+          { column: "timestamp", operator: "between", value: [from, to] },
+        ],
+        aggregation: {
+          groupBy: [{ column: "client_id" }, { column: "device_version" }],
+          functions: [{ column: "timestamp", function: "max", alias: "last_seen" }],
+        },
+        // Newest sightings first, so a hit ceiling can only shed stale rows.
+        ordering: { column: "last_seen", direction: "DESC" },
+        limit,
       },
-      // Newest sightings first, so a hit ceiling can only shed stale rows.
-      ordering: { column: "last_seen", direction: "DESC" },
-      limit,
-    });
+      { requireComplete: true },
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
@@ -328,20 +345,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     from: string,
     to: string,
     limit: number,
+    options?: MonitoringReadOptions,
   ): Promise<Result<GroupLifecycleEventRow[]>> {
     if (thingNames.length === 0) {
       return success([]);
     }
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
-      columns: ["client_id", "event_type", "event_timestamp", "disconnect_reason"],
-      filters: [
-        { column: "client_id", operator: "in", value: thingNames },
-        { column: "event_timestamp", operator: "between", value: [from, to] },
-      ],
-      ordering: { column: "event_timestamp", direction: "DESC" },
-      limit,
-    });
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_device_lifecycle_events`,
+        columns: ["client_id", "event_type", "event_timestamp", "disconnect_reason"],
+        filters: [
+          { column: "client_id", operator: "in", value: thingNames },
+          { column: "event_timestamp", operator: "between", value: [from, to] },
+        ],
+        ordering: { column: "event_timestamp", direction: "DESC" },
+        limit,
+      },
+      options,
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
@@ -741,6 +762,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   // Build the SQL, run it against the centrum schema, index columns by name.
   private async runMonitoringQuery(
     params: QueryParams,
+    options?: MonitoringReadOptions,
   ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {
     const queryResult = this.queryBuilder.buildQuery(params);
     if (queryResult.isFailure()) {
@@ -750,6 +772,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const result = await this.executeSqlQuery(this.CENTRUM_SCHEMA_NAME, queryResult.value);
     if (result.isFailure()) {
       return failure(result.error);
+    }
+
+    if (options?.requireComplete && result.value.truncated) {
+      return failure(AppError.internal(`Monitoring read of ${params.table} was truncated`));
     }
 
     return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });

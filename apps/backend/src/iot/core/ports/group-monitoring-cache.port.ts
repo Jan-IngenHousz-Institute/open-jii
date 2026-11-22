@@ -1,5 +1,15 @@
+import type { IotDeviceGroupMonitoring } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
+
 export const GROUP_MONITORING_CACHE = Symbol("GROUP_MONITORING_CACHE");
 
+export interface GroupMonitoringLoad {
+  monitoring: IotDeviceGroupMonitoring;
+  complete: boolean;
+}
+
 export interface GroupMonitoringCache {
-  tryCache<T>(key: string, load: () => Promise<T>): Promise<T | null>;
+  getOrLoad(
+    key: string,
+    load: () => Promise<GroupMonitoringLoad>,
+  ): Promise<IotDeviceGroupMonitoring>;
 }

@@ -112,25 +112,34 @@ export interface DeviceMeasurementRow {
   sample: string | null;
 }
 
+export interface MonitoringReadOptions {
+  requireComplete: boolean;
+}
+
 /**
  * Every pipeline-computed fact about a device. Live connectivity is not
  * here; it comes from AWS directly.
  */
 export interface DatabricksPort {
   getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>>;
-  getDevicesLastActivity(thingNames: string[]): Promise<Result<Map<string, string | null>>>;
+  getDevicesLastActivity(
+    thingNames: string[],
+    options?: MonitoringReadOptions,
+  ): Promise<Result<Map<string, string | null>>>;
   getDevicesThroughput(
     thingNames: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
     limit: number,
+    options?: MonitoringReadOptions,
   ): Promise<Result<GroupThroughputRow[]>>;
   getDevicesLifecycleEvents(
     thingNames: string[],
     from: string,
     to: string,
     limit: number,
+    options?: MonitoringReadOptions,
   ): Promise<Result<GroupLifecycleEventRow[]>>;
   getDevicesDataByExperiment(
     thingNames: string[],

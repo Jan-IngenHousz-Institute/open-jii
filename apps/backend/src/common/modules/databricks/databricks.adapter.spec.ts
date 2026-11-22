@@ -1265,6 +1265,7 @@ describe("DatabricksAdapter", () => {
       columns: string[],
       dataArray: (string | null)[][],
       captured: CapturedStatement,
+      truncated = false,
     ) => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
@@ -1291,7 +1292,7 @@ describe("DatabricksAdapter", () => {
               })),
             },
             total_row_count: dataArray.length,
-            truncated: false,
+            truncated,
           },
           result: {
             data_array: dataArray,
@@ -1570,6 +1571,40 @@ describe("DatabricksAdapter", () => {
         () => databricksAdapter.getDevicesLifecycleEvents(THINGS, FROM, TO, 200),
       ],
     ];
+
+    const completeReads: [string, () => Promise<Result<unknown>>][] = [
+      [
+        "last activity",
+        () => databricksAdapter.getDevicesLastActivity(THINGS, { requireComplete: true }),
+      ],
+      [
+        "throughput",
+        () =>
+          databricksAdapter.getDevicesThroughput(THINGS, FROM, TO, "hour", 50, {
+            requireComplete: true,
+          }),
+      ],
+      [
+        "data by experiment",
+        () => databricksAdapter.getDevicesDataByExperiment(THINGS, FROM, TO, "hour", 50),
+      ],
+      ["firmware", () => databricksAdapter.getDevicesFirmware(THINGS, FROM, TO, 50)],
+      [
+        "lifecycle events",
+        () =>
+          databricksAdapter.getDevicesLifecycleEvents(THINGS, FROM, TO, 200, {
+            requireComplete: true,
+          }),
+      ],
+    ];
+
+    it.each(completeReads)("rejects a truncated group %s scan", async (_name, scan) => {
+      mockGroupSql(["client_id"], [["qa-device"]], {}, true);
+      const result = await scan();
+
+      assertFailure(result);
+      expect(result.error.message).toContain("was truncated");
+    });
 
     it.each(scans)("propagates a SQL failure from the %s scan", async (_name, scan) => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {

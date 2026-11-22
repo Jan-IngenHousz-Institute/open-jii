@@ -149,11 +149,12 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     expect(warehouse).not.toHaveBeenCalled();
   });
 
-  it("degrades connectivity to unknown when the fleet index fails", async () => {
+  it("retries a failed fleet-index read and caches a successful sparse result", async () => {
     const { groupId } = await seedGroupWithDevice();
-    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(
-      failure(AppError.internal("index down")),
-    );
+    const connectivity = vi
+      .spyOn(awsAdapter, "searchThingsConnectivity")
+      .mockResolvedValueOnce(failure(AppError.internal("index down")))
+      .mockResolvedValue(success(new Map()));
     vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
     vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
@@ -165,14 +166,22 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     assertSuccess(result);
     expect(result.value.members[0].connectivity).toBeNull();
     expect(result.value.pipelineUnavailable).toBe(false);
+
+    const recovered = await useCase.execute(groupId, WINDOW);
+    const cached = await useCase.execute(groupId, WINDOW);
+    assertSuccess(recovered);
+    assertSuccess(cached);
+    expect(cached.value).toEqual(recovered.value);
+    expect(connectivity).toHaveBeenCalledTimes(2);
   });
 
-  it("marks the pipeline unavailable when the warehouse lookup fails", async () => {
+  it("retries a failed warehouse lookup within the same window", async () => {
     const { groupId } = await seedGroupWithDevice();
     vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
-    vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(
-      failure(AppError.internal("warehouse down")),
-    );
+    const activity = vi
+      .spyOn(databricksAdapter, "getDevicesLastActivity")
+      .mockResolvedValueOnce(failure(AppError.internal("warehouse down")))
+      .mockResolvedValue(success(new Map()));
     vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
@@ -183,6 +192,11 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     assertSuccess(result);
     expect(result.value.pipelineUnavailable).toBe(true);
     expect(result.value.members[0].lastDataAt).toBeNull();
+
+    const recovered = await useCase.execute(groupId, WINDOW);
+    assertSuccess(recovered);
+    expect(recovered.value.pipelineUnavailable).toBe(false);
+    expect(activity).toHaveBeenCalledTimes(2);
   });
 
   it("marks the pipeline unavailable when any grouped scan fails", async () => {
@@ -220,7 +234,7 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
     // The adapter is asked for limit + 1 rows; echoing the request size back
     // means the ceiling overflowed and the family must not pretend completeness.
-    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockImplementation(
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockImplementationOnce(
       (_t, _f, _to, _b, limit) =>
         Promise.resolve(
           success(
@@ -232,7 +246,7 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
           ),
         ),
     );
-    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockImplementation((_t, _f, _to, limit) =>
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockImplementationOnce((_t, _f, _to, limit) =>
       Promise.resolve(
         success(
           Array.from({ length: limit }, (_, index) => ({
@@ -250,6 +264,12 @@ describe("GetIotDeviceGroupMonitoringUseCase", () => {
     expect(result.value.pipelineUnavailable).toBe(true);
     expect(result.value.dataByExperiment).toEqual([]);
     expect(result.value.firmware).toEqual([]);
+
+    vi.spyOn(databricksAdapter, "getDevicesDataByExperiment").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesFirmware").mockResolvedValue(success([]));
+    const recovered = await useCase.execute(groupId, WINDOW);
+    assertSuccess(recovered);
+    expect(recovered.value.pipelineUnavailable).toBe(false);
   });
 
   it("propagates a repository failure", async () => {
