@@ -271,6 +271,7 @@ export class ExperimentDataRepository {
     if (hasAggregation) {
       read.mode = "aggregation";
       const queryResult = await this.buildQuery(experimentId, shape, {
+        columns,
         filters: effectiveFilters,
         aggregation,
         ordering,

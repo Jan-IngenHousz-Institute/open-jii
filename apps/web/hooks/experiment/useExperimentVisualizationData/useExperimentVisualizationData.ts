@@ -13,6 +13,7 @@ import type {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   aggregateKind,
+  isWindowOnlyAggregation,
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDataJoinValid } from "@repo/api/transforms/joined-columns";
@@ -85,17 +86,6 @@ function buildAliasMap(aggregation: ExperimentDataAggregation): Record<string, s
     map[alias] = item.column;
   }
   return map;
-}
-
-function isWindowOnlyAggregation(aggregation: ExperimentDataAggregation): boolean {
-  if ((aggregation.groupBy?.length ?? 0) > 0) {
-    return false;
-  }
-  const fns = aggregation.functions ?? [];
-  if (fns.length === 0) {
-    return false;
-  }
-  return fns.every((f) => aggregateKind(f.function) !== "row");
 }
 
 // CONTRIBUTOR/DEVICE structs flatten to their display field so the chart layer sees plain strings.
@@ -175,9 +165,11 @@ export const useExperimentVisualizationData = (
     [aggregation, aggregationActive],
   );
 
-  const columnsCsv = aggregationActive
-    ? undefined
-    : cleanedColumns && cleanedColumns.length > 0
+  // Grouped reads return only their aggregates; a window-only read keeps raw rows, so it names
+  // the columns the chart plots instead of returning the whole table.
+  const sendsColumns = !aggregationActive || isWindowOnlyAggregation(aggregation);
+  const columnsCsv =
+    sendsColumns && cleanedColumns && cleanedColumns.length > 0
       ? cleanedColumns.join(",")
       : undefined;
 

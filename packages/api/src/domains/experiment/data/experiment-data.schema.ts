@@ -117,6 +117,23 @@ export function hasRowWindowGroupingConflict(
   );
 }
 
+/** No grouping and only running or row-window aggregates, so the read keeps every row. */
+export function isWindowOnlyAggregation(
+  aggregation:
+    | {
+        groupBy?: readonly unknown[];
+        functions?: readonly { function: ExperimentAggregationFunction }[];
+      }
+    | undefined,
+): boolean {
+  const functions = aggregation?.functions ?? [];
+  return (
+    (aggregation?.groupBy?.length ?? 0) === 0 &&
+    functions.length > 0 &&
+    !functions.some((item) => requiresGroupBy(item.function))
+  );
+}
+
 export const ORDER_COLUMN_REQUIRED_MESSAGE = "Choose an Ordered by column for this aggregate";
 export const ORDER_COLUMN_FORBIDDEN_MESSAGE = "This aggregate does not accept an Ordered by column";
 export const PARTITION_COLUMN_FORBIDDEN_MESSAGE = "Only row windows accept a Per column";

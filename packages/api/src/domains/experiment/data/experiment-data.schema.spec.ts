@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DISTINCT_VALUES_MAX_LIMIT,
   isBivariateAggregate,
+  isWindowOnlyAggregation,
   zExperimentAggregationFunction,
   zExperimentAggregationItem,
   zExperimentDataAggregation,
@@ -406,6 +407,22 @@ describe("time matching query", () => {
 describe("ordered aggregates", () => {
   const windows = ["previous", "change_from_previous", "row_number"] as const;
   const ordered = [...windows, "latest", "earliest"] as const;
+
+  it.each([...windows, "cumsum"] as const)("treats ungrouped %s as a window-only read", (fn) => {
+    expect(isWindowOnlyAggregation({ functions: [{ function: fn }] })).toBe(true);
+  });
+
+  it("keeps grouped, row-aggregating and empty reads out of the window-only path", () => {
+    expect(isWindowOnlyAggregation(undefined)).toBe(false);
+    expect(isWindowOnlyAggregation({ functions: [] })).toBe(false);
+    expect(isWindowOnlyAggregation({ functions: [{ function: "latest" }] })).toBe(false);
+    expect(
+      isWindowOnlyAggregation({ functions: [{ function: "cumsum" }, { function: "avg" }] }),
+    ).toBe(false);
+    expect(isWindowOnlyAggregation({ groupBy: [{}], functions: [{ function: "cumsum" }] })).toBe(
+      false,
+    );
+  });
 
   it.each(ordered)("requires ordering for %s in items and ad-hoc queries", (fn) => {
     const item = { column: "value", function: fn };

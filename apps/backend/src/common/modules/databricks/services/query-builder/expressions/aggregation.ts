@@ -129,7 +129,8 @@ function sortTarget(
  *
  * Two SELECT shapes:
  *   - GROUP BY path:    `SELECT <groupBy>, <row aggs>, <windows> FROM (...) GROUP BY ...`
- *   - Window-only path: `SELECT *, <windows> FROM (...)`, preserving raw rows.
+ *   - Window-only path: `SELECT <columns>, <windows> FROM (...)`, preserving raw rows.
+ *     `<columns>` is the caller's `columns`, or `*` when none are named.
  * Both accept an `explode` (`LATERAL VIEW EXPLODE`) so array elements can
  * be grouped by.
  * The window-only path activates only with no groupBy entries and no
@@ -140,6 +141,9 @@ export function wrapWithAggregation(
   innerSql: string,
   opts: {
     columnNames?: string[];
+    columns?: string[];
+    /** Flattened payload fields the inner query exposes, each under one name that may hold a dot. */
+    fieldNames?: string[];
     aggregation?: AggregationSpec;
     ordering?: QueryOrdering;
     limit?: number;
@@ -228,9 +232,15 @@ export function wrapWithAggregation(
 
   let sql: string;
   if (groupByClauses.length === 0 && selectClauses.length === 0) {
-    // Window-only path: keep every raw column from the inner subquery so
-    // non-aggregated series still have their values to plot.
-    sql = `SELECT *, ${windowProjections.join(", ")} FROM ${from}`;
+    // Raw series plot from these rows, so keep the columns they name. Every column of a wide
+    // table would overrun the warehouse's inline result limit long before the row ceiling.
+    const fields = new Set(opts.fieldNames ?? []);
+    const kept = [...new Set(opts.columns ?? [])]
+      .filter((name) => name.length > 0 && name !== "*")
+      .map((name) => (fields.has(name) ? builder.quoteName(name) : builder.escapeIdentifier(name)));
+    if (kept.length > 0 && explode !== undefined) kept.push(quoteAlias(explode.alias));
+    const raw = kept.length > 0 ? kept.join(", ") : "*";
+    sql = `SELECT ${raw}, ${windowProjections.join(", ")} FROM ${from}`;
   } else {
     const projections = [...selectClauses, ...windowProjections];
     sql = `SELECT ${projections.join(", ")} FROM ${from}`;

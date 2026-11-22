@@ -351,6 +351,32 @@ describe("row-window repository inputs", () => {
     },
   );
 
+  it("passes the chart's columns to a row-window read so only they come back", async () => {
+    const { repository, experiment, build } = setup();
+    const result = await repository.getTableData({
+      experimentId: experiment.id,
+      experiment,
+      tableName: "raw_data",
+      source: "warehouse",
+      columns: ["timestamp", "value"],
+      aggregation: {
+        functions: [
+          { column: "value", function: "change_from_previous", orderColumn: "timestamp" },
+        ],
+      },
+    });
+    assertSuccess(result);
+    const windowRead = build.mock.calls.find(([query]) => query.aggregation)?.[0];
+    expect(windowRead?.columns).toEqual(["timestamp", "value"]);
+    const sql = new QueryBuilderService().buildQuery({
+      table: "readings",
+      columns: windowRead?.columns,
+      aggregation: windowRead?.aggregation,
+    });
+    assertSuccess(sql);
+    expect(sql.value).toMatch(/^SELECT `timestamp`, `value`, CASE WHEN /);
+  });
+
   it.each(["latest", "earliest"] as const)("sets an id tie breaker for %s", async (fn) => {
     const { read, build } = setup();
     assertSuccess(await read({ column: "value", function: fn, orderColumn: "timestamp" }));
