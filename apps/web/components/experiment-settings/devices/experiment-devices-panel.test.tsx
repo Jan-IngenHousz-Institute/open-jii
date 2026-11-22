@@ -460,8 +460,8 @@ describe("ExperimentDevicesPanel", () => {
       clientId: `publisher-${String(index)}`,
     }));
     const request = server.mount(contract.experiments.listExperimentDevices, {
-      body: ({ query }: SpyCall) => {
-        const page = Number(query.page ?? 1);
+      body: ({ url }: SpyCall) => {
+        const page = Number(new URL(url).searchParams.get("page") ?? 1);
         const start = (page - 1) * 20;
         return {
           ...overview(many.slice(start, start + 20)),

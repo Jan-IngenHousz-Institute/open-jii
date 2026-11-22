@@ -36,13 +36,14 @@ function mountMonitoring(body: MonitoringBody) {
   server.mount(contract.experiments.listExperiments, { body: [] });
   return server.mount(contract.iot.getIotDeviceGroupMonitoring, {
     body: ({ query, url }: SpyCall): IotDeviceGroupMonitoring => {
-      const page = Number(query.page ?? 1);
+      const params = new URL(url).searchParams;
+      const page = Number(params.get("page") ?? 1);
       const now = Date.now();
       const pipelineUnavailable = body.pipelineUnavailable ?? false;
       const members = filterGroupMembers(
         body.members,
         {
-          search: query.search ?? "",
+          search: params.get("search") ?? "",
           families: zDeviceType.array().parse(arrayParam(url, "family")),
           statuses: zGroupMemberHealth.array().parse(arrayParam(url, "health")),
         },
