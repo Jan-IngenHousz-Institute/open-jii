@@ -4,7 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { chartTextWidth } from "./outer-labels";
+import { chartTextWidth, wrapChartLabel } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -87,6 +87,39 @@ export interface ParallelCoordinatesProps extends BaseChartProps {
   data: ParallelCoordinatesSeriesData[];
 }
 
+const ROTATED_LABEL_WIDTH = 112;
+const HEADING_EDGE_PADDING = 12;
+// Plotly offsets a parcoords heading 28 px from its axis endpoint.
+const ROTATED_HEADING_OFFSET = 28;
+
+function fitParallelHeadings(
+  data: ParallelCoordinatesSeriesData[],
+  chartWidth: number,
+  fontSize: number,
+  margin: { l: number; r: number },
+  edgePadding: number,
+) {
+  const widths = data.map((series) =>
+    series.dimensions
+      .filter((dim) => dim.visible !== false)
+      .map((dim) => chartTextWidth(dim.label, fontSize))
+      .sort((a, b) => b - a),
+  );
+  const widest = Math.max(0, ...widths.map((series) => series[0] ?? 0));
+  const edge = widest / 2 + edgePadding;
+  const axisWidth = chartWidth - Math.max(margin.l, edge) - Math.max(margin.r, edge);
+  return {
+    fontSize,
+    edge,
+    mustRotate: widths.some(
+      ([first = 0, second, ...rest], index) =>
+        !data[index]?.labelangle &&
+        second !== undefined &&
+        (first + second) / 2 + 3 > axisWidth / (rest.length + 1),
+    ),
+  };
+}
+
 export function ParallelCoordinates({
   data,
   config = {},
@@ -94,15 +127,57 @@ export function ParallelCoordinates({
   loading,
   error,
 }: ParallelCoordinatesProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("parcoords", renderer);
 
+  const base = useMemo(
+    () => createBaseLayout(config, sizing),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
+  const {
+    fontSize,
+    edge,
+    mustRotate: rotateLabels,
+  } = useMemo(() => {
+    const width = config.width || sizing.width || Infinity;
+    const margin = { l: base.margin?.l ?? 0, r: base.margin?.r ?? 0 };
+    const regular = fitParallelHeadings(
+      data,
+      width,
+      fontSizes.axisTitle,
+      margin,
+      HEADING_EDGE_PADDING,
+    );
+    if (!regular.mustRotate) return regular;
+
+    const tighter = fitParallelHeadings(data, width, fontSizes.axisTitle - 1, margin, 4);
+    return tighter.mustRotate ? regular : tighter;
+  }, [base.margin, config.width, data, fontSizes.axisTitle, sizing.width]);
+
+  const labelledSeries = useMemo(
+    () =>
+      data.map((series) =>
+        rotateLabels && !series.labelangle
+          ? {
+              ...series,
+              dimensions: series.dimensions.map((dim) =>
+                dim.visible === false
+                  ? dim
+                  : { ...dim, label: wrapChartLabel(dim.label, fontSize, ROTATED_LABEL_WIDTH) },
+              ),
+            }
+          : series,
+      ),
+    [data, fontSize, rotateLabels],
+  );
+
   const plotData: PlotData[] = useMemo(
     () =>
-      data.map(
+      labelledSeries.map(
         (series) =>
           ({
             name: series.name,
@@ -142,9 +217,9 @@ export function ParallelCoordinates({
                 },
 
             // Label configuration; defaults shrink with the container tier.
-            labelangle: series.labelangle || 0,
+            labelangle: series.labelangle || (rotateLabels ? 90 : 0),
             labelside: series.labelside || "top",
-            labelfont: { size: fontSizes.axisTitle },
+            labelfont: { size: fontSize },
             rangefont: series.rangefont || {
               size: Math.min(12, fontSizes.tick),
               color: readThemeColor("--foreground") ?? "#444",
@@ -162,47 +237,61 @@ export function ParallelCoordinates({
             customdata: series.customdata,
           }) as any as PlotData,
       ),
-    [data, fontSizes.axisTitle, fontSizes.tick, plotType],
+    [fontSize, fontSizes.tick, labelledSeries, plotType, rotateLabels],
   );
 
-  const layout = useMemo(
-    () => {
-      const base = createBaseLayout(config, sizing);
-      const dimensions = data.flatMap((series) =>
-        series.dimensions.filter((dim) => dim.visible !== false),
-      );
-      const endLabelWidth =
-        Math.max(
-          0,
-          ...dimensions.map((dim) => chartTextWidth(dim.label ?? "", fontSizes.axisTitle)),
-        ) /
-          2 +
-        12;
-      return {
-        ...base,
-        ...(config.title
-          ? {
-              title: {
-                ...base.title,
-                yref: "container" as const,
-                y: 1,
-                yanchor: "top" as const,
-                pad: { t: 8 },
-              },
-            }
-          : {}),
-        margin: {
-          ...base.margin,
-          l: Math.max(base.margin?.l ?? 0, endLabelWidth),
-          r: Math.max(base.margin?.r ?? 0, endLabelWidth),
-          t: Math.max(base.margin?.t ?? 0, (config.title ? 72 : 40) + fontSizes.axisTitle),
-          b: Math.max(base.margin?.b ?? 0, 32),
-        },
-      };
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [config, data, fontSizes.axisTitle, sizing, themeVersion],
-  );
+  const layout = useMemo(() => {
+    const margin = {
+      ...base.margin,
+      l: Math.max(base.margin?.l ?? 0, rotateLabels ? 0 : edge),
+      r: Math.max(base.margin?.r ?? 0, rotateLabels ? 0 : edge),
+      t: Math.max(base.margin?.t ?? 0, (config.title ? 72 : 40) + fontSizes.axisTitle),
+      b: Math.max(base.margin?.b ?? 0, 32),
+    };
+    if (rotateLabels) {
+      for (const series of labelledSeries) {
+        const labels = series.dimensions
+          .filter((dim) => dim.visible !== false)
+          .map((dim) => dim.label);
+        const longestLine = Math.max(0, ...labels.map((label) => chartTextWidth(label, fontSize)));
+        if (series.labelangle) {
+          const edge = HEADING_EDGE_PADDING + longestLine / 2;
+          margin.l = Math.max(margin.l, edge);
+          margin.r = Math.max(margin.r, edge);
+          continue;
+        }
+
+        const maxLines = Math.max(0, ...labels.map((label) => label.split("<br>").length));
+        const sideMargin = HEADING_EDGE_PADDING + maxLines * fontSize * 1.3;
+        margin.l = Math.max(margin.l, sideMargin);
+        margin.r = Math.max(margin.r, sideMargin);
+        if (series.labelside === "bottom") {
+          margin.b = Math.max(
+            margin.b,
+            longestLine + ROTATED_HEADING_OFFSET + HEADING_EDGE_PADDING,
+          );
+        } else {
+          const topPadding = config.title ? 48 : HEADING_EDGE_PADDING;
+          margin.t = Math.max(margin.t, longestLine + ROTATED_HEADING_OFFSET + topPadding);
+        }
+      }
+    }
+    return {
+      ...base,
+      ...(config.title
+        ? {
+            title: {
+              ...base.title,
+              yref: "container" as const,
+              y: 1,
+              yanchor: "top" as const,
+              pad: { t: 8 },
+            },
+          }
+        : {}),
+      margin,
+    };
+  }, [base, config.title, edge, fontSize, fontSizes.axisTitle, labelledSeries, rotateLabels]);
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (

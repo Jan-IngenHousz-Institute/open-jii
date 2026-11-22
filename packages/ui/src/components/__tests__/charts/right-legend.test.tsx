@@ -72,6 +72,34 @@ describe("right legends at the Plotly boundary", () => {
     expect(figure().data[0]?.name).toContain("<br>");
   });
 
+  it("gives a shared cartesian colour bar and the secondary Y axis separate room", () => {
+    const data = [
+      { ...series, name: "Yield", traceType: "scatter" as const, marker: { color: [1, 2] } },
+      {
+        ...series,
+        name: "Temperature",
+        traceType: "scatter" as const,
+        axis: "secondary" as const,
+        marker: { color: [1, 2] },
+      },
+    ];
+    const colorAxis = { showscale: true, colorbar: { title: { text: "Assay signal" } } };
+    render(<CartesianChart data={data} colorAxis={colorAxis} />);
+
+    expect(figure().data.map((trace) => trace.marker)).toMatchObject([
+      { color: [1, 2], coloraxis: "coloraxis" },
+      { color: [1, 2], coloraxis: "coloraxis" },
+    ]);
+    expect(figure().layout).toMatchObject({
+      coloraxis: {
+        showscale: true,
+        colorbar: { xref: "container", title: { text: "Assay signal" } },
+      },
+      legend: { orientation: "h", y: 0, maxheight: 64 },
+      yaxis2: { side: "right" },
+    });
+  });
+
   it("keeps short secondary-axis names beside the plot", () => {
     measurement.width = 992;
     render(

@@ -3,8 +3,11 @@ import type {
   ExperimentSeriesTraceType,
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
-import type { CartesianSeries } from "@repo/ui/components/charts/cartesian-chart";
-import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
+import type {
+  CartesianColorAxis,
+  CartesianSeries,
+  FacetGridConfig,
+} from "@repo/ui/components/charts/cartesian-chart";
 import type { MarkerConfig } from "@repo/ui/components/charts/types";
 import { defaultFacetColumns } from "@repo/ui/components/charts/utils";
 
@@ -28,6 +31,7 @@ export interface CartesianTransformOptions {
 export interface CartesianTransformResult {
   chartSeries: CartesianSeries[];
   subplots: FacetGridConfig | undefined;
+  colorAxis?: CartesianColorAxis;
   /**
    * Whether X was synthesised from row index (no X column picked yet).
    * The renderer needs this to override `xAxisType` to `"linear"` so the
@@ -76,6 +80,7 @@ export function transformCartesianData(
     (chartConfig.colorMode === "continuous" ||
       (chartConfig.colorMode === undefined && !isCategoricalColumnType(options.colorColumnType)));
   const isCategoricalColor = Boolean(colorColumn) && !isContinuousColor;
+  const colorAxis = isContinuousColor ? buildColorAxis(chartConfig.marker) : undefined;
 
   // Each data source's row-key for reading values: when the source has
   // its own `aggregate`, the SQL projects it under a unique alias
@@ -176,7 +181,6 @@ export function transformCartesianData(
   // Continuous color: one trace per Y series, per-point colorscale.
   const buildContinuousColorCellSeries = (
     cellRows: Record<string, unknown>[],
-    cellIndex: number,
     xaxisId: string | undefined,
     yaxisId: string | undefined,
     showlegend: boolean | undefined,
@@ -204,11 +208,7 @@ export function transformCartesianData(
         y,
         errorValues,
       });
-      // Hide colorbar on cells past the first to dedupe the legend
-      // and prevent N stacked colorbars in the right gutter.
-      const marker =
-        cellIndex > 0 && series.marker ? { ...series.marker, showscale: false } : series.marker;
-      return { ...series, marker, xaxisId, yaxisId, showlegend };
+      return { ...series, xaxisId, yaxisId, showlegend };
     });
   };
 
@@ -339,7 +339,6 @@ export function transformCartesianData(
       isContinuousColor && colorColumn
         ? buildContinuousColorCellSeries(
             cellRows,
-            cellIndex,
             xaxisId,
             yaxisId,
             cellIndex === 0 ? undefined : false,
@@ -382,7 +381,7 @@ export function transformCartesianData(
   const stackedSeries = applyManualStacking(allSeries, chartConfig.stackMode);
 
   if (!facetColumn) {
-    return { chartSeries: stackedSeries, subplots: undefined, useIndexForX };
+    return { chartSeries: stackedSeries, subplots: undefined, colorAxis, useIndexForX };
   }
 
   // Build the grid spec. `facetColumns` overrides the auto default;
@@ -414,7 +413,7 @@ export function transformCartesianData(
     roworder: chartConfig.facetRowOrder === "bottom-to-top" ? "bottom to top" : "top to bottom",
   };
 
-  return { chartSeries: stackedSeries, subplots: subplotsConfig, useIndexForX };
+  return { chartSeries: stackedSeries, subplots: subplotsConfig, colorAxis, useIndexForX };
 }
 
 /** Cumulate y values per stackgroup so date/category x-axes stack the
@@ -639,8 +638,15 @@ function toAreaMode(mode: ChartFormConfig["mode"]): CartesianSeries["mode"] {
   return "lines";
 }
 
-// Build the series marker, overlaying per-series concerns (point-level
-// continuous color, bubble sizes, colorbar) on the chart-level `marker`.
+function buildColorAxis(marker?: MarkerConfig): CartesianColorAxis {
+  return {
+    colorscale: marker?.colorscale,
+    showscale: marker?.showscale === true,
+    colorbar: { title: marker?.colorbar?.title, thickness: 15, len: 0.9 },
+  };
+}
+
+// Overlay point colours and bubble sizes on the chart-level marker style.
 function buildMarker({
   chartConfig,
   fallbackColor,
@@ -653,30 +659,10 @@ function buildMarker({
   sizeContext?: SizeContext | null;
 }): MarkerConfig {
   const markerBase = chartConfig.marker;
-  const colorscale = continuousColorValues ? markerBase?.colorscale : undefined;
-  const showscale = continuousColorValues ? markerBase?.showscale : undefined;
-  // Colorbar metadata only applies when a colorscale is in play; otherwise
-  // Plotly emits a "no colorscale" warning and may render an empty bar.
-  const colorbar =
-    continuousColorValues && markerBase?.showscale
-      ? {
-          title: {
-            text: markerBase.colorbar?.title?.text,
-            font: markerBase.colorbar?.title?.font,
-            side: markerBase.colorbar?.title?.side,
-          },
-          thickness: 15,
-          len: 0.9,
-        }
-      : undefined;
-
   return {
     color: continuousColorValues ?? markerBase?.color ?? fallbackColor,
     symbol: markerBase?.symbol ?? "circle",
     opacity: markerBase?.opacity,
-    colorscale,
-    showscale,
-    colorbar,
     line: markerBase?.line,
     size: sizeContext?.values ?? sizeContext?.fallbackSize ?? markerBase?.size,
   };

@@ -109,6 +109,38 @@ describe("ParallelCoordinates", () => {
     });
   });
 
+  it("makes room for long headings without changing short headings that fit", () => {
+    const dimensions = [
+      "primary_assay_measurement",
+      "secondary_reference_measurement",
+      "continuous_colour",
+      "sample_size",
+      "sample_index",
+    ].map((label) => ({ label, values: [1, 2] }));
+    const config = { width: 566, title: "Seasonal assay measurements" };
+    const { getByTestId, rerender } = render(
+      <ParallelCoordinates data={[{ dimensions }]} config={config} />,
+    );
+
+    const trace = JSON.parse(getByTestId("chart-data").textContent || "[]")[0];
+    expect(trace.labelangle).toBe(90);
+    expect(
+      trace.dimensions.map((dimension: { label: string }) =>
+        dimension.label.replaceAll("<br>", ""),
+      ),
+    ).toEqual(dimensions.map((dimension) => dimension.label));
+    expect(JSON.parse(getByTestId("chart-layout").textContent || "{}").margin.t).toBeGreaterThan(
+      100,
+    );
+
+    const short = dimensions.map((dimension, index) => ({ ...dimension, label: String(index) }));
+    rerender(<ParallelCoordinates data={[{ dimensions: short }]} config={config} />);
+    expect(JSON.parse(getByTestId("chart-data").textContent || "[]")[0]).toMatchObject({
+      labelangle: 0,
+      dimensions: short,
+    });
+  });
+
   it("handles custom dimension configuration", () => {
     const customData: ParallelCoordinatesSeriesData[] = [
       {

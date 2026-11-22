@@ -1,6 +1,6 @@
 "use client";
 
-import type { Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
+import type { ColorBar, Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
@@ -152,8 +152,14 @@ export interface FacetGridConfig {
   roworder?: "top to bottom" | "bottom to top";
 }
 
+export type CartesianColorAxis = Pick<MarkerConfig, "colorscale" | "showscale"> & {
+  colorbar?: Partial<ColorBar>;
+};
+
 export interface CartesianChartProps extends BaseChartProps {
   data: CartesianSeries[];
+  /** One continuous marker colour scale shared by all scatter traces. */
+  colorAxis?: CartesianColorAxis;
   /**
    * Optional facet grid spec. When present, traces are routed to the
    * cells via their `xaxisId` / `yaxisId` and the layout emits a
@@ -175,6 +181,7 @@ export interface CartesianChartProps extends BaseChartProps {
  */
 export function CartesianChart({
   data,
+  colorAxis,
   config = {},
   className,
   loading,
@@ -194,9 +201,10 @@ export function CartesianChart({
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
 
+  const hasSharedColorAxis = colorAxis !== undefined;
   const plotData: PlotData[] = useMemo(
-    () => data.map((series) => buildTrace(series, scatterPlotType)),
-    [data, scatterPlotType],
+    () => data.map((series) => buildTrace(series, scatterPlotType, hasSharedColorAxis)),
+    [data, scatterPlotType, hasSharedColorAxis],
   );
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
@@ -211,11 +219,29 @@ export function CartesianChart({
   }, [data]);
 
   const layout = useMemo(() => {
-    const next = createBaseLayout(config, {
-      ...sizing,
-      hasSecondaryAxis: data.some((series) => series.axis === "secondary"),
-      hasColorbar: data.some((series) => series.marker?.showscale),
-    });
+    const hasSecondary = data.some((series) => series.axis === "secondary");
+    const hasOuterColorbar = hasSecondary && colorAxis?.showscale === true;
+    // Plotly lets a container-anchored bar and legend claim the same right gutter.
+    const moveRightLegend = hasOuterColorbar && (config.legendPosition ?? "right") === "right";
+    const legendConfig = moveRightLegend
+      ? { ...config, legendPosition: "bottom" as const }
+      : config;
+    const next: Partial<Layout> & { coloraxis?: CartesianColorAxis } = createBaseLayout(
+      legendConfig,
+      {
+        ...sizing,
+        hasSecondaryAxis: hasSecondary,
+        hasColorbar: colorAxis?.showscale || data.some((series) => series.marker?.showscale),
+      },
+    );
+    if (colorAxis) {
+      next.coloraxis = hasOuterColorbar
+        ? { ...colorAxis, colorbar: { ...colorAxis.colorbar, xref: "container" } }
+        : colorAxis;
+    }
+    if (hasOuterColorbar && next.title) {
+      next.title = { ...next.title, xref: "paper", x: 0.5 };
+    }
 
     const xAxisValues = axisScan.x;
     const primaryYValues = axisScan.y;
@@ -267,9 +293,18 @@ export function CartesianChart({
         ultraCompactCells: sizing.cellUltraCompact,
       });
       Object.assign(next, faceted);
+      if (moveRightLegend && !sizing.cellUltraCompact) {
+        // Facet headings and the shared X title are annotations outside the plot.
+        next.margin = {
+          ...next.margin,
+          ...(next.title ? { t: Math.max(next.margin?.t ?? 0, 56) } : {}),
+          ...(effectiveSharedXTitle && config.xAxisTitle && next.showlegend !== false
+            ? { b: Math.max(next.margin?.b ?? 0, 136) }
+            : {}),
+        };
+      }
     }
 
-    const hasSecondary = data.some((s) => s.axis === "secondary");
     if (hasSecondary && subplots) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
@@ -311,9 +346,9 @@ export function CartesianChart({
       next.uirevision = uirevision;
     }
 
-    return next;
+    return moveRightLegend ? { ...next, legend: { ...next.legend, maxheight: 64 } } : next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, axisScan, subplots, uirevision, themeVersion]);
+  }, [config, sizing, data, axisScan, colorAxis, subplots, uirevision, themeVersion]);
 
   const bounded = useMemo(
     () => withBoundedRightLegend(layout, config, plotData, sizing.width),
@@ -395,7 +430,11 @@ function applyFacetSecondaryAxes(
  * here (rather than parameterising `LineChart`/`BarChart` etc.) lets a
  * single chart hold mixed traces while keeping each branch readable.
  */
-function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData {
+function buildTrace(
+  series: CartesianSeries,
+  scatterPlotType: string,
+  hasSharedColorAxis: boolean,
+): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
   // charts pin each trace to its cell) wins over the legacy `axis:
   // "secondary"` flag (single-canvas dual-Y). When both are unset the
@@ -457,9 +496,13 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
         size: series.marker?.size ?? 6,
         symbol: series.marker?.symbol ?? "circle",
         opacity: series.marker?.opacity ?? series.opacity ?? 1,
-        colorscale: series.marker?.colorscale,
-        showscale: series.marker?.showscale ?? false,
-        colorbar: series.marker?.colorbar,
+        ...(hasSharedColorAxis
+          ? { coloraxis: "coloraxis" }
+          : {
+              colorscale: series.marker?.colorscale,
+              showscale: series.marker?.showscale ?? false,
+              colorbar: series.marker?.colorbar,
+            }),
         line: series.marker?.line,
         // Bubble sizing; Plotly ignores these when `marker.size` is a
         // scalar.
