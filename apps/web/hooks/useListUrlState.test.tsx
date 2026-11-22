@@ -151,7 +151,9 @@ describe("useListUrlState", () => {
 
       for (const page of [2, 3]) {
         setSearchParams(`page=${page}&q=wheat`);
-        act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
         rerender();
         expect(result.current.page).toBe(page);
       }

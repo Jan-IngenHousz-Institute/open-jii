@@ -196,7 +196,9 @@ describe("useResourceList", () => {
     vi.useFakeTimers();
     try {
       openOnUrl("/list", "q=new&page=3");
-      act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
       rerender();
       await act(() => vi.advanceTimersByTimeAsync(50));
 
