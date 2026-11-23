@@ -385,8 +385,10 @@ describe("NotificationDispatchService", () => {
   });
 
   it("stores the row and queues nothing for a type with no email entry yet", async () => {
-    // `data_export_completed` is on the `preference` policy, so only the missing
-    // entry keeps its email from going out.
+    // Every `preference` type has an email today, so the gap is simulated: the
+    // recipient opted in, and only the missing entry keeps the email from going out.
+    vi.spyOn(notificationEmail, "hasEmail").mockReturnValue(false);
+    assertSuccess(await repository.upsertPreference(recipientId, "data_jobs", "email", true));
     const result = await dispatch.dispatch({
       type: "data_export_completed",
       recipientIds: [recipientId],
@@ -1121,6 +1123,89 @@ describe("NotificationDispatchService", () => {
       expect(result.error.message).toContain("no resource to email about");
       expect(send).not.toHaveBeenCalled();
     });
+  });
+
+  describe("the data export email entries", () => {
+    const exportedFrom = { type: "experiment" as const, id: crypto.randomUUID() };
+
+    it("data_export_completed sends the experiment's id, its name, the format, the address and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataExportReadyNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_export_completed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: exportedFrom,
+        params: { experimentName: "Drought trial", format: "csv" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: exportedFrom.id,
+        experimentName: "Drought trial",
+        format: "csv",
+        email: recipientEmail,
+        unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "data_jobs",
+        categoryLabel: "Data exports and uploads",
+      });
+    });
+
+    it("data_export_failed sends the experiment's id, its name, the address and the footer", async () => {
+      const send = vi
+        .spyOn(testApp.module.get(EmailAdapter), "sendDataExportFailedNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await notificationEmail.send("data_export_failed", {
+        recipientId,
+        recipientEmail,
+        actorName: null,
+        resource: exportedFrom,
+        params: { experimentName: "Drought trial" },
+      });
+
+      assertSuccess(result);
+      expect(send).toHaveBeenCalledExactlyOnceWith({
+        experimentId: exportedFrom.id,
+        experimentName: "Drought trial",
+        email: recipientEmail,
+        unsubscribe: send.mock.calls[0]?.[0].unsubscribe,
+      });
+      expectUnsubscribeFooter(testApp, send.mock.calls[0]?.[0].unsubscribe, {
+        recipientId,
+        category: "data_jobs",
+        categoryLabel: "Data exports and uploads",
+      });
+    });
+
+    it.each([
+      ["data_export_completed", "sendDataExportReadyNotification", { format: "csv" }],
+      ["data_export_failed", "sendDataExportFailedNotification", {}],
+    ] as const)(
+      "%s refuses a notification stored with no resource",
+      async (type, method, extraParams) => {
+        const send = vi
+          .spyOn(testApp.module.get(EmailAdapter), method)
+          .mockResolvedValue(success(undefined));
+
+        const result = await notificationEmail.send(type, {
+          recipientId,
+          recipientEmail,
+          actorName: null,
+          resource: null,
+          params: { experimentName: "Drought trial", ...extraParams },
+        });
+
+        assertFailure(result);
+        expect(result.error.message).toContain("no resource to email about");
+        expect(send).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("the data upload email entries", () => {

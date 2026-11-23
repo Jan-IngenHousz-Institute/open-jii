@@ -80,6 +80,14 @@ vi.mock("@repo/transactional/render/calibration-run-rejected-notification", () =
   renderCalibrationRunRejectedNotification: vi.fn(),
 }));
 
+vi.mock("@repo/transactional/render/data-export-ready-notification", () => ({
+  renderDataExportReadyNotification: vi.fn(),
+}));
+
+vi.mock("@repo/transactional/render/data-export-failed-notification", () => ({
+  renderDataExportFailedNotification: vi.fn(),
+}));
+
 vi.mock("@repo/transactional/render/data-upload-completed-notification", () => ({
   renderDataUploadCompletedNotification: vi.fn(),
 }));

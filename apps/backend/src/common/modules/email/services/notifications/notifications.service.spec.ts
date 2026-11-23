@@ -543,6 +543,96 @@ describe("NotificationsService", () => {
     });
   });
 
+  describe("the data export notifications", () => {
+    const sentMail = () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+      return mockSendMail;
+    };
+
+    it("sendDataExportReadyNotification names the format as a person reads it and links the Data tab", async () => {
+      const mockRender = spyOnProtected(
+        service,
+        "renderDataExportReadyNotificationEmail",
+      ).mockResolvedValue({ html: MOCK_HTML_CONTENT, text: MOCK_TEXT_CONTENT });
+      const mockSendMail = sentMail();
+
+      const result = await service.sendDataExportReadyNotification({
+        experimentId: MOCK_EXPERIMENT_ID,
+        experimentName: "Drought trial",
+        format: "json-array",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRender).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: "Drought trial",
+        format: "JSON array",
+        dataUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}/data`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "Your JSON array export of Drought trial is ready",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("sendDataExportReadyNotification keeps a format it has no label for", async () => {
+      const mockRender = spyOnProtected(
+        service,
+        "renderDataExportReadyNotificationEmail",
+      ).mockResolvedValue({ html: MOCK_HTML_CONTENT, text: MOCK_TEXT_CONTENT });
+      sentMail();
+
+      await service.sendDataExportReadyNotification({
+        experimentId: MOCK_EXPERIMENT_ID,
+        experimentName: "Drought trial",
+        format: "feather",
+        email: MOCK_EMAIL,
+      });
+
+      expect(mockRender).toHaveBeenCalledWith(expect.objectContaining({ format: "feather" }));
+    });
+
+    it("sendDataExportFailedNotification links the Data tab and sends it to the address", async () => {
+      const mockRender = spyOnProtected(
+        service,
+        "renderDataExportFailedNotificationEmail",
+      ).mockResolvedValue({ html: MOCK_HTML_CONTENT, text: MOCK_TEXT_CONTENT });
+      const mockSendMail = sentMail();
+
+      const result = await service.sendDataExportFailedNotification({
+        experimentId: MOCK_EXPERIMENT_ID,
+        experimentName: "Drought trial",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRender).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        experimentName: "Drought trial",
+        dataUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}/data`,
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: "Your export of Drought trial failed",
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+  });
+
   describe("the data upload notifications", () => {
     const sentMail = () => {
       const mockSendMail = vi.fn().mockReturnValue({
@@ -1898,6 +1988,29 @@ describe("NotificationsService", () => {
             deviceName: "Greenhouse 3 MiniPAR",
             definitionName: "PAR sweep",
             actor: MOCK_ACTOR,
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataExportReadyNotification",
+        "renderDataExportReadyNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataExportReadyNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            format: "csv",
+            email: MOCK_EMAIL,
+            unsubscribe,
+          }),
+      ],
+      [
+        "sendDataExportFailedNotification",
+        "renderDataExportFailedNotificationEmail",
+        (unsubscribe) =>
+          service.sendDataExportFailedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
             email: MOCK_EMAIL,
             unsubscribe,
           }),

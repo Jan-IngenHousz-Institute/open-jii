@@ -31,6 +31,8 @@ export type CmsEmailType =
   | "calibration-run-awaiting-approval-notification"
   | "calibration-run-approved-notification"
   | "calibration-run-rejected-notification"
+  | "data-export-failed-notification"
+  | "data-export-ready-notification"
   | "data-upload-completed-notification"
   | "data-upload-failed-notification"
   | "data-upload-partly-completed-notification";
