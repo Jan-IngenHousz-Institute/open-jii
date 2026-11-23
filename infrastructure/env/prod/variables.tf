@@ -156,12 +156,6 @@ variable "backend_databricks_warehouse_id" {
   sensitive   = true
 }
 
-variable "api_cloudfront_header_value" {
-  description = "Custom header value for CloudFront-ALB authentication"
-  type        = string
-  sensitive   = true
-}
-
 # Contentful configuration variables
 variable "contentful_space_id" {
   description = "Contentful space ID"
