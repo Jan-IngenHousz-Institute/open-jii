@@ -110,6 +110,21 @@ describe("ExperimentWarehouseReadsService", () => {
     expect(result.value[0]).toEqual(rawData);
   });
 
+  it("reads one table's newest row time without its schemas", async () => {
+    const lookup = vi
+      .spyOn(databricksPort, "getExperimentTableMetadata")
+      .mockResolvedValue(success([{ ...rawData, latestRowAt: "2026-09-22T10:05:00.000Z" }]));
+
+    const result = await reads.latestRowAt(experimentId, "raw_data");
+
+    assertSuccess(result);
+    expect(result.value).toBe("2026-09-22T10:05:00.000Z");
+    expect(lookup).toHaveBeenCalledWith(experimentId, {
+      identifier: "raw_data",
+      includeSchemas: false,
+    });
+  });
+
   it("matches a question to its column by the pipeline's key", async () => {
     const renamed: FlowGraphDto = {
       ...graph,

@@ -167,18 +167,24 @@ export function ExperimentDataTable({
     setRowSelection({});
   }
 
-  const { tableMetadata, tableRows, dataUpdatedAt, isLoading, isRefreshing, error } =
-    useExperimentData({
-      experimentId,
-      page: pagination.pageIndex + 1,
-      pageSize: pagination.pageSize,
-      tableName,
-      orderBy: sortColumn,
-      orderDirection: sortDirection,
-      filters: activeFilters,
-      errorColumn,
-      keepPreviousPage: true,
-    });
+  const {
+    tableMetadata,
+    tableRows,
+    latestRowAt: readLatestRowAt,
+    isLoading,
+    isRefreshing,
+    error,
+  } = useExperimentData({
+    experimentId,
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
+    tableName,
+    orderBy: sortColumn,
+    orderDirection: sortDirection,
+    filters: activeFilters,
+    errorColumn,
+    keepPreviousPage: true,
+  });
 
   const viewKey = [
     pagination.pageIndex,
@@ -194,8 +200,7 @@ export function ExperimentDataTable({
   const landedRowIds = useLandedRowIds(
     isRefreshing ? undefined : tableRows,
     viewKey,
-    isUpload ? null : latestRowAt,
-    dataUpdatedAt,
+    isUpload ? null : readLatestRowAt,
   );
 
   const handlePaginationChange = useCallback<typeof setPagination>((updaterOrValue) => {

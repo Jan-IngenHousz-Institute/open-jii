@@ -584,6 +584,37 @@ describe("ExperimentStoreReadsService", () => {
     expect(flow).not.toHaveBeenCalled();
   });
 
+  it("reads one table's newest row time from the store, and none for a table it lacks", async () => {
+    vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(
+      success([
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 3,
+          latestRowAt: "2026-09-22T10:00:00.000Z",
+          schemaRevision: "r1",
+        },
+        {
+          identifier: "m1",
+          tableType: "macro",
+          displayName: null,
+          rowCount: 2,
+          latestRowAt: "2026-09-22T10:05:00.000Z",
+          schemaRevision: "r2",
+        },
+      ]),
+    );
+
+    const macro = await reads.latestRowAt("e1", "m1");
+    const device = await reads.latestRowAt("e1", "device");
+
+    assertSuccess(macro);
+    assertSuccess(device);
+    expect(macro.value).toBe("2026-09-22T10:05:00.000Z");
+    expect(device.value).toBeNull();
+  });
+
   it("lists a table the sheets match with their schema, and a revision that moves with them", async () => {
     vi.spyOn(store, "getExperimentTableMetadata").mockResolvedValue(
       success([

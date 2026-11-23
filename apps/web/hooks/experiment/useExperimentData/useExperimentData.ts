@@ -118,7 +118,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
   const dataView = JSON.stringify({ ...input, page: undefined });
   const freshness = relativeFilterQueryOptions(cleanedFilters, STALE_TIME);
 
-  const { data, dataUpdatedAt, isLoading, isPlaceholderData, error } = useQuery(
+  const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
       input,
       ...freshness,
@@ -181,7 +181,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
   return {
     tableMetadata,
     tableRows,
-    dataUpdatedAt,
+    latestRowAt: tableData?.latestRowAt,
     isLoading,
     isRefreshing: isPlaceholderData,
     error,

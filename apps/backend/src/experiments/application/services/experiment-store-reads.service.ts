@@ -92,6 +92,15 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return this.numberAnswers.typed(experimentId, withCustomMetadata.value);
   }
 
+  async latestRowAt(experimentId: string, identifier: string): Promise<Result<string | null>> {
+    const metadata = await this.store.getExperimentTableMetadata(experimentId);
+    if (metadata.isFailure()) {
+      return metadata;
+    }
+    const table = metadata.value.find((candidate) => candidate.identifier === identifier);
+    return success(table?.latestRowAt ?? null);
+  }
+
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>> {
     const columns = this.store.getExperimentTableColumns(tableType, identifier);
     if (columns.isFailure()) {

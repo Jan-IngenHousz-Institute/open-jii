@@ -18,25 +18,18 @@ interface Props {
   rows: { id: string; processed_timestamp: string }[] | undefined;
   view: string;
   latestRowAt: string | null;
-  readAt: number;
 }
 
 function renderLanded(initialProps: Props) {
   return renderHook(
-    ({ rows, view, latestRowAt, readAt }: Props) =>
-      useLandedRowIds(rows, view, latestRowAt, readAt),
+    ({ rows, view, latestRowAt }: Props) => useLandedRowIds(rows, view, latestRowAt),
     { initialProps },
   );
 }
 
 describe("useLandedRowIds", () => {
   it("lands nothing on the first load", () => {
-    const { result } = renderLanded({
-      rows: PAGE,
-      view: "page-1",
-      latestRowAt: READ_AT,
-      readAt: 1,
-    });
+    const { result } = renderLanded({ rows: PAGE, view: "page-1", latestRowAt: READ_AT });
 
     expect(result.current.size).toBe(0);
   });
@@ -46,11 +39,9 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-1",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({ rows: PAGE, view: "page-1", latestRowAt: NEXT_READ_AT, readAt: 1 });
-    rerender({ rows: [ARRIVED, ...PAGE], view: "page-1", latestRowAt: NEXT_READ_AT, readAt: 2 });
+    rerender({ rows: [ARRIVED, ...PAGE], view: "page-1", latestRowAt: NEXT_READ_AT });
 
     expect([...result.current]).toEqual(["c"]);
   });
@@ -60,10 +51,21 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-2",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({ rows: [MOVED_IN, ...PAGE], view: "page-2", latestRowAt: NEXT_READ_AT, readAt: 2 });
+    rerender({ rows: [MOVED_IN, ...PAGE], view: "page-2", latestRowAt: NEXT_READ_AT });
+
+    expect(result.current.size).toBe(0);
+  });
+
+  it("lands nothing for a row the previous read's newest row time already covered", () => {
+    const { result, rerender } = renderLanded({
+      rows: PAGE,
+      view: "page-2",
+      latestRowAt: NEXT_READ_AT,
+    });
+
+    rerender({ rows: [ARRIVED, ...PAGE], view: "page-2", latestRowAt: THIRD_READ_AT });
 
     expect(result.current.size).toBe(0);
   });
@@ -73,11 +75,10 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-2",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({ rows: PAGE, view: "page-2", latestRowAt: NEXT_READ_AT, readAt: 2 });
-    rerender({ rows: [ARRIVED, ...PAGE], view: "page-2", latestRowAt: THIRD_READ_AT, readAt: 3 });
+    rerender({ rows: PAGE, view: "page-2", latestRowAt: NEXT_READ_AT });
+    rerender({ rows: [ARRIVED, ...PAGE], view: "page-2", latestRowAt: THIRD_READ_AT });
 
     expect(result.current.size).toBe(0);
   });
@@ -90,28 +91,17 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-1",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({
-      rows: [arrived, movedIn, ...PAGE],
-      view: "page-1",
-      latestRowAt: NEXT_READ_AT,
-      readAt: 2,
-    });
+    rerender({ rows: [arrived, movedIn, ...PAGE], view: "page-1", latestRowAt: NEXT_READ_AT });
 
     expect([...result.current]).toEqual(["c"]);
   });
 
   it("lands nothing for a table with no newest-row time", () => {
-    const { result, rerender } = renderLanded({
-      rows: PAGE,
-      view: "page-1",
-      latestRowAt: null,
-      readAt: 1,
-    });
+    const { result, rerender } = renderLanded({ rows: PAGE, view: "page-1", latestRowAt: null });
 
-    rerender({ rows: [ARRIVED, ...PAGE], view: "page-1", latestRowAt: null, readAt: 2 });
+    rerender({ rows: [ARRIVED, ...PAGE], view: "page-1", latestRowAt: null });
 
     expect(result.current.size).toBe(0);
   });
@@ -122,11 +112,10 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-1",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({ rows: refetched, view: "page-1", latestRowAt: NEXT_READ_AT, readAt: 2 });
-    rerender({ rows: refetched, view: "page-1", latestRowAt: NEXT_READ_AT, readAt: 2 });
+    rerender({ rows: refetched, view: "page-1", latestRowAt: NEXT_READ_AT });
+    rerender({ rows: refetched, view: "page-1", latestRowAt: NEXT_READ_AT });
 
     expect([...result.current]).toEqual(["c"]);
   });
@@ -136,10 +125,9 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-1",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({ rows: [ARRIVED], view: "page-2", latestRowAt: NEXT_READ_AT, readAt: 2 });
+    rerender({ rows: [ARRIVED], view: "page-2", latestRowAt: NEXT_READ_AT });
 
     expect(result.current.size).toBe(0);
   });
@@ -149,11 +137,10 @@ describe("useLandedRowIds", () => {
       rows: PAGE,
       view: "page-1",
       latestRowAt: READ_AT,
-      readAt: 1,
     });
 
-    rerender({ rows: undefined, view: "page-2", latestRowAt: READ_AT, readAt: 1 });
-    rerender({ rows: [ARRIVED], view: "page-2", latestRowAt: NEXT_READ_AT, readAt: 2 });
+    rerender({ rows: undefined, view: "page-2", latestRowAt: READ_AT });
+    rerender({ rows: [ARRIVED], view: "page-2", latestRowAt: NEXT_READ_AT });
 
     expect(result.current.size).toBe(0);
   });
