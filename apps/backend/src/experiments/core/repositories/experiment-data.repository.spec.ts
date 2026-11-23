@@ -682,6 +682,7 @@ describe("ExperimentDataRepository", () => {
             ordering: {
               column: "contributor.id",
               direction: "DESC",
+              rowId: "id",
               mode: { kind: "pseudonym", salt: mockExperiment.id },
             },
           }),
@@ -699,7 +700,7 @@ describe("ExperimentDataRepository", () => {
 
         expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
           expect.objectContaining({
-            ordering: { column: "contributor.name", direction: "ASC" },
+            ordering: { column: "contributor.name", direction: "ASC", rowId: "id" },
           }),
         );
       });
@@ -715,7 +716,7 @@ describe("ExperimentDataRepository", () => {
 
         expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
           expect.objectContaining({
-            ordering: { column: "plot.name", direction: "ASC" },
+            ordering: { column: "plot.name", direction: "ASC", rowId: "id" },
           }),
         );
       });
@@ -739,6 +740,7 @@ describe("ExperimentDataRepository", () => {
             ordering: {
               column: "contributor.id",
               direction: "ASC",
+              rowId: "id",
               mode: { kind: "pseudonym", salt: mockExperiment.id },
             },
           }),
@@ -868,6 +870,7 @@ describe("ExperimentDataRepository", () => {
             ordering: {
               column: "contributor.id",
               direction: "ASC",
+              rowId: "id",
               mode: { kind: "pseudonym", salt: mockExperiment.id },
             },
           }),
@@ -889,6 +892,7 @@ describe("ExperimentDataRepository", () => {
             ordering: {
               column: "contributor.id",
               direction: "DESC",
+              rowId: "id",
               mode: { kind: "pseudonym", salt: mockExperiment.id },
             },
           }),
@@ -1556,6 +1560,14 @@ describe("ExperimentDataRepository", () => {
       customMetadataSchema: null,
     };
     const emptyData = { columns: [], rows: [], totalRows: 0, truncated: false };
+    const schemaLessUpload: ExperimentTableMetadata = {
+      identifier: "upload_1",
+      tableType: "upload",
+      displayName: null,
+      rowCount: 5,
+      latestRowAt: null,
+      schemaRevision: null,
+    };
 
     it("runs an aggregation over the table with its payload flattened", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
@@ -1584,6 +1596,56 @@ describe("ExperimentDataRepository", () => {
           reservedColumns: VIEW_COLUMNS,
         }),
       );
+    });
+
+    it.each([
+      { orderBy: "timestamp", rowId: "id" },
+      { orderBy: "id", rowId: undefined },
+    ])(
+      "breaks ties by the row id on a table with no payload, unless sorting by $orderBy",
+      async ({ orderBy, rowId }) => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([{ ...macroTable, macroSchema: null }]),
+        );
+        const build = vi
+          .spyOn(databricksPort, "buildExperimentQuery")
+          .mockReturnValue(success("SELECT 1"));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
+
+        const result = await repository.getTableData({
+          ...readParams,
+          tableName: "macro_123",
+          page: 1,
+          pageSize: 5,
+          orderBy,
+        });
+
+        assertSuccess(result);
+        expect(build.mock.calls[0][0].reservedColumns).toBeUndefined();
+        expect(build.mock.calls[0][0].ordering?.rowId).toBe(rowId);
+      },
+    );
+
+    it("breaks ties by the row id on an upload table with no schema", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([schemaLessUpload]),
+      );
+      const build = vi
+        .spyOn(databricksPort, "buildExperimentQuery")
+        .mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
+
+      const result = await repository.getTableData({
+        ...readParams,
+        tableName: "upload_1",
+        page: 1,
+        pageSize: 5,
+        orderBy: "uploaded_at",
+      });
+
+      assertSuccess(result);
+      expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledWith("upload", "upload_1");
+      expect(build.mock.calls[0][0].ordering?.rowId).toBe("id");
     });
 
     it("passes on a query-builder failure for an aggregation and for a chart read", async () => {
@@ -1646,18 +1708,9 @@ describe("ExperimentDataRepository", () => {
       );
     });
 
-    it("hides an upload table's payload when it has no schema, and looks up no columns", async () => {
+    it("hides an upload table's payload when it has no schema", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([
-          {
-            identifier: "upload_1",
-            tableType: "upload",
-            displayName: null,
-            rowCount: 5,
-            latestRowAt: null,
-            schemaRevision: null,
-          },
-        ]),
+        success([schemaLessUpload]),
       );
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
@@ -1665,7 +1718,6 @@ describe("ExperimentDataRepository", () => {
       await repository.getTableData({ ...readParams, tableName: "upload_1" });
 
       const [query] = vi.mocked(databricksPort.buildExperimentQuery).mock.calls[0];
-      expect(databricksPort.getExperimentTableColumns).not.toHaveBeenCalled();
       expect(query.variants).toBeUndefined();
       expect(query.exceptColumns).toContain("uploaded_data");
       expect(query.exceptColumns).toContain("custom_metadata");
@@ -2072,7 +2124,7 @@ describe("ExperimentDataRepository", () => {
           experimentId,
           columns: ["site"],
           distinct: true,
-          ordering: { column: "site", direction: "ASC" },
+          ordering: { column: "site", direction: "ASC", rowId: "id" },
           limit: 11,
         }),
       );
@@ -2495,9 +2547,8 @@ describe("ExperimentDataRepository", () => {
         assertSuccess(result);
         if (orderBy === "") expect(build.mock.calls[0][0].ordering).toBeUndefined();
         const mode = numeric ? "numericString" : number ? "number" : undefined;
-        expect(build.mock.calls[0][0].ordering?.mode).toEqual(
-          mode ? { kind: mode, rowId: "id" } : undefined,
-        );
+        expect(build.mock.calls[0][0].ordering?.mode).toEqual(mode ? { kind: mode } : undefined);
+        if (orderBy !== "") expect(build.mock.calls[0][0].ordering?.rowId).toBe("id");
       },
     );
 
@@ -2530,7 +2581,7 @@ describe("ExperimentDataRepository", () => {
         expect.objectContaining({
           distinct: true,
           columns: ["q"],
-          ordering: { column: "q", direction: "ASC", mode: { kind: "numericString", rowId: "id" } },
+          ordering: { column: "q", direction: "ASC", rowId: "id", mode: { kind: "numericString" } },
           limit: 6,
         }),
       );
@@ -2778,6 +2829,7 @@ describe("ExperimentDataRepository", () => {
           ordering: {
             column: "second__contributor.id",
             direction: "ASC",
+            rowId: "id",
             mode: { kind: "pseudonym", salt: experimentId },
           },
         }),
@@ -2814,7 +2866,7 @@ describe("ExperimentDataRepository", () => {
         .mocked(databricksPort.buildExperimentQuery)
         .mock.calls.find(([input]) => input.join)?.[0];
       expect(query?.filters).toEqual(filters);
-      expect(query?.ordering).toEqual({ column: "Plant.name", direction: "ASC" });
+      expect(query?.ordering).toEqual({ column: "Plant.name", direction: "ASC", rowId: "id" });
     });
 
     it("rejects a secondary table absent from the experiment before querying it", async () => {
