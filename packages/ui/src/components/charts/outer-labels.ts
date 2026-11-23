@@ -11,6 +11,8 @@ const SHORT_HORIZONTAL_LEGEND_HEIGHT = 50;
 const SHORT_LEGEND_INSET = 4;
 const MIN_LEGEND_HEIGHT = 30;
 export const MIN_OUTER_PLOT_HEIGHT = 60;
+// Plotly autosizing can keep its previous dimension after a one-pixel change.
+export const AUTOSIZE_TOLERANCE = 1;
 
 export function fitsOuterPlot(layout: Partial<Layout>, height: number, minPlotHeight: number) {
   return height - (layout.margin?.t ?? 0) - (layout.margin?.b ?? 0) >= minPlotHeight;
@@ -215,12 +217,13 @@ export function withOuterLabels({
   const bottom = Math.ceil(labels.bottom + radialBand);
   // Plotly's scrollbar can extend a few pixels past a tight viewport at the bottom edge.
   const legendInset = horizontal && compact ? SHORT_LEGEND_INSET : 0;
+  const compactHeight = compact ? compact.height - AUTOSIZE_TOLERANCE : 0;
   const legendHeight = compact
     ? Math.max(
         MIN_LEGEND_HEIGHT,
         Math.min(
           SHORT_HORIZONTAL_LEGEND_HEIGHT,
-          Math.floor(compact.height - top - bottom - legendInset - MIN_OUTER_PLOT_HEIGHT),
+          Math.floor(compactHeight - top - bottom - legendInset - MIN_OUTER_PLOT_HEIGHT),
         ),
       )
     : HORIZONTAL_LEGEND_HEIGHT;
@@ -229,7 +232,7 @@ export function withOuterLabels({
   const spareHeight = compact
     ? Math.max(
         0,
-        compact.height - top - bottom - (horizontal ? legendBand : 0) - compact.maxPlotHeight,
+        compactHeight - top - bottom - (horizontal ? legendBand : 0) - compact.maxPlotHeight,
       )
     : 0;
   const margin = {

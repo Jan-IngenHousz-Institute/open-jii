@@ -1,12 +1,23 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React, { useCallback, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { cn } from "../../lib/utils";
-import { chartTextWidth, withOuterLabels, wrapChartLabel } from "./outer-labels";
+import {
+  AUTOSIZE_TOLERANCE,
+  chartTextWidth,
+  MIN_OUTER_PLOT_HEIGHT,
+  withOuterLabels,
+  wrapChartLabel,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
-import type { PolarFit } from "./polar-label-fit";
+import {
+  linearTicks,
+  measurePolarLabel,
+  polarDiameter,
+  radarLabelsCollide,
+} from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
@@ -92,11 +103,26 @@ export function RadarPlot({
   angularAxisVisible = true,
 }: RadarPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
-    trackWidth: true,
+    trackWidth: "pixel",
     trackHeight: "pixel",
   });
+  const height = config.height ?? sizing.height ?? 0;
+  const viewportWidth = config.width ?? sizing.viewportWidth ?? Infinity;
+  const { width, snug, compact: compactTier, veryCompact, ultraCompact } = sizing;
+  // Keep the current tick density during growth until the size stops changing.
+  const [settledCompact, setSettledCompact] = useState<boolean>();
+  useEffect(() => {
+    if (!height) return;
+    const timer = setTimeout(() => setSettledCompact(compactTier), 65);
+    return () => clearTimeout(timer);
+  }, [compactTier, height, viewportWidth]);
+  const compactChrome = compactTier || settledCompact === true;
+  const chrome = useMemo(
+    () => ({ width, snug, compact: compactChrome, veryCompact, ultraCompact }),
+    [width, snug, compactChrome, veryCompact, ultraCompact],
+  );
   const themeVersion = useChartThemeRefresh();
-  const fontSizes = tierAxisFontSizes(sizing);
+  const fontSizes = tierAxisFontSizes(chrome);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatterpolar", renderer);
 
@@ -170,11 +196,11 @@ export function RadarPlot({
   const normal = useMemo(
     () => {
       const ticktext = axisCategories?.map((label) =>
-        wrapChartLabel(label, fontSizes.tick, sizing.compact ? 72 : 96),
+        wrapChartLabel(label, fontSizes.tick, chrome.compact ? 72 : 96),
       );
       const outer = withOuterLabels({
         config,
-        sizing,
+        sizing: chrome,
         traces: plotData,
         labels: radarLabelMargins(ticktext ?? [], fontSizes.tick),
       });
@@ -187,7 +213,7 @@ export function RadarPlot({
               visible: radialAxisVisible,
               range: rangeMode === "tozero" ? [0, undefined] : undefined,
               rangemode: rangeMode,
-              nticks: sizing.compact ? 3 : 5,
+              nticks: chrome.compact ? 3 : 5,
               tickfont: { size: fontSizes.tick },
               gridcolor: chartGridColor(),
               linecolor: chartGridColor(),
@@ -234,65 +260,141 @@ export function RadarPlot({
       radialAxisVisible,
       rangeMode,
       showTickLabels,
-      sizing,
+      chrome,
       tickAngle,
       themeVersion,
     ],
   );
 
-  const height = config.height ?? sizing.height ?? 0;
-  const compact = useCallback<PolarFit["compact"]>(
-    (maxPlotHeight) => {
-      const headings = axisCategories ?? [];
-      const dense = headings.length >= 6;
-      const headingFont = dense ? Math.min(fontSizes.tick, 9) : fontSizes.tick;
-      const step = (2 * Math.PI) / Math.max(3, headings.length);
-      const centeredWidth = Math.max(
-        headingFont * 4,
-        (maxPlotHeight + 2 * headingFont) * Math.sin(step) + 1,
-      );
-      // Centered headings extend toward their neighbours. Side headings extend outward.
-      const ticktext = headings.map((label, index) =>
-        wrapChartLabel(
-          label,
-          headingFont,
-          dense && Math.abs(Math.sin(step * index)) < 0.1 ? Math.min(112, centeredWidth) : 112,
-        ),
-      );
-      const outer = withOuterLabels({
-        config,
-        sizing,
-        traces: plotData,
-        labels: radarLabelMargins(ticktext, headingFont, true),
-        compact: { height, maxPlotHeight },
-      });
-      const { polar } = normal.layout;
-      return {
-        data: outer.data,
-        layout: {
-          ...outer.layout,
-          polar: {
-            ...polar,
-            radialaxis: { ...polar.radialaxis, nticks: 2, angle: -90, tickangle: -90 },
-            angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
-          },
-        } as unknown as Partial<Layout>,
-      };
-    },
-    [axisCategories, config, fontSizes.tick, height, normal, plotData, sizing],
+  const diameter = polarDiameter(
+    normal.layout as unknown as Partial<Layout>,
+    viewportWidth,
+    height,
   );
-  const polarFit = useMemo(() => ({ compact }), [compact]);
+  const extents = useMemo(
+    () =>
+      data.flatMap((series) => {
+        if (series.visible === false || series.visible === "legendonly") return [];
+        const values = series.r.filter(Number.isFinite);
+        if (!values.length) return [];
+        const padding =
+          !series.mode || series.mode.includes("markers")
+            ? Math.max(3, (series.marker?.size || 8) / 1.6)
+            : 0;
+        return [{ min: Math.min(...values), max: Math.max(...values), padding }];
+      }),
+    [data],
+  );
 
-  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
+  const range = (size: number): [number, number] => {
+    const min = rangeMode === "normal" ? Math.min(0, ...extents.map((series) => series.min)) : 0;
+    const max = Math.max(
+      min,
+      ...extents.map(
+        (series) => min + (series.max - min) / Math.max(0.5, 1 - series.padding / (size / 2)),
+      ),
+    );
+    return [min, max > min ? max : min + 1];
+  };
+  const headings = useMemo(
+    () =>
+      normal.layout.polar.angularaxis.ticktext?.map((text, index, ticks) => ({
+        text,
+        angle: (index * 360) / ticks.length,
+      })) ?? [],
+    [normal],
+  );
+  const radialRange = range(diameter);
+  const needsCompact =
+    height > 0 &&
+    (diameter - AUTOSIZE_TOLERANCE < MIN_OUTER_PLOT_HEIGHT ||
+      (headings.length > 0 &&
+        angularAxisVisible &&
+        showTickLabels &&
+        tickAngle === 0 &&
+        radarLabelsCollide({
+          diameter,
+          size: fontSizes.tick,
+          labels: headings,
+          range: radialRange,
+          ticks: radialAxisVisible
+            ? linearTicks(...radialRange, normal.layout.polar.radialaxis.nticks)
+            : [],
+          measure: measurePolarLabel,
+        })));
+  const compactHeight = needsCompact ? height : 0;
+  const maxPlotHeight = needsCompact ? Math.max(diameter, MIN_OUTER_PLOT_HEIGHT) : 0;
+  const compactRange = range(maxPlotHeight);
+  const sparseTicks = needsCompact ? linearTicks(...compactRange, 2) : [];
+  const radialTicks = (
+    needsCompact && sparseTicks.length < 2 ? linearTicks(...compactRange, 3) : sparseTicks
+  ).join(",");
+  const figure = useMemo(() => {
+    if (!compactHeight) return normal;
+    const headings = axisCategories ?? [];
+    const dense = headings.length >= 6;
+    const headingFont = dense ? Math.min(fontSizes.tick, 9) : fontSizes.tick;
+    const step = (2 * Math.PI) / Math.max(3, headings.length);
+    const centeredWidth = Math.max(
+      headingFont * 4,
+      (maxPlotHeight + 2 * headingFont) * Math.sin(step) + 1,
+    );
+    // Centered headings extend toward their neighbours. Side headings extend outward.
+    const ticktext = headings.map((label, index) =>
+      wrapChartLabel(
+        label,
+        headingFont,
+        dense && Math.abs(Math.sin(step * index)) < 0.1 ? Math.min(112, centeredWidth) : 112,
+      ),
+    );
+    const outer = withOuterLabels({
+      config,
+      sizing: chrome,
+      traces: plotData,
+      labels: radarLabelMargins(ticktext, headingFont, true),
+      compact: { height: compactHeight, maxPlotHeight },
+    });
+    const { polar } = normal.layout;
+    return {
+      data: outer.data,
+      layout: {
+        ...outer.layout,
+        polar: {
+          ...polar,
+          radialaxis: {
+            ...polar.radialaxis,
+            nticks: 2,
+            angle: -90,
+            tickangle: -90,
+            tickmode: "array",
+            tickvals: radialTicks.split(",").map(Number),
+            ticktext: radialTicks.split(","),
+          },
+          angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
+        },
+      } as unknown as Partial<Layout>,
+    };
+  }, [
+    axisCategories,
+    config,
+    fontSizes.tick,
+    compactHeight,
+    maxPlotHeight,
+    normal,
+    plotData,
+    chrome,
+    radialTicks,
+  ]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, chrome), [config, chrome]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={normal.data}
-        layout={normal.layout as unknown as Partial<Layout>}
-        polarFit={polarFit}
+        data={figure.data}
+        layout={figure.layout as unknown as Partial<Layout>}
         config={plotConfig}
-        loading={loading}
+        loading={loading || sizing.height === undefined}
         error={error}
       />
     </div>

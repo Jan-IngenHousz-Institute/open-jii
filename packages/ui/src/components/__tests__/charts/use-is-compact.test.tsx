@@ -58,7 +58,7 @@ function SizingProbe({
   trackHeight,
 }: {
   grid?: { rows: number; columns: number };
-  trackWidth?: boolean;
+  trackWidth?: boolean | "pixel";
   trackHeight?: boolean | "pixel";
 }) {
   const [ref, sizing] = useChartSizing<HTMLDivElement>({ grid, trackWidth, trackHeight });
@@ -87,6 +87,17 @@ describe("useChartSizing", () => {
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(368);
     act(() => observers[0]?.fire(420, 560));
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(416);
+  });
+
+  it("waits for a measurable plot and tracks its pixel width separately from wrapping", () => {
+    const { getByTestId } = render(<SizingProbe trackWidth="pixel" trackHeight="pixel" />);
+    const read = () => JSON.parse(getByTestId("probe").textContent ?? "{}");
+    act(() => observers[0]?.fire(380, 0));
+    expect(read().viewportWidth).toBeUndefined();
+    act(() => observers[0]?.fire(380, 239));
+    expect(read()).toMatchObject({ viewportWidth: 380, width: 368, height: 239 });
+    act(() => observers[0]?.fire(381, 239));
+    expect(read()).toMatchObject({ viewportWidth: 381, width: 368, height: 239 });
   });
 
   it("tracks height changes within a tier when captions need the available height", () => {

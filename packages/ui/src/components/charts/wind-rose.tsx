@@ -1,12 +1,12 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React, { useCallback, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { cn } from "../../lib/utils";
-import { withOuterLabels } from "./outer-labels";
+import { AUTOSIZE_TOLERANCE, MIN_OUTER_PLOT_HEIGHT, withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
-import type { PolarFit } from "./polar-label-fit";
+import { fitWindTicks, measurePolarLabel, polarDiameter } from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
@@ -73,9 +73,14 @@ export function WindRose({
   radialAxisTitle = "Frequency",
 }: WindRoseProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
-    trackWidth: true,
+    trackWidth: "pixel",
     trackHeight: "pixel",
   });
+  const { width, snug, compact: compactTier, veryCompact, ultraCompact } = sizing;
+  const chrome = useMemo(
+    () => ({ width, snug, compact: compactTier, veryCompact, ultraCompact }),
+    [width, snug, compactTier, veryCompact, ultraCompact],
+  );
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const plotData: PlotData[] = useMemo(
@@ -129,7 +134,7 @@ export function WindRose({
     () => {
       const outer = withOuterLabels({
         config,
-        sizing,
+        sizing: chrome,
         traces: plotData,
         labels: { left: 40, right: 40, top: 32, bottom: 32 },
         radialTitle,
@@ -167,47 +172,113 @@ export function WindRose({
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [config, plotData, directionTicks, fontSizes.tick, radialTitle, sizing, tickText, themeVersion],
+    [config, plotData, directionTicks, fontSizes.tick, radialTitle, chrome, tickText, themeVersion],
   );
 
   const height = config.height ?? sizing.height ?? 0;
-  const compact = useCallback<PolarFit["compact"]>(
-    (maxPlotHeight) => {
-      const outer = withOuterLabels({
-        config,
-        sizing,
-        traces: plotData,
-        labels: { left: 40, right: 40, top: 22, bottom: 22 },
-        radialTitle,
-        compact: { height, maxPlotHeight },
-      });
-      const { polar } = normal.layout;
-      return {
-        data: outer.data,
-        layout: {
-          ...outer.layout,
-          barmode: normal.layout.barmode,
-          polar,
-        } as unknown as Partial<Layout>,
-      };
-    },
-    [config, height, normal, plotData, radialTitle, sizing],
+  const viewportWidth = config.width ?? sizing.viewportWidth ?? Infinity;
+  const normalDiameter = polarDiameter(
+    normal.layout as unknown as Partial<Layout>,
+    viewportWidth,
+    height,
   );
-  const polarFit = useMemo(
-    () => ({ compact, wind: { ticks: directionTicks, labels: tickText } }),
-    [compact, directionTicks, tickText],
+  const short = height > 0 && normalDiameter - AUTOSIZE_TOLERANCE < MIN_OUTER_PLOT_HEIGHT;
+  const compactHeight = short ? height : 0;
+  const figure = useMemo(() => {
+    if (!compactHeight) return normal;
+    const outer = withOuterLabels({
+      config,
+      sizing: chrome,
+      traces: plotData,
+      labels: { left: 40, right: 40, top: 22, bottom: 22 },
+      radialTitle,
+      compact: { height: compactHeight, maxPlotHeight: MIN_OUTER_PLOT_HEIGHT },
+    });
+    return {
+      data: outer.data,
+      layout: { ...outer.layout, barmode: normal.layout.barmode, polar: normal.layout.polar },
+    };
+  }, [normal, config, chrome, plotData, radialTitle, compactHeight]);
+
+  const peak = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const series of data) {
+      if (series.visible === false || series.visible === "legendonly") continue;
+      series.theta.forEach((angle, index) => {
+        counts.set(angle, (counts.get(angle) ?? 0) + (series.r[index] ?? 0));
+      });
+    }
+    return Math.max(0, ...counts.values());
+  }, [data]);
+  const labels = useMemo(
+    () =>
+      directionTicks.flatMap((angle, index) => {
+        const text = tickText[index];
+        return text ? [{ angle, text }] : [];
+      }),
+    [directionTicks, tickText],
   );
 
-  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
+  const diameter = polarDiameter(
+    figure.layout as unknown as Partial<Layout>,
+    viewportWidth,
+    height,
+  );
+  // Remove crowded ticks as the widget shrinks. Restore extra ticks after the resize settles.
+  const [settledDiameter, setSettledDiameter] = useState<number>();
+  useEffect(() => {
+    if (diameter < MIN_OUTER_PLOT_HEIGHT) return;
+    const timer = setTimeout(() => setSettledDiameter(diameter), 65);
+    return () => clearTimeout(timer);
+  }, [diameter]);
+  const stableDiameter = Math.min(diameter, settledDiameter ?? diameter);
+  const measured = height > 0;
+  const fit = useMemo(() => {
+    if (!measured) return { step: 1, ticks: undefined };
+    return fitWindTicks({
+      diameter: Math.max(MIN_OUTER_PLOT_HEIGHT, stableDiameter),
+      peak,
+      labels,
+      size: fontSizes.tick,
+      measure: measurePolarLabel,
+      compact: short,
+    });
+  }, [measured, stableDiameter, peak, labels, fontSizes.tick, short]);
+  const radial = fit.ticks?.join(",");
+  const layout = useMemo(() => {
+    if (fit.step === 1 && !radial) return figure.layout;
+    const { polar } = figure.layout;
+    const angles = new Set(
+      labels.filter((_, index) => index % fit.step === 0).map(({ angle }) => angle),
+    );
+    const ticktext = tickText.map((text, index) =>
+      angles.has(directionTicks[index] ?? NaN) ? text : "",
+    );
+    return {
+      ...figure.layout,
+      polar: {
+        ...polar,
+        angularaxis: fit.step === 1 ? polar.angularaxis : { ...polar.angularaxis, ticktext },
+        radialaxis: radial
+          ? {
+              ...polar.radialaxis,
+              tickmode: "array",
+              tickvals: radial.split(",").map(Number),
+              ticktext: radial.split(","),
+            }
+          : polar.radialaxis,
+      },
+    };
+  }, [figure, fit.step, radial, labels, tickText, directionTicks]);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, chrome), [config, chrome]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={normal.data}
-        layout={normal.layout as unknown as Partial<Layout>}
-        polarFit={polarFit}
+        data={figure.data}
+        layout={layout as unknown as Partial<Layout>}
         config={plotConfig}
-        loading={loading}
+        loading={loading || sizing.height === undefined}
         error={error}
       />
     </div>

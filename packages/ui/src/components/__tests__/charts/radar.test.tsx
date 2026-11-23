@@ -7,16 +7,22 @@ import type { RadarPlotProps, MultiRadarProps, RadarSeriesData } from "../../cha
 
 // Mock common utilities to prevent WebGL detection errors
 vi.mock("../../charts/plotly-chart", () => ({
-  PlotlyChart: vi.fn(({ data, layout, config, loading, error, polarFit }) => (
+  PlotlyChart: vi.fn(({ data, layout, config, loading, error }) => (
     <div data-testid="plotly-chart">
       {loading && <div data-testid="loading">Loading...</div>}
       {error && <div data-testid="error">{error}</div>}
       <div data-testid="plot-data">{JSON.stringify(data)}</div>
       <div data-testid="plot-layout">{JSON.stringify(layout)}</div>
-      <div data-testid="compact-plot-layout">{JSON.stringify(polarFit?.compact(60).layout)}</div>
       <div data-testid="chart-config">{JSON.stringify(config)}</div>
     </div>
   )),
+}));
+
+vi.mock("../../charts/use-is-compact", () => ({
+  useChartSizing: () => [
+    { current: null },
+    { height: 425, viewportWidth: 566, width: 560, snug: true, compact: false },
+  ],
 }));
 
 vi.mock("../../charts/utils", async (importOriginal) => ({
@@ -91,11 +97,24 @@ describe("RadarPlot", () => {
         config={{ height: 229, title: "Assays", legendPosition: "top" }}
       />,
     );
-    const layout = JSON.parse(screen.getByTestId("compact-plot-layout").textContent ?? "{}");
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
     expect(layout.legend.maxheight).toBeLessThan(64);
     expect(layout.polar.angularaxis.ticktext.join("|").replaceAll("<br>", "")).toBe(
       "primary_assay_measurement|secondary_reference_measurement|sample_size",
     );
+  });
+
+  it("plans compact radial ticks for fractional measurements", () => {
+    const categories = ["Category A", "Category B", "Category C"];
+    render(
+      <RadarPlot
+        data={[{ r: [0.2, 0.24, 0.3], theta: categories }]}
+        categories={categories}
+        config={{ height: 190, title: "Assays", legendPosition: "top" }}
+      />,
+    );
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
+    expect(layout.polar.radialaxis.tickvals).toEqual([0, 0.2]);
   });
 
   it("wraps centered headings more tightly when a short radar has more spokes", () => {
@@ -114,8 +133,7 @@ describe("RadarPlot", () => {
       <RadarPlot {...defaultProps} categories={categories.slice(0, 5)} config={config} />,
     );
     const tickText = () =>
-      JSON.parse(screen.getByTestId("compact-plot-layout").textContent ?? "{}").polar.angularaxis
-        .ticktext;
+      JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}").polar.angularaxis.ticktext;
     const fiveSpokeHeading = tickText()[0];
     rerender(<RadarPlot {...defaultProps} categories={categories} config={config} />);
     const headings = tickText();

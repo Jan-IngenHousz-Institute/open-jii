@@ -19,8 +19,6 @@ import { PlotlyErrorBoundary } from "./plotly-error-boundary";
 import { loadPlotlyRuntime, loadedPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
 import { PlotlyTraceGate } from "./plotly-trace-gate";
 import { withBrandedPngExport } from "./png-export";
-import { preparePolarFigure } from "./polar-label-fit";
-import type { PolarFigure, PolarFit } from "./polar-label-fit";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -107,7 +105,6 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   className?: string;
   loading?: boolean;
   error?: string;
-  polarFit?: PolarFit;
 }
 
 // Plotly's gl2d builds three canvases per chart but only wires two of them to a
@@ -338,10 +335,7 @@ const validatePlotlyData = (data: Data[] | undefined): PlotData[] => {
  * with WebGL context management and dimension validation
  */
 export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
-  (
-    { className, loading, error, data, layout, config, onRelayout, polarFit, ...plotProps },
-    ref,
-  ) => {
+  ({ className, loading, error, data, layout, config, onRelayout, ...plotProps }, ref) => {
     const isClient = useIsClient();
     const [isWebGLEnabled, setIsWebGLEnabled] = useState(true);
     const [isContextAvailable, setIsContextAvailable] = useState(false);
@@ -362,8 +356,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // Without an IntersectionObserver every chart counts as on screen.
     const isOnScreenRef = useRef(true);
     const resizeIsPendingRef = useRef(false);
-    const fitPolar = polarFit !== undefined;
-    const [fitSize, setFitSize] = useState<{ width: number; height: number }>();
 
     const setContainer = React.useCallback(
       (node: HTMLDivElement | null) => {
@@ -382,42 +374,16 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       if (!el) return;
 
       const resize = () => {
-        resizeIsPendingRef.current = false;
-        if (fitPolar) {
-          const { width, height } = el.getBoundingClientRect();
-          if (width > 0 && height > 0) {
-            const plot = graphDivRef.current;
-            if (plot) {
-              // ResizeObserver runs before paint. Keep the previous fitted plot inside a shrinking widget.
-              const scale = Math.min(
-                1,
-                width / parseFloat(plot.style.width),
-                height / parseFloat(plot.style.height),
-              );
-              plot.style.transform = scale < 1 ? `scale(${scale})` : "";
-            }
-            setFitSize((previous) =>
-              previous?.width === width && previous.height === height
-                ? previous
-                : { width, height },
-            );
-          }
-          return;
-        }
         const graphDiv = graphDivRef.current;
         if (!graphDiv) {
           return;
         }
+        resizeIsPendingRef.current = false;
         void loadPlotlyRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
       };
 
       let frame = 0;
       const sizeObserver = new ResizeObserver(() => {
-        if (fitPolar) {
-          if (isOnScreenRef.current) resize();
-          else resizeIsPendingRef.current = true;
-          return;
-        }
         // Coalesced: a drag emits an entry per frame.
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
@@ -431,7 +397,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         });
       });
       sizeObserver.observe(el);
-      if (fitPolar) resize();
 
       const screenObserver =
         typeof IntersectionObserver === "undefined"
@@ -452,7 +417,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         sizeObserver.disconnect();
         screenObserver?.disconnect();
       };
-    }, [fitPolar]);
+    }, []);
 
     // react-plotly binds an event prop once per instance and does not notice when a remount's
     // purge drops it (React's strict and offscreen remounts reuse the instance), so the relayout
@@ -653,58 +618,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return withBrandedPngExport(createSafeConfig(config));
     }, [config]);
 
-    const [prepared, setPrepared] = useState<{ figure: PolarFigure; config: SafeConfig }>();
-    useEffect(() => {
-      const container = containerRef.current;
-      if (!polarFit || !fitSize || !container || !hasTurn || !isDrawable) return;
-      let cancelled = false;
-      // Fit once the requested size settles. The last fitted plot keeps its dimensions during a drag.
-      const timer = setTimeout(() => {
-        void preparePolarFigure(
-          container,
-          { data: renderData, layout: safeLayout },
-          {
-            ...polarFit,
-            compact: (diameter) => {
-              const candidate = polarFit.compact(diameter);
-              return { ...candidate, data: validatePlotlyData(candidate.data) };
-            },
-          },
-          safeLayout.width ?? fitSize.width,
-          safeLayout.height ?? fitSize.height,
-          () => cancelled,
-        )
-          .then((figure) => {
-            if (!cancelled && figure) setPrepared({ figure, config: safeConfig });
-          })
-          .catch((failure: unknown) => {
-            if (!cancelled) handleLoadError(failure);
-          });
-      }, 45);
-      return () => {
-        cancelled = true;
-        clearTimeout(timer);
-      };
-    }, [
-      polarFit,
-      fitSize,
-      hasTurn,
-      isDrawable,
-      renderData,
-      safeLayout,
-      safeConfig,
-      handleLoadError,
-    ]);
-
-    const active = fitPolar ? prepared : undefined;
-    const scale =
-      active && fitSize
-        ? Math.min(
-            1,
-            fitSize.width / (active.figure.layout.width ?? fitSize.width),
-            fitSize.height / (active.figure.layout.height ?? fitSize.height),
-          )
-        : 1;
     // Handle errors
     const displayError = error || localError;
     if (displayError) {
@@ -764,26 +677,20 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         ref={setContainer}
         className={cn("plotly-container relative h-full min-h-0 w-full flex-1", className)}
       >
-        {hasTurn && (!fitPolar || prepared) ? (
+        {hasTurn ? (
           <PlotlyErrorBoundary onError={handleLoadError}>
             <Suspense fallback={<PlotLoadingComponent />}>
               <PlotlyTraceGate types={renderTypes}>
                 <Plot
                   key={plotKey}
-                  data={active?.figure.data ?? renderData}
-                  layout={active?.figure.layout ?? safeLayout}
-                  config={active?.config ?? safeConfig}
+                  data={renderData}
+                  layout={safeLayout}
+                  config={safeConfig}
                   {...plotProps}
                   style={{
-                    width: active?.figure.layout.width ?? "100%",
-                    height: active?.figure.layout.height ?? "100%",
+                    width: "100%",
+                    height: "100%",
                     ...plotProps.style,
-                    ...(active
-                      ? {
-                          transform: scale < 1 ? `scale(${scale})` : undefined,
-                          transformOrigin: "top left",
-                        }
-                      : {}),
                   }}
                   onError={(error: PlotlyErrorEvent) => {
                     console.error("Plotly chart error:", error);

@@ -5,6 +5,7 @@ import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import {
+  AUTOSIZE_TOLERANCE,
   chartTextWidth,
   fitsOuterPlot,
   MIN_OUTER_PLOT_HEIGHT,
@@ -273,7 +274,7 @@ export function TernaryPlot({
       const height = config.height ?? sizing.height ?? 0;
       const minPlotHeight = Math.max(MIN_OUTER_PLOT_HEIGHT, 6 * fontSizes.tick + 8);
       const outer =
-        height > 0 && !fitsOuterPlot(normal.layout, height, minPlotHeight)
+        height > 0 && !fitsOuterPlot(normal.layout, height - AUTOSIZE_TOLERANCE, minPlotHeight)
           ? withOuterLabels({
               ...options,
               labels: { ...options.labels, top: 38, bottom: 42 },

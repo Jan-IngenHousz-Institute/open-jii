@@ -1,263 +1,227 @@
-import type { Layout, PlotData } from "plotly.js";
+import type { Layout } from "plotly.js";
 
-import { MIN_OUTER_PLOT_HEIGHT } from "./outer-labels";
-import { loadPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
+const GAP = 1.5;
+const LINE_SPACING = 1.3;
+const MID_SHIFT = 0.35;
 
-export interface PolarFigure {
-  data: PlotData[];
-  layout: Partial<Layout>;
-}
+type Box = { left: number; right: number; top: number; bottom: number };
+type Ink = { width: number; boxes: Box[] };
+export type MeasureLabel = (text: string, size: number) => Ink;
 
-export interface PolarFit {
-  compact(maxPlotHeight: number): PolarFigure;
-  wind?: { ticks: number[]; labels: string[] };
-}
+let context: CanvasRenderingContext2D | null | undefined;
+let family = "sans-serif";
+const metrics = new Map<string, Ink>();
+const METRIC_LIMIT = 2048;
 
-type Bounds = Pick<DOMRectReadOnly, "left" | "right" | "top" | "bottom">;
-const TOLERANCE = 1.5;
+export const measurePolarLabel: MeasureLabel = (text, size) => {
+  if (context === undefined && typeof CanvasRenderingContext2D !== "undefined") {
+    context = document.createElement("canvas").getContext("2d");
+    const styles = getComputedStyle(document.body);
+    family = styles.getPropertyValue("--font-sans").trim() || styles.fontFamily || family;
+  }
+  const font = `${size}px ${family}`;
+  const key = `${font}\n${text}`;
+  const cached = metrics.get(key);
+  if (cached) return cached;
 
-function intersects(a: Bounds, b: Bounds) {
-  return (
-    Math.min(a.right, b.right) - Math.max(a.left, b.left) > TOLERANCE &&
-    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > TOLERANCE
-  );
-}
-
-function inkBounds(label: SVGTextElement, context: CanvasRenderingContext2D): Bounds[] {
-  const lines = [...label.querySelectorAll<SVGTSpanElement>("tspan.line")];
-  return (lines.length ? lines : [label]).flatMap((line) => {
-    const matrix = line.getScreenCTM();
-    if (!matrix) return [];
-    const { fontStyle, fontWeight, fontSize, fontFamily } = getComputedStyle(line);
-    context.font = `${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`;
-    const characters = Array.from(line.textContent ?? "").slice(0, line.getNumberOfChars());
-    return characters.flatMap((character, index) => {
-      if (!character.trim()) return [];
-      const metrics = context.measureText(character);
-      const point = line.getStartPositionOfChar(index);
-      const rotation = line.getRotationOfChar(index);
-      const transform = matrix.translate(point.x, point.y).rotate(rotation);
-      const corners = [
-        [-metrics.actualBoundingBoxLeft, -metrics.actualBoundingBoxAscent],
-        [metrics.actualBoundingBoxRight, -metrics.actualBoundingBoxAscent],
-        [metrics.actualBoundingBoxRight, metrics.actualBoundingBoxDescent],
-        [-metrics.actualBoundingBoxLeft, metrics.actualBoundingBoxDescent],
-      ].map(([x, y]) => new DOMPoint(x, y).matrixTransform(transform));
-      return [
-        {
-          left: Math.min(...corners.map((corner) => corner.x)),
-          right: Math.max(...corners.map((corner) => corner.x)),
-          top: Math.min(...corners.map((corner) => corner.y)),
-          bottom: Math.max(...corners.map((corner) => corner.y)),
-        },
-      ];
-    });
-  });
-}
-
-type Axis = "angular" | "radial" | "other";
-type TickLabel = { axis: Axis; value?: number; text: string };
-type PlotlyTick = SVGTextElement & { __data__?: { x?: number } };
-
-function readLabels(graph: HTMLElement, checkAngularPairs: boolean) {
-  const frame = graph.getBoundingClientRect();
-  const legend = graph.querySelector(".infolayer .legend > .bg")?.getBoundingClientRect();
-  const labels = [
-    ...graph.querySelectorAll<PlotlyTick>(
-      ".polarlayer .angularaxistick text, .polarlayer .xtick text, .gtitle, .annotation-text",
-    ),
-  ].flatMap((label) => {
-    const bounds = label.getBoundingClientRect();
-    const text = label.textContent ?? "";
-    if (!bounds.width || !bounds.height || !text.trim()) return [];
-    const axis: Axis = label.closest(".angularaxistick")
-      ? "angular"
-      : label.closest(".polarlayer")
-        ? "radial"
-        : "other";
+  if (!context) {
+    const width = text.length * size * 0.65;
+    return { width, boxes: [{ left: 0, right: width, top: -size * 0.7, bottom: 0 }] };
+  }
+  context.font = font;
+  const width = context.measureText(text).width;
+  let prefix = "";
+  const boxes = Array.from(text).flatMap((glyph) => {
+    const advance = context?.measureText(prefix).width ?? 0;
+    prefix += glyph;
+    if (!glyph.trim() || !context) return [];
+    const ink = context.measureText(glyph);
     return [
       {
-        axis,
-        value: label.__data__?.x,
-        text,
-        label,
-        bounds,
-        ink: undefined as Bounds[] | undefined,
+        left: advance - ink.actualBoundingBoxLeft,
+        right: advance + ink.actualBoundingBoxRight,
+        top: -ink.actualBoundingBoxAscent,
+        bottom: ink.actualBoundingBoxDescent,
       },
     ];
   });
-  const conflicts: [TickLabel, TickLabel][] = [];
-  const clipped = new Set<TickLabel>();
-  let context: CanvasRenderingContext2D | null | undefined;
-  labels.forEach((a, index) => {
-    if (
-      a.axis !== "other" &&
-      (a.bounds.left < frame.left - TOLERANCE ||
-        a.bounds.right > frame.right + TOLERANCE ||
-        a.bounds.top < frame.top - TOLERANCE ||
-        a.bounds.bottom > frame.bottom + TOLERANCE ||
-        (legend && intersects(a.bounds, legend)))
-    )
-      clipped.add(a);
-    for (const b of labels.slice(index + 1)) {
-      if (
-        (a.axis === "other" && b.axis === "other") ||
-        (!checkAngularPairs && a.axis === "angular" && b.axis === "angular") ||
-        !intersects(a.bounds, b.bounds)
-      )
-        continue;
-      context ??= document.createElement("canvas").getContext("2d");
-      if (context) {
-        a.ink ??= inkBounds(a.label, context);
-        b.ink ??= inkBounds(b.label, context);
-        if (!a.ink.some((glyph) => b.ink?.some((other) => intersects(glyph, other)))) continue;
-      }
-      conflicts.push([a, b]);
-    }
-  });
-  return { labels, clipped, conflicts };
+  const result = { width, boxes };
+  if (metrics.size === METRIC_LIMIT) metrics.clear();
+  metrics.set(key, result);
+  return result;
+};
+
+export function polarDiameter(layout: Partial<Layout>, width: number, height: number) {
+  const { l = 0, r = 0, t = 0, b = 0 } = layout.margin ?? {};
+  return Math.min(width - l - r, height - t - b);
 }
 
-function radialSubsets(ticks: TickLabel[]) {
-  const subsets = [ticks];
-  // Keep the origin and prefer the longest evenly spaced span at each density.
-  for (let count = ticks.length - 1; count >= 2; count--) {
-    for (let step = Math.floor((ticks.length - 1) / (count - 1)); step > 0; step--) {
-      subsets.push(ticks.filter((_, index) => index % step === 0 && index <= (count - 1) * step));
-    }
+function overlaps(a: Box, b: Box) {
+  return (
+    Math.min(a.right, b.right) - Math.max(a.left, b.left) > GAP &&
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > GAP
+  );
+}
+
+function project(ink: Ink, x: number, y: number, anchor: number, quarterTurn = false, pivotY = 0) {
+  const leftOffset = x - anchor * ink.width;
+  if (!quarterTurn) {
+    return ink.boxes.map(({ left, right, top, bottom }) => ({
+      left: left + leftOffset,
+      right: right + leftOffset,
+      top: top + y,
+      bottom: bottom + y,
+    }));
   }
-  return subsets;
+  return ink.boxes.map(({ left, right, top, bottom }) => ({
+    left: x + pivotY - bottom,
+    right: x + pivotY - top,
+    top: y + pivotY + left - anchor * ink.width,
+    bottom: y + pivotY + right - anchor * ink.width,
+  }));
 }
 
-export function chooseWindTicks(
-  angular: TickLabel[],
-  radial: TickLabel[],
-  fits: (keep: Set<TickLabel>) => boolean,
-) {
-  const radialChoices = radialSubsets(radial);
-  for (let step = 1; step <= Math.max(1, Math.floor(angular.length / 2)); step++) {
-    const angularChoice = angular.filter((_, index) => index % step === 0);
-    for (const radialChoice of radialChoices) {
-      if (fits(new Set([...angularChoice, ...radialChoice]))) {
-        return { angular: angularChoice, radial: radialChoice };
-      }
-    }
-  }
-  return undefined;
+interface AngularTick {
+  angle: number;
+  text: string;
 }
 
-function windTicks(
-  figure: PolarFigure,
-  measured: ReturnType<typeof readLabels>,
-  wind: NonNullable<PolarFit["wind"]>,
-) {
-  const angular = measured.labels.filter((tick) => tick.axis === "angular");
-  const radial = measured.labels.filter((tick) => tick.axis === "radial");
-  const keep = chooseWindTicks(angular, radial, (labels) => {
-    const visible = (tick: TickLabel) => tick.axis === "other" || labels.has(tick);
-    return (
-      ![...measured.clipped].some(visible) &&
-      !measured.conflicts.some(([a, b]) => visible(a) && visible(b))
+function angularInk(labels: AngularTick[], size: number, radius: number, measure: MeasureLabel) {
+  // Plotly positions labels outside the circumference and aligns them away from the centre.
+  const standoff = 5.5 + size * 0.2;
+  return labels.map(({ angle, text }) => {
+    const direction = (angle * Math.PI) / 180;
+    const x = Math.sin(direction);
+    const y = Math.cos(direction);
+    const lines = text.split("<br>");
+    const anchor = Math.abs(x) < 0.1 ? 0.5 : x > 0 ? 0 : 1;
+    const baseline =
+      -y * (radius + standoff + size * (y > 0 ? 0.2 : 1)) +
+      Math.abs(x) * size * MID_SHIFT -
+      ((1 + y) * (lines.length - 1) * LINE_SPACING * size) / 2;
+    return lines.flatMap((line, index) =>
+      project(
+        measure(line, size),
+        x * (radius + standoff),
+        baseline + index * size * LINE_SPACING,
+        anchor,
+      ),
     );
   });
-  if (!keep) return undefined;
-  const values = new Set(keep.angular.map((tick) => tick.value));
-  const polar = figure.layout.polar;
-  return {
-    ...figure,
-    layout: {
-      ...figure.layout,
-      polar: {
-        ...polar,
-        angularaxis:
-          keep.angular.length === angular.length
-            ? polar?.angularaxis
-            : {
-                ...polar?.angularaxis,
-                ticktext: wind.labels.map((label, index) =>
-                  values.has(wind.ticks[index]) ? label : "",
-                ),
-              },
-        radialaxis:
-          keep.radial.length === radial.length
-            ? polar?.radialaxis
-            : {
-                ...polar?.radialaxis,
-                tickmode: "array",
-                tickvals: keep.radial.map((tick) => tick.value),
-                ticktext: keep.radial.map((tick) => tick.text),
-              },
-      } as Partial<Layout>["polar"],
-    },
-  };
 }
 
-export async function preparePolarFigure(
-  container: HTMLElement,
-  normal: PolarFigure,
-  fit: PolarFit,
-  width: number,
-  height: number,
-  cancelled: () => boolean,
-): Promise<PolarFigure | undefined> {
-  const { Plotly } = await loadPlotlyRuntime();
-  await pendingTraceTypes(normal.data.map((trace) => trace.type ?? "scatter"));
-  if (cancelled()) return undefined;
+function collide(a: Box[], b: Box[]) {
+  return a.some((glyph) => b.some((other) => overlaps(glyph, other)));
+}
 
-  const host = document.createElement("div");
-  host.setAttribute("aria-hidden", "true");
-  host.style.cssText = "position:fixed;left:0;top:0;visibility:hidden;pointer-events:none";
-  const shadow = host.attachShadow({ mode: "closed" });
-  const style = document.createElement("style");
-  // The shadow root keeps candidate charts out of the live plot tree.
-  style.textContent = `
-    .main-svg { position: absolute; top: 0; left: 0; }
-    .js-plotly-plot text { font-family: var(--font-sans) !important; }
-  `;
-  const graph = document.createElement("div");
-  graph.style.cssText = `width:${width}px;height:${height}px`;
-  shadow.append(style, graph);
-  container.append(host);
+function pairsCollide(labels: Box[][]) {
+  return labels.some((label, index) =>
+    labels.some((other, nextIndex) => nextIndex > index && collide(label, other)),
+  );
+}
 
-  const fixed = (figure: PolarFigure): PolarFigure => ({
-    data: figure.data,
-    layout: { ...figure.layout, width, height, autosize: false },
+/** Linear auto ticks use the next 2/5/10 multiple of the rough interval. */
+export function linearTicks(min: number, max: number, count: number) {
+  const rough = (max - min) / count;
+  if (!Number.isFinite(rough) || rough <= 0) return [0, 1];
+  const base = 10 ** Math.floor(Math.log10(rough));
+  const step = (rough <= 2 * base ? 2 : rough <= 5 * base ? 5 : 10) * base;
+  const first = Math.ceil(min / step - 1e-8) * step;
+  const length = Math.max(0, Math.min(20, Math.floor((max - first) / step + 1e-8) + 1));
+  return Array.from({ length }, (_, index) => Number((first + index * step).toPrecision(12)));
+}
+
+function radialInk(
+  ticks: number[],
+  size: number,
+  radius: number,
+  range: readonly [number, number],
+  measure: MeasureLabel,
+  rotate = false,
+) {
+  return ticks.map((value) => {
+    const x = (radius * (value - range[0])) / (range[1] - range[0]);
+    return project(
+      measure(String(value), size),
+      x,
+      5.5 + size * 1.2,
+      rotate ? 0 : 0.5,
+      rotate,
+      -size / 2,
+    );
   });
-  const inspect = async (figure: PolarFigure, checkAngularPairs = true) => {
-    // Plotly mutates its input. The visible chart gets the untouched figure.
-    await Plotly.react(graph, structuredClone(figure.data), structuredClone(figure.layout), {
-      responsive: false,
-      displayModeBar: false,
-    });
-    const circle = graph.querySelector(".polarlayer .plotbg path")?.getBoundingClientRect();
-    const diameter = circle ? Math.min(circle.width, circle.height) : 0;
-    return { diameter, labels: readLabels(graph, checkAngularPairs) };
-  };
+}
 
-  try {
-    const normalHeight = height - (normal.layout.margin?.t ?? 0) - (normal.layout.margin?.b ?? 0);
-    let maxPlotHeight = MIN_OUTER_PLOT_HEIGHT;
-    if (normalHeight >= MIN_OUTER_PLOT_HEIGHT) {
-      const regular = fixed(normal);
-      // The mode with all 32 labels has a different catalogue minimum.
-      const density = fit.wind?.labels.filter(Boolean).length ?? 0;
-      const { diameter, labels } = await inspect(regular, density <= 16);
-      if (cancelled()) return undefined;
-      if (diameter >= MIN_OUTER_PLOT_HEIGHT) {
-        if (!labels.clipped.size && !labels.conflicts.length) return regular;
-        if (fit.wind) {
-          const fitted = windTicks(regular, labels, fit.wind);
-          if (fitted) return fitted;
-        }
-        maxPlotHeight = Math.floor(diameter);
-      }
+function radialChoices(ticks: number[]) {
+  const choices = [ticks];
+  for (let count = ticks.length - 1; count >= 2; count--) {
+    for (let step = Math.floor((ticks.length - 1) / (count - 1)); step >= 1; step--) {
+      choices.push(ticks.filter((_, index) => index % step === 0 && index <= (count - 1) * step));
     }
-    const compact = fixed(fit.compact(maxPlotHeight));
-    if (!fit.wind) return compact;
-    const { labels } = await inspect(compact);
-    return cancelled() ? undefined : (windTicks(compact, labels, fit.wind) ?? compact);
-  } finally {
-    Plotly.purge(graph);
-    host.remove();
   }
+  return choices;
+}
+
+export function fitWindTicks({
+  diameter,
+  peak,
+  labels,
+  size,
+  measure,
+  compact,
+}: {
+  diameter: number;
+  peak: number;
+  labels: AngularTick[];
+  size: number;
+  measure: MeasureLabel;
+  compact: boolean;
+}) {
+  // Stacked barpolar pins the minimum at zero and pads the upper extent by 5% of the radius.
+  const range = [0, Math.max(1, peak / 0.95)] as const;
+  const natural = linearTicks(...range, 5);
+  const radius = diameter / 2;
+  const angleBoxes = angularInk(labels, size, radius, measure);
+  const radial = radialInk(natural, size, radius, range, measure);
+  const radialMap = new Map(natural.map((value, index) => [value, radial[index] ?? []]));
+  for (let step = 1; step <= Math.max(1, Math.floor(labels.length / 2)); step++) {
+    const kept = angleBoxes.filter((_, index) => index % step === 0);
+    if ((compact || labels.length <= 16) && pairsCollide(kept)) continue;
+    for (const choice of radialChoices(natural)) {
+      const selected = choice.map((value) => radialMap.get(value) ?? []);
+      if (
+        pairsCollide(selected) ||
+        selected.some((tick) => kept.some((label) => collide(tick, label)))
+      )
+        continue;
+      return { step, ticks: choice === natural && !compact ? undefined : choice };
+    }
+  }
+  return { step: Math.max(1, Math.ceil(labels.length / 8)), ticks: linearTicks(...range, 2) };
+}
+
+export function radarLabelsCollide({
+  diameter,
+  size,
+  labels,
+  range,
+  ticks,
+  measure,
+}: {
+  diameter: number;
+  size: number;
+  labels: AngularTick[];
+  range: readonly [number, number];
+  ticks: number[];
+  measure: MeasureLabel;
+}) {
+  const radius = diameter / 2;
+  const headings = angularInk(labels, size, radius, measure);
+  let numbers = radialInk(ticks, size, radius, range, measure);
+  if (pairsCollide(numbers)) numbers = radialInk(ticks, size, radius, range, measure, true);
+  return (
+    pairsCollide(headings) ||
+    pairsCollide(numbers) ||
+    numbers.some((tick) => headings.some((heading) => collide(tick, heading)))
+  );
 }
