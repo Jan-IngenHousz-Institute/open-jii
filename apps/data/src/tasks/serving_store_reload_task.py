@@ -1,6 +1,6 @@
 # Databricks notebook source
 # DBTITLE 1,Serving Store Reload
-# Replaces what the serving store holds for one experiment, or for every experiment, with what gold
+# Replaces what the serving store holds for one experiment, or for every experiment, with what its source
 # holds now. Run by hand; docs/runbooks/procedures/serving-store-reload.md says when and how.
 
 # COMMAND ----------
@@ -9,10 +9,10 @@
 import traceback
 
 from openjii.serving_store.reload import StoreReload
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, UPLOADS
+from openjii.serving_store.tables import DEVICE_EVENTS, MACRO_RESULTS, MEASUREMENTS, UPLOADS
 from openjii.serving_store.writer import StoreWriter
 
-TABLES = {table.name: table for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS)}
+TABLES = {table.name: table for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS, DEVICE_EVENTS)}
 
 WIDGETS = ("CATALOG_NAME", "CENTRAL_SCHEMA", "ENVIRONMENT", "EXPERIMENT_ID", "TABLE")
 for name in WIDGETS:
@@ -36,10 +36,16 @@ TABLE = required_widget("TABLE")
 
 if TABLE != "all" and TABLE not in TABLES:
     raise ValueError(f"TABLE is {TABLE!r}; use all or one of {', '.join(TABLES)}")
-tables = list(TABLES.values()) if TABLE == "all" else [TABLES[TABLE]]
+# Device events reload only by name: reloaded before their sink runs, they would let device pages read
+# events the feed never adds to.
+tables = [table for table in TABLES.values() if table.per_experiment] if TABLE == "all" else [TABLES[TABLE]]
 experiment_id = None if EXPERIMENT_ID == "all" else EXPERIMENT_ID
 
-# Lets the delete remove more than the reload's limit of rows gold no longer holds, as for a
+holds_no_experiment = TABLE != "all" and not TABLES[TABLE].per_experiment
+if experiment_id is not None and holds_no_experiment:
+    raise ValueError(f"TABLE {TABLE} holds no experiment's rows; reload it with EXPERIMENT_ID all")
+
+# Lets the delete remove more than the reload's limit of rows the source no longer holds, as for a
 # deleted experiment. Anything but true or false is refused, so a typo cannot pass for either.
 ALLOW_REMOVAL = dbutils.widgets.get("ALLOW_REMOVAL").strip().lower()
 if ALLOW_REMOVAL not in ("true", "false"):
@@ -74,17 +80,18 @@ for table in tables:
         mismatches.append(f"{table.name} failed: {type(error).__name__}: {error}")
         continue
 
+    counted = "experiments" if table.per_experiment else "devices"
     print(
-        f"[serving store] Reloaded {table.name} at gold version {reloaded.version}: "
+        f"[serving store] Reloaded {table.name} at {table.source_table} version {reloaded.version}: "
         f"{reloaded.written.inserted} rows sent, {reloaded.written.rejected} refused (in feed_rejects); "
-        f"{sum(reloaded.gold.values())} rows in gold and {sum(reloaded.store.values())} in the store "
-        f"over {len(reloaded.gold)} experiments, {sum(reloaded.newer.values())} of them written by the feed since",
+        f"{sum(reloaded.source.values())} rows in {table.source_table} and {sum(reloaded.store.values())} in the store "
+        f"over {len(reloaded.source)} {counted}, {sum(reloaded.newer.values())} of them written by the feed since",
         flush=True,
     )
-    found_nothing = experiment_id is not None and not (reloaded.gold or reloaded.store or reloaded.older)
+    found_nothing = experiment_id is not None and not (reloaded.source or reloaded.store or reloaded.older)
     if found_nothing:
         print(
-            f"[serving store] Neither gold nor store.{table.name} holds experiment {experiment_id} now; "
+            f"[serving store] Neither {table.source_table} nor store.{table.name} holds experiment {experiment_id} now; "
             "unless it was deleted, check the id"
         )
 
@@ -100,12 +107,20 @@ for table in tables:
             "the older ones stay; fix them as store-feed-rejects describes, then run the reload again"
         )
     if reloaded.missing:
-        mismatches.append(f"{table.name} lacks {reloaded.missing} of gold's rows, in {named(reloaded.short)}")
+        mismatches.append(
+            f"{table.name} lacks {reloaded.missing} of {table.source_table}'s rows, in {named(reloaded.short)}"
+        )
     if reloaded.older:
         mismatches.append(
             f"{table.name} holds rows from before version {reloaded.version} that the feed sent after the "
             f"delete, in {named(reloaded.older)}; run the reload again once the feed has caught up"
         )
+    if reloaded.unmatched_copies:
+        mismatches.append(
+            f"the copy of {table.name} by device does not hold the captures {table.name} holds, with as many "
+            f"more rows as each count says (0 when only which ones differ), in "
+            f"{named(reloaded.unmatched_copies)}; run the reload again"
+        )
 
 if mismatches:
-    raise RuntimeError(f"The store does not match gold: {'; '.join(mismatches)}")
+    raise RuntimeError(f"The store does not match its sources: {'; '.join(mismatches)}")

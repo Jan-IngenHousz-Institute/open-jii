@@ -24,11 +24,12 @@ DRIVER_RETRY_DELAYS = (10, 30, 60)
 
 class StoreFeed:
     """One pipeline's store sinks, each reading the change feed of its store table's source: a gold
-    table of the same pipeline, or the lakehouse's copy of the metadata sheets.
+    or silver table of the same pipeline, or the lakehouse's copy of the metadata sheets.
 
     A sink with a new checkpoint starts at the version in ``SERVING_STORE_FEED_START_<TABLE>``,
     which must still be within the source's file retention (seven days unless the table sets its
-    own).
+    own). Without that setting the pipeline fails at start, except for a table that may wait for it,
+    which gets no sink until it is set.
     """
 
     def __init__(self, dp: ModuleType, spark: SparkSession, dbutils: Any, environment: str, catalog: str):
@@ -39,7 +40,14 @@ class StoreFeed:
         self.catalog = catalog
 
     def define(self, table: StoreTable) -> None:
-        start_version = self.spark.conf.get(f"SERVING_STORE_FEED_START_{table.name.upper()}")
+        setting = f"SERVING_STORE_FEED_START_{table.name.upper()}"
+        if table.needs_start_version:
+            start_version = self.spark.conf.get(setting)
+        else:
+            start_version = self.spark.conf.get(setting, None)
+            if not start_version:
+                return
+
         sink = f"serving_store_{table.name}"
         spark = self.spark
         source = table.source(self.catalog)
@@ -80,6 +88,8 @@ class StoreFeed:
         """The batch's payload schemas, or none and why when Spark cannot work them out. The rows
         still go, and the reason goes to ``feed_rejects``, since an upload's rows arrive in one batch
         and no later one would bring its schemas."""
+        if not table.sends_schemas:
+            return [], None
         try:
             return [row.line for row in table.schema_lines(changes).collect()], None
         except Exception as error:

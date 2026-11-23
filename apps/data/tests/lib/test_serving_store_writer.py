@@ -16,6 +16,7 @@ import pytest
 import requests
 import responses
 from openjii.serving_store import writer
+from openjii.serving_store.tables import SETTLES
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written, exact_doubles, storable
 from pyspark.sql import DataFrame, SparkSession
 
@@ -56,7 +57,7 @@ def _lines(count: int) -> list[str]:
 def test_lines_go_in_chunks_of_at_most_5000_rows(store: StoreWriter) -> None:
     responses.add(responses.POST, URL)
 
-    written = store.insert("measurements", _lines(12_001))
+    written = store.insert("macro_results", _lines(12_001))
 
     assert written == Written(inserted=12_001)
     assert [len(lines) for _, _, lines in _inserts()] == [5_000, 5_000, 2_001]
@@ -70,7 +71,7 @@ def test_a_chunk_stays_under_its_byte_budget_in_bytes(
     monkeypatch.setattr(writer, "CHUNK_BYTES", 80)
     responses.add(responses.POST, URL)
 
-    store.insert("measurements", ['{"id":1,"pad":"' + "é" * 20 + '"}'] * 3)
+    store.insert("macro_results", ['{"id":1,"pad":"' + "é" * 20 + '"}'] * 3)
 
     assert [len(lines) for _, _, lines in _inserts()] == [1, 1, 1]
 
@@ -105,7 +106,7 @@ def test_a_partition_is_posted_chunk_by_chunk_as_it_arrives(store: StoreWriter) 
 
     responses.add_callback(responses.POST, URL, callback=accept)
 
-    assert store.insert("measurements", partition()) == Written(inserted=12_001)
+    assert store.insert("macro_results", partition()) == Written(inserted=12_001)
     # A chunk goes once the next line would not fit, before the rest of the partition is read.
     assert read_at_each_insert == [5_001, 10_001, 12_001]
 
@@ -116,7 +117,7 @@ def test_a_busy_store_is_waited_out_within_the_executors_attempts(store: StoreWr
     responses.add(responses.POST, URL, status=500, headers={"X-ClickHouse-Exception-Code": "252"})
     responses.add(responses.POST, URL)
 
-    written = store.insert("measurements", _lines(4))
+    written = store.insert("macro_results", _lines(4))
 
     assert written == Written(inserted=4)
     assert len(responses.calls) == 3
@@ -132,7 +133,7 @@ def test_a_store_that_does_not_answer_gets_its_rows_handed_back_at_once(
     responses.add(responses.POST, URL)
     responses.add(responses.POST, URL, body=silence)
 
-    written = store.insert("measurements", _lines(6_000))
+    written = store.insert("macro_results", _lines(6_000))
 
     assert written == Written(inserted=5_000, unfinished=1_000)
     assert len(responses.calls) == 2
@@ -143,7 +144,7 @@ def test_a_store_that_stays_down_gets_its_rows_handed_back_not_waited_for(store:
     responses.add(responses.POST, URL)
     responses.add(responses.POST, URL, status=500, headers={"X-ClickHouse-Exception-Code": "241"})
 
-    written = store.insert("measurements", _lines(6_000))
+    written = store.insert("macro_results", _lines(6_000))
 
     # The first chunk landed; the second failed every attempt, and nothing raised.
     assert written == Written(inserted=5_000, unfinished=1_000)
@@ -155,13 +156,13 @@ def test_a_code_the_writer_does_not_know_is_retried_rather_than_rejected(store: 
     responses.add(responses.POST, URL, status=500, headers={"X-ClickHouse-Exception-Code": "999"})
     responses.add(responses.POST, URL)
 
-    assert store.insert("measurements", _lines(2)) == Written(inserted=2)
+    assert store.insert("macro_results", _lines(2)) == Written(inserted=2)
 
 
 @pytest.mark.parametrize(
     ("status", "code", "text"),
     [
-        (404, "60", "Code: 60. DB::Exception: Table store.measurements does not exist. (UNKNOWN_TABLE)"),
+        (404, "60", "Code: 60. DB::Exception: Table store.macro_results does not exist. (UNKNOWN_TABLE)"),
         (
             400,
             "117",
@@ -178,14 +179,65 @@ def test_a_table_or_field_the_store_lacks_hands_the_rows_back_at_once(
         responses.POST, URL, status=status, headers={"X-ClickHouse-Exception-Code": code}, body=text
     )
 
-    written = store.insert("measurements", _lines(6_000))
+    written = store.insert("macro_results", _lines(6_000))
 
     assert written == Written(unfinished=6_000)
     assert len(responses.calls) == 1
 
 
+@responses.activate
+def test_each_chunk_of_measurements_is_settled_with_its_own_lines_once_it_has_landed(
+    store: StoreWriter,
+) -> None:
+    responses.add(responses.POST, URL, body="1764150000000000000")
+    lines = _lines(6_000)
+
+    written = store.insert("measurements", lines)
+
+    queries = [parse_qs(urlparse(str(call.request.url)).query) for call in responses.calls]
+    settles = [
+        (query, call)
+        for query, call in zip(queries, responses.calls, strict=True)
+        if "chunk_structure" in query
+    ]
+    assert written == Written(inserted=6_000)
+    # The stamp is read before the settle that carries it, so it never follows the settle's read.
+    assert [query["query"][0].split()[:3] for query in queries] == [
+        ["INSERT", "INTO", "store.measurements"],
+        ["SELECT", "toUnixTimestamp64Nano(now64(9))"],
+        ["INSERT", "INTO", "store.measurements_by_device"],
+    ] * 2
+    for (query, call), chunk in zip(settles, (lines[:5_000], lines[5_000:]), strict=True):
+        assert query["chunk_structure"] == [SETTLES["measurements"].structure]
+        assert query["param_stamp"] == ["1764150000000000000"]
+        # A repeated settle is written again, and its captures may span any number of months.
+        assert query["insert_deduplicate"] == ["0"]
+        assert query["throw_on_max_partitions_per_insert_block"] == ["0"]
+        # The store ends the settle before the writer would stop waiting for it.
+        assert int(query["max_execution_time"][0]) < writer.INSERT_TIMEOUT[1]
+        body = call.request.body
+        assert isinstance(body, bytes)
+        assert "\n".join(chunk).encode() in body
+
+
+@responses.activate
+def test_a_chunk_whose_settle_did_not_run_is_handed_back_so_sending_it_again_settles_it(
+    store: StoreWriter,
+) -> None:
+    responses.add(responses.POST, URL)
+    responses.add(responses.POST, URL, body=requests.ConnectionError("connection refused"))
+
+    written = store.insert("measurements", _lines(6_000))
+
+    assert written == Written(unfinished=6_000)
+    assert len(responses.calls) == 2
+
+
 def _refuse_bad_rows(request: requests.PreparedRequest) -> tuple[int, dict, str]:
     body = request.body
+    if body is None:
+        # The settle's stamp, a query without a body.
+        return 200, {}, "1"
     assert isinstance(body, bytes) and request.url is not None
     if b'"bad' in body and "feed_rejects" not in request.url:
         return 400, {"X-ClickHouse-Exception-Code": "117"}, "Code: 117. DB::Exception: Cannot parse input"
@@ -199,18 +251,18 @@ def test_rows_the_store_cannot_read_are_set_aside_in_one_insert_and_the_rest_lan
     lines[2] = json.dumps({"id": "bad-2", "_commit_version": 4})
     lines[5] = json.dumps({"id": "bad-5", "_commit_version": 4})
 
-    written = store.insert("measurements", lines)
+    written = store.insert("macro_results", lines)
 
     assert written == Written(inserted=6, rejected=2)
     landed = [
-        json.loads(line) for table, _, chunk in _inserts() if table == "store.measurements" for line in chunk
+        json.loads(line) for table, _, chunk in _inserts() if table == "store.macro_results" for line in chunk
     ]
     reject_inserts = [chunk for table, _, chunk in _inserts() if table == "store.feed_rejects"]
     assert sorted(row["id"] for row in landed) == [0, 1, 3, 4, 6, 7]
     assert len(reject_inserts) == 1
     assert [json.loads(line) for line in reject_inserts[0]] == [
         {
-            "source_table": "measurements",
+            "source_table": "macro_results",
             "commit_version": 4,
             "code": 117,
             "message": "Code: 117. DB::Exception: Cannot parse input",
@@ -221,6 +273,27 @@ def test_rows_the_store_cannot_read_are_set_aside_in_one_insert_and_the_rest_lan
 
 
 @responses.activate
+def test_a_chunks_settle_reads_the_rows_that_landed_and_never_those_the_store_refused(
+    store: StoreWriter,
+) -> None:
+    responses.add_callback(responses.POST, URL, callback=_refuse_bad_rows)
+    lines = _lines(8)
+    lines[2] = json.dumps({"id": "bad-2", "_commit_version": 4})
+
+    written = store.insert("measurements", lines)
+
+    [settle] = [
+        call
+        for call in responses.calls
+        if "chunk_structure" in parse_qs(urlparse(str(call.request.url)).query)
+    ]
+    body = settle.request.body
+    assert written == Written(inserted=7, rejected=1)
+    assert isinstance(body, bytes)
+    assert "\n".join(lines[:2] + lines[3:]).encode() in body
+
+
+@responses.activate
 def test_a_rejected_row_too_long_to_keep_whole_is_cut_and_says_so(
     store: StoreWriter, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -228,7 +301,7 @@ def test_a_rejected_row_too_long_to_keep_whole_is_cut_and_says_so(
     responses.add_callback(responses.POST, URL, callback=_refuse_bad_rows)
     line = json.dumps({"id": "bad", "_commit_version": 4, "pad": "x" * 40})
 
-    assert store.insert("measurements", [line]) == Written(rejected=1)
+    assert store.insert("macro_results", [line]) == Written(rejected=1)
 
     [[reject]] = [chunk for table, _, chunk in _inserts() if table == "store.feed_rejects"]
     assert json.loads(reject)["row"] == line[:40]
@@ -329,7 +402,7 @@ def test_a_line_without_leading_float64_fields_is_left_as_it_is() -> None:
 def test_a_line_whose_integers_are_rewritten_still_sends_exact_doubles(store: StoreWriter) -> None:
     responses.add(responses.POST, URL)
 
-    store.insert("measurements", ['{"latitude":51.986383,"j":{"w":18446744073709551616}}'])
+    store.insert("macro_results", ['{"latitude":51.986383,"j":{"w":18446744073709551616}}'])
 
     [(_, _, [line])] = _inserts()
     assert '"latitude":51.986382999999996' in line
@@ -385,10 +458,10 @@ def test_a_batch_posts_the_same_chunks_however_its_input_is_partitioned(
     url, received = recording_store
     batch = _batch(spark, 2_000)
 
-    first = StoreWriter(url, "openjii_writer", "secret").write(batch.repartition(1), "measurements")
+    first = StoreWriter(url, "openjii_writer", "secret").write(batch.repartition(1), "macro_results")
     first_inserts = sorted(received)
     received.clear()
-    replay = StoreWriter(url, "openjii_writer", "secret").write(batch.repartition(7), "measurements")
+    replay = StoreWriter(url, "openjii_writer", "secret").write(batch.repartition(7), "macro_results")
 
     assert first == replay == Written(inserted=2_000)
     assert sorted(received) == first_inserts
@@ -402,9 +475,29 @@ def test_a_chunk_holds_its_rows_in_time_order_so_its_insert_writes_few_months(
 ) -> None:
     url, received = recording_store
 
-    StoreWriter(url, "openjii_writer", "secret").write(_batch(spark, 2_000), "measurements")
+    StoreWriter(url, "openjii_writer", "secret").write(_batch(spark, 2_000), "macro_results")
 
     assert received
     for _, body in received:
         months = [json.loads(line)["month"] for line in body.decode().split("\n")]
         assert months == sorted(months)
+
+
+@pytest.mark.spark
+def test_a_chunk_holds_a_months_rows_experiment_by_experiment_so_its_settle_reads_few(
+    spark: SparkSession, recording_store: tuple[str, list[tuple[str, bytes]]]
+) -> None:
+    url, received = recording_store
+    rows = [
+        (json.dumps({"id": index, "experiment_id": f"e{index % 3}"}), datetime(2026, 10, 1 + index % 28))
+        for index in range(600)
+    ]
+
+    StoreWriter(url, "openjii_writer", "secret").write(
+        spark.createDataFrame(rows, "line string, partition_time timestamp"), "macro_results"
+    )
+
+    assert received
+    for _, body in received:
+        experiments = [json.loads(line)["experiment_id"] for line in body.decode().split("\n")]
+        assert experiments == sorted(experiments)

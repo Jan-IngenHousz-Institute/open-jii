@@ -12,7 +12,14 @@ from pathlib import Path
 
 import pytest
 from openjii.serving_store import feed
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
+from openjii.serving_store.tables import (
+    DEVICE_EVENTS,
+    MACRO_RESULTS,
+    MEASUREMENTS,
+    METADATA_ROWS,
+    UPLOADS,
+    StoreTable,
+)
 from openjii.serving_store.writer import StoreUnavailable, StoreWriter, Written
 from pyspark.sql import DataFrame, SparkSession
 
@@ -34,6 +41,15 @@ _UPLOAD_CHANGES = """
       TIMESTAMP'2026-10-19 09:00:01' AS _commit_timestamp
     FROM VALUES ('insert'), ('delete') AS t(change)
 """
+
+_EVENT_CHANGES = """
+    SELECT 'c1' AS client_id, 'disconnected' AS event_type, TIMESTAMP'2026-10-19 09:00:00.123' AS event_timestamp,
+      's1' AS session_identifier, 'CLIENT_INITIATED_DISCONNECT' AS disconnect_reason,
+      TIMESTAMP'2026-10-19 09:00:05' AS ingestion_timestamp, 'insert' AS _change_type, 12L AS _commit_version,
+      TIMESTAMP'2026-10-19 09:00:06' AS _commit_timestamp
+"""
+
+_DEVICE_EVENTS_START = "SERVING_STORE_FEED_START_DEVICE_EVENTS"
 
 
 class _Secrets:
@@ -141,6 +157,32 @@ def test_each_pipeline_feeds_the_tables_it_reads_without_reading_secrets_yet(
     assert secrets.read == []
 
 
+@pytest.mark.parametrize(
+    ("cleared", "notebook"),
+    [("UPLOADS", "centrum"), ("MACRO_RESULTS", "macros"), ("METADATA_ROWS", "centrum")],
+)
+def test_a_table_whose_start_version_is_cleared_fails_its_pipeline_at_start(
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None, cleared: str, notebook: str
+) -> None:
+    spark.conf.unset(f"SERVING_STORE_FEED_START_{cleared}")
+
+    with pytest.raises(Exception, match=f"SERVING_STORE_FEED_START_{cleared}"):
+        _load(f"{notebook}/serving_store_feed.py", spark, _Secrets())
+
+
+def test_device_events_without_a_start_version_have_no_sink_while_the_others_feed(
+    spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
+) -> None:
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+
+    assert set(fake_dp.sinks) == {
+        "serving_store_measurements",
+        "serving_store_uploads",
+        "serving_store_metadata_rows",
+    }
+    assert set(fake_dp.flows) == {f"{sink}_changes" for sink in fake_dp.sinks}
+
+
 def test_a_flow_reads_its_source_tables_change_feed_from_the_start_version(
     spark: SparkSession, fake_dp: types.ModuleType, start_versions: None
 ) -> None:
@@ -211,10 +253,71 @@ def test_a_batch_of_sheet_rows_sends_each_sheet_with_its_schema_once_its_rows_ha
     }
 
 
+@pytest.fixture
+def device_events_start(spark: SparkSession, start_versions: None) -> Iterator[None]:
+    spark.conf.set(_DEVICE_EVENTS_START, "43")
+    yield
+    spark.conf.unset(_DEVICE_EVENTS_START)
+
+
+def test_centrum_feeds_silvers_device_events_from_their_start_version_once_it_is_set(
+    spark: SparkSession, fake_dp: types.ModuleType, device_events_start: None
+) -> None:
+    session = _Spark(spark)
+    _load("centrum/serving_store_feed.py", session, _Secrets())
+
+    _, read = fake_dp.flows["serving_store_device_events_changes"]
+    read()
+
+    assert set(fake_dp.sinks) == {
+        "serving_store_measurements",
+        "serving_store_uploads",
+        "serving_store_metadata_rows",
+        "serving_store_device_events",
+    }
+    assert session.readStream.table_name == "LIVE.clean_device_lifecycle_events"
+    assert session.readStream.options["startingVersion"] == "43"
+
+
+def test_a_device_events_batch_sends_its_lines_without_schemas_or_a_reject(
+    spark: SparkSession,
+    fake_dp: types.ModuleType,
+    device_events_start: None,
+    monkeypatch: pytest.MonkeyPatch,
+    schemas_sent: list[tuple[str, list[str]]],
+) -> None:
+    sent: list[tuple[str, list[str]]] = []
+    rejects: list[str] = []
+
+    def write(self: StoreWriter, lines: DataFrame, table: str) -> Written:
+        sent.append((table, [row.line for row in lines.collect()]))
+        return Written(inserted=1)
+
+    monkeypatch.setattr(StoreWriter, "write", write)
+    monkeypatch.setattr(StoreWriter, "_insert", lambda self, table, lines: rejects.append(table))
+    _load("centrum/serving_store_feed.py", spark, _Secrets())
+
+    fake_dp.sinks["serving_store_device_events"](spark.sql(_EVENT_CHANGES), 0)
+
+    [(table, [line])] = sent
+    assert table == "device_events"
+    assert set(json.loads(line)) == {
+        "client_id",
+        "event_type",
+        "event_timestamp",
+        "session_identifier",
+        "disconnect_reason",
+        "_commit_version",
+        "_commit_timestamp",
+    }
+    assert schemas_sent == [("payload_schemas", [])]
+    assert rejects == []
+
+
 def test_the_writer_may_insert_into_every_table_a_sink_writes(store_module) -> None:
     written = {"feed_rejects"}
-    for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS, METADATA_ROWS):
-        written |= {table.name, table.schema_table}
+    for table in (MEASUREMENTS, MACRO_RESULTS, UPLOADS, METADATA_ROWS, DEVICE_EVENTS):
+        written |= {table.name, table.schema_table, *table.derived_tables}
 
     granted = set(store_module.grants("writer"))
 

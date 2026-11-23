@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 import requests
+from openjii.serving_store import writer as writer_module
 from openjii.serving_store.tables import (
+    DEVICE_EVENTS,
     MACRO_RESULTS,
     MEASUREMENTS,
     METADATA_ROWS,
@@ -22,6 +24,7 @@ from openjii.serving_store.tables import (
 )
 from openjii.serving_store.writer import StoreWriter, Written, exact_doubles, storable
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 pytestmark = pytest.mark.spark
 
@@ -87,6 +90,19 @@ _UPLOADED_DATA_CHANGES = """
       'up1' AS upload_id, 'u1' AS created_by, TIMESTAMP'2026-10-19 09:00:00' AS uploaded_at,
       parse_json('[{"ph": 6.5}]') AS uploaded_data,
       'insert' AS _change_type, 3L AS _commit_version, TIMESTAMP'2026-10-19 09:00:01' AS _commit_timestamp
+"""
+
+# Silver's lifecycle events, with the ingestion time silver adds.
+_LIFECYCLE_EVENT_CHANGES = """
+    SELECT client_id, event_type, ts AS event_timestamp, session AS session_identifier,
+      reason AS disconnect_reason, TIMESTAMP'2026-10-19 09:05:00' AS ingestion_timestamp,
+      change AS _change_type, 12L AS _commit_version, TIMESTAMP'2026-10-19 09:05:01' AS _commit_timestamp
+    FROM VALUES
+      ('c1', 'connected', TIMESTAMP'2026-10-19 09:00:00.123', 's1', CAST(NULL AS STRING), 'insert'),
+      ('c1', 'disconnected', TIMESTAMP'2026-10-19 09:04:00', 's1', 'CLIENT_INITIATED_DISCONNECT', 'insert'),
+      ('c2', 'connected', TIMESTAMP'1850-01-01 00:00:00', CAST(NULL AS STRING), CAST(NULL AS STRING), 'insert'),
+      ('c3', 'connected', TIMESTAMP'2026-10-19 09:00:00', 's3', CAST(NULL AS STRING), 'delete')
+    AS t(client_id, event_type, ts, session, reason, change)
 """
 
 
@@ -202,6 +218,114 @@ def test_a_payload_that_is_not_a_list_of_samples_has_no_readings(spark: SparkSes
 
 def test_only_rows_gold_holds_now_are_sent(spark: SparkSession) -> None:
     assert set(_rows(MEASUREMENTS.lines(spark.sql(_RAW_DATA_CHANGES)))) == {1, 2, 3}
+
+
+def test_a_batch_that_holds_a_capture_twice_sends_the_copy_gold_processed_last(spark: SparkSession) -> None:
+    first = spark.sql(_RAW_DATA_CHANGES).filter("id = 1")
+    again = first.withColumns(
+        {"client_id": F.lit("c2"), "processed_timestamp": F.lit("2026-10-19 10:05:00").cast("timestamp")}
+    )
+    removed = first.withColumns({"client_id": F.lit("c3"), "_change_type": F.lit("delete")}).withColumn(
+        "processed_timestamp", F.lit("2026-10-19 11:00:00").cast("timestamp")
+    )
+
+    lines = MEASUREMENTS.lines(first.unionByName(again).unionByName(removed))
+
+    sent = [json.loads(row.line) for row in lines.collect()]
+    assert [(row["id"], row["client_id"]) for row in sent] == [(1, "c2")]
+
+
+def test_a_batch_that_holds_a_capture_in_two_commits_sends_the_newer_commits_copy(
+    spark: SparkSession,
+) -> None:
+    older = (
+        spark.sql(_RAW_DATA_CHANGES)
+        .filter("id = 1")
+        .withColumns(
+            {
+                "client_id": F.lit("c1"),
+                "_commit_version": F.lit(11).cast("long"),
+                "processed_timestamp": F.lit("2026-10-19 10:05:00").cast("timestamp"),
+            }
+        )
+    )
+    newer = older.withColumns(
+        {
+            "client_id": F.lit("c2"),
+            "_commit_version": F.lit(12).cast("long"),
+            "processed_timestamp": F.lit("2026-10-19 10:01:00").cast("timestamp"),
+        }
+    )
+
+    lines = MEASUREMENTS.lines(older.unionByName(newer))
+
+    sent = [json.loads(row.line) for row in lines.collect()]
+    assert [(row["client_id"], row["_commit_version"]) for row in sent] == [("c2", 12)]
+
+
+def test_copies_with_one_commit_and_processing_time_keep_the_first_clients_in_a_batch_and_a_reload_alike(
+    spark: SparkSession,
+) -> None:
+    second = (
+        spark.sql(_RAW_DATA_CHANGES)
+        .filter("id = 1")
+        .withColumns(
+            {
+                "client_id": F.lit("c2"),
+                "_commit_version": F.lit(12).cast("long"),
+                "processed_timestamp": F.lit("2026-10-19 10:05:00").cast("timestamp"),
+            }
+        )
+    )
+    copies = second.unionByName(second.withColumn("client_id", F.lit("c1")))
+
+    batch = [json.loads(row.line)["client_id"] for row in MEASUREMENTS.lines(copies).collect()]
+    reloaded = [row.client_id for row in MEASUREMENTS.newest_copies(copies.drop("_commit_version")).collect()]
+
+    assert (batch, reloaded) == (["c1"], ["c1"])
+
+
+@pytest.mark.parametrize("reversed_input", [False, True], ids=["in-order", "reversed"])
+def test_copies_that_tie_on_commit_processing_time_and_client_keep_one_copy_in_a_batch_and_a_reload_alike(
+    spark: SparkSession, reversed_input: bool
+) -> None:
+    # A capture one client sent twice in one silver batch: everything the order reads ties.
+    copy = (
+        spark.sql(_RAW_DATA_CHANGES)
+        .filter("id = 1")
+        .withColumns(
+            {
+                "_commit_version": F.lit(12).cast("long"),
+                "processed_timestamp": F.lit("2026-10-19 10:05:00").cast("timestamp"),
+            }
+        )
+    )
+    first, second = (
+        copy.withColumn("device_battery", F.lit(43.0)),
+        copy.withColumn("device_battery", F.lit(82.0)),
+    )
+    copies = second.unionByName(first) if reversed_input else first.unionByName(second)
+
+    batch = [
+        json.loads(row.line)["device_battery"] for row in MEASUREMENTS.lines(copies.repartition(1)).collect()
+    ]
+    reloaded = [
+        row.device_battery
+        for row in MEASUREMENTS.newest_copies(
+            copies.drop("_change_type", "_commit_version", "_commit_timestamp")
+        )
+        .repartition(1)
+        .collect()
+    ]
+
+    assert len(batch) == 1
+    assert batch == reloaded
+    assert batch[0] == _TIED_COPY_KEPT
+
+
+# Which of the two tied copies both keep, by the hash of their fields; fixed, so the choice never
+# depends on the input order or on which writer sends it.
+_TIED_COPY_KEPT = 43.0
 
 
 def test_timestamps_outside_the_stores_range_are_clamped_whole(spark: SparkSession) -> None:
@@ -371,6 +495,7 @@ def test_a_sheets_schema_leaves_out_a_row_that_is_no_object_and_keeps_the_rest(
 
 def test_each_table_reads_its_source_in_the_pipeline_or_the_sheets_copy_by_name() -> None:
     assert MEASUREMENTS.source("open_jii_dev") == "LIVE.experiment_raw_data"
+    assert DEVICE_EVENTS.source("open_jii_dev") == "LIVE.clean_device_lifecycle_events"
     assert METADATA_ROWS.source("open_jii_dev") == "open_jii_dev.centrum.experiment_custom_metadata"
 
 
@@ -442,6 +567,35 @@ def test_each_line_carries_the_time_its_store_table_is_partitioned_by(
     sent = {json.loads(row.line)["id"]: row.partition_time for row in table.lines(gold).collect()}
 
     assert sent == {row.id: row[column] for row in gold.collect()}
+
+
+def _events(lines: DataFrame) -> list[dict]:
+    rows = [json.loads(row.line) for row in lines.collect()]
+    return sorted(rows, key=lambda row: (row["client_id"], row["event_timestamp"]))
+
+
+def test_a_lifecycle_event_carries_silvers_columns_without_its_ingestion_time(spark: SparkSession) -> None:
+    [connected, disconnected, early] = _events(DEVICE_EVENTS.lines(spark.sql(_LIFECYCLE_EVENT_CHANGES)))
+
+    assert connected == {
+        "client_id": "c1",
+        "event_type": "connected",
+        "event_timestamp": "2026-10-19 09:00:00.123000",
+        "session_identifier": "s1",
+        "_commit_version": 12,
+        "_commit_timestamp": "2026-10-19 09:05:01.000000",
+    }
+    assert disconnected["disconnect_reason"] == "CLIENT_INITIATED_DISCONNECT"
+    assert early["event_timestamp"] == "1900-01-01 00:00:00.000000"
+    assert "session_identifier" not in early
+
+
+def test_a_lifecycle_event_is_partitioned_by_its_own_time(spark: SparkSession) -> None:
+    silver = spark.sql(_LIFECYCLE_EVENT_CHANGES).where("_change_type = 'insert'")
+
+    sent = sorted(row.partition_time for row in DEVICE_EVENTS.lines(silver).collect())
+
+    assert sent == sorted(row.event_timestamp for row in silver.collect())
 
 
 _FEED_FIXTURE = Path(__file__).parents[1] / "fixtures" / "serving_store_feed.json"
@@ -676,6 +830,85 @@ def test_coordinates_land_as_the_very_doubles_gold_holds(
         "WHERE experiment_id = 'exact'"
     )
     assert rows == [{"latitude": 51.986383, "longitude": 5.6631109, "device_battery": 87.5}] * 3
+
+
+@pytest.mark.clickhouse
+def test_measurements_the_writer_sends_reach_the_copy_ordered_by_device(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'by_device' AS experiment_id")
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    rows = store.rows(
+        f"SELECT client_id, id, device_id FROM {_DATABASE}.measurements_by_device FINAL "
+        "WHERE experiment_id = 'by_device' ORDER BY id"
+    )
+    assert [(row["client_id"], row["id"], row["device_id"]) for row in rows] == [
+        ("c1", 1, "d1"),
+        ("c1", 2, "d1"),
+        ("c1", 3, "d1"),
+    ]
+
+
+def _measurement_lines(spark: SparkSession, experiment: str) -> list[str]:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", f"'{experiment}' AS experiment_id")
+    return [row.line for row in MEASUREMENTS.lines(spark.sql(changes)).collect()]
+
+
+def _held(store: _Store, table: str, experiment: str) -> list[int]:
+    rows = store.rows(
+        f"SELECT DISTINCT id FROM {_DATABASE}.{table} WHERE experiment_id = '{experiment}' ORDER BY id"
+    )
+    return [row["id"] for row in rows]
+
+
+@pytest.mark.clickhouse
+def test_a_chunk_sent_again_after_a_reloads_delete_stays_out_of_the_device_copy(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    lines = _measurement_lines(spark, "resent")
+    writer.insert(MEASUREMENTS.name, lines)
+    for table in (MEASUREMENTS.name, *MEASUREMENTS.derived_tables):
+        store.run(f"DELETE FROM {_DATABASE}.{table} WHERE _commit_version < 8 AND experiment_id = 'resent'")
+
+    assert writer.insert(MEASUREMENTS.name, lines) == Written(inserted=3)
+
+    assert _held(store, "measurements", "resent") == []
+    assert _held(store, "measurements_by_device", "resent") == []
+
+
+@pytest.mark.clickhouse
+def test_a_chunk_the_device_copy_refused_reaches_it_when_sent_again(
+    spark: SparkSession, store: _Store, writer: StoreWriter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(writer_module, "EXECUTOR_RETRY_DELAYS", ())
+    lines = _measurement_lines(spark, "retried")
+    store.run(
+        f"ALTER TABLE {_DATABASE}.measurements_by_device ADD CONSTRAINT refused CHECK experiment_id != 'retried'"
+    )
+    try:
+        assert writer.insert(MEASUREMENTS.name, lines) == Written(unfinished=3)
+    finally:
+        store.run(f"ALTER TABLE {_DATABASE}.measurements_by_device DROP CONSTRAINT refused")
+
+    assert writer.insert(MEASUREMENTS.name, lines) == Written(inserted=3)
+
+    assert _held(store, "measurements", "retried") == [1, 2, 3]
+    assert _held(store, "measurements_by_device", "retried") == [1, 2, 3]
+
+
+@pytest.mark.clickhouse
+def test_lifecycle_events_land_as_sent(spark: SparkSession, store: _Store, writer: StoreWriter) -> None:
+    lines = DEVICE_EVENTS.lines(spark.sql(_LIFECYCLE_EVENT_CHANGES))
+    columns = ("client_id", "event_type", "event_timestamp", "session_identifier", "disconnect_reason")
+
+    assert writer.write(lines, DEVICE_EVENTS.name) == Written(inserted=3)
+
+    stored = store.rows(
+        f"SELECT {', '.join(columns)} FROM {_DATABASE}.device_events FINAL ORDER BY client_id, event_timestamp"
+    )
+    assert stored == [{column: row.get(column) for column in columns} for row in _events(lines)]
 
 
 @pytest.mark.clickhouse

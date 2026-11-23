@@ -357,7 +357,11 @@ describe("createGrant", () => {
     const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
 
     const notificationsFor = (userId: string) =>
-      testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+      testApp.database
+        .select()
+        .from(notifications)
+        .where(eq(notifications.recipientId, userId))
+        .orderBy(notifications.createdAt);
 
     it("tells a user they were given access to an experiment, and queues their email", async () => {
       const name = `Exp ${crypto.randomUUID()}`;
