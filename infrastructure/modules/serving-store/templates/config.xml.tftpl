@@ -14,8 +14,10 @@
     </logger>
 
     <!-- A failed statement's text, with its parameters filled in, reaches the error returned, these
-         logs, which go to CloudWatch, and the query log: experiment ids and what researchers filter
-         by. Every string literal reads as '***' in all three; the statement itself runs unchanged. -->
+         logs, which go to CloudWatch, and the query log. Every string literal in it reads as '***'
+         in all three, so what researchers filter by stays out; the statement itself runs unchanged.
+         Settings are not masked: the query log keeps the SQL_experiment a chart's read sends, an
+         experiment id, which every URL shows. -->
     <query_masking_rules>
         <rule>
             <name>string literals</name>

@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 
 import type {
+  ExperimentAsOfJoin,
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../experiments/core/models/experiment-data.model";
@@ -13,15 +14,22 @@ import type {
   StoreQueryColumn,
   StoreQueryParams,
 } from "../../../experiments/core/ports/serving-store.port";
+import { STORE_QUERY_TOO_LARGE } from "../../../experiments/core/ports/serving-store.port";
 import { AppError, failure, success } from "../../utils/fp-utils";
 import type { Result } from "../../utils/fp-utils";
+import { hasAggregationContent } from "../databricks/services/query-builder/expressions/aggregation";
 import { QueryBuilderInputError } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
 import { CellValues } from "./services/client/cell-values";
 import { ServingStoreClientService } from "./services/client/client.service";
+import { StoreAggregation } from "./services/query-builder/store-aggregation";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
+import type { StoreAsOfSecondary } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
+
+/** The setting the reader's row policy on each table reads (infrastructure/modules/serving-store). */
+export const EXPERIMENT_SETTING = "SQL_experiment";
 
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
   static: "static",
@@ -147,9 +155,18 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     const identifier = params.tableType === "static" ? undefined : params.tableName;
-    const builder = new StoreQueryBuilder()
-      .read(table, params.experimentId, identifier)
-      .select(params.columns)
+    const { aggregation } = params;
+    const isAggregated = aggregation !== undefined && hasAggregationContent(aggregation);
+    const builder = new StoreQueryBuilder();
+    if (params.isChartRead) {
+      builder.readForChart(table, params.experimentId, identifier);
+    } else {
+      builder.read(table, params.experimentId, identifier);
+    }
+    builder
+      // An aggregation's windows and groups read columns its chart may not show, so it reads whole
+      // rows and keeps the chart's columns itself.
+      .select(isAggregated ? undefined : params.columns)
       .reserve(params.reservedColumns ?? [])
       .serialNumbers(params.deviceSerials ?? [])
       .metadataSheets(params.metadataSheets ?? []);
@@ -169,8 +186,32 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     try {
+      if (params.join !== undefined) {
+        const secondary = this.asOfSecondary(params, params.join);
+        if (secondary.isFailure()) {
+          return secondary;
+        }
+        builder.joinAsOf(secondary.value, {
+          column: params.join.matchColumn,
+          time: params.join.primaryTimeColumn,
+          toleranceMinutes: params.join.toleranceMinutes,
+        });
+      }
       for (const filter of params.filters ?? []) {
         builder.filter(filter);
+      }
+      if (isAggregated) {
+        const aggregated = new StoreAggregation(builder, aggregation).build({
+          ordering: params.ordering,
+          limit: params.limit,
+          offset: params.offset,
+          idOrder: params.orderByIds,
+          columns: params.columns,
+        });
+        return this.withinQuerySize(params, {
+          ...aggregated,
+          experiment: this.policyExperiment(builder, params),
+        });
       }
       if (params.ordering) {
         builder.orderBy(params.ordering, params.orderByIds);
@@ -181,21 +222,11 @@ export class ServingStoreAdapter implements ServingStorePort {
       if (params.offset !== undefined) {
         builder.offset(params.offset);
       }
-      const query = { sql: builder.build(), columns: builder.outputColumns() };
-
-      // The flagged ids are written into the statement, and a flagged page also sends its count,
-      // which wraps it.
-      const isFlaggedReadTooLarge =
-        params.flagged !== undefined && !this.client.fitsQuerySize(this.countQuery(query).sql);
-      if (isFlaggedReadTooLarge) {
-        return failure(
-          AppError.badRequest(
-            "Too many of the table's rows are flagged to filter a read by flags",
-            "FLAGGED_READ_TOO_LARGE",
-          ),
-        );
-      }
-      return success(query);
+      return this.withinQuerySize(params, {
+        sql: builder.build(),
+        columns: builder.outputColumns(),
+        experiment: this.policyExperiment(builder, params),
+      });
     } catch (error) {
       if (error instanceof QueryBuilderInputError) {
         return failure(AppError.badRequest(error.message, "INVALID_QUERY_INPUT"));
@@ -204,10 +235,83 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
   }
 
+  /**
+   * A statement writes the ids it reads by, such as flagged rows or every registered device, and a
+   * flagged read or a chart also sends its count, which wraps it, so both must fit the store's limit
+   * on a statement's text. Only the store reads by flags, so a flagged read past it is refused; a
+   * chart past it fails with a code its reader answers from the warehouse.
+   */
+  private withinQuerySize(params: StoreQueryParams, query: StoreQuery): Result<StoreQuery> {
+    const isMeasured = params.flagged !== undefined || params.isChartRead === true;
+    const isTooLarge = isMeasured && !this.client.fitsQuerySize(this.countQuery(query).sql);
+    if (!isTooLarge) {
+      return success(query);
+    }
+    if (params.flagged !== undefined) {
+      return failure(
+        AppError.badRequest(
+          "Too many of the table's rows are flagged to filter a read by flags",
+          "FLAGGED_READ_TOO_LARGE",
+        ),
+      );
+    }
+    return failure(
+      AppError.internal(
+        "The chart's statement passes the store's limit on a query's size",
+        STORE_QUERY_TOO_LARGE,
+      ),
+    );
+  }
+
+  /**
+   * A statement that reads a table, a chart's or a joined read's second table, names its
+   * experiment to the reader's row policy; one that reads only views sends none, so a store whose
+   * config lags the backend still serves pages.
+   */
+  private policyExperiment(
+    builder: StoreQueryBuilder,
+    params: StoreQueryParams,
+  ): string | undefined {
+    return builder.readsTables() ? params.experimentId : undefined;
+  }
+
+  /** The second table of an as-of read, from the same experiment and its devices. */
+  private asOfSecondary(
+    params: StoreQueryParams,
+    join: ExperimentAsOfJoin,
+  ): Result<StoreAsOfSecondary> {
+    const { secondary } = join;
+    const table = StoreTables.of(secondary.tableType, secondary.tableName);
+    if (table === null) {
+      return failure(AppError.notFound(`The store holds no table '${secondary.tableName}'`));
+    }
+
+    const identifier = secondary.tableType === "static" ? undefined : secondary.tableName;
+    const builder = new StoreQueryBuilder()
+      .readForChart(table, params.experimentId, identifier)
+      .reserve(secondary.reservedColumns ?? [])
+      .serialNumbers(params.deviceSerials ?? [])
+      .metadataSheets(params.metadataSheets ?? []);
+    for (const { columnName, schema, suffix } of secondary.variants ?? []) {
+      builder.parseVariant(columnName, schema, suffix);
+    }
+    if (secondary.exceptColumns && secondary.exceptColumns.length > 0) {
+      builder.except(secondary.exceptColumns);
+    }
+    return success(
+      builder.buildAsOfSecondary({
+        column: join.matchColumn,
+        time: join.secondaryTimeColumn,
+        columns: builder.secondaryColumnsRead(params, join),
+      }),
+    );
+  }
+
   countQuery(query: StoreQuery): StoreQuery {
     return {
       sql: `SELECT toString(count()) AS total FROM (${query.sql}) AS sub`,
       columns: [{ name: "total", type: "BIGINT" }],
+      experiment: query.experiment,
     };
   }
 
@@ -224,6 +328,7 @@ export class ServingStoreAdapter implements ServingStorePort {
         `OFFSET ${offset}`,
       ].join("\n"),
       columns: [{ name: "serial_number", type: "STRING" }],
+      experiment: query.experiment,
     };
   }
 
@@ -237,7 +342,7 @@ export class ServingStoreAdapter implements ServingStorePort {
   async executeQuery(query: StoreQuery): Promise<Result<SchemaData>> {
     const rows: (string | null)[][] = [];
     const size = new PageBytes();
-    const read = await this.client.stream(query.sql, (row) => {
+    const read = await this.client.stream(query.sql, this.settingsOf(query), (row) => {
       const cells = this.cells(query.columns, row);
       size.add(cells.map((cell, index) => (query.columns[index].idOf === "device" ? null : cell)));
       if (size.exceedsLimit) {
@@ -259,15 +364,20 @@ export class ServingStoreAdapter implements ServingStorePort {
     return success({ columns, rows, totalRows: rows.length, truncated: !read.value.complete });
   }
 
+  private settingsOf({ experiment }: StoreQuery): Record<string, string> {
+    return experiment === undefined ? {} : { [EXPERIMENT_SETTING]: experiment };
+  }
+
   private cells(columns: StoreQueryColumn[], row: unknown[]): (string | null)[] {
     const payloads = this.payloads(columns, row);
-    return columns.map(({ type, idOf, text }, index) => {
+    return columns.map(({ type, idOf, text, isPairText }, index) => {
       const value = row[index];
       if (text !== undefined) {
         return CellValues.payloadCell(payloads.get(text.column), text.key, type);
       }
       if (idOf === "device") {
-        return JSON.stringify(value);
+        const isPairTextCell = isPairText === true && (typeof value === "string" || value === null);
+        return isPairTextCell ? value : JSON.stringify(value);
       }
       if (idOf === "contributor") {
         return typeof value === "string" ? value : null;
