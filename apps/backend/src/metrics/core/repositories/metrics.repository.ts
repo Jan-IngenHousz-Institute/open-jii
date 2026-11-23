@@ -8,6 +8,7 @@ import {
   eq,
   experiments,
   inArray,
+  iotDevices,
   isNull,
   macros,
   ne,
@@ -153,6 +154,25 @@ export class MetricsRepository {
       }
 
       return versions;
+    });
+  }
+
+  /** Each registered device's family by its thing name, the client id it publishes under. */
+  async getDeviceTypeMapForThingNames(thingNames: string[]): Promise<Result<Map<string, string>>> {
+    return tryCatch(async () => {
+      const deviceTypes = new Map<string, string>();
+      for (let index = 0; index < thingNames.length; index += 10_000) {
+        const rows = await this.database
+          .select({ thingName: iotDevices.thingName, deviceType: iotDevices.deviceType })
+          .from(iotDevices)
+          .where(inArray(iotDevices.thingName, thingNames.slice(index, index + 10_000)));
+
+        for (const row of rows) {
+          deviceTypes.set(row.thingName, row.deviceType);
+        }
+      }
+
+      return deviceTypes;
     });
   }
 

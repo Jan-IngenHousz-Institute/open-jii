@@ -22,3 +22,14 @@ export function storeMigrationStatements(): string[] {
     return rest.length > 0 ? [...statements, lines.join("\n")] : statements;
   });
 }
+
+/**
+ * The views the store refreshes on a schedule, in the order the migrations make them, which is the
+ * order each refreshes after the one it depends on.
+ */
+export function storeRefreshedViews(): string[] {
+  return storeMigrationStatements().flatMap((statement) => {
+    const view = /CREATE MATERIALIZED VIEW IF NOT EXISTS (\w+)\s+REFRESH /.exec(statement)?.[1];
+    return view === undefined ? [] : [view];
+  });
+}
