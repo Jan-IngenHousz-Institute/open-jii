@@ -1,5 +1,5 @@
+import { parseWarehouseTimestamp } from "@/util/date";
 import { useState } from "react";
-import { parseWarehouseTimestamp } from "~/components/public-metrics/activity-indicator";
 
 const NONE: ReadonlySet<string> = new Set();
 

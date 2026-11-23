@@ -74,6 +74,15 @@ export function parseIsoDate(raw: unknown): Date | undefined {
   return Number.isFinite(parsed.getTime()) ? parsed : undefined;
 }
 
+/** Warehouse timestamps are UTC text, with or without an explicit zone. */
+const HAS_TIMEZONE = /(?:Z|[+-]\d{2}:?\d{2})$/;
+
+export function parseWarehouseTimestamp(value: string): Date | null {
+  const normalized = HAS_TIMEZONE.test(value) ? value : `${value.replace(" ", "T")}Z`;
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function applyTimeOfDay(date: Date, hhmm: string): Date {
   const [hhStr, mmStr] = hhmm.split(":");
   const hours = Number(hhStr);
