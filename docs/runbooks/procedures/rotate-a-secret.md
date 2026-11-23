@@ -35,18 +35,18 @@ someone who could read it leaves, or when it may have leaked.
 
 ## Secrets and what reads them
 
-| `secrets:set` secret | Key                                    | Made at                              | Read by               | Restart after setting                                                    | Two values at once                                                                |
-| -------------------- | -------------------------------------- | ------------------------------------ | --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `auth`               | `AUTH_SECRET`                          | `openssl rand -base64 48`            | backend               | backend                                                                  | no: every user is signed out, so pick a quiet time                                |
-| `auth`               | `NOTIFICATION_UNSUBSCRIBE_SECRET`      | `openssl rand -base64 48`            | backend               | backend                                                                  | no: unsubscribe links in emails sent before the rotation stop working             |
-| `auth`               | `AUTH_GITHUB_SECRET`                   | the GitHub OAuth app, Client secrets | backend               | backend                                                                  | yes: GitHub keeps both until you delete the old one                               |
-| `auth`               | `AUTH_ORCID_SECRET`                    | the ORCID developer tools            | backend               | backend                                                                  | no: sign-in with ORCID fails until the backend restarts, so restart straight away |
-| `contentful`         | `CONTENTFUL_ACCESS_TOKEN`              | Contentful, Settings, API keys       | backend, web          | backend and web                                                          | yes: create a new key and delete the old one after                                |
-| `contentful`         | `CONTENTFUL_PREVIEW_ACCESS_TOKEN`      | Contentful, the same API key         | web                   | web                                                                      | yes                                                                               |
-| `contentful`         | `CONTENTFUL_PREVIEW_SECRET`            | `openssl rand -hex 32`               | web                   | web, then the preview URLs: see below                                    | no: previews answer 401 until the preview URLs carry the new value                |
-| `mailchimp`          | `MAILCHIMP_API_KEY`                    | Mailchimp, Account, API keys         | backend               | backend                                                                  | yes                                                                               |
-| `status-contentful`  | `CONTENTFUL_ACCESS_TOKEN`              | the same key as `contentful`         | status publisher      | none: see below                                                          | yes                                                                               |
-| `status-slack`       | none, the value is the webhook address | Slack, the app's Incoming Webhooks   | status Slack function | none: it reads the secret again after 15 minutes and after a failed post | yes                                                                               |
+| `secrets:set` secret | Key                                    | Made at                                 | Read by               | Restart after setting                                                    | Two values at once                                                                |
+| -------------------- | -------------------------------------- | --------------------------------------- | --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `auth`               | `AUTH_SECRET`                          | `openssl rand -base64 48`               | backend               | backend                                                                  | no: every user is signed out, so pick a quiet time                                |
+| `auth`               | `NOTIFICATION_UNSUBSCRIBE_SECRET`      | `openssl rand -base64 48`               | backend               | backend                                                                  | no: unsubscribe links in emails sent before the rotation stop working             |
+| `auth`               | `AUTH_GITHUB_SECRET`                   | the GitHub OAuth app, Client secrets    | backend               | backend                                                                  | yes: GitHub keeps both until you delete the old one                               |
+| `auth`               | `AUTH_ORCID_SECRET`                    | the ORCID developer tools               | backend               | backend                                                                  | no: sign-in with ORCID fails until the backend restarts, so restart straight away |
+| `contentful`         | `CONTENTFUL_ACCESS_TOKEN`              | Contentful, Settings, API keys          | backend, web          | backend and web                                                          | yes: a new API key, with the old one deleted last; see below                      |
+| `contentful`         | `CONTENTFUL_PREVIEW_ACCESS_TOKEN`      | the same new API key, its preview token | web                   | web                                                                      | yes, rotated with the delivery token: see below                                   |
+| `contentful`         | `CONTENTFUL_PREVIEW_SECRET`            | `openssl rand -hex 32`                  | web                   | web, then the preview URLs: see below                                    | no: previews answer 401 until the preview URLs carry the new value                |
+| `mailchimp`          | `MAILCHIMP_API_KEY`                    | Mailchimp, Account, API keys            | backend               | backend                                                                  | yes                                                                               |
+| `status-contentful`  | `CONTENTFUL_ACCESS_TOKEN`              | the same key as `contentful`            | status publisher      | none: see below                                                          | yes                                                                               |
+| `status-slack`       | none, the value is the webhook address | Slack, the app's Incoming Webhooks      | status Slack function | none: it reads the secret again after 15 minutes and after a failed post | yes                                                                               |
 
 The ids in these secrets, such as `AUTH_GITHUB_ID`, `CONTENTFUL_SPACE_ID` and the Mailchimp audience,
 change only when the account behind them changes, not on rotation.
@@ -54,9 +54,13 @@ change only when the account behind them changes, not on rotation.
 **The web build** also reads `CONTENTFUL_ACCESS_TOKEN` from the GitHub secret of the same name in each
 environment. Set it there too before redeploying web, or the build uses the old key.
 
-**The Contentful delivery key** is one key in three places: `contentful`, `status-contentful`, and the
-`CONTENTFUL_ACCESS_TOKEN` GitHub secret the web build reads. Set all three before revoking the old key,
-or the status publisher and the next web build keep using a revoked one.
+**The Contentful API key** carries two tokens, delivery and preview, and deleting the key revokes both.
+So rotate them together from one new API key. Store its delivery token in all three places that hold
+it: `contentful` `CONTENTFUL_ACCESS_TOKEN`, `status-contentful` `CONTENTFUL_ACCESS_TOKEN`, and the
+`CONTENTFUL_ACCESS_TOKEN` GitHub secret the web build reads. Store its preview token as `contentful`
+`CONTENTFUL_PREVIEW_ACCESS_TOKEN`. Redeploy backend and web, check that a published page renders and
+that an editor's draft preview opens, and only then delete the old API key. Otherwise the status
+publisher, the next web build or the previews keep using a revoked token.
 
 **The status publisher** keeps its Contentful key until a read fails. After a failure it waits five
 minutes before reading Contentful again, and that read takes the secret afresh. Until then it keeps
