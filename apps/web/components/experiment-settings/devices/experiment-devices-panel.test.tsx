@@ -233,12 +233,12 @@ describe("ExperimentDevicesPanel", () => {
       /\{(\w+)\}/g,
       ":$1",
     );
-    let lookupFailed = false;
+    let lookups = 0;
     server.use(
       http.get(`${API_URL}${path}`, ({ request }) => {
         if (!new URL(request.url).searchParams.get("selectedClientId")) return undefined;
-        lookupFailed = true;
-        return HttpResponse.json({ message: "Error" }, { status: 500 });
+        lookups += 1;
+        return lookups === 1 ? HttpResponse.json({ message: "Error" }, { status: 500 }) : undefined;
       }),
     );
 
@@ -253,11 +253,22 @@ describe("ExperimentDevicesPanel", () => {
       "Field",
     );
 
-    await waitFor(() => expect(lookupFailed).toBe(true));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // The notice renders only once the lookup query has settled in its error state.
+    expect(
+      await screen.findByText("iot.experimentDevices.selectedLookupError"),
+    ).toBeInTheDocument();
     expect(within(screen.getByRole("list")).queryByText("Bench sensor")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Field phone" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "iot.onboarding.retry" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("iot.experimentDevices.selectedLookupError"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(lookups).toBe(2);
+    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
   });
 
   it("defaults the detail pane to the first filtered and sorted row from a shared URL", async () => {

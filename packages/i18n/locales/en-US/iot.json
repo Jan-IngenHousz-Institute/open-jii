@@ -606,6 +606,7 @@
       "noRecentData": "No data in the last 30 days",
       "lastDataUnavailable": "Unavailable",
       "pipelineUnavailable": "Measurement data could not be loaded, so devices that only sent data may be missing.",
+      "selectedLookupError": "The selected device could not be refreshed, so its details may be out of date.",
       "unknownFirmware": "Firmware unknown",
       "searchPlaceholder": "Search devices",
       "searchNoMatches": "No devices match that search.",

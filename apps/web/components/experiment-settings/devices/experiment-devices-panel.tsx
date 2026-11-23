@@ -146,6 +146,23 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
         </p>
       )}
 
+      {!onPage && offPage.isError && offPage.data === undefined && (
+        <p className="text-status-stale-foreground flex items-center gap-1.5 text-xs">
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+          {t("iot.experimentDevices.selectedLookupError")}
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={() => {
+              void offPage.refetch();
+            }}
+          >
+            {t("iot.onboarding.retry")}
+          </Button>
+        </p>
+      )}
+
       <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-20 lg:self-start">
           <ExperimentDevicesList
