@@ -461,15 +461,6 @@ resource "databricks_access_control_rule_set" "node_service_principal" {
   }
 }
 
-locals {
-  # The wheels the classic pipelines and the store reload install into their environment.
-  pipeline_wheels = [
-    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl",
-    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
-    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl",
-  ]
-}
-
 # Workers keep 8 GB per core: Python UDF workers run outside Spark's heap and cannot
 # spill, and the end state has not yet run on long-lived clusters. r6id is the newest
 # r generation the disk cache runs on, and spot rarely reclaims it. The driver runs no
@@ -873,418 +864,85 @@ resource "databricks_grants" "centrum_schema" {
   depends_on = [module.databricks_catalog]
 }
 
-module "centrum_pipeline" {
-  source = "../../modules/databricks/pipeline"
+# The bundle in apps/data owns the pipelines and jobs now. These blocks drop them from state
+# without touching the live resources; delete them once both environments have applied.
+removed {
+  from = module.centrum_pipeline
 
-  name         = "Centrum-DLT-Pipeline-DEV"
-  schema_name  = "centrum"
-  catalog_name = module.databricks_catalog.catalog_name
-
-  notebook_paths = concat([
-    # bronze
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_imported_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_uploaded_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_large_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/raw_device_lifecycle_events",
-    # silver
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_device_lifecycle_events",
-    # gold
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_devices",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_keys",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data_schemas",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data_schemas",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
-    # event hooks
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
-  ], local.centrum_feed_notebooks, local.ingest_healthcheck_notebooks)
-
-  # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
-  configuration = merge({
-    "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
-    "BRONZE_TABLE"                    = "raw_data"
-    "SILVER_TABLE"                    = "clean_data"
-    "RAW_KINESIS_TABLE"               = "raw_kinesis_data"
-    "KINESIS_STREAM_NAME"             = module.kinesis.kinesis_stream_name
-    "SERVICE_CREDENTIAL_NAME"         = "unity-catalog-kinesis-role-${var.environment}"
-    "CHECKPOINT_PATH"                 = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
-    "ENVIRONMENT"                     = var.environment
-    "MONITORING_SLACK_CHANNEL"        = var.slack_channel
-    "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
-    "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
-    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
-    "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-    # Opts the pipeline into the default publishing mode, which cannot be undone.
-    "pipelines.enableDPMForExistingPipeline" = "true"
-  }, local.serving_store_feed_settings)
-
-  # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
-  edition = "ADVANCED"
-
-  continuous_mode = true
-  # Production mode restarts the cluster and retries after a recoverable failure.
-  development_mode = false
-  serverless       = false
-
-  node_type_id        = "r6id.large"
-  driver_node_type_id = "r7i.xlarge"
-  num_workers         = 1
-  policy_id           = module.node_cluster_policy.policy_id
-
-  environment_dependencies = local.pipeline_wheels
-
-  spark_conf = {
-    # Streaming skips AQE, so shuffles run at one per worker core.
-    "spark.sql.shuffle.partitions" = "2"
-    # Adds the Python and other processes' memory to the driver's metrics, which the
-    # JVM heap figures leave out.
-    "spark.executor.processTreeMetrics.enabled" = "true"
-    # Databricks' default heap, about 80% of the node, left its own services too little
-    # and the driver swapped. The heap holds about 6 GB after a full collection.
-    "spark.driver.memory" = "12g"
+  lifecycle {
+    destroy = false
   }
-
-  # A class histogram in the GC log at every full collection, to find what the driver's
-  # heap keeps growing with. The environment variable adds the option without touching
-  # Databricks' own driver JVM options. Diagnostic: remove once the growth is explained.
-  spark_env_vars = {
-    JAVA_TOOL_OPTIONS = "-Xlog:gc+classhisto=trace"
-  }
-  cluster_log_volume_path = "${module.pipeline_logs_volume.volume_path}/centrum"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
 }
 
-# Macro execution is a separate deployment, not a separate domain: it publishes
-# experiment_macro_data and its schema samples into centrum like any other gold
-# table. It runs on its own compute because a Spark task waits on the sandbox
-# over HTTP, and sharing centrum's cluster meant those tasks held the
-# slots the Kinesis reader needs for its prefetch job.
-module "macro_execution_pipeline" {
-  source = "../../modules/databricks/pipeline"
+removed {
+  from = module.macro_execution_pipeline
 
-  name         = "Macro-Execution-DLT-Pipeline-DEV"
-  schema_name  = "centrum"
-  catalog_name = module.databricks_catalog.catalog_name
-
-  notebook_paths = concat([
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
-  ], local.macro_feed_notebooks)
-
-  configuration = merge({
-    "MACRO_MAX_FILES_PER_TRIGGER" = "16"
-    "MACRO_MAX_BYTES_PER_TRIGGER" = "16777216"
-    "MACRO_EXECUTION_PARTITIONS"  = "16"
-    "CATALOG_NAME"                = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME"         = "centrum"
-    "ENVIRONMENT"                 = var.environment
-    # Lets the macro results id widen from INT to BIGINT in place. Set on one table only, the
-    # tables that stream from it refuse the new type and the update stops.
-    "pipelines.enableTypeWidening" = "true"
-    # Opts the pipeline into the default publishing mode, which cannot be undone.
-    "pipelines.enableDPMForExistingPipeline" = "true"
-  }, local.serving_store_feed_settings)
-
-  # Neither AUTO CDC nor expectations, so CORE is enough.
-  edition = "CORE"
-
-  continuous_mode  = true
-  development_mode = false
-  serverless       = false
-
-  node_type_id        = "r5a.large"
-  driver_node_type_id = "m7i.xlarge"
-  num_workers         = 1
-  policy_id           = module.macro_cluster_policy.policy_id
-
-  environment_dependencies = local.pipeline_wheels
-
-  spark_conf = {
-    # Streaming skips AQE, so shuffles run at one per worker core.
-    "spark.sql.shuffle.partitions" = "2"
-    # Adds the Python and other processes' memory to the driver's metrics, which the
-    # JVM heap figures leave out.
-    "spark.executor.processTreeMetrics.enabled" = "true"
-    # Databricks' default heap, about 80% of the node, left its own services too little
-    # and the driver swapped. The heap holds 2 to 4 GB between collections.
-    "spark.driver.memory" = "5g"
+  lifecycle {
+    destroy = false
   }
-  cluster_log_volume_path = "${module.pipeline_logs_volume.volume_path}/macro"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.macro_cluster_policy, module.centrum_pipeline]
 }
 
-module "metrics_pipeline" {
-  source = "../../modules/databricks/pipeline"
+removed {
+  from = module.metrics_pipeline
 
-  name         = "Metrics-DLT-Pipeline-DEV"
-  schema_name  = "metrics"
-  catalog_name = module.databricks_catalog.catalog_name
-
-  notebook_paths = [
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/platform_totals",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/family_totals",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/hourly_activity",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/activity_windows",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/parameter_stats",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/pool_facts",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_experiment",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_contributors_window",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_devices_window",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_resource",
-    # ops: read by the heartbeat export, never by the public endpoint
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_device_silence",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_ingest_quality",
-  ]
-
-  environment_dependencies = [
-    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
-  ]
-
-  configuration = {
-    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME" = "centrum"
-    "SILVER_TABLE"        = "clean_data"
-    "BRONZE_TABLE"        = "raw_data"
-    # Opts the pipeline into the default publishing mode, which cannot be undone.
-    "pipelines.enableDPMForExistingPipeline" = "true"
+  lifecycle {
+    destroy = false
   }
-
-  continuous_mode  = false
-  development_mode = true
-  serverless       = true
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [databricks_grants.centrum_schema]
 }
 
-module "metrics_pipeline_scheduler" {
-  source = "../../modules/databricks/job"
+removed {
+  from = module.metrics_pipeline_scheduler
 
-  name        = "Metrics-Pipeline-Scheduler-DEV"
-  description = "Triggers the public metrics pipeline refresh"
-
-  # Schedule: hourly, which is how often the backend reads the figures
-  # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0 * * * ?"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
+  lifecycle {
+    destroy = false
   }
-
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key         = "trigger_metrics_pipeline"
-      task_type   = "pipeline"
-      pipeline_id = module.metrics_pipeline.pipeline_id
-    }
-  ]
-
-  # The metrics pipeline only ever runs through this job, so job-level failure
-  # notifications cover every run; no in-pipeline event hook needed.
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.metrics_pipeline]
 }
 
-# The heartbeat export runs on its own schedule rather than as a second task on the
-# metrics scheduler.
-#
-# Measured on dev: the pipeline task takes 575s and the export adds 421s, of which 216s
-# is serverless environment setup. Together that is 997s against a 900s schedule, so
-# every other run was skipped for maximum concurrent runs and each skip raised a job
-# failure notification.
-#
-# Decoupling also makes the dead-man honest. As a dependent task the export could not
-# write when the parent run was skipped, so collector silence and scheduler skew were
-# indistinguishable. Standing alone, its absence means the collector is gone.
-module "metrics_heartbeat_export" {
-  source = "../../modules/databricks/job"
+removed {
+  from = module.metrics_heartbeat_export
 
-  name        = "Metrics-Heartbeat-Export-DEV"
-  description = "Exports lakehouse observability and usage signals for the platform heartbeat"
-
-  # Every 30 minutes. These are slow-moving counts and one cycle sits well inside the
-  # dead-man window.
-  schedule = "0 0/30 * * * ?"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
+  lifecycle {
+    destroy = false
   }
-
-  task_retry_config = {
-    retries                   = 1
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  environments = [
-    {
-      environment_key = "heartbeat"
-      spec = {
-        environment_version = "4"
-        dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
-        ]
-      }
-    }
-  ]
-
-  tasks = [
-    {
-      key           = "export_platform_heartbeat"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/metrics_heartbeat_task"
-
-      parameters = {
-        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
-        "CENTRAL_SCHEMA" = "centrum"
-        "METRICS_SCHEMA" = "metrics"
-        # Lowercase, unlike the other jobs: this value becomes the CloudWatch
-        # Environment dimension, which the catalog and Grafana query as-is.
-        "ENVIRONMENT"        = var.environment
-        "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
-        "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
-        "COST_COMPONENTS"    = jsonencode(local.databricks_cost_components)
-        "WORKSPACE_ID"       = tostring(module.databricks_workspace.workspace_id)
-      }
-    }
-  ]
-
-  # The export is the monitoring producer, so its own failures have to reach someone.
-  # The dead-man covers silence; this covers a run that ran and threw.
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.heartbeat_external_location]
 }
 
-locals {
-  databricks_cost_components = {
-    centrum        = { dlt_pipeline_id = module.centrum_pipeline.pipeline_id }
-    macro          = { dlt_pipeline_id = module.macro_execution_pipeline.pipeline_id }
-    metrics        = { dlt_pipeline_id = module.metrics_pipeline.pipeline_id }
-    warehouse      = { warehouse_id = var.backend_databricks_warehouse_id }
-    investigations = { warehouse_id = module.investigations_warehouse.warehouse_id }
+removed {
+  from = module.centrum_backup_job
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.data_upload_job
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.data_export_job
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.project_transfer_job
+
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.serving_store_reload_job
+
+  lifecycle {
+    destroy = false
   }
 }
 
@@ -1355,166 +1013,6 @@ module "lakehouse_backup_external_location" {
   }
 
   depends_on = [module.storage_credential]
-}
-
-module "centrum_backup_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Centrum-Backup-Job-DEV"
-  description = "Backs up raw_data from centrum schema every 8 hours to dedicated backup location"
-
-  # Schedule: Every 8 hours at 00:00, 08:00, and 16:00 UTC
-  # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0 0,8,16 * * ?"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 120000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "backup_centrum_raw_data"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/centrum_backup_task"
-
-      parameters = {
-        "CATALOG_NAME"    = module.databricks_catalog.catalog_name
-        "CENTRAL_SCHEMA"  = "centrum"
-        "SOURCE_TABLE"    = "raw_data"
-        "BACKUP_LOCATION" = "s3://${module.lakehouse_backup_s3.bucket_id}/centrum_raw_data"
-        "ENVIRONMENT"     = upper(var.environment)
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-    on_start = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.centrum_pipeline]
-}
-
-module "data_upload_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Data-Upload-Job-DEV"
-  description = "Dispatches user-initiated data uploads (CSV, ambyte, …) to the right processor and writes parquet into the data-imports volume for the centrum pipeline to ingest"
-
-  max_concurrent_runs           = 5
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Environment configuration for serverless compute dependencies
-  environments = [
-    {
-      environment_key = "data_upload"
-      spec = {
-        environment_version = "4"
-        dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/ambyte-0.1.0-py3-none-any.whl",
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-        ]
-      }
-    }
-  ]
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "process_upload"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/data_upload_task"
-
-      parameters = {
-        SOURCE_KIND       = "{{SOURCE_KIND}}"
-        EXPERIMENT_ID     = "{{EXPERIMENT_ID}}"
-        UPLOAD_DIRECTORY  = "{{UPLOAD_DIRECTORY}}"
-        UPLOAD_TABLE_ID   = "{{UPLOAD_TABLE_ID}}"
-        UPLOAD_TABLE_NAME = "{{UPLOAD_TABLE_NAME}}"
-        UPLOAD_ID         = "{{UPLOAD_ID}}"
-        USER_ID           = "{{USER_ID}}"
-        EXPERIMENT_NAME   = "{{EXPERIMENT_NAME}}"
-        EXPERIMENT_SCHEMA = "{{EXPERIMENT_SCHEMA}}"
-        YEAR_PREFIX       = "{{YEAR_PREFIX}}"
-        CATALOG_NAME      = module.databricks_catalog.catalog_name
-        ENVIRONMENT       = upper(var.environment)
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
 }
 
 module "data_downloads_volume" {
@@ -2027,176 +1525,6 @@ module "serving_views" {
   depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table, module.status_views]
 }
 
-module "data_export_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Data-Export-Job-DEV"
-  description = "Exports experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, Excel) to Unity Catalog volumes"
-
-  max_concurrent_runs           = 5
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Environment configuration for serverless compute dependencies
-  environments = [
-    {
-      environment_key = "data_exporting"
-      spec = {
-        environment_version = "4"
-        dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
-          # openpyxl backs the pandas Excel writer used for xlsx exports
-          "openpyxl==3.1.5"
-        ]
-      }
-    }
-  ]
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 1
-    min_retry_interval_millis = 30000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "export_data"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/data_export_task"
-
-      parameters = {
-        EXPERIMENT_ID = "{{EXPERIMENT_ID}}"
-        TABLE_NAME    = "{{TABLE_NAME}}"
-        FORMAT        = "{{FORMAT}}"
-        USER_ID       = "{{USER_ID}}"
-        CATALOG_NAME  = module.databricks_catalog.catalog_name
-        ENVIRONMENT   = upper(var.environment)
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
-module "project_transfer_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Project-Transfer-Job-DEV"
-  description = "Validates pending project transfer requests, calls the backend webhook for approved transfers, and writes enriched measurement data to the data-imports volume"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
-
-  # Enable job queueing
-  queue = {
-    enabled = true
-  }
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Trigger on transfer_requests table changes
-  trigger = {
-    table_update = {
-      table_names                       = ["${module.databricks_catalog.catalog_name}.centrum.openjii_project_transfer_requests"]
-      condition                         = "ANY_UPDATED"
-      min_time_between_triggers_seconds = 60
-    }
-  }
-
-  # Environment configuration for enrich library dependency
-  environments = [
-    {
-      environment_key = "project_transfer"
-      spec = {
-        environment_version = "4"
-        dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-        ]
-      }
-    }
-  ]
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key           = "transfer_project_data"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/project_transfer_task"
-
-      parameters = {
-        catalog_name        = module.databricks_catalog.catalog_name
-        ENVIRONMENT         = upper(var.environment)
-        PHOTOSYNQ_DATA_PATH = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/data-legacy/photosynq_merged"
-      }
-    }
-  ]
-
-  # Configure Slack notifications
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-}
-
 module "aurora_db" {
   source                 = "../../modules/aurora_db"
   cluster_identifier     = "open-jii-${var.environment}-db-cluster"
@@ -2235,28 +1563,10 @@ module "serving_store" {
 }
 
 locals {
-  # The gold version each feed sink starts at when its checkpoint is new. Gold keeps old versions'
-  # files for seven days, so read these on the day the feed first ships, and again before any
-  # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
-  # the feed's alerts.
-  serving_store_feed_start_versions = {
-    measurements  = "58430"
-    uploads       = "44"
-    macro_results = "57120"
-    # The sheets' copy needs no history: the first load owes every sheet to it once
-    # (docs/runbooks/procedures/serving-store-reload.md).
-    metadata_rows = "latest"
-  }
-  serving_store_feed = length(local.serving_store_feed_start_versions) > 0
-
-  # Only while the feed is on do the pipelines carry it: a settings change starts a pipeline
-  # before a release has deployed the notebook.
-  centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed"] : []
-  macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = {
-    for table, version in local.serving_store_feed_start_versions :
-    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
-  }
+  # Whether the pipelines carry the store feed, which the bundle decides
+  # (apps/data/resources). Turning the feed on or off changes both in one PR, because this
+  # switch only arms the feed's alerts.
+  serving_store_feed = true
 }
 
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
@@ -2348,80 +1658,6 @@ module "serving_store_reload_cluster_policy" {
   depends_on = [module.databricks_workspace]
 }
 
-# Run by an operator, never on a schedule (docs/runbooks/procedures/serving-store-reload.md).
-# Classic compute, since only the VPC reaches the store.
-module "serving_store_reload_job" {
-  source = "../../modules/databricks/job"
-
-  name        = "Serving-Store-Reload-DEV"
-  description = "Replaces the serving store's rows for one experiment, or every experiment, with gold's"
-
-  max_concurrent_runs = 1
-  use_serverless      = false
-  continuous          = false
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Whoever started the run reads why it failed before running it again.
-  task_retry_config = {
-    retries          = 0
-    retry_on_timeout = false
-  }
-
-  tasks = [
-    {
-      key           = "reload_serving_store"
-      task_type     = "notebook"
-      compute_type  = "new_cluster"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/serving_store_reload_task"
-
-      node_type_id        = "r6id.large"
-      driver_node_type_id = "r6id.large"
-      num_workers         = 1
-      data_security_mode  = "SINGLE_USER"
-      single_user_name    = module.node_service_principal.service_principal_application_id
-      policy_id           = module.serving_store_reload_cluster_policy.policy_id
-      libraries           = local.pipeline_wheels
-
-      parameters = {
-        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
-        "CENTRAL_SCHEMA" = "centrum"
-        "ENVIRONMENT"    = var.environment
-        # Given per run: an experiment's id or all, and one store table or all.
-        "EXPERIMENT_ID" = ""
-        "TABLE"         = "all"
-        # True only when the rows gold no longer holds should leave the store, as for a deleted experiment.
-        "ALLOW_REMOVAL" = "false"
-      }
-    }
-  ]
-
-  webhook_notifications = {
-    on_failure = [
-      module.slack_notification_destination.notification_destination_id
-    ]
-  }
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "IS_OWNER"
-    },
-    {
-      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.serving_store_secret_scope]
-}
-
 module "secrets_rotation_trigger" {
   source = "../../modules/secrets-manager-rotation/secrets-rotation-trigger"
 
@@ -2494,8 +1730,6 @@ module "databricks_secrets" {
     DATABRICKS_HOST                 = module.databricks_workspace.workspace_url
     DATABRICKS_CLIENT_ID            = module.node_service_principal.service_principal_application_id
     DATABRICKS_CLIENT_SECRET        = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_DATA_UPLOAD_JOB_ID   = module.data_upload_job.job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID   = module.data_export_job.job_id
     DATABRICKS_DATA_UPLOAD_JOB_NAME = "Data-Upload-Job-DEV"
     DATABRICKS_DATA_EXPORT_JOB_NAME = "Data-Export-Job-DEV"
     DATABRICKS_WAREHOUSE_ID         = var.backend_databricks_warehouse_id
@@ -2964,18 +2198,9 @@ module "backend_ecs" {
       name      = "DATABRICKS_HOST"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
     },
-    # Older backend images read the job ids, so a rollback still boots on this task definition.
-    {
-      name      = "DATABRICKS_DATA_UPLOAD_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::"
-    },
     {
       name      = "DATABRICKS_DATA_UPLOAD_JOB_NAME"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_NAME::"
-    },
-    {
-      name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::"
     },
     {
       name      = "DATABRICKS_DATA_EXPORT_JOB_NAME"
@@ -3726,10 +2951,6 @@ module "cost_publisher" {
 locals {
   # Needs the centrum pipeline that drops health checks from raw_data to be running here.
   ingest_healthcheck_publishing = true
-
-  # The pipeline carries the notebook only while publishing is on: a settings change starts it before
-  # a release has deployed a new notebook.
-  ingest_healthcheck_notebooks = local.ingest_healthcheck_publishing ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks"] : []
 
   # Needs a HealthcheckAgeMinutes datapoint here: the stalled rule fires on no data.
   ingest_healthcheck_alerting = true

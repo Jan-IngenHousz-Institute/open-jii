@@ -1,0 +1,50 @@
+resources:
+  jobs:
+    # Run by an operator, never on a schedule (docs/runbooks/procedures/serving-store-reload.md).
+    # Classic compute, since only the VPC reaches the store.
+    serving_store_reload:
+      name: Serving-Store-Reload-${var.env_upper}
+      description: Replaces the serving store's rows for one experiment, or every experiment, with gold's
+      max_concurrent_runs: 1
+      queue:
+        enabled: false
+
+      tasks:
+        - task_key: reload_serving_store
+          # Whoever started the run reads why it failed before running it again.
+          max_retries: 0
+          retry_on_timeout: false
+          new_cluster:
+            spark_version: 18.x-scala2.13
+            node_type_id: r6id.large
+            driver_node_type_id: r6id.large
+            num_workers: 1
+            data_security_mode: SINGLE_USER
+            single_user_name: ${var.node_principal}
+            policy_id: ${var.reload_policy}
+          libraries:
+            - whl: ../src/lib/enrich/dist/*.whl
+            - whl: ../src/lib/openjii/dist/*.whl
+            - whl: ../src/lib/data_repair/dist/*.whl
+          notebook_task:
+            notebook_path: ../src/tasks/serving_store_reload_task.py
+            base_parameters:
+              CATALOG_NAME: ${var.catalog}
+              CENTRAL_SCHEMA: centrum
+              ENVIRONMENT: ${bundle.target}
+              # Given per run: an experiment's id or all, and one store table or all.
+              EXPERIMENT_ID: ""
+              TABLE: all
+              # True only when the rows gold no longer holds should leave the store, as for a deleted experiment.
+              ALLOW_REMOVAL: "false"
+
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

@@ -27,7 +27,8 @@ hourly file, so read that file for the error when the workspace no longer shows 
   covered in [flow-restarts](flow-restarts.md); a driver short of memory in
   [driver-heap](driver-heap.md).
 - **Clusters that cannot start:** retry later, or move the pipeline's workers to another instance
-  type in its OpenTofu definition.
+  type in its definition under `apps/data/resources/`, and in its cluster policy when the policy
+  fixes the type.
 
 ## Closing
 

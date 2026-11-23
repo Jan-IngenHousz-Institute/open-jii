@@ -69,18 +69,6 @@ variable "databricks_service_principal_client_secret" {
   sensitive   = true
 }
 
-variable "databricks_data_upload_job_id" {
-  description = "Databricks Data Upload Job ID (from prod workspace). Used by the backend to trigger user-initiated data uploads (CSV, ambyte, …)."
-  type        = string
-  sensitive   = true
-}
-
-variable "databricks_data_export_job_id" {
-  description = "Databricks Data Export Job ID (from prod workspace)."
-  type        = string
-  sensitive   = true
-}
-
 variable "kinesis_credential_id" {
   description = "Databricks storage credential ID for Kinesis (same value as prod)"
   type        = string

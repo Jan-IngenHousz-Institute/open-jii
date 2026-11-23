@@ -1,0 +1,42 @@
+resources:
+  jobs:
+    centrum_backup:
+      name: Centrum-Backup-Job-${var.env_upper}
+      description: Backs up raw_data from centrum schema every 8 hours to dedicated backup location
+      max_concurrent_runs: 1
+      performance_target: STANDARD
+      queue:
+        enabled: false
+
+      # 00:00, 08:00 and 16:00 UTC.
+      schedule:
+        quartz_cron_expression: 0 0 0,8,16 * * ?
+        timezone_id: UTC
+        pause_status: UNPAUSED
+
+      tasks:
+        - task_key: backup_centrum_raw_data
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: true
+          notebook_task:
+            notebook_path: ../src/tasks/centrum_backup_task.py
+            base_parameters:
+              CATALOG_NAME: ${var.catalog}
+              CENTRAL_SCHEMA: centrum
+              SOURCE_TABLE: raw_data
+              BACKUP_LOCATION: s3://open-jii-lakehouse-backups-${bundle.target}/centrum_raw_data
+              ENVIRONMENT: ${var.env_upper}
+
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+        on_start:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

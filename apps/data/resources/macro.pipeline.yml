@@ -1,0 +1,80 @@
+resources:
+  pipelines:
+    # Macro execution is a separate deployment, not a separate domain: it publishes
+    # experiment_macro_data and its schema samples into centrum like any other gold
+    # table. It runs on its own compute because a Spark task waits on the sandbox
+    # over HTTP, and sharing centrum's cluster meant those tasks held the
+    # slots the Kinesis reader needs for its prefetch job.
+    macro:
+      name: Macro-Execution-DLT-Pipeline-${var.env_upper}
+      catalog: ${var.catalog}
+      schema: centrum
+      channel: CURRENT
+      # Neither AUTO CDC nor expectations, so CORE is enough.
+      edition: CORE
+      continuous: true
+      serverless: false
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}
+
+      clusters:
+        - label: default
+          node_type_id: ${var.macro_worker_node_type}
+          driver_node_type_id: m7i.xlarge
+          num_workers: 1
+          policy_id: ${var.macro_policy}
+          cluster_log_conf:
+            volumes:
+              destination: /Volumes/${var.catalog}/centrum/pipeline-logs/macro
+          spark_conf:
+            "spark.sql.shuffle.partitions": ${var.macro_shuffle_partitions}
+            # Adds the Python and other processes' memory to the driver's metrics, which the
+            # JVM heap figures leave out.
+            "spark.executor.processTreeMetrics.enabled": "true"
+            # Databricks' default heap, about 80% of the node, left its own services too little
+            # and the driver swapped. The heap holds 2 to 4 GB between collections.
+            "spark.driver.memory": "5g"
+
+      environment:
+        dependencies:
+          - ../src/lib/enrich/dist/*.whl
+          - ../src/lib/openjii/dist/*.whl
+          - ../src/lib/data_repair/dist/*.whl
+
+      configuration:
+        "MACRO_MAX_FILES_PER_TRIGGER": "16"
+        "MACRO_MAX_BYTES_PER_TRIGGER": "16777216"
+        "MACRO_EXECUTION_PARTITIONS": "16"
+        "CATALOG_NAME": ${var.catalog}
+        "CENTRUM_SCHEMA_NAME": centrum
+        "ENVIRONMENT": ${var.pipeline_environment}
+        # Lets the macro results id widen from INT to BIGINT in place. Set on one table only, the
+        # tables that stream from it refuse the new type and the update stops.
+        "pipelines.enableTypeWidening": "true"
+        "openjii.code_version": ${var.macro_code_version}
+
+      libraries:
+        - notebook:
+            path: ../src/pipelines/macros/experiment_macro_data.py
+        - notebook:
+            path: ../src/pipelines/macros/experiment_macro_data_schemas.py
+
+targets:
+  dev:
+    resources:
+      pipelines:
+        macro:
+          # The store feed runs on dev only, with the same starts as Centrum's.
+          configuration:
+            "SERVING_STORE_FEED_START_MEASUREMENTS": "58430"
+            "SERVING_STORE_FEED_START_UPLOADS": "44"
+            "SERVING_STORE_FEED_START_MACRO_RESULTS": "57120"
+            "SERVING_STORE_FEED_START_METADATA_ROWS": latest
+          libraries:
+            - notebook:
+                path: ../src/pipelines/macros/serving_store_feed.py

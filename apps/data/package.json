@@ -11,9 +11,9 @@
     "check-types": "uv run pyright",
     "test": "uv run pytest",
     "test:coverage": "uv run pytest --cov --cov-report=term-missing",
-    "validate": "databricks bundle validate",
-    "validate:dev": "databricks bundle validate -t dev",
-    "validate:prod": "databricks bundle validate -t prod",
+    "validate": "pnpm run validate:dev",
+    "validate:dev": "BUNDLE_VAR_centrum_code_version=$(git rev-parse --short=12 HEAD:./src/pipelines/centrum) BUNDLE_VAR_macro_code_version=$(git rev-parse --short=12 HEAD:./src/pipelines/macros) databricks bundle validate -t dev",
+    "validate:prod": "BUNDLE_VAR_centrum_code_version=$(git rev-parse --short=12 HEAD:./src/pipelines/centrum) BUNDLE_VAR_macro_code_version=$(git rev-parse --short=12 HEAD:./src/pipelines/macros) databricks bundle validate -t prod",
     "clean": "git clean -xdf .cache .turbo .venv dist src/lib/*/dist src/lib/*/build src/lib/*/*.egg-info"
   }
 }

@@ -1,0 +1,36 @@
+resources:
+  jobs:
+    metrics_pipeline_scheduler:
+      name: Metrics-Pipeline-Scheduler-${var.env_upper}
+      description: Triggers the public metrics pipeline refresh
+      max_concurrent_runs: 1
+      performance_target: PERFORMANCE_OPTIMIZED
+      queue:
+        enabled: false
+
+      # Hourly, which is how often the backend reads the figures.
+      schedule:
+        quartz_cron_expression: 0 0 * * * ?
+        timezone_id: UTC
+        pause_status: UNPAUSED
+
+      tasks:
+        - task_key: trigger_metrics_pipeline
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.metrics.id}
+
+      # The metrics pipeline only ever runs through this job, so job-level failure
+      # notifications cover every run; no in-pipeline event hook needed.
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

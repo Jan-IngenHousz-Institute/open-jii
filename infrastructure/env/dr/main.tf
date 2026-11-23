@@ -338,8 +338,6 @@ module "databricks_secrets" {
     DATABRICKS_HOST                 = var.databricks_host
     DATABRICKS_CLIENT_ID            = var.databricks_service_principal_client_id
     DATABRICKS_CLIENT_SECRET        = var.databricks_service_principal_client_secret
-    DATABRICKS_DATA_UPLOAD_JOB_ID   = var.databricks_data_upload_job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID   = var.databricks_data_export_job_id
     DATABRICKS_DATA_UPLOAD_JOB_NAME = "Data-Upload-Job-PROD"
     DATABRICKS_DATA_EXPORT_JOB_NAME = "Data-Export-Job-PROD"
     DATABRICKS_WAREHOUSE_ID         = var.backend_databricks_warehouse_id
@@ -642,10 +640,7 @@ module "backend_ecs" {
     { name = "DATABRICKS_CLIENT_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::" },
     { name = "DATABRICKS_CLIENT_SECRET", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::" },
     { name = "DATABRICKS_HOST", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::" },
-    # Older backend images read the job ids, so a rollback still boots on this task definition.
-    { name = "DATABRICKS_DATA_UPLOAD_JOB_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::" },
     { name = "DATABRICKS_DATA_UPLOAD_JOB_NAME", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_NAME::" },
-    { name = "DATABRICKS_DATA_EXPORT_JOB_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::" },
     { name = "DATABRICKS_DATA_EXPORT_JOB_NAME", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_NAME::" },
     { name = "DATABRICKS_WAREHOUSE_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::" },
     { name = "DATABRICKS_WEBHOOK_API_KEY_ID", valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WEBHOOK_API_KEY_ID::" },

@@ -1,0 +1,141 @@
+resources:
+  pipelines:
+    centrum:
+      name: Centrum-DLT-Pipeline-${var.env_upper}
+      catalog: ${var.catalog}
+      schema: centrum
+      channel: CURRENT
+      # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
+      edition: ADVANCED
+      continuous: true
+      serverless: false
+
+      # The run-as identity owns the tables, and a deleted pipeline takes its tables with it.
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}
+
+      clusters:
+        - label: default
+          node_type_id: r6id.large
+          driver_node_type_id: r7i.xlarge
+          policy_id: ${var.centrum_policy}
+          cluster_log_conf:
+            volumes:
+              destination: /Volumes/${var.catalog}/centrum/pipeline-logs/centrum
+          spark_conf:
+            "spark.sql.shuffle.partitions": ${var.centrum_shuffle_partitions}
+            # Adds the Python and other processes' memory to the driver's metrics, which the
+            # JVM heap figures leave out.
+            "spark.executor.processTreeMetrics.enabled": "true"
+            # Databricks' default heap, about 80% of the node, left its own services too little
+            # and the driver swapped. The heap holds about 6 GB after a full collection.
+            "spark.driver.memory": "12g"
+          # A class histogram in the GC log at every full collection, to find what the driver's
+          # heap keeps growing with. The environment variable adds the option without touching
+          # Databricks' own driver JVM options. Diagnostic: remove once the growth is explained.
+          spark_env_vars:
+            JAVA_TOOL_OPTIONS: -Xlog:gc+classhisto=trace
+
+      environment:
+        dependencies:
+          - ../src/lib/enrich/dist/*.whl
+          - ../src/lib/openjii/dist/*.whl
+          - ../src/lib/data_repair/dist/*.whl
+
+      # Databricks' per-flow trigger defaults apply; notebooks may override individual tables.
+      configuration:
+        "CATALOG_NAME": ${var.catalog}
+        "BRONZE_TABLE": raw_data
+        "SILVER_TABLE": clean_data
+        "RAW_KINESIS_TABLE": raw_kinesis_data
+        "KINESIS_STREAM_NAME": open-jii-${bundle.target}-data-ingest-stream
+        "SERVICE_CREDENTIAL_NAME": unity-catalog-kinesis-role-${bundle.target}
+        "CHECKPOINT_PATH": /Volumes/${var.catalog}/centrum/checkpoints/kinesis
+        "ENVIRONMENT": ${var.pipeline_environment}
+        "MONITORING_SLACK_CHANNEL": "#jii-monitoring"
+        "LARGE_IOT_S3_PATH": s3://open-jii-large-iot-${bundle.target}/
+        "DEVICE_LIFECYCLE_EVENTS_S3_PATH": s3://open-jii-iot-raw-archive-${bundle.target}/device-lifecycle-events/
+        # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
+        "pipelines.enableSharedReplsForAllPythonPipeline": "true"
+        "openjii.code_version": ${var.centrum_code_version}
+
+      libraries:
+        - notebook:
+            path: ../src/pipelines/centrum/bronze/raw_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/bronze/raw_imported_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/bronze/raw_uploaded_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/bronze/raw_large_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/bronze/raw_device_lifecycle_events.py
+        - notebook:
+            path: ../src/pipelines/centrum/silver/clean_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/silver/clean_device_lifecycle_events.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_raw_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_devices.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_uploaded_data.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_table_metadata.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_contributors.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/bridge_experiment_contributor.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/bridge_experiment_device.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_device_keys.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_raw_data_schemas.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/experiment_uploaded_data_schemas.py
+        - notebook:
+            path: ../src/pipelines/centrum/gold/sources.py
+        - notebook:
+            path: ../src/pipelines/centrum/hooks.py
+        - notebook:
+            path: ../src/pipelines/centrum/bronze/ingest_healthchecks.py
+
+targets:
+  dev:
+    resources:
+      pipelines:
+        centrum:
+          clusters:
+            - label: default
+              num_workers: 1
+          # The store feed runs on dev only. Each start is the gold version its sink begins at
+          # when its checkpoint is new; read them again before any checkpoint reset
+          # (docs/runbooks/store-feed-stalled.md).
+          configuration:
+            "SERVING_STORE_FEED_START_MEASUREMENTS": "58430"
+            "SERVING_STORE_FEED_START_UPLOADS": "44"
+            "SERVING_STORE_FEED_START_MACRO_RESULTS": "57120"
+            "SERVING_STORE_FEED_START_METADATA_ROWS": latest
+          libraries:
+            - notebook:
+                path: ../src/pipelines/centrum/serving_store_feed.py
+
+  prod:
+    resources:
+      pipelines:
+        centrum:
+          clusters:
+            - label: default
+              autoscale:
+                min_workers: 2
+                max_workers: 6
+              aws_attributes:
+                availability: SPOT_WITH_FALLBACK
+                first_on_demand: 2
+                zone_id: auto
+                spot_bid_price_percent: 100

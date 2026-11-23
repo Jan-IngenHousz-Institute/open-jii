@@ -56,13 +56,14 @@ Rows the store could not read never stall the feed: they go to `store.feed_rejec
 
 ## Switching the feed off and on
 
-The feed is on in an environment when `local.serving_store_feed_start_versions` in
-`infrastructure/env/<env>/main.tf` holds a start version for each table, and off when it is empty;
-the pipelines carry the feed's notebook and settings only while it is on. Changing it and applying
-restarts both pipelines, and the feed's alerts go with the switch. When minutes matter more than a
-pull request, remove the `serving_store_feed` notebook from each pipeline's source code in the
-Databricks UI. That restarts the pipeline at once (3 to 7 minutes waiting for nodes) and the next
-apply reverts it, so follow up in code.
+The feed is on in an environment when that target's block in
+`apps/data/resources/centrum.pipeline.yml` and `macro.pipeline.yml` lists the `serving_store_feed`
+notebook and a start version for each table. `local.serving_store_feed` in
+`infrastructure/env/<env>/main.tf` arms the feed's alerts, so change both in one pull request.
+Deploying the change restarts both pipelines. When minutes matter more than a pull request, remove
+the `serving_store_feed` notebook from each pipeline's source code in the Databricks UI. That
+restarts the pipeline at once (3 to 7 minutes waiting for nodes) and the next bundle deploy reverts
+it, so follow up in code.
 
 A start version is the gold version a sink starts at when its checkpoint is new: the first time the
 feed runs in an environment, and after a checkpoint reset or a full refresh of the whole pipeline.
@@ -99,8 +100,8 @@ caught up, [reload](procedures/serving-store-reload.md) every table for `all`; t
 the rows gold gained before the new start version. This clears neither of the sheets' tables, so
 reset `metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead.
 
-1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
-   wins.
+1. Put the new start version in both pipelines' definitions under `apps/data/resources/` and
+   deploy. The pipelines restart; the old checkpoint still wins.
 2. In the Databricks UI, switch the pipeline to triggered and start one update that resets the
    flow's checkpoint, by its full name:
 

@@ -1,0 +1,45 @@
+resources:
+  jobs:
+    data_export:
+      name: Data-Export-Job-${var.env_upper}
+      description: Exports experiment table data in multiple formats (CSV, NDJSON, JSON Array, Parquet, Excel) to Unity Catalog volumes
+      max_concurrent_runs: 5
+      performance_target: PERFORMANCE_OPTIMIZED
+      queue:
+        enabled: true
+
+      environments:
+        - environment_key: data_exporting
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../src/lib/openjii/dist/*.whl
+              # openpyxl backs the pandas Excel writer used for xlsx exports
+              - openpyxl==3.1.5
+
+      tasks:
+        - task_key: export_data
+          environment_key: data_exporting
+          max_retries: ${var.export_retries}
+          min_retry_interval_millis: 30000
+          retry_on_timeout: true
+          notebook_task:
+            notebook_path: ../src/tasks/data_export_task.py
+            base_parameters:
+              EXPERIMENT_ID: "{{EXPERIMENT_ID}}"
+              TABLE_NAME: "{{TABLE_NAME}}"
+              FORMAT: "{{FORMAT}}"
+              USER_ID: "{{USER_ID}}"
+              CATALOG_NAME: ${var.catalog}
+              ENVIRONMENT: ${var.env_upper}
+
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

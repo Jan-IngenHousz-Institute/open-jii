@@ -1,51 +1,103 @@
 bundle:
   name: open-jii
 
-# Workspace configuration
-workspace:
-  # Root path where bundle artifacts will be deployed
-  root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
-  # File path for deployed notebooks
-  file_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}/notebooks
-  # Artifact path for wheels
-  artifact_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}/artifacts
+include:
+  - resources/*.yml
 
-# Permissions - allow all users to read deployed resources
+# The root sits in the CI principal's home, not in Shared: everything under Shared is writable
+# by every workspace user, and that grant cannot be revoked.
+workspace:
+  root_path: /Workspace/Users/${var.ci_principal}/.bundle/${bundle.name}/${bundle.target}
+  file_path: ${workspace.root_path}/notebooks
+  artifact_path: ${workspace.root_path}/artifacts
+
 permissions:
   - level: CAN_MANAGE
-    group_name: users
+    service_principal_name: ${var.ci_principal}
+  - level: CAN_VIEW
+    service_principal_name: ${var.node_principal}
 
-# Artifacts configuration - Python wheels for custom libraries
+run_as:
+  service_principal_name: ${var.node_principal}
+
+variables:
+  node_principal:
+    description: Application id of the principal every pipeline and job runs as
+  ci_principal:
+    description: Application id of the principal that deploys the bundle
+  centrum_policy:
+    description: Cluster policy of the Centrum pipeline
+  macro_policy:
+    description: Cluster policy of the macro pipeline
+  reload_policy:
+    description: Cluster policy of the store reload
+  slack_destination:
+    description: Notification destination for failed runs
+  backend_warehouse:
+    description: Warehouse the backend queries, for the cost export
+  investigations_warehouse:
+    description: Warehouse for investigations, for the cost export
+  catalog:
+    description: Unity Catalog catalog of the environment
+    default: open_jii_${bundle.target}
+  env_upper:
+    description: The environment in upper case, which bundles cannot derive
+  workspace_id:
+    description: Numeric workspace id, which the cost export filters billing rows by
+  pipeline_environment:
+    description: ENVIRONMENT as the Centrum and macro pipelines have always received it
+  # A change to either restarts its pipeline, which is how new notebook code reaches a
+  # continuous pipeline. No default: a deploy without them must fail.
+  centrum_code_version:
+    description: Git tree id of src/pipelines/centrum
+  macro_code_version:
+    description: Git tree id of src/pipelines/macros
+  centrum_shuffle_partitions:
+    description: One shuffle partition per worker core, since streaming skips AQE
+    default: "2"
+  macro_worker_node_type:
+    default: r5a.large
+  macro_shuffle_partitions:
+    description: One shuffle partition per worker core, since streaming skips AQE
+    default: "2"
+  export_retries:
+    default: 1
+  transfer_performance_target:
+    default: PERFORMANCE_OPTIMIZED
+
+# Each wheel carries the git tree id of its lib as a local version, so its path changes when the
+# lib's code changes and every pipeline and job that installs it picks up the new one.
 artifacts:
   ambyte_wheel:
     type: whl
     path: ./src/lib/ambyte
-    build: python3 -m build
+    build: &stamped_build >-
+      cp pyproject.toml pyproject.toml.orig &&
+      sed -i.bak -E "s/^version = \"([0-9.]+)\"/version = \"\1+$(git rev-parse --short=12 HEAD:./)\"/" pyproject.toml &&
+      python3 -m build --wheel;
+      status=$?; mv pyproject.toml.orig pyproject.toml; rm -f pyproject.toml.bak; exit $status
 
   enrich_wheel:
     type: whl
     path: ./src/lib/enrich
-    build: python3 -m build
+    build: *stamped_build
 
   openjii_wheel:
     type: whl
     path: ./src/lib/openjii
-    build: python3 -m build
+    build: *stamped_build
 
   data_repair_wheel:
     type: whl
     path: ./src/lib/data_repair
-    build: python3 -m build
+    build: *stamped_build
 
-# Sync configuration for notebooks
 sync:
-  # Only sync notebooks, pipelines, and tasks - exclude everything else
   include:
     - "src/pipelines/**"
     - "src/tasks/**"
     - "src/notebooks/**"
 
-  # Patterns to exclude
   exclude:
     - ".DS_Store"
     - "lib/**" # Libraries are deployed as wheels
@@ -58,13 +110,70 @@ sync:
     - ".gitignore"
     - "src/lib/**" # Library source code (deployed as wheels)
 
-# Deployment targets
 targets:
-  # Development environment
   dev:
     mode: production
     default: true
+    variables:
+      node_principal:
+        lookup:
+          service_principal: node-service-principal-dev
+      ci_principal:
+        lookup:
+          service_principal: github-cicd-service-principal-dev
+      centrum_policy:
+        lookup:
+          cluster_policy: centrum-pipeline-cluster-policy-dev
+      macro_policy:
+        lookup:
+          cluster_policy: macro-pipeline-cluster-policy-dev
+      reload_policy:
+        lookup:
+          cluster_policy: serving-store-reload-cluster-policy-dev
+      slack_destination:
+        lookup:
+          notification_destination: slack-notifications-dev
+      backend_warehouse:
+        lookup:
+          warehouse: Backend API
+      investigations_warehouse:
+        lookup:
+          warehouse: Investigations
+      env_upper: DEV
+      workspace_id: "1147213749942235"
+      pipeline_environment: dev
 
-  # Production environment
   prod:
     mode: production
+    variables:
+      node_principal:
+        lookup:
+          service_principal: node-service-principal-prod
+      ci_principal:
+        lookup:
+          service_principal: github-cicd-service-principal-prod
+      centrum_policy:
+        lookup:
+          cluster_policy: centrum-pipeline-cluster-policy-prod
+      macro_policy:
+        lookup:
+          cluster_policy: macro-pipeline-cluster-policy-prod
+      reload_policy:
+        lookup:
+          cluster_policy: serving-store-reload-cluster-policy-prod
+      slack_destination:
+        lookup:
+          notification_destination: slack-notifications-prod
+      backend_warehouse:
+        lookup:
+          warehouse: Backend API
+      investigations_warehouse:
+        lookup:
+          warehouse: Investigations
+      env_upper: PROD
+      pipeline_environment: PROD
+      centrum_shuffle_partitions: "12"
+      macro_worker_node_type: m5a.xlarge
+      macro_shuffle_partitions: "4"
+      export_retries: 2
+      transfer_performance_target: STANDARD
