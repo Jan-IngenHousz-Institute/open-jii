@@ -108,8 +108,15 @@ the sheets' rows are filled by owing every sheet to the lakehouse once
 ([reload](procedures/serving-store-reload.md#metadata-sheets)). Device events read silver's
 `clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so set
 `device_events` in the map to that table's latest version, never one before it. Left empty, it keeps
-the device events sink off. After switching on, watch the first batches in each pipeline's driver
-log (`[serving store] measurements batch 0: ... inserted`). A first batch numbered 0 means the sink
+the device events sink off. Device pages read from the warehouse until full reloads of
+`measurements` and `device_events` have both passed, so switch the sink on and reload them, as the
+[reload procedure](procedures/serving-store-reload.md#before-device-pages-read-the-store) orders it.
+If either had passed before the feed went off, first run
+`DELETE FROM store.completed_reloads WHERE table_name IN ('measurements', 'device_events')` as the
+admin and wait two minutes, so device pages read the warehouse rather than a store missing the rows
+gold gained meanwhile, until new reloads of both pass. After switching on, watch the first batches in
+each pipeline's driver log
+(`[serving store] measurements batch 0: ... inserted`). A first batch numbered 0 means the sink
 started at its start version, and rows gold gained while the feed was off stay missing until a
 [reload](procedures/serving-store-reload.md); a higher number means it resumed from its checkpoint.
 For `metadata_rows`, a batch 0 after the feed was off means the deletions made meanwhile were
