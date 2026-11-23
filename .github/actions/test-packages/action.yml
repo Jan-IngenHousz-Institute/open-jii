@@ -47,10 +47,12 @@ runs:
         pnpm turbo run build "${DEPENDENCY_ARGS[@]}"
         NO_CACHE=(--only --cache=local:)
 
-        echo "Running: pnpm turbo run test ${NO_CACHE[*]} ${TEST_ARGS[*]}"
+        # Ten suites starting at once on a 4-vCPU runner starve each other past their
+        # test timeouts, so packages that share a job test two at a time.
+        echo "Running: pnpm turbo run test --concurrency=2 ${NO_CACHE[*]} ${TEST_ARGS[*]}"
 
         TEST_LOG="$(mktemp)"
-        pnpm turbo run test "${NO_CACHE[@]}" "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
+        pnpm turbo run test --concurrency=2 "${NO_CACHE[@]}" "${TEST_ARGS[@]}" 2>&1 | tee "$TEST_LOG"
         EXIT_CODE=${PIPESTATUS[0]}
         set -e
 

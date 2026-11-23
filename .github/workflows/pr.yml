@@ -55,7 +55,8 @@ jobs:
             . as $apps
             | ["web", "backend", "mobile", "@repo/ui"] as $own
             | [$apps[] | select(IN($own[]) | not)] as $rest
-            | [{name: "build", label: "Build and Type Check", task: "build", filters: $apps, shard: ""},
+            | [{name: "build", label: "Build", task: "build", filters: $apps, shard: ""},
+               {name: "types", label: "Type Check", task: "types", filters: $apps, shard: ""},
                {name: "lint", label: "Lint", task: "lint", filters: $apps, shard: ""}]
               + (if affected("web") then shards("web"; 2) else [] end)
               + (if affected("backend") then shards("backend"; 2) else [] end)
@@ -399,7 +400,7 @@ jobs:
           affected_apps: ${{ toJSON(matrix.filters) }}
 
       - name: Type Check Packages
-        if: matrix.task == 'build'
+        if: matrix.task == 'types'
         shell: bash
         env:
           FILTERS: ${{ toJSON(matrix.filters) }}
