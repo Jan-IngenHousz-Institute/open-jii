@@ -1,11 +1,12 @@
 import type { Layout } from "plotly.js";
+import { useSyncExternalStore } from "react";
 
 const GAP = 1.5;
 const LINE_SPACING = 1.3;
 const MID_SHIFT = 0.35;
 
 type Box = { left: number; right: number; top: number; bottom: number };
-type Ink = { width: number; boxes: Box[] };
+type Ink = { width: number; boxes: Box[]; bounds?: Box };
 export type MeasureLabel = (text: string, size: number) => Ink;
 
 let context: CanvasRenderingContext2D | null | undefined;
@@ -13,11 +14,47 @@ let family = "sans-serif";
 const metrics = new Map<string, Ink>();
 const METRIC_LIMIT = 2048;
 
+let fontRevision = 0;
+const fontListeners = new Set<() => void>();
+
+export function polarFontFamily() {
+  const styles = getComputedStyle(document.body);
+  return styles.getPropertyValue("--font-sans").trim() || styles.fontFamily || "sans-serif";
+}
+
+function refreshFontMetrics() {
+  metrics.clear();
+  family = polarFontFamily();
+  fontRevision++;
+  fontListeners.forEach((listener) => listener());
+}
+
+function subscribeToFonts(listener: () => void) {
+  const fonts = document.fonts;
+  if (!fonts) return () => undefined;
+  if (!fontListeners.size) fonts.addEventListener("loadingdone", refreshFontMetrics);
+  fontListeners.add(listener);
+  return () => {
+    fontListeners.delete(listener);
+    if (!fontListeners.size) {
+      fonts.removeEventListener("loadingdone", refreshFontMetrics);
+      metrics.clear();
+    }
+  };
+}
+
+export function usePolarFontRevision() {
+  return useSyncExternalStore(
+    subscribeToFonts,
+    () => fontRevision,
+    () => 0,
+  );
+}
+
 export const measurePolarLabel: MeasureLabel = (text, size) => {
   if (context === undefined && typeof CanvasRenderingContext2D !== "undefined") {
     context = document.createElement("canvas").getContext("2d");
-    const styles = getComputedStyle(document.body);
-    family = styles.getPropertyValue("--font-sans").trim() || styles.fontFamily || family;
+    family = polarFontFamily();
   }
   const font = `${size}px ${family}`;
   const key = `${font}\n${text}`;
@@ -29,7 +66,14 @@ export const measurePolarLabel: MeasureLabel = (text, size) => {
     return { width, boxes: [{ left: 0, right: width, top: -size * 0.7, bottom: 0 }] };
   }
   context.font = font;
-  const width = context.measureText(text).width;
+  const line = context.measureText(text);
+  const width = line.width;
+  const bounds = {
+    left: -line.actualBoundingBoxLeft,
+    right: line.actualBoundingBoxRight,
+    top: -line.actualBoundingBoxAscent,
+    bottom: line.actualBoundingBoxDescent,
+  };
   let prefix = "";
   const boxes = Array.from(text).flatMap((glyph) => {
     const advance = context?.measureText(prefix).width ?? 0;
@@ -45,7 +89,7 @@ export const measurePolarLabel: MeasureLabel = (text, size) => {
       },
     ];
   });
-  const result = { width, boxes };
+  const result = { width, boxes, bounds };
   if (metrics.size === METRIC_LIMIT) metrics.clear();
   metrics.set(key, result);
   return result;
@@ -86,7 +130,13 @@ interface AngularTick {
   text: string;
 }
 
-function angularInk(labels: AngularTick[], size: number, radius: number, measure: MeasureLabel) {
+function angularInk(
+  labels: AngularTick[],
+  size: number,
+  radius: number,
+  measure: MeasureLabel,
+  wholeLine = false,
+) {
   // Plotly positions labels outside the circumference and aligns them away from the centre.
   const standoff = 5.5 + size * 0.2;
   return labels.map(({ angle, text }) => {
@@ -99,14 +149,15 @@ function angularInk(labels: AngularTick[], size: number, radius: number, measure
       -y * (radius + standoff + size * (y > 0 ? 0.2 : 1)) +
       Math.abs(x) * size * MID_SHIFT -
       ((1 + y) * (lines.length - 1) * LINE_SPACING * size) / 2;
-    return lines.flatMap((line, index) =>
-      project(
-        measure(line, size),
+    return lines.flatMap((line, index) => {
+      const ink = measure(line, size);
+      return project(
+        wholeLine && ink.bounds ? { ...ink, boxes: [ink.bounds] } : ink,
         x * (radius + standoff),
         baseline + index * size * LINE_SPACING,
         anchor,
-      ),
-    );
+      );
+    });
   });
 }
 
@@ -224,4 +275,59 @@ export function radarLabelsCollide({
     pairsCollide(numbers) ||
     numbers.some((tick) => headings.some((heading) => collide(tick, heading)))
   );
+}
+
+const COMPACT_RADAR_SPOKES = [-90, 90, 0, 180];
+
+export function fitCompactRadarTicks({
+  diameter,
+  headingSize,
+  tickSize,
+  labels,
+  range,
+  ticks,
+  measure,
+}: {
+  diameter: number;
+  headingSize: number;
+  tickSize: number;
+  labels: AngularTick[];
+  range: readonly [number, number];
+  ticks: number[];
+  measure: MeasureLabel;
+}) {
+  const radius = diameter / 2;
+  // Whole runs include the ligatures and right-to-left shaping used by SVG text.
+  const headings = angularInk(labels, headingSize, radius, measure, true);
+  const candidates = COMPACT_RADAR_SPOKES.map((angle) => {
+    // The local tick rotation cancels the radial axis rotation, so text stays upright.
+    const sin = Math.sin((angle * Math.PI) / 180);
+    const cos = Math.cos((angle * Math.PI) / 180);
+    const vertical = Math.abs(angle) === 90;
+    const anchor = vertical ? (angle > 0 ? 0 : 1) : 0.5;
+    const xOffset = vertical ? (Math.sign(angle) * MID_SHIFT * tickSize) / 2 : 0;
+    const y = 5.5 + tickSize * (angle === -90 ? 0.4 : vertical ? 0.2 : 0.7);
+    const boxes = ticks.map((tick) => {
+      const x = (radius * (tick - range[0])) / (range[1] - range[0]) + xOffset;
+      return project(
+        measure(String(tick), tickSize),
+        x * cos + y * sin,
+        -x * sin + y * cos + tickSize / 2,
+        anchor,
+      );
+    });
+    return { angle, boxes };
+  });
+  for (let count = ticks.length; count > 0; count--) {
+    for (const { angle, boxes } of candidates) {
+      const kept = boxes.slice(0, count);
+      if (
+        !pairsCollide(kept) &&
+        !kept.some((tick) => headings.some((label) => collide(tick, label)))
+      ) {
+        return { angle, ticks: ticks.slice(0, count) };
+      }
+    }
+  }
+  return { angle: -90, ticks: [] };
 }

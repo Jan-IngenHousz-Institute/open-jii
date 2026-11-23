@@ -1,15 +1,22 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 import { cn } from "../../lib/utils";
 import { AUTOSIZE_TOLERANCE, MIN_OUTER_PLOT_HEIGHT, withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
-import { fitWindTicks, measurePolarLabel, polarDiameter } from "./polar-label-fit";
+import {
+  fitWindTicks,
+  measurePolarLabel,
+  polarDiameter,
+  polarFontFamily,
+  usePolarFontRevision,
+} from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
+import type { ChartSizing } from "./use-is-compact";
 import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes, chartGridColor } from "./utils";
 
 /**
@@ -61,6 +68,7 @@ export interface WindRoseProps extends BaseChartProps {
 const DEFAULT_DIRECTION_TICKS = [0, 45, 90, 135, 180, 225, 270, 315];
 const DEFAULT_DIRECTION_LABELS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 const DEFAULT_CONFIG: PlotlyChartConfig = {};
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function WindRose({
   data,
@@ -72,10 +80,36 @@ export function WindRose({
   directionTicks = DEFAULT_DIRECTION_TICKS,
   radialAxisTitle = "Frequency",
 }: WindRoseProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
+  const [containerRef, measuredSizing] = useChartSizing<HTMLDivElement>({
     trackWidth: "pixel",
     trackHeight: "pixel",
   });
+  const [settledSize, setSettledSize] = useState<{
+    sizing: ChartSizing;
+    width?: number;
+    height?: number;
+  }>();
+  useIsomorphicLayoutEffect(() => {
+    if (!measuredSizing.height || settledSize?.sizing === measuredSizing) return;
+    const commitSize = () => {
+      const container = containerRef.current;
+      // Plotly autosize preserves fractional CSS pixels in the grid.
+      const styles = container ? getComputedStyle(container) : undefined;
+      setSettledSize({
+        sizing: measuredSizing,
+        width: Number.parseFloat(styles?.width ?? "") || measuredSizing.viewportWidth,
+        height: Number.parseFloat(styles?.height ?? "") || measuredSizing.height,
+      });
+    };
+    if (!settledSize) {
+      commitSize();
+      return;
+    }
+    const timer = setTimeout(commitSize, 65);
+    return () => clearTimeout(timer);
+  }, [containerRef, measuredSizing, settledSize]);
+  const sizing = settledSize?.sizing ?? measuredSizing;
+  const fontRevision = usePolarFontRevision();
   const { width, snug, compact: compactTier, veryCompact, ultraCompact } = sizing;
   const chrome = useMemo(
     () => ({ width, snug, compact: compactTier, veryCompact, ultraCompact }),
@@ -143,6 +177,8 @@ export function WindRose({
         data: outer.data,
         layout: {
           ...outer.layout,
+          // Plotly keys SVG ticks by font. Use the loaded family to refresh their positions.
+          ...(fontRevision ? { font: { ...outer.layout.font, family: polarFontFamily() } } : {}),
           barmode: "stack",
           polar: {
             bgcolor: "white",
@@ -172,11 +208,21 @@ export function WindRose({
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [config, plotData, directionTicks, fontSizes.tick, radialTitle, chrome, tickText, themeVersion],
+    [
+      config,
+      plotData,
+      directionTicks,
+      fontSizes.tick,
+      radialTitle,
+      chrome,
+      tickText,
+      themeVersion,
+      fontRevision,
+    ],
   );
 
-  const height = config.height ?? sizing.height ?? 0;
-  const viewportWidth = config.width ?? sizing.viewportWidth ?? Infinity;
+  const height = config.height ?? settledSize?.height ?? sizing.height ?? 0;
+  const viewportWidth = config.width ?? settledSize?.width ?? sizing.viewportWidth ?? Infinity;
   const normalDiameter = polarDiameter(
     normal.layout as unknown as Partial<Layout>,
     viewportWidth,
@@ -196,7 +242,12 @@ export function WindRose({
     });
     return {
       data: outer.data,
-      layout: { ...outer.layout, barmode: normal.layout.barmode, polar: normal.layout.polar },
+      layout: {
+        ...outer.layout,
+        font: normal.layout.font,
+        barmode: normal.layout.barmode,
+        polar: normal.layout.polar,
+      },
     };
   }, [normal, config, chrome, plotData, radialTitle, compactHeight]);
 
@@ -224,28 +275,21 @@ export function WindRose({
     viewportWidth,
     height,
   );
-  // Remove crowded ticks as the widget shrinks. Restore extra ticks after the resize settles.
-  const [settledDiameter, setSettledDiameter] = useState<number>();
-  useEffect(() => {
-    if (diameter < MIN_OUTER_PLOT_HEIGHT) return;
-    const timer = setTimeout(() => setSettledDiameter(diameter), 65);
-    return () => clearTimeout(timer);
-  }, [diameter]);
-  const stableDiameter = Math.min(diameter, settledDiameter ?? diameter);
   const measured = height > 0;
   const fit = useMemo(() => {
     if (!measured) return { step: 1, ticks: undefined };
     return fitWindTicks({
-      diameter: Math.max(MIN_OUTER_PLOT_HEIGHT, stableDiameter),
+      diameter: Math.max(MIN_OUTER_PLOT_HEIGHT, diameter),
       peak,
       labels,
       size: fontSizes.tick,
       measure: measurePolarLabel,
       compact: short,
     });
-  }, [measured, stableDiameter, peak, labels, fontSizes.tick, short]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fontRevision invalidates the measured text.
+  }, [measured, diameter, peak, labels, fontSizes.tick, short, fontRevision]);
   const radial = fit.ticks?.join(",");
-  const layout = useMemo(() => {
+  const tickLayout = useMemo(() => {
     if (fit.step === 1 && !radial) return figure.layout;
     const { polar } = figure.layout;
     const angles = new Set(
@@ -270,6 +314,14 @@ export function WindRose({
       },
     };
   }, [figure, fit.step, radial, labels, tickText, directionTicks]);
+  // Commit the measured dimensions with their ticks. Plotly's autosize would draw them separately.
+  const layout = useMemo(
+    () =>
+      height && Number.isFinite(viewportWidth)
+        ? { ...tickLayout, width: viewportWidth, height, autosize: false }
+        : tickLayout,
+    [tickLayout, viewportWidth, height],
+  );
   const plotConfig = useMemo(() => createPlotlyConfig(config, chrome), [config, chrome]);
 
   return (
@@ -278,7 +330,7 @@ export function WindRose({
         data={figure.data}
         layout={layout as unknown as Partial<Layout>}
         config={plotConfig}
-        loading={loading || sizing.height === undefined}
+        loading={loading || !settledSize}
         error={error}
       />
     </div>

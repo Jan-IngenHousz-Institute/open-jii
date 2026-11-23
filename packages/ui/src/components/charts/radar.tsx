@@ -1,7 +1,7 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "../../lib/utils";
 import {
@@ -13,10 +13,13 @@ import {
 } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import {
+  fitCompactRadarTicks,
   linearTicks,
   measurePolarLabel,
   polarDiameter,
+  polarFontFamily,
   radarLabelsCollide,
+  usePolarFontRevision,
 } from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -122,6 +125,7 @@ export function RadarPlot({
     [width, snug, compactChrome, veryCompact, ultraCompact],
   );
   const themeVersion = useChartThemeRefresh();
+  const fontRevision = usePolarFontRevision();
   const fontSizes = tierAxisFontSizes(chrome);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatterpolar", renderer);
@@ -208,6 +212,8 @@ export function RadarPlot({
         data: outer.data,
         layout: {
           ...outer.layout,
+          // Plotly keys SVG ticks by font. Use the loaded family to refresh their positions.
+          ...(fontRevision ? { font: { ...outer.layout.font, family: polarFontFamily() } } : {}),
           polar: {
             radialaxis: {
               visible: radialAxisVisible,
@@ -263,6 +269,7 @@ export function RadarPlot({
       chrome,
       tickAngle,
       themeVersion,
+      fontRevision,
     ],
   );
 
@@ -286,16 +293,19 @@ export function RadarPlot({
     [data],
   );
 
-  const range = (size: number): [number, number] => {
-    const min = rangeMode === "normal" ? Math.min(0, ...extents.map((series) => series.min)) : 0;
-    const max = Math.max(
-      min,
-      ...extents.map(
-        (series) => min + (series.max - min) / Math.max(0.5, 1 - series.padding / (size / 2)),
-      ),
-    );
-    return [min, max > min ? max : min + 1];
-  };
+  const range = useCallback(
+    (size: number): [number, number] => {
+      const min = rangeMode === "normal" ? Math.min(0, ...extents.map((series) => series.min)) : 0;
+      const max = Math.max(
+        min,
+        ...extents.map(
+          (series) => min + (series.max - min) / Math.max(0.5, 1 - series.padding / (size / 2)),
+        ),
+      );
+      return [min, max > min ? max : min + 1];
+    },
+    [extents, rangeMode],
+  );
   const headings = useMemo(
     () =>
       normal.layout.polar.angularaxis.ticktext?.map((text, index, ticks) => ({
@@ -354,21 +364,43 @@ export function RadarPlot({
       labels: radarLabelMargins(ticktext, headingFont, true),
       compact: { height: compactHeight, maxPlotHeight },
     });
+    const compactDiameter = polarDiameter(outer.layout, viewportWidth, compactHeight);
+    const ticks = radialTicks.split(",").map(Number);
+    const compactAxis =
+      gridShape === "circular" &&
+      angularAxisVisible &&
+      showTickLabels &&
+      radialAxisVisible &&
+      tickAngle === 0
+        ? fitCompactRadarTicks({
+            diameter: compactDiameter,
+            headingSize: headingFont,
+            tickSize: fontSizes.tick,
+            labels: ticktext.map((text, index) => ({
+              text,
+              angle: (index * 360) / ticktext.length,
+            })),
+            range: range(compactDiameter),
+            ticks,
+            measure: measurePolarLabel,
+          })
+        : { angle: -90, ticks };
     const { polar } = normal.layout;
     return {
       data: outer.data,
       layout: {
         ...outer.layout,
+        font: normal.layout.font,
         polar: {
           ...polar,
           radialaxis: {
             ...polar.radialaxis,
             nticks: 2,
-            angle: -90,
-            tickangle: -90,
+            angle: compactAxis.angle,
+            tickangle: compactAxis.angle,
             tickmode: "array",
-            tickvals: radialTicks.split(",").map(Number),
-            ticktext: radialTicks.split(","),
+            tickvals: compactAxis.ticks,
+            ticktext: compactAxis.ticks.map(String),
           },
           angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
         },
@@ -384,6 +416,13 @@ export function RadarPlot({
     plotData,
     chrome,
     radialTicks,
+    angularAxisVisible,
+    gridShape,
+    radialAxisVisible,
+    range,
+    showTickLabels,
+    tickAngle,
+    viewportWidth,
   ]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, chrome), [config, chrome]);

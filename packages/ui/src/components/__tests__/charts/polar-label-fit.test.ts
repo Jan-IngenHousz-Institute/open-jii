@@ -1,6 +1,11 @@
 import { expect, it } from "vitest";
 
-import { fitWindTicks, linearTicks, radarLabelsCollide } from "../../charts/polar-label-fit";
+import {
+  fitCompactRadarTicks,
+  fitWindTicks,
+  linearTicks,
+  radarLabelsCollide,
+} from "../../charts/polar-label-fit";
 import type { MeasureLabel } from "../../charts/polar-label-fit";
 
 const compass = [
@@ -93,4 +98,24 @@ it("detects when adjacent radar headings share space", () => {
   };
   expect(radarLabelsCollide({ ...args, diameter: 60 })).toBe(true);
   expect(radarLabelsCollide({ ...args, diameter: 510 })).toBe(false);
+});
+
+it("moves the compact radial spoke when it shares space with a heading", () => {
+  const input = {
+    diameter: 61,
+    headingSize: 9,
+    tickSize: 10,
+    range: [0, 2150] as const,
+    ticks: [0, 2000],
+    measure,
+  };
+  expect(fitCompactRadarTicks({ ...input, labels: [] })).toEqual({
+    angle: -90,
+    ticks: [0, 2000],
+  });
+  const fit = fitCompactRadarTicks({
+    ...input,
+    labels: [{ angle: 225, text: "relative_humidity" }],
+  });
+  expect(fit).toEqual({ angle: 90, ticks: [0, 2000] });
 });
