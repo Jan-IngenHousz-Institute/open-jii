@@ -23,9 +23,10 @@ variable "databricks_account_id" {
 }
 
 variable "databricks_client_id" {
-  description = "The service principal's client ID for Databricks authentication"
+  description = "The service principal's client ID for Databricks authentication; unused under databricks-cli"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "databricks_client_secret" {
@@ -135,9 +136,9 @@ variable "centralized_metastore_bucket_name" {
 }
 
 variable "posthog_key" {
-  description = "PostHog project API key"
+  description = "PostHog project API key, the public phc_ key the web app also ships; dev and prod share the project"
   type        = string
-  default     = "phc_bAOjcJ4S1mw8I5bSlDHUDmNeOaLuo4dhPiqWmyNdWLd"
+  default     = "phc_kjR7HtWXPKgnqfC36XMwZjoYpBCevLqodnhsaHR5XyDF"
 }
 
 variable "posthog_host" {

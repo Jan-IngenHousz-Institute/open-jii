@@ -154,7 +154,8 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
   object[key] = value;
   await deps.put(name, JSON.stringify(object));
 
-  const missing = spec.keys.filter((key) => !(key in object));
+  // An empty string counts as unset: the service reading it would start without the value.
+  const missing = spec.keys.filter((key) => typeof object[key] !== "string" || object[key] === "");
   deps.write(
     `Set ${key} in ${name}` +
       (missing.length > 0 ? `; still without a value: ${missing.join(", ")}` : "") +
@@ -163,7 +164,8 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
 }
 
 function secretsManager(profile: string) {
-  const client = new SecretsManagerClient({ profile });
+  // The secrets live in eu-central-1 in both accounts, whatever region the profile names.
+  const client = new SecretsManagerClient({ profile, region: "eu-central-1" });
   return {
     read: async (name: string): Promise<string | null> => {
       try {

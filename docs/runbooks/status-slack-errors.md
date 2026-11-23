@@ -60,7 +60,8 @@ logs `{"skipped": "<event type>", "id": "<event id>", "reason": "already posted"
   `AccessDeniedException` means the role lost `secretsmanager:GetSecretValue` on it, and
   `ResourceNotFoundException` means the secret was deleted, has no value yet, or
   `STATUS_SLACK_SECRET_ARN` is stale. Applying the environment restores the secret and the ARN, and
-  `pnpm secrets:set <env> status-slack` gives it a value. An error saying the secret does not hold an
+  `pbpaste | pnpm secrets:set <env> status-slack --aws-profile <your profile>` gives it a value, with
+  the address on the clipboard. An error saying the secret does not hold an
   https address means the stored value is something else. The value must be the bare webhook
   address, not JSON.
 - **The event is malformed.** A `SyntaxError` from reading the message, or a schema error listing the

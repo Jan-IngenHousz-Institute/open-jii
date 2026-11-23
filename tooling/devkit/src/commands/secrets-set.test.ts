@@ -54,6 +54,22 @@ describe("setSecret", () => {
     expect(output).not.toContain("s3cr3t-value");
   });
 
+  it("lists a key with an empty value as still without a value", async () => {
+    const d = deps(JSON.stringify({ CONTENTFUL_SPACE_ID: "", CONTENTFUL_ACCESS_TOKEN: "t" }));
+
+    await setSecret(
+      {
+        environment: "dev",
+        secret: "status-contentful",
+        key: "CONTENTFUL_ACCESS_TOKEN",
+        awsProfile: "p",
+      },
+      d.value,
+    );
+
+    expect(d.lines.join("")).toContain("still without a value: CONTENTFUL_SPACE_ID");
+  });
+
   it("starts an empty JSON object when the secret has no value yet", async () => {
     const d = deps(null);
 
