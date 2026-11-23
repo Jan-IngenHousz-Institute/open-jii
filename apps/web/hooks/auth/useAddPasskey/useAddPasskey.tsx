@@ -1,14 +1,11 @@
 "use client";
 
-import { useDepartureRouter } from "@/components/navigation/list-departure/list-departure";
 import { NOTIFICATIONS_KEY } from "@/hooks/notifications/useNotifications/useNotifications";
-import { useLocale } from "@/hooks/useLocale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
+import { useSignInAgainToast } from "~/hooks/auth/useSignInAgainToast/useSignInAgainToast";
 
 import { authClient } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
-import { ToastAction } from "@repo/ui/components/toast";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 /**
@@ -33,15 +30,7 @@ export interface UseAddPasskeyOptions {
 export function useAddPasskey(options: UseAddPasskeyOptions = {}) {
   const queryClient = useQueryClient();
   const { t } = useTranslation("account");
-  const locale = useLocale();
-  const router = useDepartureRouter();
-  const signOut = useSignOut();
-
-  const signInAgain = async () => {
-    await signOut.mutateAsync();
-    const callbackUrl = `/${locale}/platform/account/security`;
-    router.push(`/${locale}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  };
+  const toastSignInAgain = useSignInAgainToast();
 
   return useMutation({
     mutationFn: async (input: { name?: string }) => {
@@ -67,15 +56,7 @@ export function useAddPasskey(options: UseAddPasskeyOptions = {}) {
     },
     onError: (error) => {
       if (error instanceof PasskeySessionTooOldError) {
-        toast({
-          description: t("passkeys.sessionTooOld"),
-          variant: "destructive",
-          action: (
-            <ToastAction altText={t("passkeys.signInAgain")} onClick={() => void signInAgain()}>
-              {t("passkeys.signInAgain")}
-            </ToastAction>
-          ),
-        });
+        toastSignInAgain(t("passkeys.sessionTooOld"), t("passkeys.signInAgain"));
       } else {
         toast({ description: t("passkeys.addError"), variant: "destructive" });
       }

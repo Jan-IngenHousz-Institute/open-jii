@@ -36,6 +36,7 @@ export const envManifest: readonly EnvVar[] = [
   env("AUTH_ORCID_ID", set, undefined, backend),
   env("AUTH_ORCID_SECRET", set, undefined, backend),
   env("AUTH_ORCID_ENVIRONMENT", set, undefined, backend),
+  env("AUTH_ORCID_REDIRECT_URI", set, undefined, backend),
   // The pair gives one address a fixed sign-in code; a dummy value would switch that on.
   env("AUTH_PLAY_REVIEW_EMAIL", unset, undefined, backend),
   env("AUTH_PLAY_REVIEW_OTP", unset, undefined, backend),
