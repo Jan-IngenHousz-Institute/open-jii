@@ -1,3 +1,4 @@
+import { act, renderHook } from "@testing-library/react";
 import { expect, it } from "vitest";
 
 import {
@@ -5,6 +6,7 @@ import {
   fitWindTicks,
   linearTicks,
   radarLabelsCollide,
+  usePolarFontRevision,
 } from "../../charts/polar-label-fit";
 import type { MeasureLabel } from "../../charts/polar-label-fit";
 
@@ -118,4 +120,38 @@ it("moves the compact radial spoke when it shares space with a heading", () => {
     labels: [{ angle: 225, text: "relative_humidity" }],
   });
   expect(fit).toEqual({ angle: 90, ticks: [0, 2000] });
+});
+
+it("updates the font revision only for a successful load in the chart's font stack", () => {
+  const fonts = new EventTarget();
+  const previousFonts = Object.getOwnPropertyDescriptor(document, "fonts");
+  const style = document.body.style;
+  const previousFamily = style.getPropertyValue("--font-sans");
+  Object.defineProperty(document, "fonts", { configurable: true, value: fonts });
+  style.setProperty("--font-sans", '"Audit Chart", Audit Fallback, sans-serif');
+
+  const { result, unmount } = renderHook(usePolarFontRevision);
+  const initial = result.current;
+  function finish(...fontfaces: Pick<FontFace, "family" | "status">[]) {
+    act(() => {
+      fonts.dispatchEvent(Object.assign(new Event("loadingdone"), { fontfaces }));
+    });
+  }
+  try {
+    finish();
+    finish({ family: "Audit Chart Editor", status: "loaded" });
+    finish({ family: "Audit Chart", status: "error" });
+    expect(result.current).toBe(initial);
+
+    finish(
+      { family: "'AUDIT CHART'", status: "loaded" },
+      { family: "Audit Fallback", status: "loaded" },
+    );
+    expect(result.current).toBe(initial + 1);
+  } finally {
+    unmount();
+    style.setProperty("--font-sans", previousFamily);
+    if (previousFonts) Object.defineProperty(document, "fonts", previousFonts);
+    else Reflect.deleteProperty(document, "fonts");
+  }
 });

@@ -22,9 +22,25 @@ export function polarFontFamily() {
   return styles.getPropertyValue("--font-sans").trim() || styles.fontFamily || "sans-serif";
 }
 
-function refreshFontMetrics() {
+function normaliseFontFamily(name: string) {
+  return name
+    .trim()
+    .replace(/^(["'])(.*)\1$/, "$2")
+    .toLowerCase();
+}
+
+function refreshFontMetrics(event: FontFaceSetLoadEvent) {
+  if (!event.fontfaces.length) return;
+
+  const chartFamily = polarFontFamily();
+  const chartFamilies = chartFamily.split(",").map(normaliseFontFamily);
+  const loadedChartFace = event.fontfaces.some(
+    (face) => face.status === "loaded" && chartFamilies.includes(normaliseFontFamily(face.family)),
+  );
+  if (!loadedChartFace) return;
+
   metrics.clear();
-  family = polarFontFamily();
+  family = chartFamily;
   fontRevision++;
   fontListeners.forEach((listener) => listener());
 }
