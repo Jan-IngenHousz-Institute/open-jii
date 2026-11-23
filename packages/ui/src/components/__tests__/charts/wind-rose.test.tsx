@@ -77,7 +77,7 @@ describe("WindRose", () => {
         data={sampleData}
         directionLabels={[]}
         directionTicks={ticks}
-        config={{ height: 229, legendPosition: "bottom" }}
+        config={{ height: 229, title: "Wind", legendPosition: "bottom" }}
       />,
     );
     const layout = getLayout();
@@ -103,6 +103,40 @@ describe("WindRose", () => {
       />,
     );
     expect(getLayout().polar.angularaxis.ticktext.filter(Boolean)).toHaveLength(32);
+  });
+
+  it("keeps the regular compass labels in a four-row wind rose with a prevailing direction", () => {
+    const directionTicks = Array.from({ length: 16 }, (_, index) => index * 22.5);
+    const directionLabels = [
+      "N",
+      "NNE",
+      "NE",
+      "ENE",
+      "E",
+      "ESE",
+      "SE",
+      "SSE",
+      "S",
+      "SSW",
+      "SW",
+      "WSW",
+      "W",
+      "WNW",
+      "NW",
+      "NNW",
+    ];
+    render(
+      <WindRose
+        data={[{ name: "0–2 m/s", theta: directionTicks, r: [103, ...Array<number>(15).fill(0)] }]}
+        directionTicks={directionTicks}
+        directionLabels={directionLabels}
+        config={{ width: 566, height: 325, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const layout = getLayout();
+    expect(layout.legend.maxheight).toBe(64);
+    expect(layout.polar.angularaxis.ticktext).toEqual(directionLabels);
+    expect(layout.polar.radialaxis.nticks).toBe(5);
   });
 
   it("gives part of the horizontal legend band back when the chart body gets shorter", () => {

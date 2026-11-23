@@ -1,20 +1,15 @@
 "use client";
 
-import type { PlotData } from "plotly.js";
+import type { Layout, PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import {
-  chartTextWidth,
-  fitsOuterPlot,
-  MIN_OUTER_PLOT_HEIGHT,
-  withOuterLabels,
-  wrapChartLabel,
-} from "./outer-labels";
+import { chartTextWidth, withOuterLabels, wrapChartLabel } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
-import type { BaseChartProps, BaseSeries } from "./types";
+import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
+import { usePolarLabelFit } from "./use-polar-label-fit";
 import {
   createPlotlyConfig,
   getRenderer,
@@ -22,6 +17,8 @@ import {
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
+
+const DEFAULT_CONFIG: PlotlyChartConfig = {};
 
 function radarLabelMargins(labels: string[], fontSize: number, compact = false) {
   const side = Math.max(32, ...labels.map((label) => chartTextWidth(label, fontSize) + 12));
@@ -82,7 +79,7 @@ export interface RadarPlotProps extends BaseChartProps {
 
 export function RadarPlot({
   data,
-  config = {},
+  config = DEFAULT_CONFIG,
   className,
   loading,
   error,
@@ -170,73 +167,27 @@ export function RadarPlot({
   }, [categories, data]);
   const axisCategories = categories ?? inferredCategories;
 
-  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const figure = useMemo(
+  const normal = useMemo(
     () => {
-      const headings = axisCategories ?? [];
-      const font = fontSizes.tick;
-      const options = { config, sizing, traces: plotData };
-      const normalHeadings = headings.map((label) =>
-        wrapChartLabel(label, font, sizing.compact ? 72 : 96),
+      const ticktext = axisCategories?.map((label) =>
+        wrapChartLabel(label, fontSizes.tick, sizing.compact ? 72 : 96),
       );
-      const normal = withOuterLabels({
-        ...options,
-        labels: radarLabelMargins(normalHeadings, font),
+      const outer = withOuterLabels({
+        config,
+        sizing,
+        traces: plotData,
+        labels: radarLabelMargins(ticktext ?? [], fontSizes.tick),
       });
-      const height = config.height ?? sizing.height ?? 0;
-      const step = (2 * Math.PI) / Math.max(3, headings.length);
-      const spokeSpacing = Math.sin(step);
-      const isCentered = (index: number) => Math.abs(Math.sin(step * index)) < 0.1;
-      const minDiameter = Math.ceil(
-        Math.max(
-          MIN_OUTER_PLOT_HEIGHT,
-          radialAxisVisible ? font * 6 + 6 : 0,
-          angularAxisVisible && showTickLabels
-            ? Math.max(
-                0,
-                ...normalHeadings
-                  .filter((_, i) => isCentered(i))
-                  .map((label) => chartTextWidth(label, font)),
-              ) / spokeSpacing
-            : 0,
-        ),
-      );
-      const short = height > 0 && !fitsOuterPlot(normal.layout, height, minDiameter);
-      const compact = { height, maxPlotHeight: minDiameter };
-      const dense = short && headings.length >= 6;
-      const headingFont = dense ? Math.min(font, 9) : font;
-      // Centered headings extend toward their neighbours. Side headings extend outward.
-      const displayCategories = short
-        ? headings.map((label, index) => {
-            const width =
-              isCentered(index) && dense
-                ? Math.max(
-                    headingFont * 4,
-                    (MIN_OUTER_PLOT_HEIGHT + 2 * headingFont) * spokeSpacing + 1,
-                  )
-                : 112;
-            return wrapChartLabel(label, headingFont, width);
-          })
-        : normalHeadings;
-      const outer = short
-        ? withOuterLabels({
-            ...options,
-            labels: radarLabelMargins(displayCategories, headingFont, true),
-            compact,
-          })
-        : normal;
       return {
         data: outer.data,
         layout: {
           ...outer.layout,
-
           polar: {
             radialaxis: {
               visible: radialAxisVisible,
               range: rangeMode === "tozero" ? [0, undefined] : undefined,
               rangemode: rangeMode,
-              nticks: short ? 2 : sizing.compact ? 3 : 5,
-              ...(short ? { angle: -90, tickangle: -90 } : {}),
+              nticks: sizing.compact ? 3 : 5,
               tickfont: { size: fontSizes.tick },
               gridcolor: chartGridColor(),
               linecolor: chartGridColor(),
@@ -251,11 +202,11 @@ export function RadarPlot({
                     tickvals: categories
                       ? categories.map((_, i) => i * (360 / categories.length))
                       : inferredCategories,
-                    ticktext: displayCategories,
+                    ticktext,
                   }
                 : {}),
               tickangle: tickAngle,
-              tickfont: { size: headingFont },
+              tickfont: { size: fontSizes.tick },
               direction: "clockwise",
               period: inferredCategories?.length ?? 360,
               ...(inferredCategories
@@ -267,7 +218,7 @@ export function RadarPlot({
             },
             gridshape: gridShape,
           },
-        } as any,
+        },
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
@@ -289,13 +240,69 @@ export function RadarPlot({
     ],
   );
 
+  const height = config.height ?? sizing.height ?? 0;
+  const { compact, maxPlotHeight, onNormalDraw } = usePolarLabelFit(
+    normal.layout as unknown as Partial<Layout>,
+    height,
+  );
+  const figure = useMemo(() => {
+    if (!compact) return normal;
+    const headings = axisCategories ?? [];
+    const dense = headings.length >= 6;
+    const headingFont = dense ? Math.min(fontSizes.tick, 9) : fontSizes.tick;
+    const step = (2 * Math.PI) / Math.max(3, headings.length);
+    const centeredWidth = Math.max(
+      headingFont * 4,
+      (maxPlotHeight + 2 * headingFont) * Math.sin(step) + 1,
+    );
+    // Centered headings extend toward their neighbours. Side headings extend outward.
+    const ticktext = headings.map((label, index) =>
+      wrapChartLabel(
+        label,
+        headingFont,
+        dense && Math.abs(Math.sin(step * index)) < 0.1 ? Math.min(112, centeredWidth) : 112,
+      ),
+    );
+    const outer = withOuterLabels({
+      config,
+      sizing,
+      traces: plotData,
+      labels: radarLabelMargins(ticktext, headingFont, true),
+      compact: { height, maxPlotHeight },
+    });
+    const { polar } = normal.layout;
+    return {
+      data: outer.data,
+      layout: {
+        ...outer.layout,
+        polar: {
+          ...polar,
+          radialaxis: { ...polar.radialaxis, nticks: 2, angle: -90, tickangle: -90 },
+          angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
+        },
+      },
+    };
+  }, [
+    axisCategories,
+    compact,
+    config,
+    fontSizes.tick,
+    height,
+    maxPlotHeight,
+    normal,
+    plotData,
+    sizing,
+  ]);
+
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={figure.data}
-        layout={figure.layout}
+        layout={figure.layout as unknown as Partial<Layout>}
+        onInitialized={onNormalDraw}
+        onUpdate={onNormalDraw}
         config={plotConfig}
         loading={loading}
         error={error}

@@ -1,19 +1,15 @@
 "use client";
 
-import type { PlotData } from "plotly.js";
+import type { Layout, PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import {
-  chartTextWidth,
-  fitsOuterPlot,
-  MIN_OUTER_PLOT_HEIGHT,
-  withOuterLabels,
-} from "./outer-labels";
+import { withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
-import type { BaseChartProps, BaseSeries } from "./types";
+import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
+import { usePolarLabelFit } from "./use-polar-label-fit";
 import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes, chartGridColor } from "./utils";
 
 /**
@@ -64,10 +60,11 @@ export interface WindRoseProps extends BaseChartProps {
 
 const DEFAULT_DIRECTION_TICKS = [0, 45, 90, 135, 180, 225, 270, 315];
 const DEFAULT_DIRECTION_LABELS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+const DEFAULT_CONFIG: PlotlyChartConfig = {};
 
 export function WindRose({
   data,
-  config = {},
+  config = DEFAULT_CONFIG,
   className,
   loading,
   error,
@@ -120,108 +117,108 @@ export function WindRose({
   // back to `tickmode: "linear"` lets Plotly draw a tick at every degree,
   // which on a 360-period axis renders as a solid black ring of stacked
   // numbers. Snapping to the user-supplied tick set avoids that.
-  const tickText =
-    directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
-  // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const figure = useMemo(
+  const tickText = useMemo(
+    () => (directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`)),
+    [directionLabels, directionTicks],
+  );
+  const radialTitle = useMemo(
+    () => ({ text: radialAxisTitle, fontSize: fontSizes.axisTitle }),
+    [radialAxisTitle, fontSizes.axisTitle],
+  );
+  const normal = useMemo(
     () => {
-      const base = {
+      const outer = withOuterLabels({
         config,
         sizing,
         traces: plotData,
-        radialTitle: { text: radialAxisTitle, fontSize: fontSizes.axisTitle },
-      };
-      const normal = withOuterLabels({
-        ...base,
         labels: { left: 40, right: 40, top: 32, bottom: 32 },
+        radialTitle,
       });
-      const height = config.height ?? sizing.height ?? 0;
-      const peak = Math.max(
-        0,
-        ...directionTicks.map((_, index) =>
-          data.reduce(
-            (sum, series) =>
-              sum +
-              (series.visible === false || series.visible === "legendonly"
-                ? 0
-                : (series.r[index] ?? 0)),
-            0,
-          ),
-        ),
-      );
-      // Five labels along a radius need four gaps, measured across the longest number.
-      const radialDiameter = 8 * (chartTextWidth(String(Math.ceil(peak)), fontSizes.tick) + 2);
-      const labelCount = Math.min(16, tickText.filter(Boolean).length);
-      const angularDiameter =
-        (2 * fontSizes.tick * 1.3) / Math.sin((2 * Math.PI) / Math.max(4, labelCount));
-      const minDiameter = Math.ceil(
-        Math.max(MIN_OUTER_PLOT_HEIGHT, radialDiameter, angularDiameter),
-      );
-      const short = height > 0 && !fitsOuterPlot(normal.layout, height, minDiameter);
-      const outer = short
-        ? withOuterLabels({
-            ...base,
-            labels: { left: 40, right: 40, top: 22, bottom: 22 },
-            compact: { height, maxPlotHeight: minDiameter },
-          })
-        : normal;
-      const labelStep = Math.ceil(directionTicks.length / 8);
-      const displayedTicks =
-        short && labelStep > 1
-          ? tickText.map((label, i) => (i % labelStep === 0 ? label : ""))
-          : tickText;
       return {
         data: outer.data,
         layout: {
           ...outer.layout,
-          // Stack value-band segments within each direction slice (the
-          // canonical wind-rose rendering). `barmode: "stack"` is read by
-          // both cartesian bar traces and barpolar.
           barmode: "stack",
           polar: {
             bgcolor: "white",
             radialaxis: {
               title: { text: "" },
               tickfont: { size: fontSizes.tick },
-              // East-pointing radial axis: avoids the north overlap with bars.
               angle: 0,
               tickangle: 0,
-              // Cap ticks so labels don't collide on small charts.
-              nticks: short ? 2 : 5,
+              nticks: 5,
               gridcolor: chartGridColor(),
               showgrid: config.showGrid !== false,
             },
             angularaxis: {
-              // Compass convention: 0° at top, sweep clockwise. Hard-coded
-              // because that's the chart's defining layout.
+              // Compass convention: 0° at top, sweep clockwise.
               direction: "clockwise",
               rotation: 90,
               period: 360,
               tickmode: "array",
               tickvals: directionTicks,
-              ticktext: displayedTicks,
+              ticktext: tickText,
               tickfont: { size: fontSizes.tick },
               gridcolor: chartGridColor(),
               showgrid: config.showGrid !== false,
             },
           },
-        } as unknown as Partial<import("plotly.js").Layout>,
+        },
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-    [
-      config,
-      data,
-      plotData,
-      directionTicks,
-      fontSizes.axisTitle,
-      fontSizes.tick,
-      radialAxisTitle,
-      sizing,
-      tickText,
-      themeVersion,
-    ],
+    [config, plotData, directionTicks, fontSizes.tick, radialTitle, sizing, tickText, themeVersion],
   );
+
+  const height = config.height ?? sizing.height ?? 0;
+  const { compact, maxPlotHeight, onNormalDraw } = usePolarLabelFit(
+    normal.layout as unknown as Partial<Layout>,
+    height,
+    // Full 32-label mode has its own larger catalogue minimum.
+    tickText.filter(Boolean).length <= 16,
+  );
+  const figure = useMemo(() => {
+    if (!compact) return normal;
+    const labelStep = Math.ceil(directionTicks.length / 8);
+    const outer = withOuterLabels({
+      config,
+      sizing,
+      traces: plotData,
+      labels: { left: 40, right: 40, top: 22, bottom: 22 },
+      radialTitle,
+      compact: { height, maxPlotHeight },
+    });
+    const { polar } = normal.layout;
+    return {
+      data: outer.data,
+      layout: {
+        ...outer.layout,
+        barmode: normal.layout.barmode,
+        polar: {
+          ...polar,
+          radialaxis: { ...polar.radialaxis, nticks: 2 },
+          angularaxis: {
+            ...polar.angularaxis,
+            ticktext:
+              labelStep > 1
+                ? tickText.map((label, i) => (i % labelStep === 0 ? label : ""))
+                : tickText,
+          },
+        },
+      },
+    };
+  }, [
+    compact,
+    config,
+    directionTicks.length,
+    height,
+    maxPlotHeight,
+    normal,
+    plotData,
+    radialTitle,
+    sizing,
+    tickText,
+  ]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
@@ -229,7 +226,9 @@ export function WindRose({
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
         data={figure.data}
-        layout={figure.layout}
+        layout={figure.layout as unknown as Partial<Layout>}
+        onInitialized={onNormalDraw}
+        onUpdate={onNormalDraw}
         config={plotConfig}
         loading={loading}
         error={error}
