@@ -1,6 +1,6 @@
 """The serving store's reads for the backend: views that name one experiment, the tables under them,
-which its reader reads only for the experiment a read names in a setting, and the contributor and
-client ids kept beside the rows.
+which its reader reads only for the experiment a read names in a setting, the platform metrics'
+views, and the contributor and client ids kept beside the rows.
 
 The tests run against the test store ``pnpm test`` starts. The packaged server config allows custom
 settings under SQL_, as the store's does.
@@ -252,6 +252,7 @@ def test_a_view_refuses_a_read_that_names_no_experiment(reader: _User) -> None:
         "max_memory_usage_for_user = 0",
         "timeout_overflow_mode = 'break'",
         "apply_deleted_mask = 0",
+        "workload = 'metrics_refreshes'",
     ],
 )
 def test_the_reader_cannot_lift_its_limits_or_see_deleted_rows(reader: _User, setting: str) -> None:
