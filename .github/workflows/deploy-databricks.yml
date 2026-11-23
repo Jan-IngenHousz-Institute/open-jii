@@ -24,6 +24,11 @@ jobs:
   deploy:
     name: Deploy Databricks Bundle
     runs-on: ubuntu-latest
+    # A deploy sets every pipeline setting, continuous among them, which a full refresh flips
+    # while it runs. The refresh job shares this group, so each waits for the other.
+    concurrency:
+      group: databricks-pipelines-${{ inputs.environment }}
+      cancel-in-progress: false
     environment: ${{ inputs.environment }}
 
     steps:
@@ -68,6 +73,12 @@ jobs:
 
       - name: Setup Databricks CLI
         uses: databricks/setup-cli@9625fdde9ba2607df0087e0d3ec7449198bf2180 # v1.23.0
+
+      # A change to either tree id restarts its pipeline, which is how new notebook code reaches it.
+      - name: Read the pipelines' code versions
+        run: |
+          echo "BUNDLE_VAR_centrum_code_version=$(git rev-parse --short=12 HEAD:apps/data/src/pipelines/centrum)" >> "$GITHUB_ENV"
+          echo "BUNDLE_VAR_macro_code_version=$(git rev-parse --short=12 HEAD:apps/data/src/pipelines/macros)" >> "$GITHUB_ENV"
 
       - name: Validate bundle
         working-directory: apps/data

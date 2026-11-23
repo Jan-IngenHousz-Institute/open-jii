@@ -1,0 +1,68 @@
+resources:
+  jobs:
+    # The heartbeat export runs on its own schedule rather than as a second task on the
+    # metrics scheduler.
+    #
+    # Measured on dev: the pipeline task takes 575s and the export adds 421s, of which 216s
+    # is serverless environment setup. Together that is 997s against a 900s schedule, so
+    # every other run was skipped for maximum concurrent runs and each skip raised a job
+    # failure notification.
+    #
+    # Decoupling also makes the dead-man honest. As a dependent task the export could not
+    # write when the parent run was skipped, so collector silence and scheduler skew were
+    # indistinguishable. Standing alone, its absence means the collector is gone.
+    metrics_heartbeat_export:
+      name: Metrics-Heartbeat-Export-${var.env_upper}
+      description: Exports lakehouse observability and usage signals for the platform heartbeat
+      max_concurrent_runs: 1
+      performance_target: STANDARD
+      queue:
+        enabled: false
+
+      # Every 30 minutes. These are slow-moving counts and one cycle sits well inside the
+      # dead-man window.
+      schedule:
+        quartz_cron_expression: 0 0/30 * * * ?
+        timezone_id: UTC
+        pause_status: UNPAUSED
+
+      environments:
+        - environment_key: heartbeat
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../src/lib/openjii/dist/*.whl
+
+      tasks:
+        - task_key: export_platform_heartbeat
+          environment_key: heartbeat
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+          notebook_task:
+            notebook_path: ../src/tasks/metrics_heartbeat_task.py
+            base_parameters:
+              CATALOG_NAME: ${var.catalog}
+              CENTRAL_SCHEMA: centrum
+              METRICS_SCHEMA: metrics
+              # Lowercase, unlike the other jobs: this value becomes the CloudWatch
+              # Environment dimension, which the catalog and Grafana query as-is.
+              ENVIRONMENT: ${bundle.target}
+              HEARTBEAT_LOCATION: s3://open-jii-heartbeat-${bundle.target}
+              PIPELINE_LOGS_PATH: /Volumes/${var.catalog}/centrum/pipeline-logs
+              COST_COMPONENTS: >-
+                {"centrum":{"dlt_pipeline_id":"${resources.pipelines.centrum.id}"},"investigations":{"warehouse_id":"${var.investigations_warehouse}"},"macro":{"dlt_pipeline_id":"${resources.pipelines.macro.id}"},"metrics":{"dlt_pipeline_id":"${resources.pipelines.metrics.id}"},"warehouse":{"warehouse_id":"${var.backend_warehouse}"}}
+              WORKSPACE_ID: ${var.workspace_id}
+
+      # The export is the monitoring producer, so its own failures have to reach someone.
+      # The dead-man covers silence; this covers a run that ran and threw.
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

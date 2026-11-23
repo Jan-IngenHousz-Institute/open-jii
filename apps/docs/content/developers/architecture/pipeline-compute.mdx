@@ -5,7 +5,7 @@ description: "How the classic Databricks pipelines are sized, and the method to 
 
 {/* verified: code@35e73aeea 2026-09-23 */}
 
-Centrum and the macro execution pipeline run on classic compute. Everything about it is declared in `infrastructure/env/{dev,prod}/main.tf`: a cluster policy per pipeline pins the node types and the spot settings, and the pipeline module sets the worker counts, the edition and the mode. The metrics pipeline is serverless and has no node types to choose.
+Centrum and the macro execution pipeline run on classic compute. It is declared in two places. A cluster policy per pipeline in `infrastructure/env/{dev,prod}/main.tf` pins the node types and the spot settings, and each pipeline's definition in `apps/data/resources/` sets the worker counts, the edition and the Spark settings. The metrics pipeline is serverless and has no node types to choose.
 
 This page is the method. The current configuration, and why it beat the alternatives, is recorded in the [pipeline compute ADR](/developers/design-decisions/pipeline-compute-adr).
 
@@ -26,11 +26,11 @@ Work through these in order. Each step narrows the candidates before the next on
 11. **Keep drivers on-demand, without local NVMe, and on at least four cores.** Losing the driver stops the update, and a driver never uses local disk. On two cores the Spark driver often misses its 300-second startup timeout, so a restart often takes more than ten minutes or fails. Size its memory for the flows and its cores for the peaks.
 12. **Let the features decide the edition.** Expectations require ADVANCED, which Centrum still uses. Centrum's bridge flows are append-only and no longer use AUTO CDC. The macro pipeline has neither expectations nor AUTO CDC and runs on CORE.
 13. **Keep spot for workers only.** Workers run on spot with fallback to on-demand, behind an on-demand driver. Production Centrum carries ingest, so its first worker runs on-demand too (`first_on_demand = 2`): one reclaim can take every spot worker at once, and when it did, every flow stopped for 14 minutes, bronze included. The on-demand worker keeps the flows running while replacements start, for about $85 a month. The pipeline sets this in its own `aws_attributes` as well as in the policy, because a policy's fixed values are not documented to reach pipeline clusters. Dev and the macro pipeline accept the stall, because a few minutes of delay there costs less than an on-demand node.
-14. **Roll out on dev first and gate production on the code.** Watch dev for at least a day. Terraform applies before the bundle deploys, and a continuous pipeline restarts by itself when its settings change, so it comes back on the new compute running its old code. Restart it again once the bundle has deployed. If the apply also adds notebooks to the pipeline, that first restart fails until the bundle uploads them. Production must not get compute sized for code it is not yet running.
+14. **Roll out on dev first and gate production on the code.** Watch dev for at least a day. A pipeline's compute settings and its code ship in one bundle deploy, and a continuous pipeline restarts by itself when its settings change, so it comes back on the new compute running the new code. Production must not get compute sized for code it is not yet running.
 
 ## Macro batch limits
 
-The macro pipeline sets three controls in its Terraform configuration:
+The macro pipeline sets three controls in its configuration in `apps/data/resources/macro.pipeline.yml`:
 
 | Setting                       | Initial value | Controls                                        |
 | ----------------------------- | ------------- | ----------------------------------------------- |
@@ -87,4 +87,4 @@ GROUP BY t.driver
 
 - Graviton and fleet instance types are offered in the workspace, but Databricks publishes no pipeline price for them, and pipeline support for them is unverified.
 - Photon raises the DBU rate and does not speed up Python UDFs, which most of our flows use.
-- A policy that fixes a node type has to change in the same apply as the pipeline that names it. A pipeline that disagrees with its policy fails at its next start.
+- A policy that fixes a node type has to change in the same pull request as the pipeline that names it. OpenTofu applies the policy before the bundle updates the pipeline, so a cluster that restarts between the two steps fails until the bundle deploy lands. A pipeline that disagrees with its policy fails at its next start.

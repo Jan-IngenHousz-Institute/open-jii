@@ -43,6 +43,10 @@ jobs:
     name: Full-refresh selected DLT tables
     needs: approval-gate
     runs-on: ubuntu-latest
+    # Shared with the bundle deploy, which would set continuous back in the middle of a refresh.
+    concurrency:
+      group: databricks-pipelines-${{ inputs.environment }}
+      cancel-in-progress: false
     environment: ${{ inputs.environment }}
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
@@ -101,17 +105,17 @@ jobs:
         run: |
           set -euo pipefail
           BODY=$(jq -Rnc --arg s "$TABLES" '{full_refresh_selection: ($s | split(",") | map(gsub("^\\s+|\\s+$"; ""))), cause: "API_CALL"}')
-          UID=$(databricks pipelines start-update "$PID" --json "$BODY" | jq -r '.update_id')
-          echo "::notice::Update $UID started ($REASON)"
+          UPDATE_ID=$(databricks pipelines start-update "$PID" --json "$BODY" | jq -r '.update_id')
+          echo "::notice::Update $UPDATE_ID started ($REASON)"
           for _ in $(seq 1 240); do
-            STATE=$(databricks pipelines get-update "$PID" "$UID" -o json | jq -r '.update.state')
+            STATE=$(databricks pipelines get-update "$PID" "$UPDATE_ID" -o json | jq -r '.update.state')
             case "$STATE" in
-              COMPLETED)        echo "::notice::Update $UID completed"; exit 0 ;;
-              FAILED|CANCELED)  echo "::error::Update $UID ended with $STATE"; exit 1 ;;
+              COMPLETED)        echo "::notice::Update $UPDATE_ID completed"; exit 0 ;;
+              FAILED|CANCELED)  echo "::error::Update $UPDATE_ID ended with $STATE"; exit 1 ;;
             esac
             sleep 30
           done
-          echo "::error::Update $UID did not complete within 2h"; exit 1
+          echo "::error::Update $UPDATE_ID did not complete within 2h"; exit 1
 
       - name: Restore continuous mode
         if: always() && inputs.environment == 'prod'

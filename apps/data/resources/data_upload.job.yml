@@ -1,0 +1,51 @@
+resources:
+  jobs:
+    data_upload:
+      name: Data-Upload-Job-${var.env_upper}
+      description: Dispatches user-initiated data uploads (CSV, ambyte, …) to the right processor and writes parquet into the data-imports volume for the centrum pipeline to ingest
+      max_concurrent_runs: 5
+      performance_target: PERFORMANCE_OPTIMIZED
+      queue:
+        enabled: true
+
+      environments:
+        - environment_key: data_upload
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../src/lib/ambyte/dist/*.whl
+              - ../src/lib/openjii/dist/*.whl
+              - ../src/lib/enrich/dist/*.whl
+
+      tasks:
+        - task_key: process_upload
+          environment_key: data_upload
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+          notebook_task:
+            notebook_path: ../src/tasks/data_upload_task.py
+            base_parameters:
+              SOURCE_KIND: "{{SOURCE_KIND}}"
+              EXPERIMENT_ID: "{{EXPERIMENT_ID}}"
+              UPLOAD_DIRECTORY: "{{UPLOAD_DIRECTORY}}"
+              UPLOAD_TABLE_ID: "{{UPLOAD_TABLE_ID}}"
+              UPLOAD_TABLE_NAME: "{{UPLOAD_TABLE_NAME}}"
+              UPLOAD_ID: "{{UPLOAD_ID}}"
+              USER_ID: "{{USER_ID}}"
+              EXPERIMENT_NAME: "{{EXPERIMENT_NAME}}"
+              EXPERIMENT_SCHEMA: "{{EXPERIMENT_SCHEMA}}"
+              YEAR_PREFIX: "{{YEAR_PREFIX}}"
+              CATALOG_NAME: ${var.catalog}
+              ENVIRONMENT: ${var.env_upper}
+
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

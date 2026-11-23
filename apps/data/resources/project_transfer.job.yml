@@ -1,0 +1,48 @@
+resources:
+  jobs:
+    project_transfer:
+      name: Project-Transfer-Job-${var.env_upper}
+      description: Validates pending project transfer requests, calls the backend webhook for approved transfers, and writes enriched measurement data to the data-imports volume
+      max_concurrent_runs: 1
+      performance_target: ${var.transfer_performance_target}
+      queue:
+        enabled: true
+
+      trigger:
+        pause_status: UNPAUSED
+        table_update:
+          table_names:
+            - ${var.catalog}.centrum.openjii_project_transfer_requests
+          condition: ANY_UPDATED
+          min_time_between_triggers_seconds: 60
+
+      environments:
+        - environment_key: project_transfer
+          spec:
+            environment_version: "4"
+            dependencies:
+              - ../src/lib/enrich/dist/*.whl
+
+      tasks:
+        - task_key: transfer_project_data
+          environment_key: project_transfer
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+          notebook_task:
+            notebook_path: ../src/tasks/project_transfer_task.py
+            base_parameters:
+              catalog_name: ${var.catalog}
+              ENVIRONMENT: ${var.env_upper}
+              PHOTOSYNQ_DATA_PATH: /Volumes/${var.catalog}/centrum/data-legacy/photosynq_merged
+
+      webhook_notifications:
+        on_failure:
+          - id: ${var.slack_destination}
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}

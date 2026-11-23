@@ -79,7 +79,7 @@ Earlier versions injected this into `_config.py` at wheel-build time (one wheel 
 
 `pnpm build` produces wheels for every lib via `uv build --all-packages` (these end up in `dist/`).
 
-The Databricks bundle (`databricks.yml`) builds wheels and uploads notebooks via `databricks bundle deploy`. CI for that is in [.github/workflows/deploy-databricks.yml](../../.github/workflows/deploy-databricks.yml). Pipeline and job definitions themselves live in terraform, not in the bundle.
+The Databricks bundle (`databricks.yml`) builds wheels and uploads notebooks via `databricks bundle deploy`. CI for that is in [.github/workflows/deploy-databricks.yml](../../.github/workflows/deploy-databricks.yml). Pipeline and job definitions live in the bundle too, one file each under `resources/`, so a deploy ships a pipeline's settings together with its code. OpenTofu keeps what they run on: the catalog, the cluster policies and the principals.
 
 ### Changing experiment views
 

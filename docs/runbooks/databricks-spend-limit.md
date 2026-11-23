@@ -21,9 +21,8 @@ GROUP BY usage_date, sku_name
 ORDER BY usage_date
 ```
 
-Run it on the Investigations warehouse. `databricks_cost_components` in
-`infrastructure/env/<env>/main.tf` lists the id each component bills under, which the heartbeat job
-receives as `COST_COMPONENTS`.
+Run it on the Investigations warehouse. `COST_COMPONENTS` in
+`apps/data/resources/metrics_heartbeat_export.job.yml` lists the id each component bills under.
 
 `jobs` and `other` have no single id: `jobs` is every job run, and `other` is the rest of the
 workspace. Split the workspace's spend at list price by product and job instead, with the heartbeat

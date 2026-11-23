@@ -1,0 +1,55 @@
+resources:
+  pipelines:
+    metrics:
+      name: Metrics-DLT-Pipeline-${var.env_upper}
+      catalog: ${var.catalog}
+      schema: metrics
+      channel: CURRENT
+      continuous: false
+      serverless: true
+
+      lifecycle:
+        prevent_destroy: true
+
+      permissions:
+        - level: IS_OWNER
+          service_principal_name: ${var.node_principal}
+
+      environment:
+        dependencies:
+          - ../src/lib/openjii/dist/*.whl
+
+      configuration:
+        "CATALOG_NAME": ${var.catalog}
+        "CENTRUM_SCHEMA_NAME": centrum
+        "SILVER_TABLE": clean_data
+        "BRONZE_TABLE": raw_data
+
+      libraries:
+        - notebook:
+            path: ../src/pipelines/metrics/platform_totals.py
+        - notebook:
+            path: ../src/pipelines/metrics/daily_activity.py
+        - notebook:
+            path: ../src/pipelines/metrics/family_totals.py
+        - notebook:
+            path: ../src/pipelines/metrics/hourly_activity.py
+        - notebook:
+            path: ../src/pipelines/metrics/activity_windows.py
+        - notebook:
+            path: ../src/pipelines/metrics/parameter_stats.py
+        - notebook:
+            path: ../src/pipelines/metrics/pool_facts.py
+        - notebook:
+            path: ../src/pipelines/metrics/daily_activity_by_experiment.py
+        - notebook:
+            path: ../src/pipelines/metrics/experiment_contributors_window.py
+        - notebook:
+            path: ../src/pipelines/metrics/experiment_devices_window.py
+        - notebook:
+            path: ../src/pipelines/metrics/daily_activity_by_resource.py
+        # ops: read by the heartbeat export, never by the public endpoint
+        - notebook:
+            path: ../src/pipelines/metrics/ops_device_silence.py
+        - notebook:
+            path: ../src/pipelines/metrics/ops_ingest_quality.py
