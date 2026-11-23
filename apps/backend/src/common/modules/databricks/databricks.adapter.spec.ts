@@ -1596,6 +1596,21 @@ describe("DatabricksAdapter", () => {
             requireComplete: true,
           }),
       ],
+      [
+        "experiment publishers",
+        () =>
+          databricksAdapter.getExperimentPublishers(
+            "11111111-1111-4111-8111-111111111111",
+            FROM,
+            TO,
+            500,
+          ),
+      ],
+      [
+        "experiment device stats",
+        () =>
+          databricksAdapter.getExperimentDeviceStats("11111111-1111-4111-8111-111111111111", 2000),
+      ],
     ];
 
     it.each(completeReads)("rejects a truncated group %s scan", async (_name, scan) => {

@@ -386,21 +386,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     experimentId: string,
     limit: number,
   ): Promise<Result<ExperimentDeviceStatsRow[]>> {
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.${this.DEVICE_DATA_TABLE_NAME}`,
-      columns: [
-        "client_id",
-        "device_name",
-        "device_firmware",
-        "device_version",
-        "device_battery",
-        "total_measurements",
-        "processed_timestamp",
-      ],
-      whereConditions: [["experiment_id", experimentId]],
-      ordering: { column: "processed_timestamp", direction: "DESC" },
-      limit,
-    });
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.${this.DEVICE_DATA_TABLE_NAME}`,
+        columns: [
+          "client_id",
+          "device_name",
+          "device_firmware",
+          "device_version",
+          "device_battery",
+          "total_measurements",
+          "processed_timestamp",
+        ],
+        whereConditions: [["experiment_id", experimentId]],
+        ordering: { column: "processed_timestamp", direction: "DESC" },
+        limit,
+      },
+      { requireComplete: true },
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
@@ -430,20 +433,23 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     to: string,
     limit: number,
   ): Promise<Result<ExperimentPublisherRow[]>> {
-    const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["experiment_id", experimentId]],
-      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
-      aggregation: {
-        groupBy: [{ column: "client_id" }],
-        functions: [
-          { column: "*", function: "count", alias: "measurement_count" },
-          { column: "timestamp", function: "max", alias: "last_data_at" },
-        ],
+    const result = await this.runMonitoringQuery(
+      {
+        table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+        whereConditions: [["experiment_id", experimentId]],
+        filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+        aggregation: {
+          groupBy: [{ column: "client_id" }],
+          functions: [
+            { column: "*", function: "count", alias: "measurement_count" },
+            { column: "timestamp", function: "max", alias: "last_data_at" },
+          ],
+        },
+        ordering: { column: "last_data_at", direction: "DESC" },
+        limit,
       },
-      ordering: { column: "last_data_at", direction: "DESC" },
-      limit,
-    });
+      { requireComplete: true },
+    );
     if (result.isFailure()) {
       return failure(result.error);
     }
