@@ -1,9 +1,9 @@
 import { fromPartial } from "@total-typescript/shoehorn";
-import { resolve } from "node:path";
 
 import { ExperimentWarehouseReadsService } from "../../../../../../experiments/application/services/experiment-warehouse-reads.service";
 import type { NumberAnswersService } from "../../../../../../experiments/application/services/number-answers.service";
 import type { DatabricksPort } from "../../../../../../experiments/core/ports/databricks.port";
+import { dataFixture } from "../../../../../../test/data-fixtures";
 import { assertSuccess } from "../../../../../utils/fp-utils";
 import { QueryBuilderService } from "../query-builder.service";
 import type { QueryParams } from "../query-builder.types";
@@ -100,6 +100,6 @@ it("keeps the Spark device-display fixture in sync with generated queries", asyn
     }),
   };
   await expect(JSON.stringify(queries, null, 2) + "\n").toMatchFileSnapshot(
-    resolve(__dirname, "../../../../../../../../data/tests/fixtures/device-display-queries.json"),
+    dataFixture("device-display-queries.json"),
   );
 });
