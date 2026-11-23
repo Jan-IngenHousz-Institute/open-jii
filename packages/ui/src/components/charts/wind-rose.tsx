@@ -1,15 +1,15 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
+import type { PolarFit } from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { usePolarLabelFit } from "./use-polar-label-fit";
 import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes, chartGridColor } from "./utils";
 
 /**
@@ -171,64 +171,41 @@ export function WindRose({
   );
 
   const height = config.height ?? sizing.height ?? 0;
-  const { compact, maxPlotHeight, onNormalDraw } = usePolarLabelFit(
-    normal.layout as unknown as Partial<Layout>,
-    height,
-    // Full 32-label mode has its own larger catalogue minimum.
-    tickText.filter(Boolean).length <= 16,
+  const compact = useCallback<PolarFit["compact"]>(
+    (maxPlotHeight) => {
+      const outer = withOuterLabels({
+        config,
+        sizing,
+        traces: plotData,
+        labels: { left: 40, right: 40, top: 22, bottom: 22 },
+        radialTitle,
+        compact: { height, maxPlotHeight },
+      });
+      const { polar } = normal.layout;
+      return {
+        data: outer.data,
+        layout: {
+          ...outer.layout,
+          barmode: normal.layout.barmode,
+          polar,
+        } as unknown as Partial<Layout>,
+      };
+    },
+    [config, height, normal, plotData, radialTitle, sizing],
   );
-  const figure = useMemo(() => {
-    if (!compact) return normal;
-    const labelStep = Math.ceil(directionTicks.length / 8);
-    const outer = withOuterLabels({
-      config,
-      sizing,
-      traces: plotData,
-      labels: { left: 40, right: 40, top: 22, bottom: 22 },
-      radialTitle,
-      compact: { height, maxPlotHeight },
-    });
-    const { polar } = normal.layout;
-    return {
-      data: outer.data,
-      layout: {
-        ...outer.layout,
-        barmode: normal.layout.barmode,
-        polar: {
-          ...polar,
-          radialaxis: { ...polar.radialaxis, nticks: 2 },
-          angularaxis: {
-            ...polar.angularaxis,
-            ticktext:
-              labelStep > 1
-                ? tickText.map((label, i) => (i % labelStep === 0 ? label : ""))
-                : tickText,
-          },
-        },
-      },
-    };
-  }, [
-    compact,
-    config,
-    directionTicks.length,
-    height,
-    maxPlotHeight,
-    normal,
-    plotData,
-    radialTitle,
-    sizing,
-    tickText,
-  ]);
+  const polarFit = useMemo(
+    () => ({ compact, wind: { ticks: directionTicks, labels: tickText } }),
+    [compact, directionTicks, tickText],
+  );
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={figure.data}
-        layout={figure.layout as unknown as Partial<Layout>}
-        onInitialized={onNormalDraw}
-        onUpdate={onNormalDraw}
+        data={normal.data}
+        layout={normal.layout as unknown as Partial<Layout>}
+        polarFit={polarFit}
         config={plotConfig}
         loading={loading}
         error={error}

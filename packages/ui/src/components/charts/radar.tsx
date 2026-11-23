@@ -1,15 +1,15 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { chartTextWidth, withOuterLabels, wrapChartLabel } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
+import type { PolarFit } from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { usePolarLabelFit } from "./use-polar-label-fit";
 import {
   createPlotlyConfig,
   getRenderer,
@@ -241,68 +241,56 @@ export function RadarPlot({
   );
 
   const height = config.height ?? sizing.height ?? 0;
-  const { compact, maxPlotHeight, onNormalDraw } = usePolarLabelFit(
-    normal.layout as unknown as Partial<Layout>,
-    height,
+  const compact = useCallback<PolarFit["compact"]>(
+    (maxPlotHeight) => {
+      const headings = axisCategories ?? [];
+      const dense = headings.length >= 6;
+      const headingFont = dense ? Math.min(fontSizes.tick, 9) : fontSizes.tick;
+      const step = (2 * Math.PI) / Math.max(3, headings.length);
+      const centeredWidth = Math.max(
+        headingFont * 4,
+        (maxPlotHeight + 2 * headingFont) * Math.sin(step) + 1,
+      );
+      // Centered headings extend toward their neighbours. Side headings extend outward.
+      const ticktext = headings.map((label, index) =>
+        wrapChartLabel(
+          label,
+          headingFont,
+          dense && Math.abs(Math.sin(step * index)) < 0.1 ? Math.min(112, centeredWidth) : 112,
+        ),
+      );
+      const outer = withOuterLabels({
+        config,
+        sizing,
+        traces: plotData,
+        labels: radarLabelMargins(ticktext, headingFont, true),
+        compact: { height, maxPlotHeight },
+      });
+      const { polar } = normal.layout;
+      return {
+        data: outer.data,
+        layout: {
+          ...outer.layout,
+          polar: {
+            ...polar,
+            radialaxis: { ...polar.radialaxis, nticks: 2, angle: -90, tickangle: -90 },
+            angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
+          },
+        } as unknown as Partial<Layout>,
+      };
+    },
+    [axisCategories, config, fontSizes.tick, height, normal, plotData, sizing],
   );
-  const figure = useMemo(() => {
-    if (!compact) return normal;
-    const headings = axisCategories ?? [];
-    const dense = headings.length >= 6;
-    const headingFont = dense ? Math.min(fontSizes.tick, 9) : fontSizes.tick;
-    const step = (2 * Math.PI) / Math.max(3, headings.length);
-    const centeredWidth = Math.max(
-      headingFont * 4,
-      (maxPlotHeight + 2 * headingFont) * Math.sin(step) + 1,
-    );
-    // Centered headings extend toward their neighbours. Side headings extend outward.
-    const ticktext = headings.map((label, index) =>
-      wrapChartLabel(
-        label,
-        headingFont,
-        dense && Math.abs(Math.sin(step * index)) < 0.1 ? Math.min(112, centeredWidth) : 112,
-      ),
-    );
-    const outer = withOuterLabels({
-      config,
-      sizing,
-      traces: plotData,
-      labels: radarLabelMargins(ticktext, headingFont, true),
-      compact: { height, maxPlotHeight },
-    });
-    const { polar } = normal.layout;
-    return {
-      data: outer.data,
-      layout: {
-        ...outer.layout,
-        polar: {
-          ...polar,
-          radialaxis: { ...polar.radialaxis, nticks: 2, angle: -90, tickangle: -90 },
-          angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
-        },
-      },
-    };
-  }, [
-    axisCategories,
-    compact,
-    config,
-    fontSizes.tick,
-    height,
-    maxPlotHeight,
-    normal,
-    plotData,
-    sizing,
-  ]);
+  const polarFit = useMemo(() => ({ compact }), [compact]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
-        data={figure.data}
-        layout={figure.layout as unknown as Partial<Layout>}
-        onInitialized={onNormalDraw}
-        onUpdate={onNormalDraw}
+        data={normal.data}
+        layout={normal.layout as unknown as Partial<Layout>}
+        polarFit={polarFit}
         config={plotConfig}
         loading={loading}
         error={error}

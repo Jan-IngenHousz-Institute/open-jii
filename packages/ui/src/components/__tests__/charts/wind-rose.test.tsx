@@ -6,10 +6,11 @@ import { WindRose } from "../../charts/wind-rose";
 import type { WindRoseSeriesData } from "../../charts/wind-rose";
 
 vi.mock("../../charts/plotly-chart", () => ({
-  PlotlyChart: ({ data, layout, config, loading, error }: any) => (
+  PlotlyChart: ({ data, layout, config, loading, error, polarFit }: any) => (
     <div data-testid="plotly-chart">
       <div data-testid="plot-data">{JSON.stringify(data)}</div>
       <div data-testid="plot-layout">{JSON.stringify(layout)}</div>
+      <div data-testid="compact-plot-layout">{JSON.stringify(polarFit?.compact(60).layout)}</div>
       <div data-testid="plot-config">{JSON.stringify(config)}</div>
       {loading && <div data-testid="loading">Loading...</div>}
       {error && <div data-testid="error">{error}</div>}
@@ -61,6 +62,10 @@ function getLayout() {
   return JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
 }
 
+function getCompactLayout() {
+  return JSON.parse(screen.getByTestId("compact-plot-layout").textContent ?? "{}");
+}
+
 describe("WindRose", () => {
   it("renders one barpolar trace per value-band series", () => {
     render(<WindRose data={sampleData} />);
@@ -70,9 +75,9 @@ describe("WindRose", () => {
     expect(plotData[1].type).toBe("barpolar");
   });
 
-  it("spaces labels in short widgets without dropping any direction ticks", () => {
+  it("passes every direction tick to the compact figure before fitting the labels", () => {
     const ticks = Array.from({ length: 32 }, (_, i) => i * 11.25);
-    const { rerender } = render(
+    render(
       <WindRose
         data={sampleData}
         directionLabels={[]}
@@ -80,29 +85,10 @@ describe("WindRose", () => {
         config={{ height: 229, title: "Wind", legendPosition: "bottom" }}
       />,
     );
-    const layout = getLayout();
+    const layout = getCompactLayout();
     expect(layout.legend.maxheight).toBeLessThan(64);
-    expect(layout.polar.radialaxis.nticks).toBeLessThan(5);
     expect(layout.polar.angularaxis.tickvals).toEqual(ticks);
-    expect(layout.polar.angularaxis.ticktext.filter(Boolean)).toEqual([
-      "0°",
-      "45°",
-      "90°",
-      "135°",
-      "180°",
-      "225°",
-      "270°",
-      "315°",
-    ]);
-    rerender(
-      <WindRose
-        data={sampleData}
-        directionLabels={[]}
-        directionTicks={ticks}
-        config={{ height: 325, legendPosition: "bottom" }}
-      />,
-    );
-    expect(getLayout().polar.angularaxis.ticktext.filter(Boolean)).toHaveLength(32);
+    expect(layout.polar.angularaxis.ticktext).toEqual(ticks.map((tick) => `${tick}°`));
   });
 
   it("keeps the regular compass labels in a four-row wind rose with a prevailing direction", () => {
@@ -146,14 +132,14 @@ describe("WindRose", () => {
         config={{ height: 229, title: "Wind", legendPosition: "bottom" }}
       />,
     );
-    const original = getLayout().legend.maxheight;
+    const original = getCompactLayout().legend.maxheight;
     rerender(
       <WindRose
         data={sampleData}
         config={{ height: 195, title: "Wind", legendPosition: "bottom" }}
       />,
     );
-    const { legend, annotations } = getLayout();
+    const { legend, annotations } = getCompactLayout();
     expect(legend.maxheight).toBeLessThan(original);
     expect(legend.maxheight).toBeGreaterThanOrEqual(30);
     expect(annotations).toContainEqual(expect.objectContaining({ text: "Frequency" }));
