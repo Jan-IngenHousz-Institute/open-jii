@@ -3067,6 +3067,19 @@
         "responses": {
           "200": {
             "description": "OK",
+            "headers": {
+              "x-data-source": {
+                "schema": {
+                  "enum": [
+                    "warehouse",
+                    "store"
+                  ],
+                  "type": "string",
+                  "description": "Which source answered: the serving store, read afresh on every call, or the SQL warehouse, served from a short-lived cache"
+                },
+                "required": true
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -3120,6 +3133,17 @@
                         ],
                         "description": "Changes whenever the table's schema does, which can be after its rows changed"
                       },
+                      "contentRevision": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Changes whenever the rows the table holds do, a row replaced in place included, in whatever order rows arrive. Only a listing the serving store answered carries one"
+                      },
                       "defaultSortColumn": {
                         "type": "string",
                         "description": "Default column to sort by in the UI"
@@ -3138,6 +3162,189 @@
                       "schemaRevision"
                     ]
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/tables/changes": {
+      "get": {
+        "operationId": "experiments.watchExperimentTables",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "event": {
+                          "const": "message"
+                        },
+                        "data": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "const": "changed"
+                                },
+                                "tables": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "identifier": {
+                                        "type": "string",
+                                        "description": "Stable identifier: static table name, macro UUID, or upload table name"
+                                      },
+                                      "totalRows": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991,
+                                        "description": "Total number of rows in the table"
+                                      },
+                                      "latestRowAt": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "format": "date-time"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ],
+                                        "description": "When the table's newest data reached the platform; for a macro result, when its source measurement did. Null for an empty table"
+                                      },
+                                      "schemaRevision": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ],
+                                        "description": "Changes whenever the table's schema does, which can be after its rows changed"
+                                      },
+                                      "contentRevision": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ],
+                                        "description": "Changes whenever the rows the table holds do, a row replaced in place included, in whatever order rows arrive. Only a listing the serving store answered carries one"
+                                      },
+                                      "displayName": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ],
+                                        "description": "The name the store holds for the table, which for an upload is its newest upload's, so a listing showing another name is stale. Null for a table the platform names"
+                                      }
+                                    },
+                                    "required": [
+                                      "identifier",
+                                      "totalRows",
+                                      "latestRowAt",
+                                      "schemaRevision",
+                                      "displayName"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "tables"
+                              ],
+                              "description": "Each table's row count, newest row and schema as the store holds them, sent when the stream opens and whenever they change"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "const": "heartbeat"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "description": "Sent while nothing changes, so a client can tell a quiet stream from a dropped one"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "type": "string"
+                        },
+                        "retry": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "event",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "event": {
+                          "const": "done"
+                        },
+                        "data": {},
+                        "id": {
+                          "type": "string"
+                        },
+                        "retry": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "event"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "event": {
+                          "const": "error"
+                        },
+                        "data": {},
+                        "id": {
+                          "type": "string"
+                        },
+                        "retry": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "event"
+                      ]
+                    }
+                  ]
                 }
               }
             }

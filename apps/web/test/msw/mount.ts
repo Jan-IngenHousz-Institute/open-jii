@@ -33,9 +33,12 @@ export type MountFn = <T extends AnyContractProcedure>(
      * request instead, so search-style endpoints can answer per query rather than
      * needing one handler per case. `unknown` already includes functions, so the
      * union can't be written out — any function value is treated as a resolver,
-     * never sent as a literal body.
+     * never sent as a literal body. A `ReadableStream` body is sent as server-sent
+     * events, for a procedure whose output is an event iterator.
      */
     body?: unknown;
+    /** Response headers, for a procedure whose contract declares some. */
+    headers?: Record<string, string>;
     /** Artificial delay in ms (or "infinite" to hang forever). */
     delay?: number | "infinite";
     /** Hold the response until this promise resolves (deterministic in-flight windows). */
@@ -57,6 +60,8 @@ export interface SpyCall {
   query: Record<string, string>;
   /** Full request URL including query string. */
   url: string;
+  /** Aborts once the client hangs up, so a streamed body can end with it. */
+  signal: AbortSignal;
 }
 
 /** Captures request details. Populated when MSW handles the request. */
@@ -106,6 +111,7 @@ export function createMount(server: SetupServer): MountFn {
     endpoint: RouteCarrier,
     options: {
       body?: unknown;
+      headers?: Record<string, string>;
       status?: number;
       delay?: number | "infinite";
       unblock?: Promise<unknown>;
@@ -157,6 +163,7 @@ export function createMount(server: SetupServer): MountFn {
         params: params as Record<string, string | readonly string[]>,
         query,
         url: request.url,
+        signal: request.signal,
       };
       spy.calls.push(call);
 
@@ -173,14 +180,25 @@ export function createMount(server: SetupServer): MountFn {
       // ── Response ────────────────────────────────────────────
       const status = options.status ?? route.successStatus ?? statusForMethod(method);
       // 204 first: a body resolver must not run for a response that carries no body.
-      if (status === 204) return new HttpResponse(null, { status });
+      if (status === 204) return new HttpResponse(null, { status, headers: options.headers });
 
       const responseBody =
         typeof options.body === "function"
           ? (options.body as (call: SpyCall) => unknown)(call)
           : options.body;
-      if (status >= 400) return HttpResponse.json(responseBody ?? { message: "Error" }, { status });
-      return HttpResponse.json(responseBody ?? null, { status });
+      const { headers } = options;
+      if (status >= 400) {
+        return HttpResponse.json(responseBody ?? { message: "Error" }, { status, headers });
+      }
+      if (responseBody instanceof ReadableStream) {
+        // Headers names are case-insensitive, so a caller's Content-Type replaces the default.
+        const streamHeaders = new Headers(headers);
+        if (!streamHeaders.has("content-type")) {
+          streamHeaders.set("content-type", "text/event-stream");
+        }
+        return new HttpResponse(responseBody, { status, headers: streamHeaders });
+      }
+      return HttpResponse.json(responseBody ?? null, { status, headers });
     });
 
     server.use(handler);

@@ -52,15 +52,15 @@ describe("ServingStoreAdapter", () => {
     expect(adapter.isConfigured()).toBe(false);
   });
 
-  it("lists each table with its count and newest row, merging the schemas of its batches", async () => {
+  it("lists each table with its count, newest row and content revision, merging the schemas of its batches", async () => {
     const query = vi
       .spyOn(client, "query")
       .mockResolvedValueOnce(
         success({
           rows: [
-            ["static", "raw_data", null, 3, "2026-09-14 17:06:42.965000"],
-            ["macro", "m1", null, "2", null],
-            ["upload", "t1", "plots", 1, "2026-09-01 10:00:00.000000"],
+            ["static", "raw_data", null, 3, "2026-09-14 17:06:42.965000", "4761194200204079042"],
+            ["macro", "m1", null, "2", null, "12"],
+            ["upload", "t1", "plots", 1, "2026-09-01 10:00:00.000000", null],
           ],
         }),
       )
@@ -78,7 +78,9 @@ describe("ServingStoreAdapter", () => {
     const result = await adapter.getExperimentTableMetadata("e1");
 
     assertSuccess(result);
+    expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[0][0]).toContain("FROM experiment_measurements(experiment = 'e1')");
+    expect(query.mock.calls[0][0]).toContain("sum(cityHash64(_commit_version, arrived_at))");
     expect(query.mock.calls[1][0]).toContain("FROM experiment_payload_schemas(experiment = 'e1')");
     const macroSchema = "OBJECT<a: DOUBLE, b: STRING>";
     expect(result.value).toEqual([
@@ -87,6 +89,7 @@ describe("ServingStoreAdapter", () => {
         tableType: "static",
         rowCount: 3,
         latestRowAt: "2026-09-14T17:06:42.965Z",
+        contentRevision: "4761194200204079042",
         questionsSchema: "OBJECT<plot: STRING>",
         macroSchema: null,
       }),
@@ -103,6 +106,7 @@ describe("ServingStoreAdapter", () => {
         identifier: "t1",
         tableType: "upload",
         displayName: "plots",
+        contentRevision: null,
         uploadSchema: "OBJECT<h: DOUBLE>",
       }),
     ]);
@@ -1081,6 +1085,224 @@ describe("ServingStoreAdapter against a store", () => {
       displayName: "renamed",
       rowCount: 2,
       latestRowAt: "2026-09-02T10:00:00.000Z",
+    });
+  });
+
+  it("moves a table's content revision for a row replaced in place, though its count, newest row and schema hold", async () => {
+    const experiment = "content-revision";
+    const upload = { ...UPLOADS[1], experiment_id: experiment };
+    await admin.insert({ table: "uploads", values: [upload], format: "JSONEachRow" });
+    const before = await adapter.getExperimentTableMetadata(experiment);
+    const edited = {
+      ...upload,
+      uploaded_data: { "Plot no.": 8, h: 999 },
+      uploaded_data_text: '{"Plot no.":8,"h":999}',
+      _commit_version: 2,
+    };
+    await admin.insert({ table: "uploads", values: [edited], format: "JSONEachRow" });
+    const after = await adapter.getExperimentTableMetadata(experiment);
+    await admin.command({ query: `DELETE FROM uploads WHERE experiment_id = '${experiment}'` });
+
+    assertSuccess(before);
+    assertSuccess(after);
+    const held = before.value.at(0);
+    const replaced = after.value.at(0);
+    expect(replaced).toMatchObject({
+      rowCount: 1,
+      latestRowAt: held?.latestRowAt,
+      schemaRevision: held?.schemaRevision,
+    });
+    expect(held?.contentRevision).toEqual(expect.any(String));
+    expect(replaced?.contentRevision).not.toBe(held?.contentRevision);
+  });
+
+  it("moves a table's content revision for a winning replacement stamped before the row it replaces", async () => {
+    // A large insert stamped first can become visible after a small one stamped later.
+    const experiment = "content-revision-order";
+    const upload = {
+      ...UPLOADS[1],
+      experiment_id: experiment,
+      uploaded_data: { "Plot no.": 1, h: 20 },
+      uploaded_data_text: '{"Plot no.":1,"h":20}',
+      arrived_at: "2026-11-25 10:00:01.000000",
+    };
+    await admin.insert({ table: "uploads", values: [upload], format: "JSONEachRow" });
+    const before = await adapter.getExperimentTableMetadata(experiment);
+    const replacement = {
+      ...upload,
+      uploaded_data: { "Plot no.": 2, h: 20 },
+      uploaded_data_text: '{"Plot no.":2,"h":20}',
+      _commit_version: 2,
+      arrived_at: "2026-11-25 10:00:00.000000",
+    };
+    await admin.insert({ table: "uploads", values: [replacement], format: "JSONEachRow" });
+    const after = await adapter.getExperimentTableMetadata(experiment);
+    await admin.command({ query: `DELETE FROM uploads WHERE experiment_id = '${experiment}'` });
+
+    assertSuccess(before);
+    assertSuccess(after);
+    const held = before.value.at(0);
+    const replaced = after.value.at(0);
+    expect(replaced).toMatchObject({
+      rowCount: 1,
+      displayName: held?.displayName,
+      latestRowAt: held?.latestRowAt,
+      schemaRevision: held?.schemaRevision,
+    });
+    expect(replaced?.contentRevision).not.toBe(held?.contentRevision);
+  });
+
+  describe("an experiment's change mark", () => {
+    // Silver's commit time, which a reload writes as a row's insert time, so its rows land older.
+    const COMMITTED_AT = "2026-09-14 17:07:00";
+    // Its own month, so a merge forced here folds no other test's rows.
+    const MARKED_AT = "2025-01-15 12:00:00";
+
+    function rowOf(experiment: string, row: Record<string, unknown>) {
+      return {
+        ...MEASUREMENTS[0],
+        experiment_id: experiment,
+        timestamp: MARKED_AT,
+        inserted_at: COMMITTED_AT,
+        ...row,
+      };
+    }
+
+    async function insert(experiment: string, rows: Record<string, unknown>[]) {
+      await admin.insert({
+        table: "measurements",
+        values: rows.map((row) => rowOf(experiment, row)),
+        format: "JSONEachRow",
+      });
+    }
+
+    /** The rows the store read for the latest mark of the experiment, as its query log has it. */
+    async function rowsLastMarkRead(experiment: string) {
+      await admin.command({ query: "SYSTEM FLUSH LOGS" });
+      const logged = await admin.query({
+        query: `SELECT read_rows FROM system.query_log WHERE type = 'QueryFinish' AND user = {user:String} AND query LIKE {experiment:String} ORDER BY event_time_microseconds DESC LIMIT 1`,
+        query_params: { user: READER_USER, experiment: `%'${experiment}'%` },
+        format: "JSONEachRow",
+      });
+      const [{ read_rows: readRows }] = z
+        .array(z.object({ read_rows: z.coerce.number() }))
+        .parse(await logged.json());
+      return readRows;
+    }
+
+    async function markOf(experiment: string, since: string | null) {
+      const mark = await adapter.getExperimentChangeMark(experiment, since);
+      assertSuccess(mark);
+      return mark.value;
+    }
+
+    it("holds still while nothing arrives, counting from where it began", async () => {
+      await insert("e-mark-quiet", [{ id: 1 }]);
+      const first = await markOf("e-mark-quiet", null);
+
+      expect(await markOf("e-mark-quiet", first.since)).toMatchObject({
+        since: first.since,
+        revision: first.revision,
+      });
+    });
+
+    it("moves its next start up the store's clock, reading no rows that arrived before it", async () => {
+      const experiment = "e-mark-cutoff";
+      // Stamped long before the next start, as migration 0012 stamps every row already held.
+      const anHourAgo = new Date(Date.now() - 60 * 60_000)
+        .toISOString()
+        .replace("T", " ")
+        .replace("Z", "");
+      await insert(
+        experiment,
+        Array.from({ length: 20_000 }, (_, id) => ({ id, arrived_at: anHourAgo })),
+      );
+
+      const wide = await markOf(experiment, "2020-01-01 00:00:00.000000");
+      const narrow = await markOf(experiment, wide.next.since);
+
+      expect(wide.next.since > wide.since).toBe(true);
+      expect(wide.revision).not.toBe(wide.next.revision);
+      expect(narrow).toMatchObject({ since: wide.next.since, revision: wide.next.revision });
+      expect(await rowsLastMarkRead(experiment)).toBeLessThan(20_000);
+    });
+
+    it("counts from a start it gives in UTC, whatever the session's time zone", async () => {
+      const experiment = "e-mark-zone";
+      const zoned = new ServingStoreClientService(
+        new ServingStoreConfigService(
+          new ConfigService({
+            servingStore: { url: STORE_URL, username: READER_USER, password: READER_PASSWORD },
+          }),
+        ),
+      );
+      vi.spyOn(client, "stream").mockImplementation((sql, settings, take) =>
+        zoned.stream(sql, { ...settings, session_timezone: "Europe/Amsterdam" }, take),
+      );
+      const before = await markOf(experiment, null);
+
+      await insert(experiment, [{ id: 1 }]);
+      const after = await markOf(experiment, before.since);
+      await zoned.onModuleDestroy();
+
+      expect(after.revision).not.toBe(before.revision);
+    });
+
+    it("counts both of its starts in one read of the rows", async () => {
+      const experiment = "e-mark-one-pass";
+      await insert(
+        experiment,
+        Array.from({ length: 20_000 }, (_, id) => ({ id })),
+      );
+
+      const mark = await markOf(experiment, "2020-01-01 00:00:00.000000");
+
+      expect(mark.revision.startsWith("20000:")).toBe(true);
+      expect(mark.next.revision.startsWith("20000:")).toBe(true);
+      expect(await rowsLastMarkRead(experiment)).toBeLessThan(2 * 20_000);
+    });
+
+    it("moves for a row that arrives with an older insert time than the rows held, as a reload sends", async () => {
+      await insert("e-mark-late", [{ id: 1, inserted_at: "2026-11-24 10:00:00" }]);
+      const before = await markOf("e-mark-late", null);
+
+      await insert("e-mark-late", [{ id: 2, inserted_at: COMMITTED_AT }]);
+      const after = await markOf("e-mark-late", before.since);
+
+      expect(after.since).toBe(before.since);
+      expect(after.revision).not.toBe(before.revision);
+    });
+
+    it("moves for a distinct row that arrives with the insert time the newest row has", async () => {
+      await insert("e-mark-tied", [{ id: 1 }]);
+      const before = await markOf("e-mark-tied", null);
+
+      await insert("e-mark-tied", [{ id: 2 }]);
+
+      expect((await markOf("e-mark-tied", before.since)).revision).not.toBe(before.revision);
+    });
+
+    it("moves for a winning replacement with the same insert time, after a merge folded it in", async () => {
+      await insert("e-mark-replaced", [{ id: 1, _commit_version: 1 }]);
+      const before = await markOf("e-mark-replaced", null);
+
+      await insert("e-mark-replaced", [{ id: 1, _commit_version: 2, data: '{"a":2}' }]);
+      await admin.command({ query: "OPTIMIZE TABLE measurements PARTITION 202501 FINAL" });
+
+      expect((await markOf("e-mark-replaced", before.since)).revision).not.toBe(before.revision);
+    });
+
+    it("moves when only the experiment's payload schemas do", async () => {
+      await insert("e-mark-schema", [{ id: 1 }]);
+      const before = await markOf("e-mark-schema", null);
+
+      await admin.insert({
+        table: "payload_schemas",
+        values: [{ ...PAYLOAD_SCHEMAS[0], experiment_id: "e-mark-schema" }],
+        format: "JSONEachRow",
+      });
+
+      expect((await markOf("e-mark-schema", before.since)).revision).not.toBe(before.revision);
     });
   });
 

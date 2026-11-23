@@ -14,6 +14,20 @@ variable "rate_limit" {
   default     = 500
 }
 
+variable "read_rate_limit" {
+  description = "A higher rate limit per 5-minute period from a single IP for GET requests whose URI path matches path_regex, such as the reads a live page repeats. rate_limit then counts every other request. Null keeps rate_limit for every request."
+  type = object({
+    limit      = number
+    path_regex = string
+  })
+  default = null
+
+  validation {
+    condition     = var.read_rate_limit == null || !can(regex("(^|[^\\\\])\\([^?]", var.read_rate_limit.path_regex))
+    error_message = "AWS WAF refuses a regex with a capturing group; write each group as (?:...)."
+  }
+}
+
 variable "blocked_countries" {
   description = "List of country codes to block (ISO 3166-1 alpha-2)"
   type        = list(string)

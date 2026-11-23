@@ -21,6 +21,7 @@ import { NumberAnswersService } from "./number-answers.service";
 @Injectable()
 export class ExperimentWarehouseReadsService implements ExperimentTableReads {
   readonly picksLargePagesById = true;
+  readonly listsTablesAfresh = false;
 
   constructor(
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,

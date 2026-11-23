@@ -26,6 +26,7 @@ export interface TableMetadataDto {
   totalRows: number;
   latestRowAt: string | null;
   schemaRevision: string | null;
+  contentRevision?: string | null;
   defaultSortColumn?: string;
   errorColumn?: string;
 }
@@ -70,7 +71,10 @@ export class GetExperimentTablesUseCase {
 
     // Read authorization is enforced by the `@CanAccess({ resource: "experiment",
     // action: "read" })` route guard.
-    const metadataResult = await this.experimentDataRepository.tablesMetadata(experimentId, source);
+    const metadataResult = await this.experimentDataRepository.listedTablesMetadata(
+      experimentId,
+      source,
+    );
 
     if (metadataResult.isFailure()) {
       this.logger.error({
@@ -108,6 +112,7 @@ export class GetExperimentTablesUseCase {
     rowCount,
     latestRowAt,
     schemaRevision,
+    contentRevision,
   }: ExperimentTableMetadata): TableMetadataDto {
     const config = STATIC_TABLE_CONFIG[identifier];
     return {
@@ -117,13 +122,21 @@ export class GetExperimentTablesUseCase {
       totalRows: rowCount,
       latestRowAt,
       schemaRevision,
+      contentRevision,
       defaultSortColumn: config?.defaultSortColumn,
       errorColumn: config?.errorColumn,
     };
   }
 
   private mapMacroTable(
-    { identifier, tableType, rowCount, latestRowAt, schemaRevision }: ExperimentTableMetadata,
+    {
+      identifier,
+      tableType,
+      rowCount,
+      latestRowAt,
+      schemaRevision,
+      contentRevision,
+    }: ExperimentTableMetadata,
     macroNamesMap: Map<string, { name: string; filename: string }>,
   ): TableMetadataDto {
     const macroInfo = macroNamesMap.get(identifier);
@@ -138,6 +151,7 @@ export class GetExperimentTablesUseCase {
       totalRows: rowCount,
       latestRowAt,
       schemaRevision,
+      contentRevision,
       defaultSortColumn: MACRO_TABLE_CONFIG.defaultSortColumn,
       errorColumn: MACRO_TABLE_CONFIG.errorColumn,
     };
@@ -150,6 +164,7 @@ export class GetExperimentTablesUseCase {
     rowCount,
     latestRowAt,
     schemaRevision,
+    contentRevision,
   }: ExperimentTableMetadata): TableMetadataDto {
     return {
       identifier,
@@ -158,6 +173,7 @@ export class GetExperimentTablesUseCase {
       totalRows: rowCount,
       latestRowAt,
       schemaRevision,
+      contentRevision,
       defaultSortColumn: UPLOAD_TABLE_CONFIG.defaultSortColumn,
       errorColumn: UPLOAD_TABLE_CONFIG.errorColumn,
     };
