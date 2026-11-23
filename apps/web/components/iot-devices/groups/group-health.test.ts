@@ -1,7 +1,11 @@
 import { createDeviceGroupMemberHealth } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
-import { filterGroupMembers, isMemberSilent, summarizeGroupHealth } from "./group-health";
+import {
+  filterGroupMembers,
+  isMemberSilent,
+  summarizeGroupHealth,
+} from "@repo/api/domains/iot/device-group/group-health";
 
 const NOW = new Date("2026-08-18T12:00:00.000Z").getTime();
 const RECENT = "2026-08-18T11:30:00.000Z";

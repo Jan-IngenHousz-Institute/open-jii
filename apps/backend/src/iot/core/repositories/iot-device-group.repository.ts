@@ -185,7 +185,7 @@ export class IotDeviceGroupRepository {
         .from(deviceGroupMembers)
         .innerJoin(iotDevices, eq(deviceGroupMembers.deviceId, iotDevices.id))
         .where(eq(deviceGroupMembers.groupId, groupId))
-        .orderBy(desc(deviceGroupMembers.createdAt));
+        .orderBy(desc(deviceGroupMembers.createdAt), deviceGroupMembers.deviceId);
     });
   }
 

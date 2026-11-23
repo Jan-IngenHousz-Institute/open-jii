@@ -4,13 +4,16 @@ import { MetricStatCard } from "@/components/metrics/metric-stat-card";
 import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
-import { useExperimentDevices } from "@/hooks/experiment/useExperimentDevices/useExperimentDevices";
 import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
 import { resolveDeviceLabel } from "@/util/device-presentation";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Cpu, Loader2 } from "lucide-react";
 import { useState } from "react";
 
+import { summarizeExperimentDevices } from "@repo/api/domains/experiment/devices/experiment-devices-summary";
 import type {
+  ExperimentDeviceEntry,
   ExperimentDeviceIdentity,
   ExperimentDevicesOverview,
 } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
@@ -32,7 +35,6 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentDeviceDetail } from "./experiment-device-detail";
 import { ExperimentDevicesList } from "./experiment-devices-list";
-import { summarizeExperimentDevices } from "./experiment-devices-summary";
 import { useExperimentDevicesList } from "./use-experiment-devices-list";
 
 export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
@@ -40,11 +42,31 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
 
-  const { data, dataUpdatedAt, isLoading, isError, refetch } = useExperimentDevices(experimentId);
-  const list = useExperimentDevicesList({ experimentId, devices: data?.devices, dataUpdatedAt });
-
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{
+    experimentId: string;
+    entry: ExperimentDeviceEntry;
+  } | null>(null);
+  const list = useExperimentDevicesList(experimentId);
+  const data = list.response?.overview;
+  const selected = selection?.experimentId === experimentId ? selection.entry : undefined;
+  const onPage = data?.devices.find((entry) => entry.clientId === selected?.clientId);
+  const offPage = useQuery(
+    orpc.experiments.listExperimentDevices.queryOptions({
+      input: {
+        id: experimentId,
+        page: 1,
+        pageSize: 1,
+        search: selected?.clientId,
+        selectedClientId: selected?.clientId,
+      },
+      enabled: selected !== undefined && data !== undefined && !onPage,
+      select: (overview) =>
+        overview.devices.find((entry) => entry.clientId === selected?.clientId) ??
+        overview.pagination?.selected ??
+        null,
+    }),
+  );
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
     onSuccess: () => {
@@ -69,11 +91,11 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   };
 
-  if (isLoading) {
+  if (list.isLoading) {
     return <ExperimentDevicesSkeleton />;
   }
 
-  if (isError || data === undefined) {
+  if (list.error || data === undefined) {
     return (
       <EmptyState
         variant="error"
@@ -83,7 +105,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
             variant="outline"
             size="sm"
             onClick={() => {
-              void refetch();
+              void list.refetch();
             }}
           >
             {t("iot.onboarding.retry")}
@@ -93,7 +115,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
-  if (data.devices.length === 0) {
+  if ((data.pagination?.summary.total ?? data.devices.length) === 0) {
     return (
       <EmptyState
         icon={<Cpu aria-hidden />}
@@ -110,11 +132,8 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
-  // Derived each render so a refetch cannot leave the pane on a stale entry.
   const selectedEntry =
-    selectedClientId === null
-      ? list.data?.items[0]
-      : (data.devices.find((entry) => entry.clientId === selectedClientId) ?? list.data?.items[0]);
+    onPage ?? (offPage.data === undefined ? selected : offPage.data) ?? data.devices.at(0);
 
   return (
     <>
@@ -127,12 +146,29 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
         </p>
       )}
 
+      {!onPage && offPage.isError && offPage.data === undefined && (
+        <p className="text-status-stale-foreground flex items-center gap-1.5 text-xs">
+          <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
+          {t("iot.experimentDevices.selectedLookupError")}
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={() => {
+              void offPage.refetch();
+            }}
+          >
+            {t("iot.onboarding.retry")}
+          </Button>
+        </p>
+      )}
+
       <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="lg:sticky lg:top-20 lg:self-start">
           <ExperimentDevicesList
             list={list}
             selectedClientId={selectedEntry?.clientId ?? null}
-            onSelect={setSelectedClientId}
+            onSelect={(entry) => setSelection({ experimentId, entry })}
           />
         </div>
 
@@ -242,14 +278,12 @@ function ExperimentDevicesSkeleton() {
 function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverview }) {
   const locale = useLocale();
   const { t } = useTranslation("iot");
-  const summary = summarizeExperimentDevices(overview);
+  const summary = overview.pagination?.summary ?? summarizeExperimentDevices(overview.devices);
 
   // Warehouse facts unknown: the data-derived counts stay blank rather than
   // claiming silence from missing data.
   const dataValue = (value: number) =>
     overview.pipelineUnavailable ? t("iot.experimentDevices.lastDataUnavailable") : value;
-
-  const total = overview.devices.length;
 
   return (
     <div className={metricsBandGrid}>
@@ -257,7 +291,7 @@ function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverv
         locale={locale}
         label={t("iot.experimentDevices.stats.onboarded")}
         value={summary.onboarded}
-        note={t("iot.experimentDevices.stats.ofTotal", { count: total })}
+        note={t("iot.experimentDevices.stats.ofTotal", { count: summary.total })}
         className="bg-card"
       />
 

@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-import { zDeviceConnectivity, zIotDevice } from "../../iot/iot.schema";
+import { zPageInfo } from "../../../shared/listing";
+import {
+  zDeviceConnectivity,
+  zIotDevice,
+  zIotDeviceFilterQuery,
+  zIotDeviceStatusCounts,
+} from "../../iot/iot.schema";
+import { zExperimentIdPathParam } from "../experiment.schema";
 
 // The registry identity of a device on the tab. Certificate and governance
 // fields are deliberately omitted: experiment members see the devices serving
@@ -60,8 +67,25 @@ export const zExperimentDeviceEntry = z.object({
   canView: z.boolean(),
 });
 
+export const zExperimentDevicesQuery = zExperimentIdPathParam.merge(zIotDeviceFilterQuery).extend({
+  selectedClientId: z.string().min(1).optional(),
+});
+
+export const zExperimentDevicesPage = zPageInfo.extend({
+  statusCounts: zIotDeviceStatusCounts,
+  summary: z.object({
+    total: z.number().int().nonnegative(),
+    onboarded: z.number().int().nonnegative(),
+    sending: z.number().int().nonnegative(),
+    onboardedSilent: z.number().int().nonnegative(),
+    sendingUnbound: z.number().int().nonnegative(),
+  }),
+  selected: zExperimentDeviceEntry.optional(),
+});
+
 export const zExperimentDevicesOverview = z.object({
   devices: z.array(zExperimentDeviceEntry),
+  pagination: zExperimentDevicesPage.optional(),
   window: z.object({ from: z.string().datetime(), to: z.string().datetime() }),
   pipelineUnavailable: z.boolean(),
 });
@@ -112,3 +136,5 @@ export type ExperimentDeviceReported = z.infer<typeof zExperimentDeviceReported>
 export type ExperimentDeviceEntry = z.infer<typeof zExperimentDeviceEntry>;
 export type ExperimentDevicesOverview = z.infer<typeof zExperimentDevicesOverview>;
 export type ExperimentDevicePathParam = z.infer<typeof zExperimentDevicePathParam>;
+
+export type ExperimentDevicesQuery = z.infer<typeof zExperimentDevicesQuery>;

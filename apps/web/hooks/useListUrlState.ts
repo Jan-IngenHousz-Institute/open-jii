@@ -21,12 +21,14 @@ export interface ListUrlStateOptions<S extends ListFilterShape, T extends ListSo
   sort: z.ZodType<T[]>;
   /** Searchable lists own q; sort-only lists explicitly leave it alone. */
   searchKey: "q" | null;
+  pageKey?: "page";
 }
 
 interface ListUrlValues<S extends ListFilterShape, T extends ListSortItem> {
   filters: ListFilters<S>;
   sort: T[];
   search: string;
+  page: number;
 }
 
 interface ReadableParams {
@@ -57,7 +59,10 @@ function parse<S extends ListFilterShape, T extends ListSortItem>(
       return [key, [...new Set(values)]];
     }),
   ) as ListFilters<S>;
+  const rawPage = options.pageKey ? params.get(options.pageKey) : null;
+  const page = rawPage && /^\d+$/.test(rawPage) ? Number(rawPage) : 1;
   return {
+    page: Number.isSafeInteger(page) && page > 0 ? page : 1,
     filters,
     sort: parseSort(options.sort, params.get(SORT_KEY)),
     search: options.searchKey ? (params.get(options.searchKey) ?? "") : "",
@@ -76,6 +81,9 @@ function toParams<S extends ListFilterShape, T extends ListSortItem>(
   entries.push([SORT_KEY, values.sort.length ? JSON.stringify(values.sort) : null]);
   if (options.searchKey) {
     entries.push([options.searchKey, values.search === "" ? null : values.search]);
+  }
+  if (options.pageKey) {
+    entries.push([options.pageKey, values.page > 1 ? String(values.page) : null]);
   }
   return entries;
 }
@@ -115,14 +123,17 @@ function buildUrl<S extends ListFilterShape, T extends ListSortItem>(
 }
 
 /**
- * One writer merges search, filters and sort so concurrent edits cannot undo each other.
+ * One writer merges search, filters, sort and page so concurrent edits cannot undo each other.
  * Replacements preserve unowned parameters and scroll without adding history steps.
  */
 export function useListUrlState<S extends ListFilterShape, T extends ListSortItem>(
   config: ListUrlStateOptions<S, T>,
 ) {
-  const { filters, sort, searchKey } = config;
-  const options = useMemo(() => ({ filters, sort, searchKey }), [filters, sort, searchKey]);
+  const { filters, sort, searchKey, pageKey } = config;
+  const options = useMemo(
+    () => ({ filters, sort, searchKey, pageKey }),
+    [filters, sort, searchKey, pageKey],
+  );
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -271,7 +282,11 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
   };
   const setFilter = <K extends keyof S>(key: K, next: z.infer<S[K]>[]) => {
     update(
-      { ...snapshot.current, filters: { ...snapshot.current.filters, [key]: [...new Set(next)] } },
+      {
+        ...snapshot.current,
+        page: 1,
+        filters: { ...snapshot.current.filters, [key]: [...new Set(next)] },
+      },
       true,
     );
   };
@@ -279,27 +294,30 @@ export function useListUrlState<S extends ListFilterShape, T extends ListSortIte
     update(
       {
         ...snapshot.current,
+        page: 1,
         filters: parse(options, new URLSearchParams()).filters,
       },
       true,
     );
-  const setSort = (sort: T[]) => update({ ...snapshot.current, sort }, true);
+  const setSort = (sort: T[]) => update({ ...snapshot.current, page: 1, sort }, true);
   const toggleSort = (field: T["field"], multi: boolean) => {
     update(
-      { ...snapshot.current, sort: toggleSortItem(snapshot.current.sort, field, multi) },
+      { ...snapshot.current, page: 1, sort: toggleSortItem(snapshot.current.sort, field, multi) },
       true,
     );
   };
   const setSearch = (search: string) => {
     if (!options.searchKey) {
-      snapshot.current = { ...snapshot.current, search };
+      snapshot.current = { ...snapshot.current, page: 1, search };
       setValues(snapshot.current);
       return;
     }
-    update({ ...snapshot.current, search }, false);
+    update({ ...snapshot.current, page: 1, search }, false);
   };
 
   return {
+    page: values.page,
+    setPage: (page: number) => update({ ...snapshot.current, page }, true),
     filters: values.filters,
     setFilter,
     clearFilters,

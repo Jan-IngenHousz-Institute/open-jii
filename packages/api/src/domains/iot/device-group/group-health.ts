@@ -1,6 +1,5 @@
-import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
-
-import { SILENT_THRESHOLD_MS } from "../monitoring/silent-threshold";
+import { SILENT_THRESHOLD_MS } from "../silent-threshold";
+import type { IotDeviceGroupMemberHealth } from "./iot-device-group.schema";
 
 export interface GroupHealthSummary {
   total: number;

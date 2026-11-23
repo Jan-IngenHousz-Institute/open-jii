@@ -43,15 +43,16 @@ export const zPaginationQuery = z.object({
 /** Applied server-side when `page` is present and `pageSize` is not. */
 export const DEFAULT_PAGE_SIZE = 20;
 
-/** `totalCount` comes from a separate count query, so an out-of-range page still reports real totals. */
+/** Out-of-range page requests still report real totals. */
+export const zPageInfo = z.object({
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  totalPages: z.number().int(),
+  totalCount: z.number().int(),
+});
+
 export function zPaginated<T extends z.ZodTypeAny>(items: T) {
-  return z.object({
-    items: z.array(items),
-    page: z.number().int(),
-    pageSize: z.number().int(),
-    totalPages: z.number().int(),
-    totalCount: z.number().int(),
-  });
+  return z.object({ items: z.array(items), ...zPageInfo.shape });
 }
 
 /**

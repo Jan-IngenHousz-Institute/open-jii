@@ -79,6 +79,22 @@ describe("useResourceList", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it("opens a shared page and writes the next page alongside the existing URL parameters", async () => {
+    openOnUrl("/list", "view=compact&status=stale&page=2");
+    const { result, router, views } = renderList((view) => envelope(rows(2), view.page, 4));
+
+    await waitFor(() => expect(result.current.data?.page).toBe(2));
+    expect(views[0]?.page).toBe(2);
+    act(() => result.current.setPage(3));
+    expect(router.replace).toHaveBeenLastCalledWith("/list?view=compact&status=stale&page=3", {
+      scroll: false,
+    });
+    act(() => result.current.setFilter("status", ["active"]));
+    expect(router.replace).toHaveBeenLastCalledWith("/list?view=compact&status=active", {
+      scroll: false,
+    });
+  });
+
   it("marks activity unavailable when the response says so, and keeps the URL sort", async () => {
     openOnUrl(
       "/list",
@@ -167,6 +183,36 @@ describe("useResourceList", () => {
     act(() => result.current.setPage(4));
 
     await waitFor(() => expect(result.current.page).toBe(2));
+  });
+
+  it("keeps the restored page while the URL search is debouncing", async () => {
+    openOnUrl("/list", "q=old");
+    const { result, rerender } = renderList(
+      (view) => envelope([], view.page, view.search === "old" ? 1 : 4),
+      "q",
+    );
+    await waitFor(() => expect(result.current.data?.page).toBe(1));
+
+    vi.useFakeTimers();
+    try {
+      openOnUrl("/list", "q=new&page=3");
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      rerender();
+      await act(() => vi.advanceTimersByTimeAsync(50));
+
+      expect(result.current.debouncedSearch).toBe("old");
+      expect(result.current.data).toMatchObject({ page: 3, totalPages: 1 });
+      expect(result.current.page).toBe(3);
+
+      await act(() => vi.advanceTimersByTimeAsync(300));
+      await act(() => vi.advanceTimersByTimeAsync(50));
+      expect(result.current.debouncedSearch).toBe("new");
+      expect(result.current.data).toMatchObject({ page: 3, totalPages: 4 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("pages an unpaged response 20 rows at a time", async () => {
