@@ -105,6 +105,26 @@ describe("WindRose", () => {
     expect(getLayout().polar.angularaxis.ticktext.filter(Boolean)).toHaveLength(32);
   });
 
+  it("gives part of the horizontal legend band back when the chart body gets shorter", () => {
+    const { rerender } = render(
+      <WindRose
+        data={sampleData}
+        config={{ height: 229, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const original = getLayout().legend.maxheight;
+    rerender(
+      <WindRose
+        data={sampleData}
+        config={{ height: 195, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const { legend, annotations } = getLayout();
+    expect(legend.maxheight).toBeLessThan(original);
+    expect(legend.maxheight).toBeGreaterThanOrEqual(30);
+    expect(annotations).toContainEqual(expect.objectContaining({ text: "Frequency" }));
+  });
+
   it("forwards r, theta, and width onto each trace", () => {
     render(<WindRose data={sampleData} />);
     const plotData = getPlotData();

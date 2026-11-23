@@ -296,11 +296,12 @@ when a chart title is set.
 On radar, polar, wind rose and ternary charts, long side legend names wrap. If
 there is too little room beside the plot, the legend moves below it.
 On radar, polar, wind rose and ternary charts, a top or bottom legend scrolls
-when its entries exceed the available space. Short radar, wind rose and ternary
-widgets reserve less height for the legend so the plot has more room. Scrolling
+when its entries exceed the available space. Radar, wind rose and ternary
+widgets give the plot more room when a title or description leaves less height.
+The legend scrolls within the space left for it. Scrolling
 the entries requires a pointer because Plotly legends lack keyboard interaction.
 The chart title stays above the outer axis labels.
-Long radar axis names wrap across lines. Short wind rose widgets space out the
+Long radar axis names wrap to fit between neighbouring spokes. Short wind rose widgets space out the
 radial numbers and show fewer direction labels while keeping every direction bin.
 Polar charts show the radial axis title below the plot. A wind rose labels the
 radial axis **Frequency** because it counts observations in each direction and

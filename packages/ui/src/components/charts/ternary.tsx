@@ -4,7 +4,12 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { chartTextWidth, shortOuterChartHeight, withOuterLabels } from "./outer-labels";
+import {
+  chartTextWidth,
+  fitsOuterPlot,
+  MIN_OUTER_PLOT_HEIGHT,
+  withOuterLabels,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -140,9 +145,8 @@ export function TernaryPlot({
 }: TernaryPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
     trackWidth: true,
-    trackHeight: true,
+    trackHeight: "pixel",
   });
-  const shortHeight = shortOuterChartHeight(config, sizing);
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -242,7 +246,7 @@ export function TernaryPlot({
   // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels({
+      const options = {
         config,
         sizing,
         labels: {
@@ -260,12 +264,22 @@ export function TernaryPlot({
             ) /
               2 +
             36,
-          top: shortHeight ? 38 : 44,
-          bottom: shortHeight ? 42 : 48,
+          top: 44,
+          bottom: 48,
         },
         traces: allTraces,
-        shortHeight,
-      });
+      };
+      const normal = withOuterLabels(options);
+      const height = config.height ?? sizing.height ?? 0;
+      const minPlotHeight = Math.max(MIN_OUTER_PLOT_HEIGHT, 6 * fontSizes.tick + 8);
+      const outer =
+        height > 0 && !fitsOuterPlot(normal.layout, height, minPlotHeight)
+          ? withOuterLabels({
+              ...options,
+              labels: { ...options.labels, top: 38, bottom: 42 },
+              compact: { height, maxPlotHeight: minPlotHeight },
+            })
+          : normal;
       return {
         data: outer.data,
         layout: {
@@ -362,7 +376,6 @@ export function TernaryPlot({
       allTraces,
       fontSizes.axisTitle,
       fontSizes.tick,
-      shortHeight,
       sizing,
       sum,
       themeVersion,

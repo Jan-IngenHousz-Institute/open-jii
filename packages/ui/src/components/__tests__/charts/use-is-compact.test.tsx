@@ -59,7 +59,7 @@ function SizingProbe({
 }: {
   grid?: { rows: number; columns: number };
   trackWidth?: boolean;
-  trackHeight?: boolean;
+  trackHeight?: boolean | "pixel";
 }) {
   const [ref, sizing] = useChartSizing<HTMLDivElement>({ grid, trackWidth, trackHeight });
   return (
@@ -98,6 +98,14 @@ describe("useChartSizing", () => {
     act(() => observers[0]?.fire(380, 585));
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}")).toMatchObject({ height: 576 });
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBeUndefined();
+  });
+
+  it("tracks single-pixel height changes when the chart budgets legend space", () => {
+    const { getByTestId } = render(<SizingProbe trackHeight="pixel" />);
+    for (const height of [239, 240, 241, 240, 239]) {
+      act(() => observers[0]?.fire(380, height));
+      expect(JSON.parse(getByTestId("probe").textContent ?? "{}").height).toBe(height);
+    }
   });
 
   it("settles outer tiers when the observer fires a wide container", () => {

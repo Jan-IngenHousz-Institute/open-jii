@@ -97,6 +97,30 @@ describe("RadarPlot", () => {
     );
   });
 
+  it("wraps centered headings more tightly when a short radar has more spokes", () => {
+    const categories = [
+      "primary_assay_measurement",
+      "secondary_reference_measurement",
+      "continuous_colour",
+      "sample_size",
+      "sample_index",
+      "relative_humidity",
+      "atmospheric_pressure",
+      "solar_radiation",
+    ];
+    const config = { height: 211, title: "Assays", legendPosition: "top" } as const;
+    const { rerender } = render(
+      <RadarPlot {...defaultProps} categories={categories.slice(0, 5)} config={config} />,
+    );
+    const tickText = () =>
+      JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}").polar.angularaxis.ticktext;
+    const fiveSpokeHeading = tickText()[0];
+    rerender(<RadarPlot {...defaultProps} categories={categories} config={config} />);
+    const headings = tickText();
+    expect(headings[0].split("<br>").length).toBeGreaterThan(fiveSpokeHeading.split("<br>").length);
+    expect(headings.join("|").replaceAll("<br>", "")).toBe(categories.join("|"));
+  });
+
   it("passes correct data to PlotlyChart", () => {
     render(<RadarPlot {...defaultProps} />);
 

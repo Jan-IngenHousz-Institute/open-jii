@@ -9,14 +9,11 @@ export const LEGEND_PADDING = 56;
 const MIN_SIDE_TEXT_WIDTH = 96;
 const SHORT_HORIZONTAL_LEGEND_HEIGHT = 50;
 const SHORT_LEGEND_INSET = 4;
+const MIN_LEGEND_HEIGHT = 30;
+export const MIN_OUTER_PLOT_HEIGHT = 60;
 
-export function shortOuterChartHeight(
-  config: PlotlyChartConfig,
-  sizing: { height?: number },
-): number | undefined {
-  const height = config.height ?? sizing.height;
-  // A three-row dashboard widget leaves about 229 px after the widget header.
-  return height !== undefined && height > 0 && height < 240 ? height : undefined;
+export function fitsOuterPlot(layout: Partial<Layout>, height: number, minPlotHeight: number) {
+  return height - (layout.margin?.t ?? 0) - (layout.margin?.b ?? 0) >= minPlotHeight;
 }
 
 let textContext: CanvasRenderingContext2D | null | undefined;
@@ -192,14 +189,14 @@ export function withOuterLabels({
   labels,
   traces,
   radialTitle,
-  shortHeight,
+  compact,
 }: {
   config: PlotlyChartConfig;
   sizing?: ChartTierOptions & { width?: number };
   labels: { left: number; right: number; top: number; bottom: number };
   traces: PlotData[];
   radialTitle?: { text: string; fontSize: number };
-  shortHeight?: number;
+  compact?: { height: number; maxPlotHeight: number };
 }): { layout: Partial<Layout>; data: PlotData[] } {
   const layout = responsiveChrome(config, { ...sizing, reserveMargins: false });
   const width = config.width ?? (sizing.width && sizing.width > 0 ? sizing.width : 720);
@@ -211,20 +208,35 @@ export function withOuterLabels({
     width,
   );
   const horizontal = hasLegend && (position === "top" || position === "bottom");
-  const legendHeight = shortHeight ? SHORT_HORIZONTAL_LEGEND_HEIGHT : HORIZONTAL_LEGEND_HEIGHT;
-  // Plotly's scrollbar can extend a few pixels past a tight viewport at the bottom edge.
-  const legendInset = horizontal && shortHeight ? SHORT_LEGEND_INSET : 0;
-  const legendBand = hasLegend ? (horizontal ? legendHeight + legendInset : sideBand) : 0;
   const titleFont = layout.title?.font?.size ?? 14;
   const titleBand = config.title ? titleFont * 1.5 + 12 : 0;
   const radialBand = radialTitle?.text ? radialTitle.fontSize * 1.5 + 8 : 0;
+  const top = Math.ceil(labels.top + titleBand);
+  const bottom = Math.ceil(labels.bottom + radialBand);
+  // Plotly's scrollbar can extend a few pixels past a tight viewport at the bottom edge.
+  const legendInset = horizontal && compact ? SHORT_LEGEND_INSET : 0;
+  const legendHeight = compact
+    ? Math.max(
+        MIN_LEGEND_HEIGHT,
+        Math.min(
+          SHORT_HORIZONTAL_LEGEND_HEIGHT,
+          Math.floor(compact.height - top - bottom - legendInset - MIN_OUTER_PLOT_HEIGHT),
+        ),
+      )
+    : HORIZONTAL_LEGEND_HEIGHT;
+  const legendBand = hasLegend ? (horizontal ? legendHeight + legendInset : sideBand) : 0;
+  // Leave room for the normal margins to return without shrinking the plot on resize.
+  const spareHeight = compact
+    ? Math.max(
+        0,
+        compact.height - top - bottom - (horizontal ? legendBand : 0) - compact.maxPlotHeight,
+      )
+    : 0;
   const margin = {
     l: Math.ceil(labels.left + (hasLegend && position === "left" ? legendBand : 0)),
     r: Math.ceil(labels.right + (hasLegend && position === "right" ? legendBand : 0)),
-    t: Math.ceil(labels.top + titleBand + (hasLegend && position === "top" ? legendBand : 0)),
-    b: Math.ceil(
-      labels.bottom + radialBand + (hasLegend && position === "bottom" ? legendBand : 0),
-    ),
+    t: top + Math.floor(spareHeight / 2) + (hasLegend && position === "top" ? legendBand : 0),
+    b: bottom + Math.ceil(spareHeight / 2) + (hasLegend && position === "bottom" ? legendBand : 0),
   };
   return {
     data,
@@ -245,8 +257,13 @@ export function withOuterLabels({
       legend: {
         ...legend,
         ...(horizontal ? { maxheight: legendHeight } : {}),
-        ...(shortHeight && legendInset
-          ? { y: position === "top" ? 1 - legendInset / shortHeight : legendInset / shortHeight }
+        ...(compact && legendInset
+          ? {
+              y:
+                position === "top"
+                  ? 1 - legendInset / compact.height
+                  : legendInset / compact.height,
+            }
           : {}),
       },
       ...(radialTitle?.text

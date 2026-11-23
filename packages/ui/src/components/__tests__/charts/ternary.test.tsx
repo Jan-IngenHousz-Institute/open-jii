@@ -77,6 +77,27 @@ describe("TernaryPlot", () => {
     }
   });
 
+  it("uses the regular legend band once the triangle has room", () => {
+    const { rerender } = render(
+      <TernaryPlot
+        data={mockData}
+        config={{ height: 239, title: "Mixtures", legendPosition: "bottom" }}
+      />,
+    );
+    const getLayout = () => JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
+    for (const height of [239, 240, 241, 325, 240]) {
+      rerender(
+        <TernaryPlot
+          data={mockData}
+          config={{ height, title: "Mixtures", legendPosition: "bottom" }}
+        />,
+      );
+      const { legend, margin } = getLayout();
+      expect(height - margin.t - margin.b).toBeGreaterThanOrEqual(60);
+      expect(legend.maxheight).toBe(height === 325 ? 64 : 50);
+    }
+  });
+
   it("passes correct data to PlotlyChart", () => {
     render(<TernaryPlot data={mockData} />);
 

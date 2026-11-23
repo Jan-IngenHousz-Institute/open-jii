@@ -4,7 +4,12 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { shortOuterChartHeight, withOuterLabels } from "./outer-labels";
+import {
+  chartTextWidth,
+  fitsOuterPlot,
+  MIN_OUTER_PLOT_HEIGHT,
+  withOuterLabels,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -72,10 +77,8 @@ export function WindRose({
 }: WindRoseProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
     trackWidth: true,
-    trackHeight: true,
+    trackHeight: "pixel",
   });
-  const shortHeight = shortOuterChartHeight(config, sizing);
-  const short = shortHeight !== undefined;
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const plotData: PlotData[] = useMemo(
@@ -119,23 +122,54 @@ export function WindRose({
   // numbers. Snapping to the user-supplied tick set avoids that.
   const tickText =
     directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
-  const labelStep = Math.ceil(directionTicks.length / 8);
-  const displayedTicks =
-    short && labelStep > 1
-      ? tickText.map((label, i) => (i % labelStep === 0 ? label : ""))
-      : tickText;
-
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels({
+      const base = {
         config,
         sizing,
-        labels: { left: 40, right: 40, top: short ? 22 : 32, bottom: short ? 22 : 32 },
         traces: plotData,
         radialTitle: { text: radialAxisTitle, fontSize: fontSizes.axisTitle },
-        shortHeight,
+      };
+      const normal = withOuterLabels({
+        ...base,
+        labels: { left: 40, right: 40, top: 32, bottom: 32 },
       });
+      const height = config.height ?? sizing.height ?? 0;
+      const peak = Math.max(
+        0,
+        ...directionTicks.map((_, index) =>
+          data.reduce(
+            (sum, series) =>
+              sum +
+              (series.visible === false || series.visible === "legendonly"
+                ? 0
+                : (series.r[index] ?? 0)),
+            0,
+          ),
+        ),
+      );
+      // Five labels along a radius need four gaps, measured across the longest number.
+      const radialDiameter = 8 * (chartTextWidth(String(Math.ceil(peak)), fontSizes.tick) + 2);
+      const labelCount = Math.min(16, tickText.filter(Boolean).length);
+      const angularDiameter =
+        (2 * fontSizes.tick * 1.3) / Math.sin((2 * Math.PI) / Math.max(4, labelCount));
+      const minDiameter = Math.ceil(
+        Math.max(MIN_OUTER_PLOT_HEIGHT, radialDiameter, angularDiameter),
+      );
+      const short = height > 0 && !fitsOuterPlot(normal.layout, height, minDiameter);
+      const outer = short
+        ? withOuterLabels({
+            ...base,
+            labels: { left: 40, right: 40, top: 22, bottom: 22 },
+            compact: { height, maxPlotHeight: minDiameter },
+          })
+        : normal;
+      const labelStep = Math.ceil(directionTicks.length / 8);
+      const displayedTicks =
+        short && labelStep > 1
+          ? tickText.map((label, i) => (i % labelStep === 0 ? label : ""))
+          : tickText;
       return {
         data: outer.data,
         layout: {
@@ -177,15 +211,14 @@ export function WindRose({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [
       config,
+      data,
       plotData,
       directionTicks,
-      displayedTicks,
       fontSizes.axisTitle,
       fontSizes.tick,
       radialAxisTitle,
-      short,
-      shortHeight,
       sizing,
+      tickText,
       themeVersion,
     ],
   );

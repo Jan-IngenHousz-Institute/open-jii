@@ -6,7 +6,8 @@ import React, { useMemo } from "react";
 import { cn } from "../../lib/utils";
 import {
   chartTextWidth,
-  shortOuterChartHeight,
+  fitsOuterPlot,
+  MIN_OUTER_PLOT_HEIGHT,
   withOuterLabels,
   wrapChartLabel,
 } from "./outer-labels";
@@ -21,6 +22,21 @@ import {
   tierAxisFontSizes,
   chartGridColor,
 } from "./utils";
+
+function radarLabelMargins(labels: string[], fontSize: number, compact = false) {
+  const side = Math.max(32, ...labels.map((label) => chartTextWidth(label, fontSize) + 12));
+  const angleStep = (2 * Math.PI) / labels.length;
+  const vertical = (direction: number) =>
+    Math.max(
+      compact ? 24 : 32,
+      ...labels.map((label, index) => {
+        const lineHeight = label.split("<br>").length * fontSize * 1.3;
+        const outward = compact ? (1 + direction * Math.cos(angleStep * index)) / 2 : 1;
+        return lineHeight * outward + (compact ? 10 : 12);
+      }),
+    );
+  return { left: side, right: side, top: vertical(1), bottom: vertical(-1) };
+}
 
 export interface RadarSeriesData extends BaseSeries {
   r: number[];
@@ -80,10 +96,8 @@ export function RadarPlot({
 }: RadarPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
     trackWidth: true,
-    trackHeight: true,
+    trackHeight: "pixel",
   });
-  const shortHeight = shortOuterChartHeight(config, sizing);
-  const short = shortHeight !== undefined;
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -156,37 +170,61 @@ export function RadarPlot({
   }, [categories, data]);
   const axisCategories = categories ?? inferredCategories;
 
-  const displayCategories = useMemo(
-    () =>
-      axisCategories?.map((label) =>
-        wrapChartLabel(label, fontSizes.tick, short ? 112 : sizing.compact ? 72 : 96),
-      ),
-    [axisCategories, fontSizes.tick, short, sizing.compact],
-  );
-  const outerLabels = useMemo(() => {
-    const side = Math.max(
-      32,
-      ...(displayCategories ?? []).map((label) => chartTextWidth(label, fontSizes.tick) + 12),
-    );
-    const height = Math.max(
-      short ? 24 : 32,
-      ...(displayCategories ?? []).map(
-        (label) => label.split("<br>").length * fontSizes.tick * 1.3 + (short ? 8 : 12),
-      ),
-    );
-    return { left: side, right: side, top: height, bottom: height };
-  }, [displayCategories, fontSizes.tick, short]);
-
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels({
-        config,
-        sizing,
-        labels: outerLabels,
-        traces: plotData,
-        shortHeight,
+      const headings = axisCategories ?? [];
+      const font = fontSizes.tick;
+      const options = { config, sizing, traces: plotData };
+      const normalHeadings = headings.map((label) =>
+        wrapChartLabel(label, font, sizing.compact ? 72 : 96),
+      );
+      const normal = withOuterLabels({
+        ...options,
+        labels: radarLabelMargins(normalHeadings, font),
       });
+      const height = config.height ?? sizing.height ?? 0;
+      const step = (2 * Math.PI) / Math.max(3, headings.length);
+      const spokeSpacing = Math.sin(step);
+      const isCentered = (index: number) => Math.abs(Math.sin(step * index)) < 0.1;
+      const minDiameter = Math.ceil(
+        Math.max(
+          MIN_OUTER_PLOT_HEIGHT,
+          radialAxisVisible ? font * 6 + 6 : 0,
+          angularAxisVisible && showTickLabels
+            ? Math.max(
+                0,
+                ...normalHeadings
+                  .filter((_, i) => isCentered(i))
+                  .map((label) => chartTextWidth(label, font)),
+              ) / spokeSpacing
+            : 0,
+        ),
+      );
+      const short = height > 0 && !fitsOuterPlot(normal.layout, height, minDiameter);
+      const compact = { height, maxPlotHeight: minDiameter };
+      const dense = short && headings.length >= 6;
+      const headingFont = dense ? Math.min(font, 9) : font;
+      // Centered headings extend toward their neighbours. Side headings extend outward.
+      const displayCategories = short
+        ? headings.map((label, index) => {
+            const width =
+              isCentered(index) && dense
+                ? Math.max(
+                    headingFont * 4,
+                    (MIN_OUTER_PLOT_HEIGHT + 2 * headingFont) * spokeSpacing + 1,
+                  )
+                : 112;
+            return wrapChartLabel(label, headingFont, width);
+          })
+        : normalHeadings;
+      const outer = short
+        ? withOuterLabels({
+            ...options,
+            labels: radarLabelMargins(displayCategories, headingFont, true),
+            compact,
+          })
+        : normal;
       return {
         data: outer.data,
         layout: {
@@ -217,7 +255,7 @@ export function RadarPlot({
                   }
                 : {}),
               tickangle: tickAngle,
-              tickfont: { size: fontSizes.tick },
+              tickfont: { size: headingFont },
               direction: "clockwise",
               period: inferredCategories?.length ?? 360,
               ...(inferredCategories
@@ -238,16 +276,12 @@ export function RadarPlot({
       categories,
       axisCategories,
       inferredCategories,
-      displayCategories,
-      outerLabels,
       config,
       plotData,
       fontSizes.tick,
       gridShape,
       radialAxisVisible,
       rangeMode,
-      short,
-      shortHeight,
       showTickLabels,
       sizing,
       tickAngle,
