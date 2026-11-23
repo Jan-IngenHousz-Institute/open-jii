@@ -190,12 +190,13 @@ and pipes it into `pnpm grafana:auth <env>`, which stores it in `tooling/devkit/
 `tooling/devkit/README.md` has the commands. The `Admin_SA` account behind the deploys' per-run tokens
 is separate and lives outside OpenTofu.
 
-### The plan account
+### Pull request plans
 
-The module also creates `tofu-plan`, a Viewer service account for the read-only OpenTofu plans that
-pull requests run through the `prod-plan` GitHub environment. The Rotate Grafana Token workflow
-finds it by name, mints a 30-day token on the 1st and 15th, stores it as `GRAFANA_SERVICE_TOKEN` in
-`prod-plan`, and revokes the account's older tokens.
+A pull request's dev plan creates its own token like a deploy. Its prod plan runs through the
+`prod-plan` GitHub environment, whose read-only role cannot create one, and needs none: it plans
+without a refresh, and the Grafana provider then calls the API only for data sources and imports,
+which the roots do not use. It passes a placeholder token. A Grafana data source would need a real
+token there again.
 
 ### Access Grafana Dashboard
 
@@ -288,12 +289,8 @@ Each workflow uses `.github/actions/publish-dora-metric/action.yml` composite ac
 
 ### Token Rotation
 
-Deploys need no rotation, since each run creates its own token. Only the `tofu-plan` Viewer token
-in `prod-plan` rotates:
-
-- Workflow: `.github/workflows/rotate-grafana-token.yml`
-- Schedule: 1st and 15th of each month
-- Token validity: 30 days
+Nothing rotates: every deploy and the dev pull request plan create their own token and delete it
+afterwards, and the prod pull request plan needs none.
 
 ### Updating Dashboards
 
@@ -357,11 +354,8 @@ aws cloudwatch list-metrics \
 If a deploy's plan or apply fails to sign in to Grafana, check that the "Create a Grafana token for
 this run" step passed and that the environment's `GRAFANA_WORKSPACE_ID_<ENV>` and
 `GRAFANA_SERVICE_ACCOUNT_ID_<ENV>` still match the workspace. If a pull request's prod plan fails
-to sign in, run the token rotation manually:
-
-```bash
-gh workflow run rotate-grafana-token.yml
-```
+to sign in, something now makes it call Grafana, most likely a new Grafana data source; see "Pull
+request plans" above.
 
 ### Deployment Metrics Not Appearing
 
