@@ -133,7 +133,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   }
 
   const selectedEntry =
-    onPage ?? (offPage.isPending ? selected : offPage.data) ?? data.devices.at(0);
+    onPage ?? (offPage.data === undefined ? selected : offPage.data) ?? data.devices.at(0);
 
   return (
     <>

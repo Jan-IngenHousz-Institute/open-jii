@@ -1,9 +1,11 @@
 import { createIotDevice } from "@/test/factories";
 import { openOnUrl } from "@/test/list-request";
+import { API_URL } from "@/test/msw/mount";
 import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -216,6 +218,46 @@ describe("ExperimentDevicesPanel", () => {
         .filter(({ query }) => query.selectedClientId)
         .map(({ query }) => query.selectedClientId),
     ).toEqual([bound.clientId]);
+  });
+
+  it("keeps a filtered-out selection open when its own lookup fails", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: ({ query }: SpyCall) =>
+        view(
+          [bound, observedPhone],
+          query.search === "Field" ? [observedPhone] : [bound, observedPhone],
+        ),
+    });
+    const path = (contract.experiments.listExperimentDevices["~orpc"].route.path ?? "").replace(
+      /\{(\w+)\}/g,
+      ":$1",
+    );
+    let lookupFailed = false;
+    server.use(
+      http.get(`${API_URL}${path}`, ({ request }) => {
+        if (!new URL(request.url).searchParams.get("selectedClientId")) return undefined;
+        lookupFailed = true;
+        return HttpResponse.json({ message: "Error" }, { status: 500 });
+      }),
+    );
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await screen.findByText("Field phone");
+    await user.click(
+      within(screen.getByRole("list")).getByRole("button", { name: /Bench sensor/ }),
+    );
+    await user.type(
+      screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
+      "Field",
+    );
+
+    await waitFor(() => expect(lookupFailed).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(within(screen.getByRole("list")).queryByText("Bench sensor")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Field phone" })).not.toBeInTheDocument();
   });
 
   it("defaults the detail pane to the first filtered and sorted row from a shared URL", async () => {
