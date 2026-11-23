@@ -82,6 +82,21 @@ describe("RadarPlot", () => {
     expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
   });
 
+  it("keeps every heading and reserves less legend space in a short widget", () => {
+    render(
+      <RadarPlot
+        {...defaultProps}
+        categories={["primary_assay_measurement", "secondary_reference_measurement", "sample_size"]}
+        config={{ height: 229, title: "Assays", legendPosition: "top" }}
+      />,
+    );
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
+    expect(layout.legend.maxheight).toBeLessThan(64);
+    expect(layout.polar.angularaxis.ticktext.join("|").replaceAll("<br>", "")).toBe(
+      "primary_assay_measurement|secondary_reference_measurement|sample_size",
+    );
+  });
+
   it("passes correct data to PlotlyChart", () => {
     render(<RadarPlot {...defaultProps} />);
 

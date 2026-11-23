@@ -4,7 +4,12 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { chartTextWidth, withOuterLabels, wrapChartLabel } from "./outer-labels";
+import {
+  chartTextWidth,
+  shortOuterChartHeight,
+  withOuterLabels,
+  wrapChartLabel,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -73,7 +78,12 @@ export function RadarPlot({
   radialAxisVisible = true,
   angularAxisVisible = true,
 }: RadarPlotProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
+    trackWidth: true,
+    trackHeight: true,
+  });
+  const shortHeight = shortOuterChartHeight(config, sizing);
+  const short = shortHeight !== undefined;
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -149,9 +159,9 @@ export function RadarPlot({
   const displayCategories = useMemo(
     () =>
       axisCategories?.map((label) =>
-        wrapChartLabel(label, fontSizes.tick, sizing.compact ? 72 : 96),
+        wrapChartLabel(label, fontSizes.tick, short ? 112 : sizing.compact ? 72 : 96),
       ),
-    [axisCategories, fontSizes.tick, sizing.compact],
+    [axisCategories, fontSizes.tick, short, sizing.compact],
   );
   const outerLabels = useMemo(() => {
     const side = Math.max(
@@ -159,13 +169,13 @@ export function RadarPlot({
       ...(displayCategories ?? []).map((label) => chartTextWidth(label, fontSizes.tick) + 12),
     );
     const height = Math.max(
-      32,
+      short ? 24 : 32,
       ...(displayCategories ?? []).map(
-        (label) => label.split("<br>").length * fontSizes.tick * 1.3 + 12,
+        (label) => label.split("<br>").length * fontSizes.tick * 1.3 + (short ? 8 : 12),
       ),
     );
     return { left: side, right: side, top: height, bottom: height };
-  }, [displayCategories, fontSizes.tick]);
+  }, [displayCategories, fontSizes.tick, short]);
 
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const figure = useMemo(
@@ -175,6 +185,7 @@ export function RadarPlot({
         sizing,
         labels: outerLabels,
         traces: plotData,
+        shortHeight,
       });
       return {
         data: outer.data,
@@ -186,7 +197,8 @@ export function RadarPlot({
               visible: radialAxisVisible,
               range: rangeMode === "tozero" ? [0, undefined] : undefined,
               rangemode: rangeMode,
-              nticks: sizing.compact ? 3 : 5,
+              nticks: short ? 2 : sizing.compact ? 3 : 5,
+              ...(short ? { angle: -90, tickangle: -90 } : {}),
               tickfont: { size: fontSizes.tick },
               gridcolor: chartGridColor(),
               linecolor: chartGridColor(),
@@ -234,6 +246,8 @@ export function RadarPlot({
       gridShape,
       radialAxisVisible,
       rangeMode,
+      short,
+      shortHeight,
       showTickLabels,
       sizing,
       tickAngle,

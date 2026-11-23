@@ -59,6 +59,24 @@ describe("TernaryPlot", () => {
     expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
   });
 
+  it("leaves room for the triangle and its three labelled axes in a short widget", () => {
+    const height = 229;
+    render(
+      <TernaryPlot
+        data={mockData}
+        config={{ height, title: "Mixtures", legendPosition: "bottom" }}
+      />,
+    );
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
+    expect(height - layout.margin.t - layout.margin.b).toBeGreaterThanOrEqual(60);
+    for (const axis of ["aaxis", "baxis", "caxis"]) {
+      expect(layout.ternary[axis]).toMatchObject({
+        title: { text: axis.charAt(0).toUpperCase() },
+        showticklabels: true,
+      });
+    }
+  });
+
   it("passes correct data to PlotlyChart", () => {
     render(<TernaryPlot data={mockData} />);
 

@@ -4,7 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { chartTextWidth, withOuterLabels } from "./outer-labels";
+import { chartTextWidth, shortOuterChartHeight, withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -138,7 +138,11 @@ export function TernaryPlot({
   sum = 1,
   bgcolor = "white",
 }: TernaryPlotProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
+    trackWidth: true,
+    trackHeight: true,
+  });
+  const shortHeight = shortOuterChartHeight(config, sizing);
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
@@ -256,10 +260,11 @@ export function TernaryPlot({
             ) /
               2 +
             36,
-          top: 44,
-          bottom: 48,
+          top: shortHeight ? 38 : 44,
+          bottom: shortHeight ? 42 : 48,
         },
         traces: allTraces,
+        shortHeight,
       });
       return {
         data: outer.data,
@@ -357,6 +362,7 @@ export function TernaryPlot({
       allTraces,
       fontSizes.axisTitle,
       fontSizes.tick,
+      shortHeight,
       sizing,
       sum,
       themeVersion,

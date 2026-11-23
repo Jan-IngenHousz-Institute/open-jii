@@ -4,7 +4,7 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { withOuterLabels } from "./outer-labels";
+import { shortOuterChartHeight, withOuterLabels } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -70,7 +70,12 @@ export function WindRose({
   directionTicks = DEFAULT_DIRECTION_TICKS,
   radialAxisTitle = "Frequency",
 }: WindRoseProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
+    trackWidth: true,
+    trackHeight: true,
+  });
+  const shortHeight = shortOuterChartHeight(config, sizing);
+  const short = shortHeight !== undefined;
   const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const plotData: PlotData[] = useMemo(
@@ -114,6 +119,11 @@ export function WindRose({
   // numbers. Snapping to the user-supplied tick set avoids that.
   const tickText =
     directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
+  const labelStep = Math.ceil(directionTicks.length / 8);
+  const displayedTicks =
+    short && labelStep > 1
+      ? tickText.map((label, i) => (i % labelStep === 0 ? label : ""))
+      : tickText;
 
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
   const figure = useMemo(
@@ -121,9 +131,10 @@ export function WindRose({
       const outer = withOuterLabels({
         config,
         sizing,
-        labels: { left: 40, right: 40, top: 32, bottom: 32 },
+        labels: { left: 40, right: 40, top: short ? 22 : 32, bottom: short ? 22 : 32 },
         traces: plotData,
         radialTitle: { text: radialAxisTitle, fontSize: fontSizes.axisTitle },
+        shortHeight,
       });
       return {
         data: outer.data,
@@ -142,7 +153,7 @@ export function WindRose({
               angle: 0,
               tickangle: 0,
               // Cap ticks so labels don't collide on small charts.
-              nticks: 5,
+              nticks: short ? 2 : 5,
               gridcolor: chartGridColor(),
               showgrid: config.showGrid !== false,
             },
@@ -154,7 +165,7 @@ export function WindRose({
               period: 360,
               tickmode: "array",
               tickvals: directionTicks,
-              ticktext: tickText,
+              ticktext: displayedTicks,
               tickfont: { size: fontSizes.tick },
               gridcolor: chartGridColor(),
               showgrid: config.showGrid !== false,
@@ -168,11 +179,13 @@ export function WindRose({
       config,
       plotData,
       directionTicks,
+      displayedTicks,
       fontSizes.axisTitle,
       fontSizes.tick,
       radialAxisTitle,
+      short,
+      shortHeight,
       sizing,
-      tickText,
       themeVersion,
     ],
   );

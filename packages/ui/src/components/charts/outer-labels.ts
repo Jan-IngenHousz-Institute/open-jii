@@ -7,6 +7,17 @@ import { effectiveLegendPosition, legendAnchorFor, responsiveChrome } from "./ut
 export const HORIZONTAL_LEGEND_HEIGHT = 64;
 export const LEGEND_PADDING = 56;
 const MIN_SIDE_TEXT_WIDTH = 96;
+const SHORT_HORIZONTAL_LEGEND_HEIGHT = 50;
+const SHORT_LEGEND_INSET = 4;
+
+export function shortOuterChartHeight(
+  config: PlotlyChartConfig,
+  sizing: { height?: number },
+): number | undefined {
+  const height = config.height ?? sizing.height;
+  // A three-row dashboard widget leaves about 229 px after the widget header.
+  return height !== undefined && height > 0 && height < 240 ? height : undefined;
+}
 
 let textContext: CanvasRenderingContext2D | null | undefined;
 let fontFamily = "sans-serif";
@@ -181,12 +192,14 @@ export function withOuterLabels({
   labels,
   traces,
   radialTitle,
+  shortHeight,
 }: {
   config: PlotlyChartConfig;
   sizing?: ChartTierOptions & { width?: number };
   labels: { left: number; right: number; top: number; bottom: number };
   traces: PlotData[];
   radialTitle?: { text: string; fontSize: number };
+  shortHeight?: number;
 }): { layout: Partial<Layout>; data: PlotData[] } {
   const layout = responsiveChrome(config, { ...sizing, reserveMargins: false });
   const width = config.width ?? (sizing.width && sizing.width > 0 ? sizing.width : 720);
@@ -197,12 +210,11 @@ export function withOuterLabels({
     traces,
     width,
   );
-  // Long horizontal legends scroll within their own band, as vertical legends do.
-  const legendBand = hasLegend
-    ? position === "top" || position === "bottom"
-      ? HORIZONTAL_LEGEND_HEIGHT
-      : sideBand
-    : 0;
+  const horizontal = hasLegend && (position === "top" || position === "bottom");
+  const legendHeight = shortHeight ? SHORT_HORIZONTAL_LEGEND_HEIGHT : HORIZONTAL_LEGEND_HEIGHT;
+  // Plotly's scrollbar can extend a few pixels past a tight viewport at the bottom edge.
+  const legendInset = horizontal && shortHeight ? SHORT_LEGEND_INSET : 0;
+  const legendBand = hasLegend ? (horizontal ? legendHeight + legendInset : sideBand) : 0;
   const titleFont = layout.title?.font?.size ?? 14;
   const titleBand = config.title ? titleFont * 1.5 + 12 : 0;
   const radialBand = radialTitle?.text ? radialTitle.fontSize * 1.5 + 8 : 0;
@@ -232,8 +244,9 @@ export function withOuterLabels({
         : {}),
       legend: {
         ...legend,
-        ...(hasLegend && (position === "top" || position === "bottom")
-          ? { maxheight: HORIZONTAL_LEGEND_HEIGHT }
+        ...(horizontal ? { maxheight: legendHeight } : {}),
+        ...(shortHeight && legendInset
+          ? { y: position === "top" ? 1 - legendInset / shortHeight : legendInset / shortHeight }
           : {}),
       },
       ...(radialTitle?.text

@@ -70,6 +70,41 @@ describe("WindRose", () => {
     expect(plotData[1].type).toBe("barpolar");
   });
 
+  it("spaces labels in short widgets without dropping any direction ticks", () => {
+    const ticks = Array.from({ length: 32 }, (_, i) => i * 11.25);
+    const { rerender } = render(
+      <WindRose
+        data={sampleData}
+        directionLabels={[]}
+        directionTicks={ticks}
+        config={{ height: 229, legendPosition: "bottom" }}
+      />,
+    );
+    const layout = getLayout();
+    expect(layout.legend.maxheight).toBeLessThan(64);
+    expect(layout.polar.radialaxis.nticks).toBeLessThan(5);
+    expect(layout.polar.angularaxis.tickvals).toEqual(ticks);
+    expect(layout.polar.angularaxis.ticktext.filter(Boolean)).toEqual([
+      "0°",
+      "45°",
+      "90°",
+      "135°",
+      "180°",
+      "225°",
+      "270°",
+      "315°",
+    ]);
+    rerender(
+      <WindRose
+        data={sampleData}
+        directionLabels={[]}
+        directionTicks={ticks}
+        config={{ height: 325, legendPosition: "bottom" }}
+      />,
+    );
+    expect(getLayout().polar.angularaxis.ticktext.filter(Boolean)).toHaveLength(32);
+  });
+
   it("forwards r, theta, and width onto each trace", () => {
     render(<WindRose data={sampleData} />);
     const plotData = getPlotData();
