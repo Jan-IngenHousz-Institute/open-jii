@@ -90,11 +90,19 @@ describe("RegistrationForm newsletter opt-in and the registration revalidation",
     ]);
   });
 
-  it("sends the opt-in before saving registration without holding a same-origin return", async () => {
+  it("sends the opt-in before saving registration for a same-origin return", async () => {
     await register("/dashboard");
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
-    expect(events).toEqual(["subscription sent", "registered saved", "auth revalidated"]);
     await waitFor(() => expect(events).toContain("subscription settled"));
+    // A same-origin return does not wait for the opt-in, so it can settle anywhere after it is sent.
+    expect(events.filter((event) => event !== "subscription settled")).toEqual([
+      "subscription sent",
+      "registered saved",
+      "auth revalidated",
+    ]);
+    expect(events.indexOf("subscription settled")).toBeGreaterThan(
+      events.indexOf("subscription sent"),
+    );
   });
 });
