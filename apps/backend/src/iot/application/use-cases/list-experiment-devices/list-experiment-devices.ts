@@ -399,7 +399,9 @@ function toIdentity(device: IotDeviceDto): ExperimentDeviceDto["device"] {
 
 /** Most recent arrival in this experiment first; never-seen rows last. */
 function byFreshest(entries: ExperimentDeviceEntryDto[]): ExperimentDeviceEntryDto[] {
-  return [...entries].sort((a, b) =>
-    (b.recentData?.lastDataAt ?? "").localeCompare(a.recentData?.lastDataAt ?? ""),
+  return [...entries].sort(
+    (a, b) =>
+      (b.recentData?.lastDataAt ?? "").localeCompare(a.recentData?.lastDataAt ?? "") ||
+      a.clientId.localeCompare(b.clientId),
   );
 }
