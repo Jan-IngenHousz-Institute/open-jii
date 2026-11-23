@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
-import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
+import { useConfirmEmailChange } from "~/hooks/auth/useConfirmEmailChange/useConfirmEmailChange";
+import { useRequestEmailChange } from "~/hooks/auth/useRequestEmailChange/useRequestEmailChange";
 import { useUpdateUser } from "~/hooks/auth/useUpdateUser/useUpdateUser";
-import { useVerifyEmail } from "~/hooks/auth/useVerifyEmail/useVerifyEmail";
 import { useCreateUserProfile } from "~/hooks/profile/useCreateUserProfile/useCreateUserProfile";
 import { getAuthCallback } from "~/lib/auth-callback";
 import { orpc } from "~/lib/orpc";
@@ -68,11 +68,16 @@ export function RegistrationForm({
   const [isPending, setIsPending] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  // The account takes the address once the code is accepted, and the library refuses to
+  // confirm it a second time, so a retry after a later step fails must skip the confirm. The
+  // address can no longer be edited or sent a new code either: the server refuses both.
+  const [confirmedEmail, setConfirmedEmail] = useState<string | null>(null);
+  const addressTaken = confirmedEmail === pendingEmail;
   const newsletterOptInRef = useRef(false);
   const { data: session } = useSession();
   const updateUser = useUpdateUser();
-  const sendOtpRegistration = useSignInEmail();
-  const verifyOtpRegistration = useVerifyEmail();
+  const requestEmailChange = useRequestEmailChange();
+  const confirmEmailChange = useConfirmEmailChange();
   const subscribeNewsletter = useMutation(orpc.newsletter.subscribeDirect.mutationOptions());
 
   const isValidEmailCheck = z.string().email().safeParse(userEmail).success;
@@ -174,7 +179,7 @@ export function RegistrationForm({
     try {
       // User needs to verify an email address and hasn't entered the OTP yet
       if (needsEmailVerification && data.email && !showOTPInput) {
-        const otpRes = await sendOtpRegistration.mutateAsync(data.email);
+        const otpRes = await requestEmailChange.mutateAsync(data.email);
 
         if (otpRes.error) {
           form.setError("email", {
@@ -191,17 +196,20 @@ export function RegistrationForm({
 
       // User has entered OTP, verify it.
       if (needsEmailVerification && showOTPInput && data.otp) {
-        const result = await verifyOtpRegistration.mutateAsync({
-          email: pendingEmail,
-          code: data.otp,
-        });
-
-        if (result.error) {
-          form.setError("otp", {
-            type: "manual",
-            message: result.error.message,
+        if (!addressTaken) {
+          const result = await confirmEmailChange.mutateAsync({
+            newEmail: pendingEmail,
+            otp: data.otp,
           });
-          return;
+
+          if (result.error) {
+            form.setError("otp", {
+              type: "manual",
+              message: result.error.message,
+            });
+            return;
+          }
+          setConfirmedEmail(pendingEmail);
         }
 
         // Profile already exists, just re-mark as registered.
@@ -245,7 +253,8 @@ export function RegistrationForm({
               pendingEmail={pendingEmail}
               isPending={isPending}
               setIsPending={setIsPending}
-              onEditEmail={handleEditEmail}
+              onEditEmail={addressTaken ? undefined : handleEditEmail}
+              canResendCode={!addressTaken}
               onComplete={() => form.handleSubmit(onSubmit)()}
               OTP_LENGTH={OTP_LENGTH}
             />

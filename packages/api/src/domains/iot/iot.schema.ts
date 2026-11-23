@@ -96,14 +96,10 @@ export const zIotDeviceFilterQuery = z
   })
   .merge(zPaginationQuery);
 
+export const zIotDeviceStatusCounts = z.record(zIotDeviceRung, z.number().int().nonnegative());
+
 export const zIotDevicePaginatedList = zPaginated(zIotDeviceWithConnectivity).extend({
-  statusCounts: z.object({
-    registered: z.number().int(),
-    provisioned: z.number().int(),
-    onboarded: z.number().int(),
-    revoked: z.number().int(),
-    retired: z.number().int(),
-  }),
+  statusCounts: zIotDeviceStatusCounts,
 });
 
 export const zIotDeviceListResponse = z.union([zIotDeviceList, zIotDevicePaginatedList]);

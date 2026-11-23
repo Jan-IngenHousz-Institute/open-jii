@@ -606,6 +606,7 @@
       "noRecentData": "Geen data in de afgelopen 30 dagen",
       "lastDataUnavailable": "Niet beschikbaar",
       "pipelineUnavailable": "Meetdata kon niet worden geladen; apparaten die alleen data stuurden ontbreken mogelijk.",
+      "selectedLookupError": "Het geselecteerde apparaat kon niet worden vernieuwd; de details zijn mogelijk verouderd.",
       "unknownFirmware": "Firmware onbekend",
       "searchPlaceholder": "Apparaten zoeken",
       "searchNoMatches": "Geen apparaten voldoen aan de zoekopdracht.",

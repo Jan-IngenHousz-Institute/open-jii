@@ -1,7 +1,8 @@
+import { createPasskey, createSession, createUseSessionResult } from "@/test/factories";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { authClient } from "@repo/auth/client";
+import { authClient, useSession } from "@repo/auth/client";
 
 import { PasskeysCard } from "./passkeys-card";
 
@@ -20,6 +21,7 @@ describe("PasskeysCard", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.mocked(useSession).mockReturnValue(createUseSessionResult());
   });
 
   it("shows the create action when WebAuthn is supported", async () => {
@@ -172,5 +174,63 @@ describe("PasskeysCard", () => {
     await waitFor(() => expect(screen.getByText("My work key")).toBeInTheDocument());
     // Named row shows the provider in the meta line; unnamed row uses the provider as its name.
     expect(screen.getAllByText(/Google Password Manager/)).toHaveLength(2);
+  });
+
+  describe("the last way in", () => {
+    const ONE_PASSKEY = [createPasskey({ id: "p1", name: "Work laptop" })];
+
+    function signedInAs(user: { email: string; emailVerified: boolean }) {
+      vi.mocked(useSession).mockReturnValue(
+        createUseSessionResult({ data: createSession({ user }) }),
+      );
+    }
+
+    beforeEach(() => {
+      vi.mocked(authClient.passkey.listUserPasskeys).mockResolvedValue({
+        data: ONE_PASSKEY,
+        error: null,
+      });
+    });
+
+    it("blocks deleting the only passkey of an account with no other way in", async () => {
+      signedInAs({ email: "0000-0002-1825-0097", emailVerified: false });
+
+      render(<PasskeysCard />);
+
+      expect(await screen.findByText("passkeys.onlyWayIn")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "passkeys.deleteNamed:Work laptop" }),
+      ).toBeDisabled();
+    });
+
+    it("lets the only passkey go while an account is connected", async () => {
+      signedInAs({ email: "0000-0002-1825-0097", emailVerified: false });
+      vi.mocked(authClient.listAccounts).mockResolvedValue({
+        data: [{ id: "orcid-row", providerId: "orcid", accountId: "0000-0002-1825-0097" }],
+        error: null,
+      });
+
+      render(<PasskeysCard />);
+
+      await waitFor(() => expect(authClient.listAccounts).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "passkeys.deleteNamed:Work laptop" }),
+        ).toBeEnabled(),
+      );
+      expect(screen.queryByText("passkeys.onlyWayIn")).not.toBeInTheDocument();
+    });
+
+    it("lets the only passkey go from an account with a confirmed address", async () => {
+      signedInAs({ email: "researcher@example.com", emailVerified: true });
+
+      render(<PasskeysCard />);
+
+      await waitFor(() => expect(authClient.listAccounts).toHaveBeenCalled());
+      expect(
+        await screen.findByRole("button", { name: "passkeys.deleteNamed:Work laptop" }),
+      ).toBeEnabled();
+      expect(screen.queryByText("passkeys.onlyWayIn")).not.toBeInTheDocument();
+    });
   });
 });

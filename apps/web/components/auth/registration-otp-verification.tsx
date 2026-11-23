@@ -3,7 +3,7 @@
 import { Pencil } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { useSignInEmail } from "~/hooks/auth/useSignInEmail/useSignInEmail";
+import { useRequestEmailChange } from "~/hooks/auth/useRequestEmailChange/useRequestEmailChange";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -22,6 +22,7 @@ export function RegistrationOtpVerification({
   isPending,
   setIsPending,
   onEditEmail,
+  canResendCode,
   onComplete,
   OTP_LENGTH,
 }: {
@@ -29,13 +30,16 @@ export function RegistrationOtpVerification({
   pendingEmail: string;
   isPending: boolean;
   setIsPending: React.Dispatch<React.SetStateAction<boolean>>;
-  onEditEmail: () => void;
+  /** Left out once the account has taken the address, which can no longer be changed here. */
+  onEditEmail?: () => void;
+  /** False once the account has taken the address: there is no code left to send. */
+  canResendCode: boolean;
   onComplete: () => void;
   OTP_LENGTH: number;
 }) {
   const { t } = useTranslation();
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SECONDS);
-  const sendOtpVerification = useSignInEmail();
+  const requestEmailChange = useRequestEmailChange();
 
   useEffect(() => {
     if (countdown > 0) {
@@ -49,7 +53,7 @@ export function RegistrationOtpVerification({
 
     setIsPending(true);
     try {
-      const res = await sendOtpVerification.mutateAsync(pendingEmail);
+      const res = await requestEmailChange.mutateAsync(pendingEmail);
 
       if (res.error) {
         toast({
@@ -72,16 +76,20 @@ export function RegistrationOtpVerification({
       <h2 className="text-xl font-bold">{t("auth.checkEmail")}</h2>
       <div className="muted-foreground mb-4 text-sm">
         {t("auth.otpInstructions")}{" "}
-        <Button
-          type="button"
-          variant="link"
-          size="inline"
-          className="font-medium"
-          onClick={onEditEmail}
-          aria-label="Edit email address"
-        >
-          {pendingEmail} <Pencil className="h-3 w-3" aria-hidden="true" />
-        </Button>
+        {onEditEmail ? (
+          <Button
+            type="button"
+            variant="link"
+            size="inline"
+            className="font-medium"
+            onClick={onEditEmail}
+            aria-label="Edit email address"
+          >
+            {pendingEmail} <Pencil className="h-3 w-3" aria-hidden="true" />
+          </Button>
+        ) : (
+          <span className="font-medium">{pendingEmail}</span>
+        )}
       </div>
       <FormField
         control={form.control}
@@ -107,19 +115,21 @@ export function RegistrationOtpVerification({
           </FormItem>
         )}
       />
-      <div className="pt-2">
-        <Button
-          type="button"
-          variant="link"
-          size="inline"
-          className="text-sm font-medium"
-          onClick={handleResendCode}
-          disabled={countdown > 0 || isPending}
-          aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
-        >
-          {countdown > 0 ? `${t("auth.resendCode")} (${countdown}s)` : t("auth.resendCode")}
-        </Button>
-      </div>
+      {canResendCode && (
+        <div className="pt-2">
+          <Button
+            type="button"
+            variant="link"
+            size="inline"
+            className="text-sm font-medium"
+            onClick={handleResendCode}
+            disabled={countdown > 0 || isPending}
+            aria-label={countdown > 0 ? `Resend code in ${countdown} seconds` : "Resend code"}
+          >
+            {countdown > 0 ? `${t("auth.resendCode")} (${countdown}s)` : t("auth.resendCode")}
+          </Button>
+        </div>
+      )}
     </>
   );
 }

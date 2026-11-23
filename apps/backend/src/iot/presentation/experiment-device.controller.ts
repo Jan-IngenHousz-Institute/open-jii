@@ -67,7 +67,12 @@ export class ExperimentDeviceController {
   @Implement(experimentDevicesContract.listExperimentDevices)
   listExperimentDevices(@Session() session: UserSession) {
     return implement(experimentDevicesContract.listExperimentDevices).handler(async ({ input }) => {
-      const result = await this.listExperimentDevicesUseCase.execute(input.id, session.user.id);
+      const result = await this.listExperimentDevicesUseCase.execute(
+        input.id,
+        session.user.id,
+        undefined,
+        input,
+      );
 
       if (result.isSuccess()) {
         return formatDates(result.value);

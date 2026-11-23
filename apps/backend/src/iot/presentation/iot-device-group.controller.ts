@@ -210,11 +210,15 @@ export class IotDeviceGroupController {
   getIotDeviceGroupMonitoring() {
     return implement(iotDeviceGroupContract.getIotDeviceGroupMonitoring).handler(
       async ({ input }) => {
-        const result = await this.getIotDeviceGroupMonitoringUseCase.execute(input.groupId, {
-          from: input.from,
-          to: input.to,
-          bucket: input.bucket,
-        });
+        const result = await this.getIotDeviceGroupMonitoringUseCase.execute(
+          input.groupId,
+          {
+            from: input.from,
+            to: input.to,
+            bucket: input.bucket,
+          },
+          input,
+        );
 
         if (result.isSuccess()) {
           return result.value;

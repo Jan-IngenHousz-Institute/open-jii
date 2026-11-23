@@ -1,3 +1,4 @@
+import { isMemberSilent } from "@repo/api/domains/iot/device-group/group-health";
 import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import type {
   IotDeviceWithConnectivity,
@@ -5,7 +6,6 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 
 import { deviceNeedsCredentials } from "../device-next-action";
-import { isMemberSilent } from "../groups/group-health";
 
 /**
  * The fleet in the shared member-health shape, so the group dashboard's

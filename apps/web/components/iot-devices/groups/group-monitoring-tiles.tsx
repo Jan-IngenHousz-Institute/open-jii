@@ -4,6 +4,7 @@ import { formatRelativeTime } from "@/util/date";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 import { AlertTriangle } from "lucide-react";
 
+import { summarizeGroupHealth } from "@repo/api/domains/iot/device-group/group-health";
 import type {
   IotDeviceGroupMemberHealth,
   IotDeviceGroupMonitoring,
@@ -17,7 +18,6 @@ import { MetricTrendCard } from "../../metrics/metric-trend-card";
 import { metricsBandGrid } from "../../metrics/metrics-band-grid";
 import { bucketAxis, foldBucketSeries, peakBucketDate } from "../monitoring/monitoring-buckets";
 import type { MonitoringRange } from "../monitoring/monitoring-range";
-import { summarizeGroupHealth } from "./group-health";
 
 interface GroupMonitoringTilesProps {
   /** Extra classes per tile, e.g. a translucent ground on the wash hero. */
@@ -46,15 +46,19 @@ export function GroupMonitoringTiles({
   const summary =
     monitoring === undefined
       ? undefined
-      : summarizeGroupHealth(members, monitoring.pipelineUnavailable, now);
+      : monitoring.pagination
+        ? { ...monitoring.pagination, total: monitoring.pagination.totalCount }
+        : summarizeGroupHealth(members, monitoring.pipelineUnavailable, now);
 
-  const freshest = members.reduce<string | null>(
-    (latest, member) =>
-      member.lastDataAt !== null && (latest === null || member.lastDataAt > latest)
-        ? member.lastDataAt
-        : latest,
-    null,
-  );
+  const freshest = monitoring?.pagination
+    ? monitoring.pagination.freshest
+    : members.reduce<string | null>(
+        (latest, member) =>
+          member.lastDataAt !== null && (latest === null || member.lastDataAt > latest)
+            ? member.lastDataAt
+            : latest,
+        null,
+      );
 
   const total =
     monitoring === undefined

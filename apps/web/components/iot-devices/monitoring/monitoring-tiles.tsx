@@ -11,6 +11,7 @@ import type {
   IotDeviceActivity,
   IotDeviceDetail,
 } from "@repo/api/domains/iot/iot.schema";
+import { SILENT_THRESHOLD_MS } from "@repo/api/domains/iot/silent-threshold";
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -19,7 +20,6 @@ import { MetricTrendCard } from "../../metrics/metric-trend-card";
 import { metricsBandGrid } from "../../metrics/metrics-band-grid";
 import { bucketAxis, foldBucketSeries, peakBucketDate } from "./monitoring-buckets";
 import type { MonitoringRange } from "./monitoring-range";
-import { SILENT_THRESHOLD_MS } from "./silent-threshold";
 
 interface MonitoringTilesProps {
   /** Extra classes per tile, e.g. a translucent ground on the wash hero. */
