@@ -377,7 +377,9 @@ describe("ExperimentJoinCodeDialog", () => {
   });
 
   it("flips a 30-day code, whose delay overflows a 32-bit timer, on its own timer", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // setInterval stays real: the 10 s poll ticks on it even in a background tab,
+    // and 30 days of ticks is ~268k callbacks, enough to time out a loaded run.
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["setTimeout", "clearTimeout", "Date"] });
     vi.setSystemTime(new Date("2026-09-18T00:00:00.000Z"));
     // 30 days is ~2.59e9 ms, past setTimeout's signed 32-bit ceiling of ~24.8 days,
     // so no single timer spans it and the card has to re-arm to reach the deadline.
@@ -388,12 +390,6 @@ describe("ExperimentJoinCodeDialog", () => {
     renderCard();
     expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
 
-    // Background the tab so the 10 s poll stops issuing requests: 30 days of them
-    // is ~268k round trips, and this case is about the timer, not the poll.
-    focusManager.setFocused(false);
-    // Advanced synchronously: the async variant flushes microtasks per timer, and
-    // 30 days of the 10 s poll is ~268k of them, which is slow enough to time out
-    // under a loaded full-suite run.
     act(() => {
       vi.advanceTimersByTime(31 * 24 * 60 * 60 * 1000);
     });
