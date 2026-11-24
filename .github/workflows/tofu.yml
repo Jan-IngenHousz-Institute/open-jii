@@ -52,7 +52,6 @@ jobs:
       TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
       TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
       TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
-      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
@@ -171,7 +170,6 @@ jobs:
       TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
       TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
       TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
-      TF_VAR_api_cloudfront_header_value: ${{ secrets.API_CLOUDFRONT_HEADER_VALUE }}
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}

@@ -1,6 +1,5 @@
-import type { ExperimentDevicesOverview } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
-
 export interface ExperimentDevicesSummary {
+  total: number;
   onboarded: number;
   sending: number;
   onboardedSilent: number;
@@ -9,14 +8,14 @@ export interface ExperimentDevicesSummary {
 
 /** The tab's four tiles. "Sending" means data landed in the overview's window. */
 export function summarizeExperimentDevices(
-  overview: ExperimentDevicesOverview,
+  devices: readonly { binding: object | null; recentData: object | null }[],
 ): ExperimentDevicesSummary {
   let onboarded = 0;
   let sending = 0;
   let onboardedSilent = 0;
   let sendingUnbound = 0;
 
-  for (const entry of overview.devices) {
+  for (const entry of devices) {
     const isBound = entry.binding !== null;
     const isSending = entry.recentData !== null;
     if (isBound) onboarded += 1;
@@ -25,5 +24,5 @@ export function summarizeExperimentDevices(
     if (!isBound && isSending) sendingUnbound += 1;
   }
 
-  return { onboarded, sending, onboardedSilent, sendingUnbound };
+  return { total: devices.length, onboarded, sending, onboardedSilent, sendingUnbound };
 }

@@ -217,11 +217,15 @@ describe("StoreQueryBuilder", () => {
   it("sorts a whole device by the registry's order of the ids it is given, then by its label", () => {
     const sql = measurements()
       .select(["id"])
-      .orderBy({ column: "device", direction: "ASC" }, ["thing-2", "thing-1"])
+      .orderBy({ column: "device", direction: "ASC" }, [["thing-2"], ["thing-1"]])
       .build();
 
-    expect(sql).toMatch(/^WITH \['thing-2', 'thing-1'\] AS __order_ids\n/);
-    expect(sql).toContain("ORDER BY indexOf(__order_ids, client_id) ASC NULLS FIRST, CASE WHEN ");
+    expect(sql).toMatch(
+      /^WITH \['thing-2', 'thing-1'\] AS __order_ids, CAST\(\[1, 2\] AS Array\(UInt32\)\) AS __order_ranks\n/,
+    );
+    expect(sql).toContain(
+      "ORDER BY arrayElement(__order_ranks, indexOf(__order_ids, client_id)) ASC NULLS FIRST, CASE WHEN ",
+    );
     expect(sql).toMatch(/ END ASC NULLS FIRST$/);
   });
 
@@ -235,7 +239,7 @@ describe("StoreQueryBuilder", () => {
       .filter({ column: "device.serial_number", operator: "contains", value: "MSQ" })
       .orderBy(
         { column: "device", direction: "DESC" },
-        devices.map(([clientId]) => clientId),
+        devices.map(([clientId]) => [clientId]),
       )
       .limit(100)
       .offset(200)
@@ -245,11 +249,19 @@ describe("StoreQueryBuilder", () => {
     expect(Buffer.byteLength(sql)).toBeLessThan(1_048_576);
   });
 
+  it("breaks ties by the row id under any sort, as the warehouse does", () => {
+    const sql = measurements()
+      .orderBy({ column: "device_name", direction: "DESC", rowId: "id" })
+      .build();
+
+    expect(sql).toMatch(/ORDER BY device_name DESC NULLS LAST, id ASC$/);
+  });
+
   it("sorts text that holds a number by its value, then by the text and the row id", () => {
     const sql = measurements()
       .parseVariant("questions_data", "OBJECT<plot: STRING>", "answer")
       .select(["plot"])
-      .orderBy({ column: "plot", direction: "DESC", mode: { kind: "numericString", rowId: "id" } })
+      .orderBy({ column: "plot", direction: "DESC", rowId: "id", mode: { kind: "numericString" } })
       .build();
 
     const answer = "questions_data['plot']";
@@ -264,7 +276,7 @@ describe("StoreQueryBuilder", () => {
       .filter({ column: "height", operator: "equals", value: "n/a" })
       .filter({ column: "height", operator: "greater_than", value: 10 })
       .filter({ column: "plot", operator: "equals", value: "007" })
-      .orderBy({ column: "height", direction: "DESC", mode: { kind: "number", rowId: "id" } })
+      .orderBy({ column: "height", direction: "DESC", rowId: "id", mode: { kind: "number" } })
       .build();
 
     const answer = "questions_data['height']";
@@ -312,11 +324,32 @@ describe("StoreQueryBuilder", () => {
   it("sorts a contributor's name by the place of each row's id, with Spark's null order", () => {
     const sql = measurements()
       .select(["id"])
-      .orderBy({ column: "contributor.name", direction: "ASC" }, ["u2", "u1"])
+      .orderBy({ column: "contributor.name", direction: "ASC" }, [["u2"], ["u1"]])
       .build();
 
-    expect(sql).toMatch(/^WITH \['u2', 'u1'\] AS __order_ids\n/);
-    expect(sql).toContain("ORDER BY indexOf(__order_ids, user_id) ASC NULLS FIRST");
+    expect(sql).toMatch(
+      /^WITH \['u2', 'u1'\] AS __order_ids, CAST\(\[1, 2\] AS Array\(UInt32\)\) AS __order_ranks\n/,
+    );
+    expect(sql).toContain(
+      "ORDER BY arrayElement(__order_ranks, indexOf(__order_ids, user_id)) ASC NULLS FIRST",
+    );
+  });
+
+  it("gives ids that tie one place, so the row id orders their rows", () => {
+    const sql = measurements()
+      .select(["id"])
+      .orderBy({ column: "contributor.name", direction: "ASC", rowId: "id" }, [
+        ["u2"],
+        ["u1", "u3"],
+      ])
+      .build();
+
+    expect(sql).toMatch(
+      /^WITH \['u2', 'u1', 'u3'\] AS __order_ids, CAST\(\[1, 2, 2\] AS Array\(UInt32\)\) AS __order_ranks\n/,
+    );
+    expect(sql).toMatch(
+      /ORDER BY arrayElement\(__order_ranks, indexOf\(__order_ids, user_id\)\) ASC NULLS FIRST, id ASC$/,
+    );
   });
 
   it("renames a payload field that takes the name of a list the statement holds", () => {
@@ -324,11 +357,11 @@ describe("StoreQueryBuilder", () => {
       .read(UPLOADS_TABLE, "e1", "t1")
       .parseVariant("uploaded_data", "OBJECT<__order_ids: STRING>", "upload")
       .select(["id", "__order_ids_upload"])
-      .orderBy({ column: "contributor.name", direction: "ASC" }, ["u1"]);
+      .orderBy({ column: "contributor.name", direction: "ASC" }, [["u1"]]);
     const sql = builder.build();
 
     expect(builder.outputColumns().map(({ name }) => name)).toEqual(["id", "__order_ids_upload"]);
-    expect(sql).toMatch(/^WITH \['u1'\] AS __order_ids\n/);
+    expect(sql).toMatch(/^WITH \['u1'\] AS __order_ids, /);
     expect(sql).toContain("uploaded_data_text AS `__order_ids_upload`");
   });
 

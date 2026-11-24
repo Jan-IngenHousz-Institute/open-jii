@@ -92,14 +92,19 @@ export function orcidProvider(config: OrcidProviderConfig) {
     // Custom user info fetching from ORCID API
     getUserInfo: async (tokens: { accessToken?: string; raw?: Record<string, unknown> }) => {
       // ORCID returns the ORCID iD in the token response
+      // A throw here escapes the callback as a bare 500. Null makes Better Auth answer
+      // `unable_to_get_user_info` through the error URL in the state, so a connect returns to
+      // Security and a sign-in to the login error page.
       const orcidId = (tokens.raw as { orcid?: string } | undefined)?.orcid ?? "";
 
       if (!orcidId) {
-        throw new Error("ORCID ID not found in token response");
+        console.warn("ORCID token response carried no iD");
+        return null;
       }
 
       if (!tokens.accessToken) {
-        throw new Error("Access token not found");
+        console.warn("ORCID token response carried no access token");
+        return null;
       }
 
       const publicApiUrl = isProduction
@@ -107,18 +112,25 @@ export function orcidProvider(config: OrcidProviderConfig) {
         : "https://pub.sandbox.orcid.org/v3.0";
 
       // Fetch ORCID public profile
-      const response = await fetch(`${publicApiUrl}/${orcidId}`, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${tokens.accessToken}`,
-        },
-      });
+      let data: ORCIDRecordResponse;
+      try {
+        const response = await fetch(`${publicApiUrl}/${orcidId}`, {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${tokens.accessToken}`,
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ORCID record: ${response.statusText}`);
+        if (!response.ok) {
+          console.warn("Failed to fetch the ORCID record", { status: response.status });
+          return null;
+        }
+
+        data = (await response.json()) as ORCIDRecordResponse;
+      } catch (error) {
+        console.warn("Failed to fetch the ORCID record", error);
+        return null;
       }
-
-      const data = (await response.json()) as ORCIDRecordResponse;
       const person = data.person;
 
       // Extract names from ORCID person data
@@ -135,16 +147,19 @@ export function orcidProvider(config: OrcidProviderConfig) {
       let email = "";
       let emailVerified = false;
 
-      const emails = person?.emails?.email;
-      if (emails?.length) {
+      // ORCID is a trusted provider for account linking, so Better Auth no longer
+      // checks emailVerified before linking a sign-in to an account with the same
+      // address. An unverified email is skipped here instead, so nobody can claim
+      // an account by publishing its address on an ORCID record.
+      const verifiedEmails = person?.emails?.email?.filter((e) => e.verified) ?? [];
+      if (verifiedEmails.length) {
         // Try to find a primary email, or take the first one
-        const publicEmail = emails.find((e) => e.primary) ?? emails[0];
-        // We checked length > 0, so publicEmail is guaranteed to be defined
+        const publicEmail = verifiedEmails.find((e) => e.primary) ?? verifiedEmails[0];
         email = publicEmail.email;
-        emailVerified = publicEmail.verified;
+        emailVerified = true;
       }
 
-      // Final fallback: If no email is available, use the ORCID ID.
+      // Final fallback: If no verified email is available, use the ORCID ID.
       // Mark emailVerified = false so the user is prompted to supply a real email.
       if (!email) {
         email = orcidId;

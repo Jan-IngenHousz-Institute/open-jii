@@ -26,11 +26,12 @@ export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf"> & {
 };
 
 interface StoreOrdering extends QueryOrdering {
-  idOrder?: string[];
+  idOrder?: string[][];
 }
 
 /** The names of the id lists a statement's WITH clause holds, which no payload field may take. */
 const ORDER_IDS = "__order_ids";
+const ORDER_RANKS = "__order_ranks";
 const DEVICE_CLIENT_IDS = "__device_client_ids";
 const DEVICE_SERIALS = "__device_serials";
 const FLAGGED_ROW_IDS = "__flagged_row_ids";
@@ -55,6 +56,7 @@ const STORE_SCALARS: Record<string, string> = {
 export class StoreQueryBuilder extends BaseQueryBuilder {
   static readonly reservedNames: readonly string[] = [
     ORDER_IDS,
+    ORDER_RANKS,
     DEVICE_CLIENT_IDS,
     DEVICE_SERIALS,
     FLAGGED_ROW_IDS,
@@ -178,9 +180,10 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   /**
    * `idOrder` sorts by what the store does not hold, a contributor's name or a device's registry
-   * id, by the place of each row's id in it; names never enter a query, whose text the store logs.
+   * id, by the place of the group holding each row's id; names never enter a query, whose text the
+   * store logs.
    */
-  orderBy(ordering: QueryOrdering, idOrder?: string[]): this {
+  orderBy(ordering: QueryOrdering, idOrder?: string[][]): this {
     this.ordering = { ...ordering, idOrder };
     return this;
   }
@@ -549,34 +552,35 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
-  private sortClause({ column, direction = "ASC", mode, idOrder }: StoreOrdering): string {
+  private sortClause(ordering: StoreOrdering): string {
+    const { column, direction = "ASC", mode, idOrder } = ordering;
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
+    const rowIdSql = this.rowIdFor(ordering);
+    const tieBreak = rowIdSql ? `, ${rowIdSql} ASC` : "";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
       const { expression, idOf } = this.baseColumn(name);
-      const place = `indexOf(${ORDER_IDS}, ${expression}) ${direction} ${nulls}`;
+      const place = `arrayElement(${ORDER_RANKS}, indexOf(${ORDER_IDS}, ${expression})) ${direction} ${nulls}`;
       // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
       // in the order carry, then by its label.
       const isDevice = idOf === "device";
-      return isDevice ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}` : place;
+      const sorted = isDevice
+        ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}`
+        : place;
+      return `${sorted}${tieBreak}`;
     }
 
     const target = this.columnExpression(column);
-    const isRowOrdered = mode?.kind === "numericString" || mode?.kind === "number";
-    const rowId =
-      isRowOrdered && !this.isDistinct && mode.rowId
-        ? this.columnExpression(mode.rowId)
-        : undefined;
     if (mode?.kind === "numericString") {
-      return numericStringOrdering(this.numericStringKeys(target, rowId), direction);
+      return numericStringOrdering(this.numericStringKeys(target, rowIdSql), direction);
     }
     if (mode?.kind === "number") {
       const nan = this.nanKey(target, column, direction, "NULLS LAST");
-      return `${nan}${target} ${direction} NULLS LAST${rowId ? `, ${rowId} ASC` : ""}`;
+      return `${nan}${target} ${direction} NULLS LAST${tieBreak}`;
     }
     const sorted =
       mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}`;
+    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}${tieBreak}`;
   }
 
   /** Spark sorts NaN above every number, where the store sorts it beside null. */
@@ -623,7 +627,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
     const idOrder = this.ordering?.idOrder;
     const lists = [
-      ...(idOrder === undefined ? [] : [`[${quoted(idOrder)}] AS ${ORDER_IDS}`]),
+      ...(idOrder === undefined
+        ? []
+        : [
+            `[${quoted(idOrder.flat())}] AS ${ORDER_IDS}`,
+            `CAST([${idOrder.flatMap((ids, place) => ids.map(() => place + 1)).join(", ")}] AS Array(UInt32)) AS ${ORDER_RANKS}`,
+          ]),
       ...(this.deviceSerials.length === 0
         ? []
         : [

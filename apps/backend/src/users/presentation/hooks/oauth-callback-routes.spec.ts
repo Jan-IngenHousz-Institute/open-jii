@@ -1,7 +1,9 @@
-import { AFTER_HOOK_KEY } from "@thallesp/nestjs-better-auth";
-import { callbackOAuth } from "better-auth/api";
+import { AFTER_HOOK_KEY, BEFORE_HOOK_KEY } from "@thallesp/nestjs-better-auth";
+import { callbackOAuth, linkSocialAccount, unlinkAccount } from "better-auth/api";
+import { emailOTP } from "better-auth/plugins/email-otp";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 
+import { SignInMethodsAuthHook } from "./sign-in-methods-auth.hook";
 import { UserAuthHook } from "./user-auth.hook";
 
 /**
@@ -15,9 +17,10 @@ import { UserAuthHook } from "./user-auth.hook";
  * renames either parameter fails here instead of quietly disabling auto-accept for
  * every ORCID and GitHub sign-up.
  *
- * Only this hook is covered. Organization invitations used to ride the same routes and
- * no longer auto-accept at all — joining an organization is a deliberate accept — so
- * `OrganizationAuthHook` has no after-hooks left to pin.
+ * Organization invitations used to ride the same routes and no longer auto-accept at
+ * all — joining an organization is a deliberate accept — so `OrganizationAuthHook` has
+ * no after-hooks left to pin. The sign-in method guards are pinned the same way below,
+ * where a path that stopped matching would let the last way in be removed.
  */
 describe("auth hook route literals", () => {
   const hooks: Record<string, Record<string, unknown>> = {
@@ -44,5 +47,37 @@ describe("auth hook route literals", () => {
       expect(hookPath(hook, "handleSocialSignIn")).toBe("/sign-in/social");
       expect(hookPath(hook, "handleOtpVerify")).toBe("/email-otp/verify-email");
     });
+
+    it("registers the email-code change registration gives an address through", () => {
+      const { changeEmailEmailOTP } = emailOTP({
+        sendVerificationOTP: () => Promise.resolve(),
+      }).endpoints;
+      expect(changeEmailEmailOTP.path).toBe("/email-otp/change-email");
+      expect(hookPath(hook, "handleEmailChange")).toBe(changeEmailEmailOTP.path);
+    });
+  });
+});
+
+describe("sign-in method guard route literals", () => {
+  const prototype = SignInMethodsAuthHook.prototype as unknown as Record<string, object>;
+
+  function hookPath(method: string): unknown {
+    return Reflect.getMetadata(BEFORE_HOOK_KEY, prototype[method]);
+  }
+
+  it("matches Better Auth's unlink route", () => {
+    expect(unlinkAccount.path).toBe("/unlink-account");
+    expect(hookPath("guardUnlinkAccount")).toBe(unlinkAccount.path);
+  });
+
+  it("matches Better Auth's link route", () => {
+    expect(linkSocialAccount.path).toBe("/link-social");
+    expect(hookPath("requireFreshSessionToLink")).toBe(linkSocialAccount.path);
+  });
+
+  it("names the passkey plugin's delete route", () => {
+    // The plugin keeps its endpoints inside `passkey()`, which the backend does not
+    // import, so this one is pinned to the literal it declares.
+    expect(hookPath("guardDeletePasskey")).toBe("/passkey/delete-passkey");
   });
 });

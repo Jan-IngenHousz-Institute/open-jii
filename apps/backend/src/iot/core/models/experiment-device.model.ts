@@ -1,3 +1,4 @@
+import type { ExperimentDevicesOverview } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 
@@ -11,6 +12,7 @@ export interface ExperimentDeviceDto {
     IotDeviceDto,
     "id" | "thingName" | "serialNumber" | "name" | "deviceType" | "status"
   >;
+  registeredAt: Date;
   addedBy: string;
   addedAt: Date;
 }
@@ -52,6 +54,9 @@ export interface ExperimentDeviceSeriesDto {
 
 export interface ExperimentDevicesOverviewDto {
   devices: ExperimentDeviceEntryDto[];
+  pagination?: Omit<NonNullable<ExperimentDevicesOverview["pagination"]>, "selected"> & {
+    selected?: ExperimentDeviceEntryDto;
+  };
   window: { from: string; to: string };
   pipelineUnavailable: boolean;
 }

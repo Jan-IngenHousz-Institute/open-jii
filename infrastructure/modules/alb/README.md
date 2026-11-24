@@ -8,8 +8,7 @@ CloudFront reaches it through a CloudFront VPC origin, which this module creates
 the VPC can reach it, so no shared header is needed.
 
 **Internet-facing** (the default): the ALB sits in public subnets and forwards only requests that
-carry the custom header CloudFront adds. This shape stays until every environment has moved to the
-internal one.
+carry the custom header CloudFront adds. Only `env/dr` still uses this shape; dev and prod are internal.
 
 ## What It Creates
 

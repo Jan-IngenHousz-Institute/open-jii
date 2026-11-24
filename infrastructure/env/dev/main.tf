@@ -1,30 +1,3 @@
-# CI's roles, the GitHub trust and the state backend belong to infrastructure/foundation, which a
-# separate workflow applies with its own role. This root forgets them without destroying anything
-# and only reads them. Delete the removed blocks once the first apply has run.
-removed {
-  from = module.terraform_state_s3
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.terraform_state_lock
-
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = module.iam_oidc
-
-  lifecycle {
-    destroy = false
-  }
-}
-
 data "aws_caller_identity" "current" {}
 
 data "aws_dynamodb_table" "terraform_state_lock" {
@@ -86,7 +59,7 @@ module "logs_bucket" {
   enable_versioning = false
 
   # Lets the backend ALB's enable_access_logs actually deliver to this bucket.
-  elb_log_delivery_prefixes = ["backend-alb-logs", "backend-private-alb-logs"]
+  elb_log_delivery_prefixes = ["backend-private-alb-logs"]
 
   lifecycle_rules = [{
     id                                 = "expire-cloudfront-access-logs"
@@ -781,13 +754,6 @@ module "experiment_secret_scope" {
   providers = {
     databricks.workspace = databricks.workspace
   }
-}
-
-# The backend's warehouse was made by hand before it was code. Imports refuse a sensitive id;
-# this one is an identifier, not a credential, and CI masks it in logs.
-import {
-  to = module.backend_warehouse.databricks_sql_endpoint.this
-  id = nonsensitive(var.backend_databricks_warehouse_id)
 }
 
 module "backend_warehouse" {
@@ -2193,12 +2159,6 @@ module "aurora_db" {
   skip_final_snapshot      = true # Skip snapshot on deletion in dev
 }
 
-# Adopts the log group the service created before retention was set in code.
-import {
-  to = module.aurora_db.aws_cloudwatch_log_group.postgresql
-  id = "/aws/rds/cluster/open-jii-${var.environment}-db-cluster/postgresql"
-}
-
 # The ClickHouse store the app reads measurement data from, fed by the pipelines
 module "serving_store" {
   source = "../../modules/serving-store"
@@ -2408,12 +2368,6 @@ module "secrets_rotation_trigger" {
   ecs_service_name = module.backend_ecs.ecs_service_name
   region           = var.aws_region
   secret_arn       = module.aurora_db.master_user_secret_arn
-}
-
-# Adopts the log group the service created before retention was set in code.
-import {
-  to = module.secrets_rotation_trigger.aws_cloudwatch_log_group.lambda
-  id = "/aws/lambda/${var.environment}-ecs-force-deployment"
 }
 
 module "cloud_trail" {
@@ -2652,17 +2606,6 @@ module "opennext" {
   }
 }
 
-# Adopts the Lambda@Edge log groups AWS created before retention was set in code.
-import {
-  to = module.opennext.module.cloudfront.aws_cloudwatch_log_group.edge_hash_body
-  id = "/aws/lambda/us-east-1.open-jii-edge-hash-body"
-}
-
-import {
-  to = module.opennext.module.cloudfront.aws_cloudwatch_log_group.edge_hash_body_us_east_1
-  id = "/aws/lambda/us-east-1.open-jii-edge-hash-body"
-}
-
 module "migration_runner_ecr" {
   source = "../../modules/ecr"
 
@@ -2789,40 +2732,6 @@ module "backend_ecr" {
   }
 }
 
-module "backend_alb" {
-  source = "../../modules/alb"
-
-  service_name    = "backend"
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.public_subnets
-  container_port  = var.backend_container_port
-  security_groups = [module.vpc.alb_security_group_id]
-  environment     = var.environment
-
-  # Health check configuration
-  health_check_path                = "/health"
-  health_check_timeout             = 5
-  health_check_interval            = 90
-  health_check_healthy_threshold   = 3
-  health_check_unhealthy_threshold = 3
-  health_check_matcher             = "200-299"
-
-  # SSL/TLS configuration for HTTPS - Uses the certificate from the default region (e.g., eu-central-1)
-  certificate_arn         = module.route53.regional_services_certificate_arn
-  cloudfront_header_value = var.api_cloudfront_header_value
-
-  # Enable access logs for better security and troubleshooting
-  enable_access_logs = true
-  access_logs_bucket = module.logs_bucket.bucket_id
-
-  tags = {
-    Environment = var.environment
-    Project     = "open-jii"
-    ManagedBy   = "terraform"
-    Component   = "backend"
-  }
-}
-
 module "backend_alb_private" {
   source = "../../modules/alb"
 
@@ -2886,9 +2795,7 @@ module "backend_ecs" {
   ephemeral_storage = 21   # Minimum size (21 GiB)
 
   # Load balancer integration
-  target_group_arn = module.backend_alb.target_group_arn
-  # Registers the tasks with the private ALB too, so it is healthy before CloudFront switches.
-  additional_target_group_arns = [module.backend_alb_private.target_group_arn]
+  target_group_arn = module.backend_alb_private.target_group_arn
 
   # Auto-scaling settings
   enable_autoscaling = true
@@ -3320,7 +3227,6 @@ module "backend_cloudfront" {
   service_name = "backend"
   environment  = var.environment
 
-
   alb_domain_name = module.backend_alb_private.alb_dns_name
   vpc_origin_id   = module.backend_alb_private.vpc_origin_id
 
@@ -3709,12 +3615,6 @@ module "grafana_metrics_publisher" {
 
   private_subnets                = module.vpc.private_subnets
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
-}
-
-# Adopts the log group the service created before retention was set in code.
-import {
-  to = module.grafana_metrics_publisher.aws_cloudwatch_log_group.metrics_publisher
-  id = "/aws/lambda/${var.environment}-metrics-publisher"
 }
 
 module "cost_publisher" {

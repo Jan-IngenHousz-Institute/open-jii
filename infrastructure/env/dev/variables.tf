@@ -109,12 +109,6 @@ variable "backend_databricks_warehouse_id" {
   sensitive   = true
 }
 
-variable "api_cloudfront_header_value" {
-  description = "Custom header value for CloudFront-ALB authentication"
-  type        = string
-  sensitive   = true
-}
-
 # Contentful configuration variables
 # Mailchimp configuration variables
 variable "centralized_metastore_bucket_name" {

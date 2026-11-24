@@ -5,7 +5,7 @@ import { APIError } from "better-auth/api";
 
 import { NotifyCredentialAddedUseCase } from "../../application/use-cases/notify-credential-added/notify-credential-added";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 const isOptionalString = (value: unknown): value is string | null | undefined =>

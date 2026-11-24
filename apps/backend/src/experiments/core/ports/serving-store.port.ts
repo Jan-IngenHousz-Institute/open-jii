@@ -40,8 +40,9 @@ export interface StoreMetadataSheet {
 }
 
 export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
-  /** Contributor ids in the order a sort on a contributor's name wants, since names stay out. */
-  orderByIds?: string[];
+  /** Ids in the order a sort on a contributor's name or a device's registry id wants, since names
+   *  stay out. Ids that tie share a group, so the row id orders their rows as the warehouse does. */
+  orderByIds?: string[][];
   /** Each client id whose device has a serial number to show, with it, for the labels a read
    *  filters, sorts or lists by. */
   deviceSerials?: [string, string][];

@@ -182,7 +182,7 @@ describe("ExperimentStoreReadsService", () => {
     const query = await reads.buildQuery({ ...page, ordering: { column: "contributor.name" } });
 
     assertSuccess(query);
-    expect(build).toHaveBeenCalledWith(expect.objectContaining({ orderByIds: [ada, zoe] }));
+    expect(build).toHaveBeenCalledWith(expect.objectContaining({ orderByIds: [[ada], [zoe]] }));
     expect(query.value.sql).not.toContain("Lovelace");
   });
 
@@ -210,6 +210,20 @@ describe("ExperimentStoreReadsService", () => {
 
     expect(build).toHaveBeenCalledWith(expect.objectContaining({ flagged }));
     expect(lookup).not.toHaveBeenCalled();
+  });
+
+  it("groups contributors who share a name, so the row id orders their rows", async () => {
+    const jan = await testApp.createTestUser({ name: "Jan Jansen" });
+    const ada = await testApp.createTestUser({ name: "Ada Lovelace" });
+    const namesake = await testApp.createTestUser({ name: "Jan Jansen" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success([jan, ada, namesake]));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    await reads.buildQuery({ ...page, ordering: { column: "contributor.name" } });
+
+    expect(build).toHaveBeenCalledWith(
+      expect.objectContaining({ orderByIds: [[ada], [jan, namesake].sort()] }),
+    );
   });
 
   it("leaves an anonymized contributor sort to the pseudonym the store computes", async () => {
@@ -279,7 +293,7 @@ describe("ExperimentStoreReadsService", () => {
       { thing: "thing-c", id: second.id },
     ].sort((a, b) => (a.id < b.id ? -1 : 1));
     const [params] = build.mock.calls[0];
-    expect(params.orderByIds).toEqual(byId.map(({ thing }) => thing));
+    expect(params.orderByIds).toEqual(byId.map(({ thing }) => [thing]));
     // The label that breaks the rest needs the serial numbers, from the same one lookup.
     expect(params.deviceSerials).toEqual([
       ["thing-c", "SN-C"],

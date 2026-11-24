@@ -677,17 +677,17 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           tableType: "static",
           experimentId: "e3",
           columns: ["id"],
-          ordering: { column: "device_name", direction: "ASC" },
+          ordering: { column: "device_name", direction: "ASC", rowId: "id" },
           limit: 1,
           offset,
         })
       ).rows;
 
-    // Equal names fall back to the store's key, which starts with the time.
+    // Equal names fall back to the row id, as they do in the warehouse.
     expect([...(await page(0)), ...(await page(1)), ...(await page(2))]).toEqual([
-      ["23"],
-      ["22"],
       ["21"],
+      ["22"],
+      ["23"],
     ]);
   });
 
@@ -839,10 +839,20 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       tableType: "static",
       experimentId: EXPERIMENT,
       columns: ["id"],
-      ordering: { column: "contributor.name", direction: "ASC" },
-      orderByIds: [BEN, ADA],
+      ordering: { column: "contributor.name", direction: "ASC", rowId: "id" },
+      orderByIds: [[BEN], [ADA]],
     });
     expect(byName.rows).toEqual([["2"], ["1"]]);
+
+    const byEqualNames = await rowsOf({
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: EXPERIMENT,
+      columns: ["id"],
+      ordering: { column: "contributor.name", direction: "ASC", rowId: "id" },
+      orderByIds: [[BEN, ADA]],
+    });
+    expect(byEqualNames.rows).toEqual([["1"], ["2"]]);
 
     const pseudonym = (id: string) =>
       `Contributor-${createHash("sha256").update(`${EXPERIMENT}:${id}`).digest("hex").slice(0, 6).toUpperCase()}`;
@@ -901,7 +911,8 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       ordering: {
         column: "plot",
         direction: "ASC",
-        mode: { kind: "numericString", rowId: "id" },
+        rowId: "id",
+        mode: { kind: "numericString" },
       },
     });
 
@@ -962,7 +973,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
           await rowsOf({
             ...read,
             columns: ["id"],
-            ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+            ordering: { column: "height", direction, rowId: "id", mode: { kind: "number" } },
             limit: 8,
           })
         ).rows.map(([id]) => id);
@@ -1048,7 +1059,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
             ...read,
             experimentId: "nan-answers",
             columns: ["id"],
-            ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+            ordering: { column: "height", direction, rowId: "id", mode: { kind: "number" } },
           })
         ).rows.map(([id]) => id);
 
@@ -1178,8 +1189,8 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
         const sorted = await rowsOf({
           ...read,
           columns: ["id"],
-          ordering: { column: "device", direction },
-          orderByIds: ["c1", "blank-phone"],
+          ordering: { column: "device", direction, rowId: "id" },
+          orderByIds: [["c1"], ["blank-phone"]],
           deviceSerials: serials,
           limit: 11,
         });
