@@ -48,18 +48,23 @@ jobs:
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Each test job of the PR run uploads its own artifact under this prefix.
+          # Each test job of the PR run uploads its own artifact under this prefix. Only a
+          # successful run with every test job's artifact still live counts: a cancelled run or
+          # an expired shard would publish partial coverage for main.
           PREFIX="coverage-reports-$HEAD_SHA-"
           RUN_ID=""
-          for CANDIDATE in $(gh api "repos/$REPO/actions/workflows/pr.yml/runs?head_sha=$HEAD_SHA&per_page=20" \
+          for CANDIDATE in $(gh api "repos/$REPO/actions/workflows/pr.yml/runs?head_sha=$HEAD_SHA&status=success&per_page=20" \
               --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id' 2>/dev/null || true); do
+            EXPECTED=$(gh api "repos/$REPO/actions/runs/$CANDIDATE/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name | startswith("Test ("))] | length' 2>/dev/null || echo 0)
             COUNT=$(gh api "repos/$REPO/actions/runs/$CANDIDATE/artifacts?per_page=100" \
-              --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"$PREFIX\")))] | length" \
+              --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"$PREFIX\"))) | .name] | unique | length" \
               2>/dev/null || echo 0)
-            if [ "$COUNT" -gt 0 ]; then
+            if [ "$EXPECTED" -gt 0 ] && [ "$COUNT" -eq "$EXPECTED" ]; then
               RUN_ID=$CANDIDATE
               break
             fi
+            echo "Run $CANDIDATE has $COUNT of $EXPECTED test jobs' coverage; not using it."
           done
           if [ -z "$RUN_ID" ]; then
             echo "No live artifact named $PREFIX*; will regenerate."
