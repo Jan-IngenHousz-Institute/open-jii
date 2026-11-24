@@ -554,6 +554,7 @@ jobs:
           PREVIEW_OUTCOME: ${{ steps.preview.outcome }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           if [ -z "$RELEASES" ]; then RELEASES="{}"; fi
@@ -573,10 +574,15 @@ jobs:
               echo "$RELEASES" | jq -r 'to_entries[] | "| \(.key) | v\(.value) | `\(.key)-v\(.value)` |"'
             fi
             echo ""
-            echo "_Preview only. Actual releases are cut when this merges to \`main\`._"
+            echo "_Preview for ${HEAD_SHA:0:10} only. Actual releases are cut when this merges to \`main\`._"
           } > preview.md
           cat preview.md >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "$PR_NUMBER" ]; then
+          # A re-run of an older commit runs outside the head's cancel group, so it must not
+          # replace the head's preview; its own preview stays in the job summary.
+          CURRENT_HEAD=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid 2>/dev/null || true)
+          if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$HEAD_SHA" ]; then
+            echo "This run is for ${HEAD_SHA:0:10}, not the pull request's head ${CURRENT_HEAD:0:10}; leaving the comment alone."
+          elif [ -n "$PR_NUMBER" ]; then
             gh pr comment "$PR_NUMBER" --body-file preview.md --edit-last \
               || gh pr comment "$PR_NUMBER" --body-file preview.md \
               || echo "::warning::Could not post release-preview comment"
