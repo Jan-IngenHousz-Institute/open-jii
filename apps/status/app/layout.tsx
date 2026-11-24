@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { env } from "~/env";
+import { inter } from "~/lib/fonts/families";
 import { QueryProvider } from "~/providers/query-provider";
 import { TranslationsProvider } from "~/providers/translations-provider";
 
@@ -9,7 +10,6 @@ import type { Namespace } from "@repo/i18n/config";
 import initTranslations, { loadNamespaceBundles } from "@repo/i18n/server";
 import { ThemeProvider } from "@repo/ui/components/theme";
 
-import { inter } from "./fonts/families";
 import "./globals.css";
 
 const PAGE_NAMESPACES: Namespace[] = ["status"];

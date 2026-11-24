@@ -1,4 +1,5 @@
 import { ListDepartureProvider } from "@/components/navigation/list-departure/list-departure";
+import { inter, jetbrainsMono } from "@/lib/fonts/families";
 import { INDEXABLE, SITE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -8,7 +9,6 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { CookieBanner } from "../components/cookie-banner";
 import { PostHogProvider } from "../providers/PostHogProvider";
-import { inter, jetbrainsMono } from "./fonts/families";
 import "./globals.css";
 
 const title = "openJII - Open-science platform";
