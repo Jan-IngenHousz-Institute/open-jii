@@ -400,11 +400,11 @@ describe("NotificationOutboxWorker", () => {
 
   it("retries a known type whose email entry this build lacks", async () => {
     const queued = await queueOne();
-    // `data_export_completed` is a real type with no entry in the email registry yet,
-    // which is the other half of the same deploy window.
+    // `workbook_version_published` is a real type with no entry in the email registry,
+    // which stands in for the other half of the same deploy window.
     await testApp.database
       .update(notifications)
-      .set({ type: "data_export_completed" })
+      .set({ type: "workbook_version_published" })
       .where(eq(notifications.id, queued.notificationId));
     expect(await worker.drain()).toEqual({
       sent: 0,
@@ -416,7 +416,7 @@ describe("NotificationOutboxWorker", () => {
 
     const row = await deliveryById(queued.id);
     expect(row).toMatchObject({ status: "pending", attempts: 1, claimedAt: null });
-    expect(row.lastError).toBe("No email for notification type data_export_completed");
+    expect(row.lastError).toBe("No email for notification type workbook_version_published");
     expect(await dueInMs(queued.id)).toBeGreaterThan(MINUTE - 30_000);
     expect(sendSubmitted).not.toHaveBeenCalled();
   });

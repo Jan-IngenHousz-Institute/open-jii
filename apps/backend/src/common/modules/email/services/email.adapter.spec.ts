@@ -646,6 +646,43 @@ describe("EmailAdapter", () => {
     });
   });
 
+  describe("sendDataExportReadyNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendDataExportReadyNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        experimentId: "exp-123",
+        experimentName: "Drought trial",
+        format: "csv",
+        email: "exporter@example.com",
+      };
+
+      const result = await adapter.sendDataExportReadyNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
+  describe("sendDataExportFailedNotification", () => {
+    it("delegates to NotificationsService with the input unchanged", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendDataExportFailedNotification")
+        .mockResolvedValue(success(undefined));
+      const input = {
+        experimentId: "exp-123",
+        experimentName: "Drought trial",
+        email: "exporter@example.com",
+      };
+
+      const result = await adapter.sendDataExportFailedNotification(input);
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(input);
+    });
+  });
+
   describe("sendDataUploadFailedNotification", () => {
     it("delegates to NotificationsService with the input unchanged", async () => {
       const notificationSpy = vi
