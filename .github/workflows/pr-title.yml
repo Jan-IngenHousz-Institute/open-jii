@@ -7,8 +7,9 @@ on:
 permissions:
   pull-requests: read
 
+# A re-run gets a group of its own, so re-running an older title check cannot cancel the newest.
 concurrency:
-  group: pr-title-${{ github.event.pull_request.number }}
+  group: pr-title-${{ github.event.pull_request.number }}${{ github.run_attempt != '1' && format('-attempt-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 jobs:

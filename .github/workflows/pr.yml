@@ -8,8 +8,9 @@ on:
       - reopened
   workflow_dispatch:
 
+# A re-run gets a group of its own, so re-running an older commit's run cannot cancel the head's.
 concurrency:
-  group: pr-${{ github.event.pull_request.number || github.ref }}
+  group: pr-${{ github.event.pull_request.number || github.ref }}${{ github.run_attempt != '1' && format('-attempt-{0}', github.run_id) || '' }}
   cancel-in-progress: true
 
 permissions:
@@ -476,7 +477,8 @@ jobs:
           dry_run: "true"
 
       - name: Post release preview
-        if: always()
+        # A cancelled dry run has no output, which would read as "nothing will release".
+        if: ${{ !cancelled() }}
         env:
           RELEASES: ${{ steps.preview.outputs.releases_created }}
           # failure = dry run errored; don't report it as "nothing will release".
