@@ -54,7 +54,8 @@ runs:
         file: ${{ inputs.dockerfile }}
         platforms: ${{ inputs.platforms }}
         push: false
-        load: true
+        # Only the scan reads the built image.
+        load: ${{ inputs.scan == 'true' }}
         tags: ${{ inputs.image-name }}
         build-args: ${{ inputs.build-args }}
         cache-from: ${{ inputs.use-gha-cache == 'true' && format('type=gha,scope={0}', inputs.cache-scope) || '' }}
