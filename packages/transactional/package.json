@@ -99,6 +99,14 @@
       "types": "./dist/render/calibration-run-rejected-notification.d.ts",
       "default": "./dist/render/calibration-run-rejected-notification.js"
     },
+    "./render/data-export-failed-notification": {
+      "types": "./dist/render/data-export-failed-notification.d.ts",
+      "default": "./dist/render/data-export-failed-notification.js"
+    },
+    "./render/data-export-ready-notification": {
+      "types": "./dist/render/data-export-ready-notification.d.ts",
+      "default": "./dist/render/data-export-ready-notification.js"
+    },
     "./render/data-upload-completed-notification": {
       "types": "./dist/render/data-upload-completed-notification.d.ts",
       "default": "./dist/render/data-upload-completed-notification.js"

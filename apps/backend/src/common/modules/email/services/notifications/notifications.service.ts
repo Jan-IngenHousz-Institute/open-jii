@@ -9,6 +9,8 @@ import { renderApiKeyCreatedNotification } from "@repo/transactional/render/api-
 import { renderCalibrationRunApprovedNotification } from "@repo/transactional/render/calibration-run-approved-notification";
 import { renderCalibrationRunAwaitingApprovalNotification } from "@repo/transactional/render/calibration-run-awaiting-approval-notification";
 import { renderCalibrationRunRejectedNotification } from "@repo/transactional/render/calibration-run-rejected-notification";
+import { renderDataExportFailedNotification } from "@repo/transactional/render/data-export-failed-notification";
+import { renderDataExportReadyNotification } from "@repo/transactional/render/data-export-ready-notification";
 import { renderDataUploadCompletedNotification } from "@repo/transactional/render/data-upload-completed-notification";
 import { renderDataUploadFailedNotification } from "@repo/transactional/render/data-upload-failed-notification";
 import { renderDataUploadPartlyCompletedNotification } from "@repo/transactional/render/data-upload-partly-completed-notification";
@@ -95,6 +97,15 @@ export const mailTransportOptions = (url: string) => ({ url, ...MAIL_TRANSPORT_T
 
 export type NotificationEmailUnsubscribe = EmailUnsubscribe & { oneClickUrl: string };
 
+/** The export's format as a person reads it; the notification carries the raw value. */
+const EXPORT_FORMAT_LABELS: Record<string, string> = {
+  csv: "CSV",
+  ndjson: "NDJSON",
+  "json-array": "JSON array",
+  parquet: "Parquet",
+  xlsx: "Excel",
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -153,6 +164,20 @@ export class NotificationsService {
     ...args: Parameters<typeof renderDataUploadCompletedNotification>
   ) {
     return renderDataUploadCompletedNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderDataExportReadyNotificationEmail(
+    ...args: Parameters<typeof renderDataExportReadyNotification>
+  ) {
+    return renderDataExportReadyNotification(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderDataExportFailedNotificationEmail(
+    ...args: Parameters<typeof renderDataExportFailedNotification>
+  ) {
+    return renderDataExportFailedNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -1199,6 +1224,115 @@ export class NotificationsService {
         this.sendFailure(error, {
           msg: "Failed to send data upload failed notification email",
           operation: "sendDataUploadFailedNotification",
+          experimentId,
+          error,
+        }),
+    );
+  }
+
+  async sendDataExportReadyNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    format: string;
+    email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
+  }) {
+    const { experimentId, experimentName, format, email, unsubscribe } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending data export ready notification email",
+          operation: "sendDataExportReadyNotification",
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: dataUrl } = new URL(`/platform/experiments/${experimentId}/data`, baseUrl);
+        const formatLabel = EXPORT_FORMAT_LABELS[format] ?? format;
+
+        const { html, text } = await this.renderDataExportReadyNotificationEmail({
+          host,
+          baseUrl,
+          experimentName,
+          format: formatLabel,
+          dataUrl,
+          unsubscribe,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your ${formatLabel} export of ${experimentName} is ready`,
+          html,
+          text,
+          unsubscribe,
+        });
+
+        this.logger.log({
+          msg: "Data export ready notification email sent successfully",
+          operation: "sendDataExportReadyNotification",
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send data export ready notification email",
+          operation: "sendDataExportReadyNotification",
+          experimentId,
+          error,
+        }),
+    );
+  }
+
+  async sendDataExportFailedNotification(input: {
+    experimentId: string;
+    experimentName: string;
+    email: string;
+    unsubscribe?: NotificationEmailUnsubscribe;
+  }) {
+    const { experimentId, experimentName, email, unsubscribe } = input;
+
+    return await tryCatch(
+      async () => {
+        this.logger.log({
+          msg: "Sending data export failed notification email",
+          operation: "sendDataExportFailedNotification",
+          experimentId,
+        });
+
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: dataUrl } = new URL(`/platform/experiments/${experimentId}/data`, baseUrl);
+
+        const { html, text } = await this.renderDataExportFailedNotificationEmail({
+          host,
+          baseUrl,
+          experimentName,
+          dataUrl,
+          unsubscribe,
+        });
+
+        await this.dispatch({
+          to: email,
+          subject: `Your export of ${experimentName} failed`,
+          html,
+          text,
+          unsubscribe,
+        });
+
+        this.logger.log({
+          msg: "Data export failed notification email sent successfully",
+          operation: "sendDataExportFailedNotification",
+          experimentId,
+          status: "success",
+        });
+      },
+      (error) =>
+        this.sendFailure(error, {
+          msg: "Failed to send data export failed notification email",
+          operation: "sendDataExportFailedNotification",
           experimentId,
           error,
         }),

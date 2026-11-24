@@ -1,0 +1,23 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+# A re-run gets a group of its own, so re-running an older title check cannot cancel the newest.
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}${{ github.run_attempt != '1' && format('-attempt-{0}', github.run_id) || '' }}
+  cancel-in-progress: true
+
+jobs:
+  validate_pr:
+    # The main ruleset requires this check by name.
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
