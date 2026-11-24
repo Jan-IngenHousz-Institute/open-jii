@@ -4,7 +4,7 @@ variable "scope_name" {
 }
 
 variable "secrets" {
-  description = "Map of secrets to create in the scope. The key is the secret name and value is the secret value"
+  description = "Values OpenTofu writes into the scope, by key. Never a credential: those are set with `pnpm secrets:set`"
   type        = map(string)
   default     = {}
   sensitive   = true

@@ -48,6 +48,11 @@ someone who could read it leaves, or when it may have leaked.
 | `mailchimp`          | `MAILCHIMP_API_KEY`                    | Mailchimp, Account, API keys            | backend               | backend                                                                  | yes                                                                               |
 | `status-contentful`  | `CONTENTFUL_ACCESS_TOKEN`              | the same key as `contentful`            | status publisher      | none: see below                                                          | yes                                                                               |
 | `status-slack`       | none, the value is the webhook address | Slack, the app's Incoming Webhooks      | status Slack function | none: it reads the secret again after 15 minutes and after a failed post | yes                                                                               |
+| `databricks`         | `DATABRICKS_CLIENT_SECRET`             | the node service principal: see below   | backend               | backend                                                                  | yes: a principal holds several secrets, so delete the old one last                |
+| `databricks`         | the three `DATABRICKS_WEBHOOK_*` keys  | `openssl rand -hex 32`: see below       | backend, pipelines    | backend                                                                  | no: the pipelines' calls fail until both sides hold the new values                |
+| `ses`                | both `*_EMAIL_SERVER` keys             | `pnpm secrets:ses-smtp`: see below      | backend               | backend                                                                  | yes: the SMTP user holds two keys, so delete the old one last                     |
+| `play-review`        | `AUTH_PLAY_REVIEW_OTP`                 | six random digits                       | backend               | backend                                                                  | no: see `infrastructure/modules/play-review-sign-in/README.md`                    |
+| `serving-store-*`    | `password`                             | `openssl rand -hex 32`: see below       | each role's user      | the role's consumer: see below                                           | no: ClickHouse holds one password per user                                        |
 
 The ids in these secrets, such as `AUTH_GITHUB_ID`, `CONTENTFUL_SPACE_ID` and the Mailchimp audience,
 change only when the account behind them changes, not on rotation.
@@ -99,9 +104,56 @@ URLs of Contentful's content model, which the web app checks (`apps/web/app/api/
 Store the new value, redeploy web, then change the preview URLs in Contentful, Settings, Content
 preview, straight away: between the redeploy and that change, editors' previews answer 401.
 
-## Not covered yet
+**The Databricks client secret** belongs to the node service principal, whose application id is the
+backend's `DATABRICKS_CLIENT_ID`. Create the new one with the account-level Databricks CLI profile
+and pipe it straight in, so it never shows: `databricks account service-principal-secrets create
+<principal id> -p <account profile> | jq -r .secret | pnpm secrets:set <env> databricks --key
+DATABRICKS_CLIENT_SECRET`. Redeploy the backend, check that an experiment's data page loads, then
+delete the old secret with `databricks account service-principal-secrets delete`.
 
-The Databricks webhook credentials, the Slack webhook used by Grafana, PostHog and Databricks, the
-PostHog key Grafana uses, and the credentials OpenTofu generates still pass through OpenTofu. Changing
-one of those is an infrastructure change until OJD-2122's second part moves them out; this page gains
-their rows then.
+**The webhook key** is three values the backend checks and two the pipelines sign with. Make each
+with `openssl rand -hex 32`, the key id included, and keep them in shell variables rather than on
+screen. Store the id and the secret twice, in `databricks` (`DATABRICKS_WEBHOOK_API_KEY_ID`,
+`DATABRICKS_WEBHOOK_SECRET`) and in `webhook-scope` (`webhook_api_key_id`, `webhook_secret`), and
+the key as `databricks` `DATABRICKS_WEBHOOK_API_KEY`. For example
+`printf %s "$WEBHOOK_SECRET" | pnpm secrets:set <env> webhook-scope --key webhook_secret`. Then
+redeploy the backend straight away: the pipelines read the scope on each call, so their calls fail
+from the scope write until the backend restarts.
+
+**The SES SMTP key** is an access key of the IAM user `<env>-ses-smtp-user`, which may hold two at
+once. `aws iam create-access-key --user-name <env>-ses-smtp-user | pnpm secrets:ses-smtp <env>`
+stores the SMTP address built from the new one and prints its id. Redeploy the backend, check that a
+sign-in code arrives, then delete the older key: `aws iam list-access-keys` names both.
+
+**The serving store's passwords** are one secret per role, `openjii-serving-store-<env>-<role>`, each
+holding `username` and `password`. The store's instance hashes them into ClickHouse's users at boot,
+and again whenever its script runs. ClickHouse holds one password per user, so a consumer fails from
+the moment the store takes the new password until it restarts with it. For one role:
+
+1. `openssl rand -hex 32 | tr -d '\n' | pnpm secrets:set <env> serving-store-<role> --key password`
+   stores the password, writes it to the `serving-store-<env>` scope too for `writer` and
+   `reloader`, and has the store take it through SSM Run Command, so nobody needs a shell on the
+   instance. ClickHouse rereads its users without a restart. If any step fails, nothing has taken
+   the new password yet, so run the command again with a new one.
+2. Restart the role's consumer straight away; the command names it. `reader`: redeploy the backend.
+   `writer`: restart the pipelines' feed, which reads the scope when it starts. `reloader`: nothing,
+   the next reload reads it. `admin`: nothing, the migration runner reads it on its next run.
+
+A new instance reads the passwords at boot, so replacing the instance needs no step here.
+
+## Values that stay in OpenTofu
+
+Three kinds of value still pass through OpenTofu, because the resource that uses them holds them: a
+refresh reads them back into the state even when the configuration leaves them out.
+
+- **Slack webhooks.** The Grafana contact point, PostHog's error alert and the Databricks job
+  notifications and event hooks each post with a webhook OpenTofu holds. Each takes its own, from
+  the GitHub secrets `SLACK_WEBHOOK_URL_GRAFANA`, `SLACK_WEBHOOK_URL_POSTHOG` and
+  `SLACK_WEBHOOK_URL_DATABRICKS`, falling back to `SLACK_WEBHOOK_URL` while one is unset. A leaked
+  webhook can only post into its own channel. To rotate one, add a webhook to the Slack app, set its
+  GitHub secret, release, and delete the old webhook in Slack.
+- **The PostHog key Grafana reads with,** `POSTHOG_GRAFANA_API_KEY`. Keep it a personal API key that
+  can only read the project's queries, so a leak exposes analytics and nothing else. Rotate it in
+  PostHog, set the GitHub secret, release, then revoke the old key.
+- **The credentials OpenTofu signs in with,** such as the per-run Grafana token and
+  `POSTHOG_TOFU_API_KEY`. They never reach the state, but they reach the plan saved for an apply.

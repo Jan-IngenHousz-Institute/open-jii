@@ -84,16 +84,19 @@ locals {
     }
   }
 
-  # The hashes of 32 random characters, shown in plans so a replacement says what changed.
   users_xml = templatefile("${path.module}/templates/users.xml.tftpl", {
     users = [
       for role, user in local.users : {
-        name            = user.name
-        profile         = user.profile
-        grants          = user.grants
-        password_sha256 = nonsensitive(sha256(random_password.user[role].result))
+        name    = user.name
+        profile = user.profile
+        grants  = user.grants
       }
     ]
+  })
+
+  passwords_script = templatefile("${path.module}/templates/passwords.sh.tftpl", {
+    region = data.aws_region.current.region
+    users  = [for role, user in local.users : { name = user.name, secret_name = "${local.name}-${role}" }]
   })
 
   cloudwatch_agent_config_path = "/opt/aws/amazon-cloudwatch-agent/etc/openjii.json"
@@ -161,25 +164,16 @@ data "aws_subnet" "this" {
   id = var.subnet_id
 }
 
-resource "random_password" "user" {
-  for_each = local.users
+data "aws_caller_identity" "current" {}
 
-  length  = 32
-  special = false
-}
-
-# One secret per role, in the shape Aurora's secrets have, so each consumer reads only its own.
+# One secret per role, in the shape Aurora's secrets have, so each consumer reads only its own. Its
+# username and password are set with `pnpm secrets:set`; the instance reads them at boot.
 module "credentials" {
-  source   = "../secrets-manager"
+  source   = "../secrets-manager/container"
   for_each = local.users
 
   name        = "${local.name}-${each.key}"
   description = "Serving store ${each.key} user"
-
-  secret_string = jsonencode({
-    username = each.value.name
-    password = random_password.user[each.key].result
-  })
 
   tags = var.tags
 }
@@ -235,6 +229,23 @@ data "aws_iam_policy_document" "agent" {
       values   = [var.metrics_namespace]
     }
   }
+}
+
+# The users' passwords, which the instance hashes into ClickHouse's users at boot.
+data "aws_iam_policy_document" "passwords" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      for role in keys(local.users) :
+      "arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${local.name}-${role}-??????"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "passwords" {
+  name   = "clickhouse-passwords"
+  role   = aws_iam_role.store.id
+  policy = data.aws_iam_policy_document.passwords.json
 }
 
 resource "aws_iam_role_policy" "agent" {
@@ -302,6 +313,7 @@ resource "aws_instance" "store" {
     data_device                  = local.data_device
     config_xml                   = local.config_xml
     users_xml                    = local.users_xml
+    passwords_script             = local.passwords_script
     prometheus_config_path       = local.prometheus_config_path
     prometheus_config            = local.prometheus_config
     cloudwatch_agent_config_path = local.cloudwatch_agent_config_path

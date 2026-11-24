@@ -4,13 +4,31 @@ import {
   ResourceNotFoundException,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
+import {
+  ListCommandInvocationsCommand,
+  ListCommandsCommand,
+  SSMClient,
+  SendCommandCommand,
+} from "@aws-sdk/client-ssm";
+import { spawn } from "node:child_process";
 import { text } from "node:stream/consumers";
 
 import { optionAfter } from "../lib/args.js";
 
 type Environment = "dev" | "prod";
 
+interface ServingStoreUser {
+  /** The key the pipelines read this user's password from in the `serving-store-<env>` scope. */
+  scopeKey?: string;
+  /** Who still holds the old password once the store has the new one. */
+  restart: string;
+}
+
 interface SecretSpec {
+  /** Secrets Manager, or a Databricks secret scope that holds one secret per key. */
+  store?: "databricks";
+  /** A serving store user, whose new password the store and the pipelines' scope must take too. */
+  servingStore?: ServingStoreUser;
   name: (env: Environment) => string;
   keys: readonly string[] | null;
 }
@@ -18,7 +36,8 @@ interface SecretSpec {
 /**
  * The secrets OpenTofu creates without a value (infrastructure/modules/secrets-manager/container), by the
  * short name this command takes. A JSON secret lists its keys, so a misspelt key fails here rather
- * than in the service that reads it. A plain secret is the value itself.
+ * than in the service that reads it. A plain secret is the value itself. A Databricks scope's keys
+ * are separate secrets that the pipelines read.
  */
 export const secrets = {
   auth: {
@@ -60,19 +79,77 @@ export const secrets = {
     name: (env: Environment) => `openjii-status-slack-${env}`,
     keys: null,
   },
+  databricks: {
+    name: (env: Environment) => `openjii-databricks-secrets-${env}`,
+    keys: [
+      "DATABRICKS_CLIENT_SECRET",
+      "DATABRICKS_WEBHOOK_API_KEY_ID",
+      "DATABRICKS_WEBHOOK_API_KEY",
+      "DATABRICKS_WEBHOOK_SECRET",
+    ],
+  },
+  ses: {
+    name: (env: Environment) => `openjii-ses-secrets-${env}`,
+    keys: ["AUTH_EMAIL_SERVER", "BACKEND_EMAIL_SERVER"],
+  },
+  "play-review": {
+    name: (env: Environment) => `openjii-play-review-sign-in-${env}`,
+    keys: ["AUTH_PLAY_REVIEW_EMAIL", "AUTH_PLAY_REVIEW_OTP"],
+  },
+  "serving-store-admin": {
+    name: (env: Environment) => `openjii-serving-store-${env}-admin`,
+    keys: ["username", "password"],
+    servingStore: {
+      restart: "Nothing to restart: the migration runner reads it on its next run.",
+    },
+  },
+  "serving-store-writer": {
+    name: (env: Environment) => `openjii-serving-store-${env}-writer`,
+    keys: ["username", "password"],
+    servingStore: {
+      scopeKey: "writer-password",
+      restart: "Restart the pipelines' serving store feed now; it reads the scope when it starts.",
+    },
+  },
+  "serving-store-reloader": {
+    name: (env: Environment) => `openjii-serving-store-${env}-reloader`,
+    keys: ["username", "password"],
+    servingStore: {
+      scopeKey: "reloader-password",
+      restart: "Nothing to restart: the next reload reads the scope.",
+    },
+  },
+  "serving-store-reader": {
+    name: (env: Environment) => `openjii-serving-store-${env}-reader`,
+    keys: ["username", "password"],
+    servingStore: {
+      restart: "Redeploy the backend now; it reads the secret when a task starts.",
+    },
+  },
+  "webhook-scope": {
+    store: "databricks",
+    name: (env: Environment) => `node-webhook-secret-scope-${env}`,
+    keys: ["webhook_api_key_id", "webhook_secret"],
+  },
+  "serving-store-scope": {
+    store: "databricks",
+    name: (env: Environment) => `serving-store-${env}`,
+    keys: ["writer-password", "reloader-password"],
+  },
 } as const satisfies Record<string, SecretSpec>;
 
 type SecretName = keyof typeof secrets;
 
 const USAGE =
   `Usage: secrets:set <dev|prod> <${Object.keys(secrets).join("|")}> [--key <KEY>] ` +
-  "[--aws-profile <name>], with the value on stdin";
+  "[--aws-profile <name>] [--databricks-profile <name>], with the value on stdin";
 
 export interface SecretsSetArgs {
   environment: Environment;
   secret: SecretName;
   key: string | null;
   awsProfile: string;
+  databricksProfile: string;
 }
 
 export interface SecretsSetDependencies {
@@ -80,6 +157,10 @@ export interface SecretsSetDependencies {
   /** The secret's current string, or null when it has no value yet. */
   read: (name: string) => Promise<string | null>;
   put: (name: string, value: string) => Promise<void>;
+  /** Writes one key of a Databricks secret scope. */
+  putScoped: (scope: string, key: string, value: string) => Promise<void>;
+  /** Has the serving store instance with this Name tag reread its users' passwords. */
+  reloadServingStore: (instanceName: string) => Promise<void>;
   write: (text: string) => void;
 }
 
@@ -95,7 +176,12 @@ export function parseArgs(given: string[]): SecretsSetArgs {
     throw new Error(USAGE);
   }
   for (const arg of args.slice(2)) {
-    if (arg.startsWith("--") && arg !== "--key" && arg !== "--aws-profile") {
+    if (
+      arg.startsWith("--") &&
+      arg !== "--key" &&
+      arg !== "--aws-profile" &&
+      arg !== "--databricks-profile"
+    ) {
       throw new Error(`Unknown argument ${arg}. ${USAGE}`);
     }
   }
@@ -104,6 +190,7 @@ export function parseArgs(given: string[]): SecretsSetArgs {
     secret,
     key: optionAfter(args, "--key"),
     awsProfile: optionAfter(args, "--aws-profile") ?? `openjii-${environment}`,
+    databricksProfile: optionAfter(args, "--databricks-profile") ?? environment,
   };
 }
 
@@ -143,6 +230,12 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
     );
   }
 
+  if ("store" in spec && spec.store === "databricks" && key !== null) {
+    await deps.putScoped(name, key, value);
+    deps.write(`Set ${key} in the Databricks secret scope ${name}\n`);
+    return;
+  }
+
   if (spec.keys === null || key === null) {
     await deps.put(name, value);
     deps.write(`Set ${name}\n`);
@@ -161,9 +254,40 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
       (missing.length > 0 ? `; still without a value: ${missing.join(", ")}` : "") +
       "\n",
   );
+
+  if (spec.servingStore && key === "password") {
+    await passToServingStore(args.environment, spec.servingStore, value, deps);
+  }
 }
 
-function secretsManager(profile: string) {
+/**
+ * The scope first, the store last: until the store rereads its passwords, every consumer keeps
+ * working on the old one, so a failure before that point is fixed by running the command again
+ * with a fresh value.
+ */
+async function passToServingStore(
+  env: Environment,
+  user: ServingStoreUser,
+  value: string,
+  deps: SecretsSetDependencies,
+): Promise<void> {
+  const retry = "Nothing has taken the new password yet; run the command again with a new one.";
+  const scope = `serving-store-${env}`;
+  const instance = `openjii-serving-store-${env}`;
+  try {
+    if (user.scopeKey) {
+      await deps.putScoped(scope, user.scopeKey, value);
+      deps.write(`Set ${user.scopeKey} in the Databricks secret scope ${scope}\n`);
+    }
+    await deps.reloadServingStore(instance);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`${reason}\n${retry}`);
+  }
+  deps.write(`${instance} now accepts the new password. ${user.restart}\n`);
+}
+
+export function secretsManager(profile: string) {
   // The secrets live in eu-central-1 in both accounts, whatever region the profile names.
   const client = new SecretsManagerClient({ profile, region: "eu-central-1" });
   return {
@@ -185,6 +309,103 @@ function secretsManager(profile: string) {
   };
 }
 
+/**
+ * Writes one scope key through the Databricks CLI, which holds the profile's credentials. The value
+ * goes on the CLI's stdin, so it never appears in a process listing.
+ */
+function databricksScopes(profile: string) {
+  return (scope: string, key: string, value: string): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const child = spawn("databricks", ["secrets", "put-secret", scope, key, "-p", profile], {
+        stdio: ["pipe", "ignore", "pipe"],
+      });
+      let stderr = "";
+      child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+      child.on("error", reject);
+      child.on("close", (code) => {
+        if (code === 0) resolve();
+        else
+          reject(
+            new Error(`databricks secrets put-secret ${scope} ${key} failed: ${stderr.trim()}`),
+          );
+      });
+      child.stdin.end(value);
+    });
+}
+
+// Written by the store's boot configuration (modules/serving-store/templates/cloud-config.yaml.tftpl).
+const PASSWORDS_SCRIPT = "/usr/local/bin/openjii-clickhouse-passwords";
+
+/** The three SSM Run Command calls the reload needs, apart so a test can stand in for them. */
+export interface SsmCommands {
+  /** Sends the script to every instance with this Name tag and returns the command id. */
+  run: (instanceName: string, script: string) => Promise<string>;
+  status: (commandId: string) => Promise<{ status?: string; targetCount?: number }>;
+  /** What the script printed on each instance, for the error when it fails. */
+  output: (commandId: string) => Promise<string>;
+}
+
+export function ssmCommands(profile: string): SsmCommands {
+  const client = new SSMClient({ profile, region: "eu-central-1" });
+  return {
+    run: async (instanceName, script) => {
+      const sent = await client.send(
+        new SendCommandCommand({
+          DocumentName: "AWS-RunShellScript",
+          Targets: [{ Key: "tag:Name", Values: [instanceName] }],
+          Parameters: { commands: [script] },
+          Comment: "pnpm secrets:set: reread the serving store passwords",
+        }),
+      );
+      if (!sent.Command?.CommandId)
+        throw new Error(`SSM returned no command id for ${instanceName}`);
+      return sent.Command.CommandId;
+    },
+    status: async (commandId) => {
+      const listed = await client.send(new ListCommandsCommand({ CommandId: commandId }));
+      const command = listed.Commands?.[0];
+      return { status: command?.Status, targetCount: command?.TargetCount };
+    },
+    output: async (commandId) => {
+      const listed = await client.send(
+        new ListCommandInvocationsCommand({ CommandId: commandId, Details: true }),
+      );
+      return (listed.CommandInvocations ?? [])
+        .flatMap((invocation) => invocation.CommandPlugins ?? [])
+        .map((plugin) => plugin.Output?.trim() ?? "")
+        .filter((output) => output !== "")
+        .join("\n");
+    },
+  };
+}
+
+/**
+ * Runs the store's passwords script through SSM Run Command, so nobody needs a shell on the
+ * instance, and waits for the outcome. ClickHouse rereads the file it writes without a restart.
+ */
+export function servingStoreReloader(
+  ssm: SsmCommands,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+) {
+  return async (instanceName: string): Promise<void> => {
+    const commandId = await ssm.run(instanceName, PASSWORDS_SCRIPT);
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await sleep(2000);
+      const { status, targetCount } = await ssm.status(commandId);
+      if (status === undefined || status === "Pending" || status === "InProgress") continue;
+      if (targetCount === 0) {
+        throw new Error(`No instance tagged Name=${instanceName} is reachable through SSM`);
+      }
+      if (status === "Success") return;
+      const output = await ssm.output(commandId);
+      throw new Error(
+        `The passwords script on ${instanceName} ended ${status}` + (output ? `:\n${output}` : ""),
+      );
+    }
+    throw new Error(`The passwords script on ${instanceName} did not finish within two minutes`);
+  };
+}
+
 async function run(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
   if (process.stdin.isTTY) {
@@ -198,6 +419,8 @@ async function run(): Promise<number> {
     readInput: () => text(process.stdin),
     read: store.read,
     put: store.put,
+    putScoped: databricksScopes(args.databricksProfile),
+    reloadServingStore: servingStoreReloader(ssmCommands(args.awsProfile)),
     write: (output) => {
       process.stdout.write(output);
     },

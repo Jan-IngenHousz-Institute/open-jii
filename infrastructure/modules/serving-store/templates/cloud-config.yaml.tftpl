@@ -30,6 +30,8 @@ write_files:
     content: |
       [Unit]
       RequiresMountsFor=/var/lib/clickhouse
+      Requires=openjii-clickhouse-passwords.service
+      After=openjii-clickhouse-passwords.service
 
       [Service]
       ExecStartPre=+/usr/bin/chown clickhouse:clickhouse /var/lib/clickhouse
@@ -43,6 +45,24 @@ write_files:
     owner: root:clickhouse
     permissions: "0640"
     content: ${jsonencode(users_xml)}
+
+  - path: /usr/local/bin/openjii-clickhouse-passwords
+    permissions: "0755"
+    content: ${jsonencode(passwords_script)}
+
+  - path: /etc/systemd/system/openjii-clickhouse-passwords.service
+    content: |
+      [Unit]
+      Description=Write the ClickHouse users' password hashes from Secrets Manager
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/usr/local/bin/openjii-clickhouse-passwords
+      Restart=on-failure
+      RestartSec=10
 
   - path: ${prometheus_config_path}
     defer: true

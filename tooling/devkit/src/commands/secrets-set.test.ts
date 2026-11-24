@@ -1,19 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { parseArgs, setSecret } from "./secrets-set.js";
-import type { SecretsSetDependencies } from "./secrets-set.js";
+import { parseArgs, servingStoreReloader, setSecret } from "./secrets-set.js";
+import type { SecretsSetDependencies, SsmCommands } from "./secrets-set.js";
 
 function deps(current: string | null, input = "s3cr3t-value\n") {
   const lines: string[] = [];
   const put = vi.fn<SecretsSetDependencies["put"]>().mockResolvedValue(undefined);
+  const putScoped = vi.fn<SecretsSetDependencies["putScoped"]>().mockResolvedValue(undefined);
   const read = vi.fn<SecretsSetDependencies["read"]>().mockResolvedValue(current);
+  const reloadServingStore = vi
+    .fn<SecretsSetDependencies["reloadServingStore"]>()
+    .mockResolvedValue(undefined);
   const value: SecretsSetDependencies = {
     readInput: () => Promise.resolve(input),
     read,
     put,
+    putScoped,
+    reloadServingStore,
     write: (text) => lines.push(text),
   };
-  return { value, lines, put, read };
+  return { value, lines, put, putScoped, read, reloadServingStore };
 }
 
 describe("parseArgs", () => {
@@ -23,8 +29,12 @@ describe("parseArgs", () => {
       secret: "auth",
       key: "AUTH_SECRET",
       awsProfile: "openjii-dev",
+      databricksProfile: "dev",
     });
     expect(parseArgs(["prod", "status-slack", "--aws-profile", "Prod"]).awsProfile).toBe("Prod");
+    expect(
+      parseArgs(["prod", "webhook-scope", "--databricks-profile", "prod-admin"]).databricksProfile,
+    ).toBe("prod-admin");
   });
 
   it("refuses an unknown environment, secret or flag", () => {
@@ -39,7 +49,13 @@ describe("setSecret", () => {
     const d = deps(JSON.stringify({ AUTH_SECRET: "old", AUTH_GITHUB_ID: "id" }));
 
     await setSecret(
-      { environment: "dev", secret: "auth", key: "AUTH_SECRET", awsProfile: "p" },
+      {
+        environment: "dev",
+        secret: "auth",
+        key: "AUTH_SECRET",
+        awsProfile: "p",
+        databricksProfile: "dev",
+      },
       d.value,
     );
 
@@ -63,6 +79,7 @@ describe("setSecret", () => {
         secret: "status-contentful",
         key: "CONTENTFUL_ACCESS_TOKEN",
         awsProfile: "p",
+        databricksProfile: "dev",
       },
       d.value,
     );
@@ -74,7 +91,13 @@ describe("setSecret", () => {
     const d = deps(null);
 
     await setSecret(
-      { environment: "prod", secret: "mailchimp", key: "MAILCHIMP_API_KEY", awsProfile: "p" },
+      {
+        environment: "prod",
+        secret: "mailchimp",
+        key: "MAILCHIMP_API_KEY",
+        awsProfile: "p",
+        databricksProfile: "dev",
+      },
       d.value,
     );
 
@@ -88,7 +111,13 @@ describe("setSecret", () => {
     const d = deps("old", "https://hooks.slack.example/T/B/x\n");
 
     await setSecret(
-      { environment: "prod", secret: "status-slack", key: null, awsProfile: "p" },
+      {
+        environment: "prod",
+        secret: "status-slack",
+        key: null,
+        awsProfile: "p",
+        databricksProfile: "dev",
+      },
       d.value,
     );
 
@@ -101,7 +130,7 @@ describe("setSecret", () => {
 
   it("refuses a missing, misspelt or unexpected key before writing", async () => {
     const d = deps("{}");
-    const base = { environment: "dev", awsProfile: "p" } as const;
+    const base = { environment: "dev", awsProfile: "p", databricksProfile: "dev" } as const;
 
     await expect(setSecret({ ...base, secret: "auth", key: null }, d.value)).rejects.toThrow(
       "needs --key",
@@ -121,11 +150,180 @@ describe("setSecret", () => {
       secret: "auth",
       key: "AUTH_SECRET",
       awsProfile: "p",
+      databricksProfile: "dev",
     } as const;
 
     await expect(setSecret(args, deps("{}", "\n").value)).rejects.toThrow("No value received");
     const broken = deps("not json");
     await expect(setSecret(args, broken.value)).rejects.toThrow("does not hold a JSON object");
     expect(broken.put).not.toHaveBeenCalled();
+  });
+
+  it("writes a Databricks scope key as its own secret, never into Secrets Manager", async () => {
+    const d = deps("{}");
+
+    await setSecret(
+      {
+        environment: "prod",
+        secret: "serving-store-scope",
+        key: "writer-password",
+        awsProfile: "p",
+        databricksProfile: "prod",
+      },
+      d.value,
+    );
+
+    expect(d.putScoped).toHaveBeenCalledWith(
+      "serving-store-prod",
+      "writer-password",
+      "s3cr3t-value",
+    );
+    expect(d.read).not.toHaveBeenCalled();
+    expect(d.put).not.toHaveBeenCalled();
+    expect(d.lines.join("")).not.toContain("s3cr3t-value");
+  });
+
+  it("refuses a key a scope does not hold", async () => {
+    const d = deps("{}");
+
+    await expect(
+      setSecret(
+        {
+          environment: "dev",
+          secret: "webhook-scope",
+          key: "webhook_api_key",
+          awsProfile: "p",
+          databricksProfile: "dev",
+        },
+        d.value,
+      ),
+    ).rejects.toThrow("has no key webhook_api_key");
+    expect(d.putScoped).not.toHaveBeenCalled();
+  });
+
+  it("names each serving store role's own secret", async () => {
+    const d = deps(JSON.stringify({ username: "openjii_reader" }));
+
+    await setSecret(
+      {
+        environment: "dev",
+        secret: "serving-store-reader",
+        key: "password",
+        awsProfile: "p",
+        databricksProfile: "dev",
+      },
+      d.value,
+    );
+
+    expect(d.read).toHaveBeenCalledWith("openjii-serving-store-dev-reader");
+    expect(d.lines.join("")).not.toContain("still without a value");
+  });
+
+  it("passes a writer password to the pipelines' scope, then to the store", async () => {
+    const d = deps(JSON.stringify({ username: "openjii_writer" }));
+    const order: string[] = [];
+    d.put.mockImplementation(() => Promise.resolve(void order.push("secret")));
+    d.putScoped.mockImplementation(() => Promise.resolve(void order.push("scope")));
+    d.reloadServingStore.mockImplementation(() => Promise.resolve(void order.push("store")));
+
+    await setSecret(
+      {
+        environment: "prod",
+        secret: "serving-store-writer",
+        key: "password",
+        awsProfile: "p",
+        databricksProfile: "prod",
+      },
+      d.value,
+    );
+
+    expect(order).toEqual(["secret", "scope", "store"]);
+    expect(d.putScoped).toHaveBeenCalledWith(
+      "serving-store-prod",
+      "writer-password",
+      "s3cr3t-value",
+    );
+    expect(d.reloadServingStore).toHaveBeenCalledWith("openjii-serving-store-prod");
+    const output = d.lines.join("");
+    expect(output).toContain("Restart the pipelines' serving store feed now");
+    expect(output).not.toContain("s3cr3t-value");
+  });
+
+  it("leaves the scope alone for the reader, and the store alone for a username", async () => {
+    const base = { environment: "dev", awsProfile: "p", databricksProfile: "dev" } as const;
+    const reader = deps(JSON.stringify({ username: "openjii_reader" }));
+
+    await setSecret({ ...base, secret: "serving-store-reader", key: "password" }, reader.value);
+
+    expect(reader.putScoped).not.toHaveBeenCalled();
+    expect(reader.reloadServingStore).toHaveBeenCalledWith("openjii-serving-store-dev");
+    expect(reader.lines.join("")).toContain("Redeploy the backend now");
+
+    const username = deps("{}");
+    await setSecret({ ...base, secret: "serving-store-reader", key: "username" }, username.value);
+    expect(username.reloadServingStore).not.toHaveBeenCalled();
+  });
+
+  it("says nothing has taken the password when the store cannot reread it", async () => {
+    const d = deps(JSON.stringify({ username: "openjii_reader" }));
+    d.reloadServingStore.mockRejectedValue(new Error("No instance tagged Name=x"));
+
+    await expect(
+      setSecret(
+        {
+          environment: "dev",
+          secret: "serving-store-reader",
+          key: "password",
+          awsProfile: "p",
+          databricksProfile: "dev",
+        },
+        d.value,
+      ),
+    ).rejects.toThrow(/No instance tagged Name=x\nNothing has taken the new password yet/);
+  });
+});
+
+describe("servingStoreReloader", () => {
+  function ssm(statuses: { status?: string; targetCount?: number }[], output = "") {
+    const commands = {
+      run: vi.fn<SsmCommands["run"]>().mockResolvedValue("cmd-1"),
+      status: vi.fn<SsmCommands["status"]>(),
+      output: vi.fn<SsmCommands["output"]>().mockResolvedValue(output),
+    };
+    for (const status of statuses) commands.status.mockResolvedValueOnce(status);
+    return commands;
+  }
+  const noWait = () => Promise.resolve();
+
+  it("runs the passwords script on the named instance and waits for it", async () => {
+    const commands = ssm([
+      { status: "Pending" },
+      { status: "InProgress", targetCount: 1 },
+      { status: "Success", targetCount: 1 },
+    ]);
+
+    await servingStoreReloader(commands, noWait)("openjii-serving-store-dev");
+
+    expect(commands.run).toHaveBeenCalledWith(
+      "openjii-serving-store-dev",
+      "/usr/local/bin/openjii-clickhouse-passwords",
+    );
+    expect(commands.status).toHaveBeenCalledTimes(3);
+  });
+
+  it("fails when no instance carries the name", async () => {
+    const commands = ssm([{ status: "Success", targetCount: 0 }]);
+
+    await expect(
+      servingStoreReloader(commands, noWait)("openjii-serving-store-dev"),
+    ).rejects.toThrow("No instance tagged Name=openjii-serving-store-dev");
+  });
+
+  it("fails with the script's output when it does not succeed", async () => {
+    const commands = ssm([{ status: "Failed", targetCount: 1 }], "AccessDeniedException");
+
+    await expect(
+      servingStoreReloader(commands, noWait)("openjii-serving-store-dev"),
+    ).rejects.toThrow(/ended Failed:\nAccessDeniedException/);
   });
 });

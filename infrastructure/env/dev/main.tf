@@ -421,7 +421,7 @@ module "node_service_principal" {
   source = "../../modules/databricks/service_principal"
 
   display_name  = "node-service-principal-${var.environment}"
-  create_secret = true
+  create_secret = false
 
   providers = {
     databricks.mws = databricks.mws
@@ -437,21 +437,6 @@ module "github_cicd_service_principal" {
   providers = {
     databricks.mws = databricks.mws
   }
-}
-
-locals {
-  # The pipeline wheels, installed through the cluster policies.
-  pipeline_libraries = [
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
-    }
-  ]
 }
 
 # Workers keep 8 GB per core: Python UDF workers run outside Spark's heap and cannot
@@ -600,7 +585,7 @@ module "slack_notification_destination" {
   source = "../../modules/databricks/notification-destination"
 
   display_name      = "slack-notifications-${var.environment}"
-  slack_webhook_url = var.slack_webhook_url
+  slack_webhook_url = local.slack_webhooks.databricks
 
   providers = {
     databricks.workspace = databricks.workspace
@@ -616,7 +601,7 @@ module "event_hooks_secret_scope" {
   scope_name = "event-hooks-${var.environment}"
 
   secrets = {
-    "slack-webhook-url" = var.slack_webhook_url
+    "slack-webhook-url" = local.slack_webhooks.databricks
     "databricks-host"   = module.databricks_workspace.workspace_url
   }
 
@@ -738,14 +723,13 @@ module "device_lifecycle_external_location" {
   depends_on = [module.storage_credential]
 }
 
+# webhook_api_key_id and webhook_secret are set with `pnpm secrets:set`.
 module "experiment_secret_scope" {
   source = "../../modules/databricks/secret_scope"
 
   scope_name = "node-webhook-secret-scope-${var.environment}"
   secrets = {
-    webhook_api_key_id = var.backend_webhook_api_key_id
-    webhook_secret     = var.backend_webhook_secret
-    webhook_base_url   = "https://${module.route53.api_domain}"
+    webhook_base_url = "https://${module.route53.api_domain}"
   }
 
   acl_principals  = [module.node_service_principal.service_principal_application_id]
@@ -1238,16 +1222,6 @@ module "metrics_heartbeat_export" {
   }
 
   depends_on = [module.heartbeat_external_location]
-}
-
-locals {
-  databricks_cost_components = {
-    centrum        = { dlt_pipeline_id = module.centrum_pipeline.pipeline_id }
-    macro          = { dlt_pipeline_id = module.macro_execution_pipeline.pipeline_id }
-    metrics        = { dlt_pipeline_id = module.metrics_pipeline.pipeline_id }
-    warehouse      = { warehouse_id = var.backend_databricks_warehouse_id }
-    investigations = { warehouse_id = module.investigations_warehouse.warehouse_id }
-  }
 }
 
 # Singular, so other principals' grants on the system catalog stay.
@@ -2180,44 +2154,18 @@ module "serving_store" {
   }
 }
 
-locals {
-  # The gold version each feed sink starts at when its checkpoint is new. Gold keeps old versions'
-  # files for seven days, so read these on the day the feed first ships, and again before any
-  # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
-  # the feed's alerts.
-  serving_store_feed_start_versions = {
-    measurements  = "58430"
-    uploads       = "44"
-    macro_results = "57120"
-    # The sheets' copy needs no history: the first load owes every sheet to it once
-    # (docs/runbooks/procedures/serving-store-reload.md).
-    metadata_rows = "latest"
-  }
-  serving_store_feed = length(local.serving_store_feed_start_versions) > 0
-
-  # Only while the feed is on do the pipelines carry it: a settings change starts a pipeline
-  # before a release has deployed the notebook.
-  centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed"] : []
-  macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = {
-    for table, version in local.serving_store_feed_start_versions :
-    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
-  }
-}
-
 # Where the pipelines' feed sends gold's changes, and the credentials the feed and the reload use
 # in one scope: the reload runs as the principal that owns gold, which reads gold's tables directly
-# and can already write them, so a scope of its own would narrow nothing.
+# and can already write them, so a scope of its own would narrow nothing. writer-password and
+# reloader-password are set with `pnpm secrets:set`, from the store's own secrets.
 module "serving_store_secret_scope" {
   source = "../../modules/databricks/secret_scope"
 
   scope_name = "serving-store-${var.environment}"
   secrets = {
     "url"               = module.serving_store.url
-    "writer-username"   = module.serving_store.writer_credentials.username
-    "writer-password"   = module.serving_store.writer_credentials.password
-    "reloader-username" = module.serving_store.reloader_credentials.username
-    "reloader-password" = module.serving_store.reloader_credentials.password
+    "writer-username"   = module.serving_store.usernames.writer
+    "reloader-username" = module.serving_store.usernames.reloader
   }
 
   acl_principals  = [module.node_service_principal.service_principal_application_id]
@@ -2384,7 +2332,6 @@ module "play_review_sign_in" {
 
   enabled        = true
   environment    = var.environment
-  domain_name    = var.domain_name
   log_group_name = module.backend_ecs.cloudwatch_log_group_name
 
   tags = {
@@ -2411,25 +2358,13 @@ module "auth_secrets" {
   }
 }
 
-# Databricks API secrets
+# The backend's Databricks credential and the webhook key it shares with the pipelines, set with
+# `pnpm secrets:set`. The ids beside them are plain settings on the backend task.
 module "databricks_secrets" {
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-databricks-secrets-${var.environment}"
   description = "Databricks connection secrets for the openJII services"
-
-  # Store secrets as JSON using variables
-  secret_string = jsonencode({
-    DATABRICKS_HOST               = module.databricks_workspace.workspace_url
-    DATABRICKS_CLIENT_ID          = module.node_service_principal.service_principal_application_id
-    DATABRICKS_CLIENT_SECRET      = module.node_service_principal.service_principal_secret_value
-    DATABRICKS_DATA_UPLOAD_JOB_ID = module.data_upload_job.job_id
-    DATABRICKS_DATA_EXPORT_JOB_ID = module.data_export_job.job_id
-    DATABRICKS_WAREHOUSE_ID       = var.backend_databricks_warehouse_id
-    DATABRICKS_WEBHOOK_API_KEY_ID = var.backend_webhook_api_key_id
-    DATABRICKS_WEBHOOK_SECRET     = var.backend_webhook_secret
-    DATABRICKS_WEBHOOK_API_KEY    = var.backend_webhook_api_key
-  })
 
   tags = {
     Environment = var.environment
@@ -2501,20 +2436,12 @@ module "ses" {
 
 }
 
-# SES SMTP secrets for application use
+# The SMTP address with the access key in it, set with `pnpm secrets:ses-smtp`.
 module "ses_secrets" {
-  source = "../../modules/secrets-manager"
+  source = "../../modules/secrets-manager/container"
 
   name        = "openjii-ses-secrets-${var.environment}"
   description = "SES SMTP credentials for transactional email sending"
-
-  # Store SES SMTP credentials as JSON
-  secret_string = jsonencode({
-    AUTH_EMAIL_SERVER    = module.ses.auth_email_server
-    AUTH_EMAIL_FROM      = "auth@mail.${var.environment}.${var.domain_name}"
-    BACKEND_EMAIL_SERVER = module.ses.auth_email_server
-    BACKEND_EMAIL_FROM   = "notifications@mail.${var.environment}.${var.domain_name}"
-  })
 
   tags = {
     Environment = var.environment
@@ -2858,32 +2785,8 @@ module "backend_ecs" {
       valueFrom = "${module.ses_secrets.secret_arn}:AUTH_EMAIL_SERVER::"
     },
     {
-      name      = "AUTH_EMAIL_FROM"
-      valueFrom = "${module.ses_secrets.secret_arn}:AUTH_EMAIL_FROM::"
-    },
-    {
-      name      = "DATABRICKS_CLIENT_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_ID::"
-    },
-    {
       name      = "DATABRICKS_CLIENT_SECRET"
       valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_CLIENT_SECRET::"
-    },
-    {
-      name      = "DATABRICKS_HOST"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_HOST::"
-    },
-    {
-      name      = "DATABRICKS_DATA_UPLOAD_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_UPLOAD_JOB_ID::"
-    },
-    {
-      name      = "DATABRICKS_DATA_EXPORT_JOB_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_DATA_EXPORT_JOB_ID::"
-    },
-    {
-      name      = "DATABRICKS_WAREHOUSE_ID"
-      valueFrom = "${module.databricks_secrets.secret_arn}:DATABRICKS_WAREHOUSE_ID::"
     },
     {
       name      = "DATABRICKS_WEBHOOK_API_KEY_ID"
@@ -2913,10 +2816,6 @@ module "backend_ecs" {
     {
       name      = "EMAIL_SERVER"
       valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_SERVER::"
-    },
-    {
-      name      = "EMAIL_FROM"
-      valueFrom = "${module.ses_secrets.secret_arn}:BACKEND_EMAIL_FROM::"
     },
     {
       name      = "CONTENTFUL_SPACE_ID"
@@ -2954,6 +2853,34 @@ module "backend_ecs" {
 
   # Environment variables for the backend service
   environment_variables = [
+    {
+      name  = "AUTH_EMAIL_FROM"
+      value = "auth@mail.${var.environment}.${var.domain_name}"
+    },
+    {
+      name  = "DATABRICKS_CLIENT_ID"
+      value = module.node_service_principal.service_principal_application_id
+    },
+    {
+      name  = "DATABRICKS_HOST"
+      value = module.databricks_workspace.workspace_url
+    },
+    {
+      name  = "DATABRICKS_DATA_UPLOAD_JOB_ID"
+      value = module.data_upload_job.job_id
+    },
+    {
+      name  = "DATABRICKS_DATA_EXPORT_JOB_ID"
+      value = module.data_export_job.job_id
+    },
+    {
+      name  = "DATABRICKS_WAREHOUSE_ID"
+      value = var.backend_databricks_warehouse_id
+    },
+    {
+      name  = "EMAIL_FROM"
+      value = "notifications@mail.${var.environment}.${var.domain_name}"
+    },
     {
       name  = "DATABRICKS_CATALOG_NAME"
       value = module.databricks_catalog.catalog_name
@@ -3553,7 +3480,7 @@ module "grafana_dashboard" {
   target_group_arn               = module.backend_alb_private.target_group_arn
   load_balancer_arn              = module.backend_alb_private.alb_arn
   ecs_cluster_name               = module.backend_ecs.ecs_cluster_name
-  slack_webhook_url              = var.slack_webhook_url
+  slack_webhook_url              = local.slack_webhooks.grafana
   posthog_project_id             = "80726"
   kinesis_shard_count            = module.kinesis.shard_count
   payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
@@ -3623,18 +3550,6 @@ module "cost_publisher" {
   environment = var.environment
 }
 
-locals {
-  # Needs the centrum pipeline that drops health checks from raw_data to be running here.
-  ingest_healthcheck_publishing = true
-
-  # The pipeline carries the notebook only while publishing is on: a settings change starts it before
-  # a release has deployed a new notebook.
-  ingest_healthcheck_notebooks = local.ingest_healthcheck_publishing ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/bronze/ingest_healthchecks"] : []
-
-  # Needs a HealthcheckAgeMinutes datapoint here: the stalled rule fires on no data.
-  ingest_healthcheck_alerting = true
-}
-
 module "ingest_healthcheck" {
   source = "../../modules/monitoring/ingest-healthcheck"
 
@@ -3680,12 +3595,6 @@ module "status_publisher" {
   # An ARN is not a secret, and a sensitive one would hide the role policy's diff.
   contentful_secret_arn = nonsensitive(module.status_contentful_secrets.secret_arn)
   page_url              = "https://${module.route53.status_domain}"
-}
-
-locals {
-  # Whether this environment posts to the status Slack channel. The webhook is set with
-  # `pnpm secrets:set dev status-slack`.
-  status_slack_enabled = false
 }
 
 # The webhook is the whole secret value, a plain address and not JSON.
