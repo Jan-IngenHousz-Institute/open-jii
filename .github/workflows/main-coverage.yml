@@ -57,9 +57,10 @@ jobs:
               --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id' 2>/dev/null || true); do
             EXPECTED=$(gh api "repos/$REPO/actions/runs/$CANDIDATE/jobs?per_page=100" \
               --jq '[.jobs[] | select(.name | startswith("Test ("))] | length' 2>/dev/null || echo 0)
-            COUNT=$(gh api "repos/$REPO/actions/runs/$CANDIDATE/artifacts?per_page=100" \
-              --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"$PREFIX\"))) | .name] | unique | length" \
-              2>/dev/null || echo 0)
+            NAMES=$(gh api "repos/$REPO/actions/runs/$CANDIDATE/artifacts?per_page=100" \
+              --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"$PREFIX\"))) | .name] | unique | join(\" \")" \
+              2>/dev/null || true)
+            COUNT=$(echo "$NAMES" | wc -w | tr -d ' ')
             if [ "$EXPECTED" -gt 0 ] && [ "$COUNT" -eq "$EXPECTED" ]; then
               RUN_ID=$CANDIDATE
               break
@@ -74,6 +75,7 @@ jobs:
           echo "PR #$PR_NUMBER (head $HEAD_SHA): found $COUNT artifacts named $PREFIX* on run $RUN_ID"
           echo "found=true" >> "$GITHUB_OUTPUT"
           echo "artifact_prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "artifact_names=$NAMES" >> "$GITHUB_OUTPUT"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Try to download coverage artifacts
@@ -88,15 +90,32 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.locate.outputs.run_id }}
 
+      # The download lists the artifacts again and skips one that expired since the count
+      # without failing, so check each counted artifact arrived before trusting the set.
+      - name: Check every test job's coverage arrived
+        id: verify
+        if: steps.download.outcome == 'success'
+        env:
+          NAMES: ${{ steps.locate.outputs.artifact_names }}
+        run: |
+          COMPLETE=true
+          for NAME in $NAMES; do
+            if [ ! -d "./coverage-artifacts/$NAME" ]; then
+              echo "$NAME did not download; will regenerate."
+              COMPLETE=false
+            fi
+          done
+          echo "complete=$COMPLETE" >> "$GITHUB_OUTPUT"
+
       - name: Setup Node.js and pnpm (only if regenerating coverage)
-        if: steps.download.outcome != 'success'
+        if: steps.verify.outputs.complete != 'true'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "24"
 
       # apps/data tests through uv; the regenerate path runs the full test suite.
       - name: Setup uv (only if regenerating coverage)
-        if: steps.download.outcome != 'success'
+        if: steps.verify.outputs.complete != 'true'
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
@@ -104,14 +123,14 @@ jobs:
 
       # PySpark 4.0 runs on Java 17 or 21, not on the runner's newer default JDK.
       - name: Setup Java (only if regenerating coverage)
-        if: steps.download.outcome != 'success'
+        if: steps.verify.outputs.complete != 'true'
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "21"
 
       - name: Regenerate coverage if artifacts not found
-        if: steps.download.outcome != 'success'
+        if: steps.verify.outputs.complete != 'true'
         run: |
           echo "Coverage artifacts not found, regenerating coverage..."
           pnpm install --frozen-lockfile
@@ -120,7 +139,7 @@ jobs:
       - name: Collect coverage files
         id: collect
         run: |
-          if [ "${{ steps.download.outcome }}" = "success" ]; then
+          if [ "${{ steps.verify.outputs.complete }}" = "true" ]; then
             FILES=$(find ./coverage-artifacts -type f \( -name coverage.json -o -name lcov.info \) 2>/dev/null | paste -sd, -)
           else
             FILES=$(find apps packages tooling -maxdepth 3 -type f \( -name coverage.json -o -name lcov.info \) 2>/dev/null | paste -sd, -)
