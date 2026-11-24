@@ -35,6 +35,7 @@
     "posthog:query": "tsx src/commands/posthog-query.ts",
     "release:cms": "tsx src/commands/release-cms.ts",
     "round:read": "tsx src/commands/round-read.ts",
+    "secrets:set": "tsx src/commands/secrets-set.ts",
     "status:fixtures": "tsx src/commands/status-fixtures.ts",
     "status:incident": "tsx src/commands/status-incident.ts",
     "test": "vitest run",
@@ -43,6 +44,7 @@
   "dependencies": {
     "@aws-sdk/client-kinesis": "catalog:aws-sdk",
     "@aws-sdk/client-s3": "catalog:aws-sdk",
+    "@aws-sdk/client-secrets-manager": "catalog:aws-sdk",
     "@repo/monitoring": "workspace:*",
     "better-auth": "1.7.14",
     "dotenv": "^16.6.1",

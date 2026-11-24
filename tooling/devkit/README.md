@@ -428,6 +428,30 @@ profile and the Databricks profile named after the environment; `--aws-profile` 
 decision goes to a manifest under `.claude/ingest-replays/`. When to run it and how to read the result
 is in `docs/runbooks/ingest-forwarding-failures.md`.
 
+## Setting a secret's value
+
+```bash
+pbpaste | pnpm secrets:set <dev|prod> <secret> --key <KEY>
+```
+
+OpenTofu creates these Secrets Manager secrets without a value, so the value never reaches a plan or
+the state. The command reads it from stdin, so it stays off the command line and out of shell
+history, merges it into the secret's JSON under the key, and prints only which keys are still unset.
+It uses your `openjii-<env>` AWS profile; `--aws-profile` picks another. A misspelt key is refused,
+since the service reading it would otherwise fail at its next start.
+
+| Secret              | Name in Secrets Manager            | Keys                                                                                                                                                      |
+| ------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`              | `openjii-auth-secrets-<env>`       | `AUTH_SECRET`, `NOTIFICATION_UNSUBSCRIBE_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_ORCID_ID`, `AUTH_ORCID_SECRET`                            |
+| `contentful`        | `openjii-contentful-secrets-<env>` | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`, `CONTENTFUL_PREVIEW_ACCESS_TOKEN`, `CONTENTFUL_PREVIEW_SECRET`                                          |
+| `mailchimp`         | `openjii-mailchimp-secrets-<env>`  | `MAILCHIMP_API_KEY`, `MAILCHIMP_SERVER_PREFIX`, `MAILCHIMP_AUDIENCE_ID`, `MAILCHIMP_COMMUNITY_KIND`, `MAILCHIMP_COMMUNITY_ID`, `MAILCHIMP_COMMUNITY_NAME` |
+| `status-contentful` | `openjii-status-contentful-<env>`  | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`                                                                                                          |
+| `status-slack`      | `openjii-status-slack-<env>`       | none: the value is the webhook address, so leave out `--key`                                                                                              |
+
+A service reads its secrets when it starts, so a new value needs a restart. Rotating one, and what
+to restart for each secret, is in
+[`docs/runbooks/procedures/rotate-a-secret.md`](../../docs/runbooks/procedures/rotate-a-secret.md).
+
 ## Status page incidents
 
 `pnpm status:incident` writes incidents for the public status page into Contentful, and holds back

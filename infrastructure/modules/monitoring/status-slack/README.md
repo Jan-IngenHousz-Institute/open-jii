@@ -19,9 +19,9 @@ The `function_name` output feeds the dashboard module, whose `Status Slack Messa
 
 ## Off by default
 
-The environments create this module and its secret only when the `status_slack_webhook_url` variable is not empty. It is passed from the GitHub secret `STATUS_SLACK_WEBHOOK_URL` as `TF_VAR_status_slack_webhook_url`, so an environment whose secret is unset creates nothing and the topic simply has no subscriber. The one-time setup is in [`status-page-incidents.md`](../../../../docs/runbooks/support/status-page-incidents.md#slack).
+The environments create this module and its secret only when `status_slack_enabled` is `true` in their `main.tf`; otherwise the topic simply has no subscriber. OpenTofu creates the secret without a value, and the webhook address is stored with `pnpm secrets:set <env> status-slack`, so it never reaches a plan or the state. The one-time setup is in [`status-page-incidents.md`](../../../../docs/runbooks/support/status-page-incidents.md#slack).
 
-`pr.yml` plans production with the `prod-plan` GitHub environment, not `prod`, so `STATUS_SLACK_WEBHOOK_URL` must exist there too. Without it, a pull request plan reads an empty address and shows the Slack resources being destroyed. The secret module is created with a recovery window of zero days, so clearing the variable and setting it again within a week does not fail on a name scheduled for deletion.
+The secret is created with a recovery window of zero days, so switching the feed off and on again within a week does not fail on a name scheduled for deletion.
 
 ## A message
 

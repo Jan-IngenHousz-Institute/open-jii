@@ -52,7 +52,7 @@ The role may call `sns:Publish` on this topic only, and holds no `kms` permissio
 
 ## The Contentful secret
 
-The publisher reads Contentful with its own secret, `openjii-status-contentful-<env>`, which the environment's `main.tf` creates through `modules/secrets-manager` from the same `contentful_space_id` and `contentful_access_token` variables that the web app's secret uses. It holds only those two keys. The preview credentials stay out of it, so the publisher can read published entries and nothing else. The role may call `secretsmanager:GetSecretValue` on this secret only. The Lambda keeps the credentials in memory between warm invocations and drops them when a read fails, so a rotated secret is picked up on the next run.
+The publisher reads Contentful with its own secret, `openjii-status-contentful-<env>`. The environment's `main.tf` creates it through `modules/secrets-manager/container` and never writes its value: `pnpm secrets:set <env> status-contentful --key <KEY>` sets it, with the same space id and delivery token as the web app's secret (`docs/runbooks/procedures/rotate-a-secret.md`). It holds only those two keys. The preview credentials stay out of it, so the publisher can read published entries and nothing else. The role may call `secretsmanager:GetSecretValue` on this secret only. The Lambda keeps the credentials in memory between warm invocations and drops them when a read fails, so a rotated secret is picked up on the next run.
 
 ## Where the code lives
 

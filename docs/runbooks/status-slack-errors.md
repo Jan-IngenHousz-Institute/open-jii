@@ -5,7 +5,7 @@ page never reached the status channel.** The status publisher sends each change 
 `status-events-<env>` SNS topic, and this function turns each one into a Slack message and posts it to
 the channel's incoming webhook. The status page itself is not affected: the data file keeps updating,
 and `status-publisher-errors` and `status-publisher-stopped` watch that. The alert is not created,
-and the function does not exist, in an environment that has no `STATUS_SLACK_WEBHOOK_URL`.
+and the function does not exist, in an environment whose `status_slack_enabled` is `false`.
 
 The alert watches `AsyncEventsDropped` in `AWS/Lambda`, which counts the events that Lambda dropped
 without the function ever handling them successfully
@@ -58,10 +58,12 @@ logs `{"skipped": "<event type>", "id": "<event id>", "reason": "already posted"
 - **The secret cannot be read.** `openjii-status-slack-<env>` is read from Secrets Manager on the
   first message of each function instance, then again after 15 minutes and after any failed post.
   `AccessDeniedException` means the role lost `secretsmanager:GetSecretValue` on it, and
-  `ResourceNotFoundException` means the secret was deleted or `STATUS_SLACK_SECRET_ARN` is stale.
-  Applying the environment restores both. An error saying the secret does not hold an https address
-  means the stored value was edited by hand, or the GitHub secret `STATUS_SLACK_WEBHOOK_URL` held
-  something else. The value must be the bare webhook address, not JSON.
+  `ResourceNotFoundException` means the secret was deleted, has no value yet, or
+  `STATUS_SLACK_SECRET_ARN` is stale. Applying the environment restores the secret and the ARN, and
+  `pbpaste | pnpm secrets:set <env> status-slack --aws-profile <your profile>` gives it a value, with
+  the address on the clipboard. An error saying the secret does not hold an
+  https address means the stored value is something else. The value must be the bare webhook
+  address, not JSON.
 - **The event is malformed.** A `SyntaxError` from reading the message, or a schema error listing the
   fields, means the message on the topic is not a status event this bundle understands. A hand
   publish to the topic does this. So does a publisher newer than this function: when the event
@@ -79,13 +81,9 @@ logs `{"skipped": "<event type>", "id": "<event id>", "reason": "already posted"
 
 1. In the Slack app that owns the webhook, open Incoming Webhooks and add a webhook for the status
    channel. Copy its address.
-2. Put the address in the GitHub secret `STATUS_SLACK_WEBHOOK_URL` for the affected environment, then
-   run the tofu workflow for it. The apply writes the new value into `openjii-status-slack-<env>`.
-3. To restore the channel before the apply, write the secret by hand with
-   `aws secretsmanager put-secret-value --secret-id openjii-status-slack-<env> --secret-string file://webhook.txt`,
-   where `webhook.txt` holds only the address, and delete the file afterwards. Do the GitHub secret
-   as well, or the next apply puts the old address back. The function reads the secret again after
-   its next failed post, so no deploy is needed.
+2. Store it with `pbpaste | pnpm secrets:set <env> status-slack --aws-profile <your profile>`. The
+   function reads the secret again after its next failed post, so no deploy is needed, and OpenTofu
+   never holds the value, so no apply puts an old one back.
 
 ## Post a missed message by hand
 
