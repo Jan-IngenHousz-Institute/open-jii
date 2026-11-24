@@ -586,6 +586,46 @@ describe("NotificationsService", () => {
       });
     });
 
+    it.each([
+      [
+        "renderDataExportReadyNotificationEmail",
+        () =>
+          service.sendDataExportReadyNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            format: "csv",
+            email: MOCK_EMAIL,
+          }),
+      ],
+      [
+        "renderDataExportFailedNotificationEmail",
+        () =>
+          service.sendDataExportFailedNotification({
+            experimentId: MOCK_EXPERIMENT_ID,
+            experimentName: "Drought trial",
+            email: MOCK_EMAIL,
+          }),
+      ],
+    ] as const)("%s: a rejected address is reported as a failure", async (seam, send) => {
+      spyOnProtected(service, seam).mockResolvedValue({
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await send();
+
+      assertFailure(result);
+      expect(result.error.message).toBe("Failed to send email: Email could not be sent");
+    });
+
     it("sendDataExportReadyNotification keeps a format it has no label for", async () => {
       const mockRender = spyOnProtected(
         service,
