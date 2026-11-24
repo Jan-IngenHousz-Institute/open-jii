@@ -99,12 +99,21 @@ jobs:
           NAMES: ${{ steps.locate.outputs.artifact_names }}
         run: |
           COMPLETE=true
-          for NAME in $NAMES; do
-            if [ ! -d "./coverage-artifacts/$NAME" ]; then
-              echo "$NAME did not download; will regenerate."
+          set -- $NAMES
+          if [ "$#" -eq 1 ]; then
+            # A pattern with a single match extracts straight into the folder, not a subfolder.
+            if [ -z "$(find ./coverage-artifacts -type f -print -quit 2>/dev/null)" ]; then
+              echo "$1 did not download; will regenerate."
               COMPLETE=false
             fi
-          done
+          else
+            for NAME in "$@"; do
+              if [ ! -d "./coverage-artifacts/$NAME" ]; then
+                echo "$NAME did not download; will regenerate."
+                COMPLETE=false
+              fi
+            done
+          fi
           echo "complete=$COMPLETE" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node.js and pnpm (only if regenerating coverage)
@@ -157,6 +166,8 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.collect.outputs.files }}
+          # Only the listed files: a partial download left beside a regenerated report must not upload.
+          disable_search: true
           flags: main
           fail_ci_if_error: false
           verbose: true
