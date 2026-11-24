@@ -125,6 +125,32 @@ describe("useSession", () => {
     expect(result.current.session?.data.user.id).toBe("u2");
   });
 
+  it("asks for registration only when the account is explicitly unregistered", () => {
+    mockGetItem.mockReturnValue(null);
+    const withRegistered = (registered: boolean | undefined) => ({
+      data: { ...serverPayload, user: { ...serverPayload.user, registered } },
+      isPending: false,
+      error: null,
+    });
+
+    mockUseSession.mockReturnValue(withRegistered(false));
+    expect(renderHook(() => useSession()).result.current.needsRegistration).toBe(true);
+
+    mockUseSession.mockReturnValue(withRegistered(true));
+    expect(renderHook(() => useSession()).result.current.needsRegistration).toBe(false);
+
+    // A cache written before the flag existed must not lock an existing user out.
+    mockUseSession.mockReturnValue(withRegistered(undefined));
+    expect(renderHook(() => useSession()).result.current.needsRegistration).toBe(false);
+  });
+
+  it("does not ask a signed-out user to register", () => {
+    mockGetItem.mockReturnValue(null);
+    mockUseSession.mockReturnValue({ data: null, isPending: false, error: null });
+
+    expect(renderHook(() => useSession()).result.current.needsRegistration).toBe(false);
+  });
+
   it("signOut clears cache and calls authClient.signOut", async () => {
     mockGetItem.mockReturnValue(JSON.stringify(cachedPayload));
     mockUseSession.mockReturnValue({ data: serverPayload, isPending: false, error: null });
