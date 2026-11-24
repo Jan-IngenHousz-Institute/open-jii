@@ -295,6 +295,37 @@ describe("RegistrationScreen", () => {
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
+  it("finishes registration when the email change saved but its answer was lost", async () => {
+    verifyOtp.mockRejectedValue(new Error("Network request failed"));
+    await reachCodeStep();
+    reloadSession.mockResolvedValue({ email: "ada@example.com" });
+
+    await settle(() => screen.UNSAFE_getByType(OTPInput).props.onChangeText("123456"));
+
+    expect(screen.queryByText(auth.errors.verifyFailed)).toBeNull();
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("locks the consent choices while the email code is being sent", async () => {
+    session.user.email = "0000-0002-1825-0097";
+    let finishSending: (value: unknown) => void = () => undefined;
+    sendOtp.mockReturnValue(new Promise((resolve) => (finishSending = resolve)));
+    render(<RegistrationScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText(auth.emailPlaceholder), "ada@example.com");
+    fillName();
+
+    await settle(() =>
+      fireEvent.press(screen.getByText(auth.registration.continueWithEmailVerification)),
+    );
+
+    for (const name of [auth.registration.acceptTerms, auth.registration.newsletterOptIn]) {
+      expect(screen.getByRole("checkbox", { name }).props.accessibilityState).toMatchObject({
+        disabled: true,
+      });
+    }
+    await settle(() => finishSending({ data: { success: true }, error: null }));
+  });
+
   it("goes back to the form from the code step", async () => {
     await reachCodeStep();
 

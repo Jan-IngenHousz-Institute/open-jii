@@ -10,9 +10,17 @@ interface CheckboxProps {
   onChange: (value: boolean) => void;
   textSize?: "sm" | "base";
   icon?: React.ReactNode;
+  disabled?: boolean;
 }
 
-export function Checkbox({ value, text, onChange, textSize = "base", icon }: CheckboxProps) {
+export function Checkbox({
+  value,
+  text,
+  onChange,
+  textSize = "base",
+  icon,
+  disabled = false,
+}: CheckboxProps) {
   const { classes, colors: themeColors } = useTheme();
 
   // WORKAROUND: Key with timestamp to force remount on every render
@@ -37,8 +45,10 @@ export function Checkbox({ value, text, onChange, textSize = "base", icon }: Che
       key={renderId}
       className="flex-row items-center gap-2"
       onPress={() => onChange(!value)}
+      disabled={disabled}
+      style={disabled ? { opacity: 0.5 } : undefined}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: value }}
+      accessibilityState={{ checked: value, disabled }}
       accessibilityLabel={text}
     >
       {checkbox}

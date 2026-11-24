@@ -177,27 +177,37 @@ export default function RegistrationScreen() {
   async function verifyAndRegister(code: string) {
     if (actionDisabled) return;
     setIsWorking(true);
-    let verified = emailVerified;
     try {
-      if (!verified) {
-        const result = await verifyRegistrationEmailCode(email, code);
-        if (result?.error) {
-          setOtpError(
-            WRONG_CODE_ERRORS.has(result.error.code ?? "")
-              ? t("auth:errors.expiredOtp")
-              : (result.error.message ?? t("auth:errors.verifyFailed")),
-          );
-          return;
-        }
-        verified = true;
+      if (!emailVerified) {
+        if (!(await verifyEmail(code))) return;
         setEmailVerified(true);
       }
       await register();
     } catch {
-      // A thrown verify call lands here unverified; useRegistration reports a failed save.
-      if (!verified) setOtpError(t("auth:errors.verifyFailed"));
+      // useRegistration reports its own failure.
     } finally {
       setIsWorking(false);
+    }
+  }
+
+  /** Returns whether the account now carries the entered address. */
+  async function verifyEmail(code: string): Promise<boolean> {
+    try {
+      const result = await verifyRegistrationEmailCode(email, code);
+      if (!result?.error) return true;
+      setOtpError(
+        WRONG_CODE_ERRORS.has(result.error.code ?? "")
+          ? t("auth:errors.expiredOtp")
+          : (result.error.message ?? t("auth:errors.verifyFailed")),
+      );
+      return false;
+    } catch (error) {
+      log.warn("registration code verify failed", { err: (error as Error)?.message });
+      // The server can commit the change and lose the answer. The code is spent then.
+      const refreshed = await reloadSessionFromServer().catch(() => null);
+      if (refreshed?.email?.toLowerCase() === email) return true;
+      setOtpError(t("auth:errors.verifyFailed"));
+      return false;
     }
   }
 
@@ -276,6 +286,7 @@ export default function RegistrationScreen() {
                   onChange={(checked) => update("acceptedTerms", checked)}
                   text={t("auth:registration.acceptTerms")}
                   textSize="sm"
+                  disabled={isBusy}
                 />
               </View>
               <Text
@@ -294,6 +305,7 @@ export default function RegistrationScreen() {
                   onChange={(checked) => update("newsletterOptIn", checked)}
                   text={t("auth:registration.newsletterOptIn")}
                   textSize="sm"
+                  disabled={isBusy}
                 />
               </View>
 
