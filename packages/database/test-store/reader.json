@@ -1,0 +1,25 @@
+{
+  "name": "openjii_reader",
+  "views": [
+    "experiment_measurements",
+    "experiment_macro_results",
+    "experiment_uploads",
+    "experiment_contributor_ids",
+    "experiment_client_ids",
+    "experiment_payload_schemas",
+    "experiment_metadata_rows",
+    "experiment_metadata_sheets"
+  ],
+  "tables": [],
+  "rowFilter": null,
+  "settings": [
+    "json_type_escape_dots_in_keys = 1",
+    "input_format_try_infer_dates = 0",
+    "input_format_try_infer_datetimes = 0",
+    "max_memory_usage = 4294967296 CONST",
+    "max_execution_time = 30 CONST",
+    "max_memory_usage_for_user = 6442450944 CONST",
+    "timeout_overflow_mode CONST",
+    "apply_deleted_mask CONST"
+  ]
+}

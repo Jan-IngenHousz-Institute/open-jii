@@ -1,4 +1,3 @@
-import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
@@ -7,6 +6,7 @@ import { resolve } from "path";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
+import { emptyStore, storeSetting, testStoreAdmin } from "../../../test/store-admin";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
@@ -304,20 +304,11 @@ describe("ServingStoreAdapter", () => {
   });
 });
 
-/**
- * The adapter's reads against a real store of the version the store runs, through the migrations'
- * views. It rebuilds the `store` database, so it runs only against a throwaway store, and skips
- * without one:
- *
- *   docker run -d --name feed-test-clickhouse -p 127.0.0.1:18123:8123 \
- *     -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
- *     clickhouse/clickhouse-server:25.8.33.6
- *   CLICKHOUSE_TEST_URL=http://127.0.0.1:18123 CLICKHOUSE_TEST_USER=admin CLICKHOUSE_TEST_PASSWORD=local \
- *     pnpm --filter backend exec vitest run src/common/modules/serving-store
- */
-const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
-const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
-const STORE_PASSWORD = process.env.CLICKHOUSE_TEST_PASSWORD ?? "";
+// The test store `pnpm test` starts and migrates. These specs seed and empty it as its admin, and
+// read it as the reader the backend reads as, with the grants and profile production's has.
+const STORE_URL = storeSetting("SERVING_STORE_URL");
+const READER_USER = storeSetting("SERVING_STORE_USERNAME");
+const READER_PASSWORD = storeSetting("SERVING_STORE_PASSWORD");
 
 const MIGRATIONS = resolve(__dirname, "../../../../../../packages/database/clickhouse/migrations");
 
@@ -471,28 +462,14 @@ const PAYLOAD_SCHEMAS = [
   _commit_version: 1,
 }));
 
-describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", () => {
+describe("ServingStoreAdapter against a store", () => {
   let admin: ClickHouseClient;
   let client: ServingStoreClientService;
   let adapter: ServingStoreAdapter;
 
   beforeAll(async () => {
-    const url = STORE_URL ?? "";
-    const server = createClient({ url, username: STORE_USER, password: STORE_PASSWORD });
-    await server.command({ query: "DROP DATABASE IF EXISTS store SYNC" });
-    await server.command({ query: "CREATE DATABASE store" });
-    await server.close();
-
-    admin = createClient({
-      url,
-      username: STORE_USER,
-      password: STORE_PASSWORD,
-      database: "store",
-      clickhouse_settings: { json_type_escape_dots_in_keys: 1 },
-    });
-    for (const statement of migrationStatements()) {
-      await admin.command({ query: statement });
-    }
+    admin = testStoreAdmin({ json_type_escape_dots_in_keys: 1 });
+    await emptyStore(admin);
     await admin.insert({ table: "measurements", values: MEASUREMENTS, format: "JSONEachRow" });
     await admin.insert({ table: "macro_results", values: MACRO_RESULTS, format: "JSONEachRow" });
     await admin.insert({ table: "uploads", values: UPLOADS, format: "JSONEachRow" });
@@ -503,7 +480,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     const config = new ConfigService({
-      servingStore: { url, username: STORE_USER, password: STORE_PASSWORD },
+      servingStore: { url: STORE_URL, username: READER_USER, password: READER_PASSWORD },
     });
     client = new ServingStoreClientService(new ServingStoreConfigService(config));
     adapter = new ServingStoreAdapter(client);
@@ -511,6 +488,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
   afterAll(async () => {
     await client.onModuleDestroy();
+    await emptyStore(admin);
     await admin.close();
   });
 
@@ -521,6 +499,13 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     assertSuccess(data);
     return data.value;
   }
+
+  it.each(["measurements", "macro_results", "uploads"])(
+    "reads as a user the %s table under its view refuses",
+    async (table) => {
+      assertFailure(await client.query(`SELECT count() FROM ${table}`));
+    },
+  );
 
   it("answers a failed read without its statement or the values in it", async () => {
     const result = await client.query(
@@ -1386,7 +1371,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(data.rows).toHaveLength(800_000);
     expect(data.truncated).toBe(false);
     expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
-  });
+  }, 30_000);
 
   it("stops reading a page before the row that takes its cells past the read limit", async () => {
     // Rows of a million bytes each, 40 MB in all and well under the store's own guard.
@@ -1406,7 +1391,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     // 26 rows of 1,000,004 bytes and their separators fit 25 MiB; the 27th passes it.
     expect(data.truncated).toBe(true);
     expect(data.rows).toHaveLength(26);
-  });
+  }, 30_000);
 
   it("counts a read and lists the experiment's ids", async () => {
     const query = adapter.buildExperimentQuery({
@@ -1520,7 +1505,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
     // One byte more, sent anyway, is a statement the store refuses too.
     assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
-  });
+  }, 30_000);
 
   describe("custom metadata on a page", () => {
     const experiment = "metadata-e";
@@ -2051,13 +2036,11 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       }
 
       beforeAll(async () => {
-        // The reader profile's per-query memory and time, and the dev store's two cores.
-        await admin.command({
-          query: `CREATE USER IF NOT EXISTS capped_reader IDENTIFIED BY ${new StoreQueryBuilder().escapeValue(STORE_PASSWORD)} SETTINGS max_memory_usage = 4294967296, max_execution_time = 30, max_threads = 2`,
-        });
-        await admin.command({ query: "GRANT SELECT ON store.* TO capped_reader" });
+        // The reader on the dev store's two cores; the client adds a URL's settings to its own.
+        const url = new URL(STORE_URL);
+        url.searchParams.set("clickhouse_setting_max_threads", "2");
         const config = new ConfigService({
-          servingStore: { url: STORE_URL, username: "capped_reader", password: STORE_PASSWORD },
+          servingStore: { url: url.href, username: READER_USER, password: READER_PASSWORD },
         });
         capped = new ServingStoreClientService(new ServingStoreConfigService(config));
         cappedAdapter = new ServingStoreAdapter(capped);
@@ -2089,7 +2072,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
       afterAll(async () => {
         await capped.onModuleDestroy();
-        await admin.command({ query: "DROP USER IF EXISTS capped_reader" });
       });
 
       it("sorts and filters a page by a metadata field", async () => {

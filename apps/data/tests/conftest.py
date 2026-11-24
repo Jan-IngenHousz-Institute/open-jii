@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import types
 from collections.abc import Iterator
@@ -104,6 +105,27 @@ def fake_dp(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
 
 
 _STORE_MIGRATIONS = Path(__file__).parents[3] / "packages/database/clickhouse/migrations"
+
+
+def store_setting(name: str) -> str:
+    """A setting of the data tests' store, which only ``pnpm test`` gives them, as it starts the store."""
+    value = os.environ.get(name)
+    if value is None:
+        raise RuntimeError(
+            f'{name} is unset; run the data tests through pnpm test, or leave these out with -m "not clickhouse"'
+        )
+    return value
+
+
+@pytest.fixture(scope="session")
+def store_admin() -> tuple[str, str, str]:
+    """The address, admin and password of the data tests' own store, which ``pnpm test`` starts on
+    port 8125, apart from the backend's, by the variables packages/database/.env.test gives it."""
+    return (
+        f"http://127.0.0.1:{store_setting('CLICKHOUSE_TEST_PORT')}/",
+        store_setting("CLICKHOUSE_TEST_USER"),
+        store_setting("CLICKHOUSE_TEST_PASSWORD"),
+    )
 
 
 @pytest.fixture(scope="session")

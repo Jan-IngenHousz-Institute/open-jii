@@ -1,3 +1,4 @@
+import type { ClickHouseClient } from "@clickhouse/client";
 import { faker } from "@faker-js/faker";
 import type { INestApplication, Type } from "@nestjs/common";
 import type { ModuleMetadata } from "@nestjs/common/interfaces";
@@ -64,6 +65,7 @@ import { QuietExperimentDataOutboxWorker } from "./quiet-experiment-data-outbox.
 import { QuietExportRunReconcilerService } from "./quiet-export-run-reconciler";
 import { QuietNotificationOutboxWorker } from "./quiet-notification-outbox.worker";
 import { QuietUploadRunReconcilerService } from "./quiet-upload-run-reconciler";
+import { emptyStore, testStoreAdmin } from "./store-admin";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -95,6 +97,8 @@ export class TestHarness {
   private readonly _imports: ModuleMetadata["imports"];
   private _module: TestingModule | null = null;
   private _request: ReturnType<typeof request> | null = null;
+  private _store: ClickHouseClient | null = null;
+  private storeUsed = false;
 
   private constructor(imports: ModuleMetadata["imports"]) {
     this._imports = imports;
@@ -164,6 +168,7 @@ export class TestHarness {
       }
 
       await this.clearDatabase();
+      await this.clearStore();
       this.resetMockAdapters();
     } catch (e) {
       // Fail loudly: a swallowed cleanup error leaves the shared test DB
@@ -178,6 +183,7 @@ export class TestHarness {
    */
   public async teardown() {
     await this.clearDatabase();
+    await this.clearStore();
 
     if (this.app) {
       await this.app.close();
@@ -217,6 +223,26 @@ export class TestHarness {
 
     // Get the database instance from the module
     return this._module.get<DatabaseInstance>("DATABASE");
+  }
+
+  /**
+   * The test store the app reads as its reader, here as its admin, for specs to insert the rows the
+   * feed would.
+   */
+  public get store(): ClickHouseClient {
+    this.storeUsed = true;
+    this._store ??= testStoreAdmin();
+    return this._store;
+  }
+
+  /** Empties the store's tables once a spec has written to it, keeping the migration ledger. */
+  private async clearStore(): Promise<void> {
+    if (!this._store || !this.storeUsed) {
+      return;
+    }
+
+    await emptyStore(this._store);
+    this.storeUsed = false;
   }
 
   private async clearDatabase(): Promise<void> {

@@ -1,14 +1,12 @@
 """The serving store reload: gold's rows at its latest version go in as inserts at that version, the
 store's older rows go after them, and the store's rows are counted against gold's.
 
-The tests marked ``clickhouse`` run the reload against a real store, as described in
-test_serving_store_tables.py, and skip without one.
+The tests marked ``clickhouse`` run the reload against the test store ``pnpm test`` starts.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timezone
 
@@ -362,11 +360,8 @@ class _Admin:
 
 
 @pytest.fixture
-def store(store_migrations: list[str]) -> Iterator[_Admin]:
-    url = os.environ.get("CLICKHOUSE_TEST_URL")
-    if not url:
-        pytest.skip("CLICKHOUSE_TEST_URL is not set")
-    store = _Admin(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
+def store(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Iterator[_Admin]:
+    store = _Admin(*store_admin)
     store.run(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     store.run(f"DROP USER IF EXISTS {_RELOADER}")
     store.run(f"CREATE DATABASE {_DATABASE}")

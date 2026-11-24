@@ -1,25 +1,19 @@
 """What the feed sends for each gold table: the rows gold holds now, in the shapes the store reads.
 
-The tests marked ``clickhouse`` also send them through the writer into the migrations' tables on a
-real store of the version the store runs, and skip without one:
-
-    docker run -d --name feed-test-clickhouse -p 127.0.0.1:18123:8123 \\
-      -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \\
-      clickhouse/clickhouse-server:25.8.33.6
-    CLICKHOUSE_TEST_URL=http://127.0.0.1:18123/ CLICKHOUSE_TEST_USER=admin CLICKHOUSE_TEST_PASSWORD=local \\
-      uv run pytest -m clickhouse
+The tests marked ``clickhouse`` also send them through the writer into the migrations' tables on the
+test store ``pnpm test`` starts, of the version the store runs.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 import requests
 from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
-from openjii.serving_store.writer import StoreWriter, Written
+from openjii.serving_store.writer import StoreWriter, Written, exact_doubles, storable
 from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
@@ -376,6 +370,68 @@ def test_each_line_carries_the_time_its_store_table_is_partitioned_by(
     assert sent == {row.id: row[column] for row in gold.collect()}
 
 
+_FEED_FIXTURE = Path(__file__).parents[1] / "fixtures" / "serving_store_feed.json"
+
+# One experiment's measurements and custom metadata as gold holds them, whose lines the backend's
+# test store is seeded with, so its data page reads the rows the feed writes.
+_FEED_RAW_DATA = """
+    SELECT
+      'e1' AS experiment_id, id, 'd1' AS device_id, 'c1' AS client_id, 'MultispeQ' AS device_name,
+      'multispeq' AS device_family, '2' AS device_version, '2.345' AS device_firmware,
+      87.5D AS device_battery, 'AA:BB:CC:DD:EE:FF' AS device_address, 'Pixel 8' AS client_model,
+      'Google' AS client_manufacturer, 'android' AS client_os, '15' AS client_os_version,
+      '1.42.0' AS client_app_version, ts AS timestamp, 'Europe/Amsterdam' AS timezone,
+      array(named_struct('id', 'm1', 'name', 'Phi2', 'filename', 'phi2.js')) AS macros,
+      parse_json(questions) AS questions_data,
+      filter(array(named_struct(
+        'id', 'a1', 'rowId', CAST(id AS STRING), 'type', 'comment',
+        'content', named_struct('text', 'leaf torn', 'flagType', CAST(NULL AS STRING)),
+        'createdBy', user_id, 'createdByName', 'Ada',
+        'createdAt', TIMESTAMP'2026-10-19 10:05:00', 'updatedAt', CAST(NULL AS TIMESTAMP)
+      )), annotation -> id = 1) AS annotations,
+      user_id, 'p1' AS protocol_id, CAST(NULL AS STRING) AS workbook_run_id,
+      CAST(NULL AS STRING) AS workbook_version_id, CAST(NULL AS STRING) AS macro_context,
+      52.1D AS latitude, 5.1D AS longitude, parse_json('{"par": 120}') AS data,
+      parse_json('{"phi2": 0.7}') AS output_data, CAST(ts AS DATE) AS date,
+      ts + INTERVAL 3 SECONDS AS processed_timestamp, CAST(NULL AS TIMESTAMP) AS arrival_timestamp,
+      CAST(NULL AS BOOLEAN) AS skip_macro_processing,
+      'insert' AS _change_type, 1L AS _commit_version, TIMESTAMP'2026-10-19 13:00:00' AS _commit_timestamp
+    FROM VALUES
+      (1L, TIMESTAMP'2026-10-19 10:00:00', 'u1', '{"plot": "A1", "height": "12"}'),
+      (2L, TIMESTAMP'2026-10-19 11:00:00', 'u2', '{"plot": "B2", "height": "9"}'),
+      (3L, TIMESTAMP'2026-10-19 12:00:00', 'u1', '{"plot": "A1", "height": "15"}')
+    AS t(id, ts, user_id, questions)
+"""
+
+_FEED_SHEETS = """
+    SELECT 'e1' AS experiment_id, 's1' AS metadata_id, parse_json(
+        '{"identifierColumnId": "plot", "experimentQuestionId": "plot", "rows": ['
+        '{"_id": "r1", "plot": "A1", "soil": "clay"}, {"_id": "r2", "plot": "B2", "soil": "sand"}]}'
+      ) AS metadata, 'u1' AS created_by, TIMESTAMP'2026-10-18 08:00:00' AS created_at,
+      TIMESTAMP'2026-10-18 08:00:00' AS updated_at, 'insert' AS _change_type, 1L AS _commit_version,
+      TIMESTAMP'2026-10-18 08:00:01' AS _commit_timestamp
+"""
+
+
+def _sent(lines: DataFrame, *keys: str) -> list[dict]:
+    """The bodies the writer sends for ``lines``, in a fixed order."""
+    sent = [json.loads(exact_doubles(storable(row.line))) for row in lines.collect()]
+    return sorted(sent, key=lambda line: [str(line[key]) for key in keys])
+
+
+def test_the_feed_sends_the_lines_the_backends_test_store_is_seeded_with(spark: SparkSession) -> None:
+    rows, sheets = spark.sql(_FEED_RAW_DATA), spark.sql(_FEED_SHEETS)
+
+    sent = {
+        "measurements": _sent(MEASUREMENTS.lines(rows), "id"),
+        "payload_schemas": _sent(MEASUREMENTS.schema_lines(rows), "identifier", "payload"),
+        "metadata_sheets": _sent(METADATA_ROWS.schema_lines(sheets), "sheet_id"),
+        "metadata_rows": _sent(METADATA_ROWS.lines(sheets), "sheet_id", "identifier"),
+    }
+
+    assert sent == json.loads(_FEED_FIXTURE.read_text())
+
+
 class _Store:
     """The test's view of a real store, as its admin."""
 
@@ -395,11 +451,8 @@ class _Store:
 
 
 @pytest.fixture(scope="module")
-def store(store_migrations: list[str]) -> Iterator[_Store]:
-    url = os.environ.get("CLICKHOUSE_TEST_URL")
-    if not url:
-        pytest.skip("CLICKHOUSE_TEST_URL is not set")
-    store = _Store(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
+def store(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Iterator[_Store]:
+    store = _Store(*store_admin)
     store.run(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     store.run(f"DROP USER IF EXISTS {_WRITER}")
     store.run(f"CREATE DATABASE {_DATABASE}")
