@@ -59,21 +59,31 @@ environment. Set it there too before redeploying web, or the build uses the old 
 So rotate them together from one new API key. Store its delivery token in all three places that hold
 it: `contentful` `CONTENTFUL_ACCESS_TOKEN`, `status-contentful` `CONTENTFUL_ACCESS_TOKEN`, and the
 `CONTENTFUL_ACCESS_TOKEN` GitHub secret the web build reads. Store its preview token as `contentful`
-`CONTENTFUL_PREVIEW_ACCESS_TOKEN`. Redeploy backend and web, then check that the deployed web app
-reads with the new token:
+`CONTENTFUL_PREVIEW_ACCESS_TOKEN`. Redeploy backend and web, then check the new tokens:
 
-- Open a CMS page in German, such as `/de-DE/about`, right after the redeploy. Only English pages
-  are built ahead, with the build's token, and published content is then cached for an hour, so an
-  English page renders even when the stored token is wrong. The first German visit reads Contentful
-  with the stored token.
+- Read Contentful with each stored delivery token, since a page that renders proves nothing: pages
+  are built ahead with the build's token and published content is cached for an hour. Run this for
+  `openjii-contentful-secrets-<env>` and again for `openjii-status-contentful-<env>`. It prints
+  `200` when the token reads published content and `401` when it does not, and never the token.
+
+  ```sh
+  SECRET=$(aws secretsmanager get-secret-value --profile openjii-<env> --region eu-central-1 \
+    --secret-id openjii-contentful-secrets-<env> --query SecretString --output text)
+  curl -s -o /dev/null -w '%{http_code}\n' \
+    -H "Authorization: Bearer $(jq -r .CONTENTFUL_ACCESS_TOKEN <<<"$SECRET")" \
+    "https://cdn.contentful.com/spaces/$(jq -r .CONTENTFUL_SPACE_ID <<<"$SECRET")/environments/master/entries?limit=1"
+  unset SECRET
+  ```
+
 - Open an editor's draft preview, which reads with the preview token and is never cached.
 
 **Before deleting the old API key**, find everything else that uses it. Dev and prod read the same
 Contentful space, and the mobile app builds a delivery token into every release
 (`EXPO_PUBLIC_CONTENTFUL_ACCESS_TOKEN`), which installed versions keep using for alerts and the
 force-update check. Contentful, Settings, API keys lists each key by name. If prod still uses the old
-key, rotate it to the new key first. If a mobile release carries the old key, leave it until no
-supported version does, or give mobile a key of its own. Only then delete the old key. Otherwise the
+key, rotate it to the new key first. An installed app keeps the token its release was built with,
+so if a mobile release carries the old key, give mobile a key of its own in the next release and
+keep the old key until no supported version carries it. Only then delete the old key. Otherwise the
 status publisher, the next web build, the previews or installed apps keep using a revoked token.
 
 **The status publisher** keeps its Contentful key until a read fails. After a failure it waits five
