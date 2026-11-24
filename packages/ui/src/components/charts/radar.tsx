@@ -14,6 +14,7 @@ import {
 import { PlotlyChart } from "./plotly-chart";
 import {
   fitCompactRadarTicks,
+  formatRadialTick,
   linearTicks,
   measurePolarLabel,
   polarDiameter,
@@ -366,6 +367,7 @@ export function RadarPlot({
     });
     const compactDiameter = polarDiameter(outer.layout, viewportWidth, compactHeight);
     const ticks = radialTicks.split(",").map(Number);
+    const axisRange = range(compactDiameter);
     const compactAxis =
       gridShape === "circular" &&
       angularAxisVisible &&
@@ -380,7 +382,7 @@ export function RadarPlot({
               text,
               angle: (index * 360) / ticktext.length,
             })),
-            range: range(compactDiameter),
+            range: axisRange,
             ticks,
             measure: measurePolarLabel,
           })
@@ -400,7 +402,7 @@ export function RadarPlot({
             tickangle: compactAxis.angle,
             tickmode: "array",
             tickvals: compactAxis.ticks,
-            ticktext: compactAxis.ticks.map(String),
+            ticktext: compactAxis.ticks.map((tick) => formatRadialTick(tick, axisRange)),
           },
           angularaxis: { ...polar.angularaxis, ticktext, tickfont: { size: headingFont } },
         },

@@ -198,6 +198,37 @@ export function linearTicks(min: number, max: number, count: number) {
   return Array.from({ length }, (_, index) => Number((first + index * step).toPrecision(12)));
 }
 
+const SI_PREFIXES: Record<number, string> = {
+  [-15]: "f",
+  [-12]: "p",
+  [-9]: "n",
+  [-6]: "μ",
+  [-3]: "m",
+  3: "k",
+  6: "M",
+  9: "B",
+  12: "T",
+};
+
+/** Plotly's default `exponentformat: "B"` text for a linear tick on this range. */
+export function formatRadialTick(value: number, range: readonly [number, number]) {
+  const maxEnd = Math.max(Math.abs(range[0]), Math.abs(range[1]));
+  const rangeExponent = Math.floor(Math.log10(maxEnd) + 0.01);
+  const exponent =
+    Number.isFinite(rangeExponent) && Math.abs(rangeExponent) > 3
+      ? 3 * Math.round((rangeExponent - 1) / 3)
+      : 0;
+  const prefix = SI_PREFIXES[exponent];
+  const mantissa = prefix === undefined || value === 0 ? value : value / 10 ** exponent;
+  const text = String(Number(mantissa.toPrecision(12)));
+  return (mantissa < 0 ? `−${text.slice(1)}` : text) + (value === 0 ? "" : (prefix ?? ""));
+}
+
+export function windRadialRange(peak: number) {
+  // Stacked barpolar pins the minimum at zero and pads the upper extent by 5% of the radius.
+  return [0, Math.max(1, peak / 0.95)] as const;
+}
+
 function radialInk(
   ticks: number[],
   size: number,
@@ -209,7 +240,7 @@ function radialInk(
   return ticks.map((value) => {
     const x = (radius * (value - range[0])) / (range[1] - range[0]);
     return project(
-      measure(String(value), size),
+      measure(formatRadialTick(value, range), size),
       x,
       5.5 + size * 1.2,
       rotate ? 0 : 0.5,
@@ -244,8 +275,7 @@ export function fitWindTicks({
   measure: MeasureLabel;
   compact: boolean;
 }) {
-  // Stacked barpolar pins the minimum at zero and pads the upper extent by 5% of the radius.
-  const range = [0, Math.max(1, peak / 0.95)] as const;
+  const range = windRadialRange(peak);
   const natural = linearTicks(...range, 5);
   const radius = diameter / 2;
   const angleBoxes = angularInk(labels, size, radius, measure);
@@ -326,7 +356,7 @@ export function fitCompactRadarTicks({
     const boxes = ticks.map((tick) => {
       const x = (radius * (tick - range[0])) / (range[1] - range[0]) + xOffset;
       return project(
-        measure(String(tick), tickSize),
+        measure(formatRadialTick(tick, range), tickSize),
         x * cos + y * sin,
         -x * sin + y * cos + tickSize / 2,
         anchor,

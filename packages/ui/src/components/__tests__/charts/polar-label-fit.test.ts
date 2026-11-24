@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 import {
   fitCompactRadarTicks,
   fitWindTicks,
+  formatRadialTick,
   linearTicks,
   radarLabelsCollide,
   usePolarFontRevision,
@@ -79,6 +80,38 @@ it("keeps the radial ticks when only the degree labels overlap", () => {
   });
   expect(fit.step).toBeGreaterThan(1);
   expect(fit.ticks).toEqual(linearTicks(0, 1 / 0.95, 5));
+});
+
+it("formats radial ticks with Plotly's default SI suffixes", () => {
+  expect(formatRadialTick(2000, [0, 2150])).toBe("2000");
+  expect([0, 2500, 5000, 20000].map((tick) => formatRadialTick(tick, [0, 21053]))).toEqual([
+    "0",
+    "2.5k",
+    "5k",
+    "20k",
+  ]);
+  expect(formatRadialTick(-5000, [-20000, 20000])).toBe("\u22125k");
+  expect(formatRadialTick(1e6, [0, 2e6])).toBe("1M");
+  expect(formatRadialTick(2e9, [0, 3e9])).toBe("2B");
+  expect(formatRadialTick(0.00002, [0, 0.00005])).toBe("20μ");
+});
+
+it("measures a wind rose peak of 20,000 as the ticks Plotly draws", () => {
+  const measured: string[] = [];
+  const recording: MeasureLabel = (text, size) => {
+    measured.push(text);
+    return measure(text, size);
+  };
+  fitWindTicks({
+    diameter: 137,
+    peak: 20000,
+    size: 11,
+    labels: compass,
+    measure: recording,
+    compact: false,
+  });
+  expect(measured).toEqual(expect.arrayContaining(["0", "5k", "10k", "15k", "20k"]));
+  expect(measured).not.toContain("20000");
 });
 
 it("predicts Plotly's linear ticks around decade and half-decade intervals", () => {

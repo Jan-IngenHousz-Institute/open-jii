@@ -8,10 +8,12 @@ import { AUTOSIZE_TOLERANCE, MIN_OUTER_PLOT_HEIGHT, withOuterLabels } from "./ou
 import { PlotlyChart } from "./plotly-chart";
 import {
   fitWindTicks,
+  formatRadialTick,
   measurePolarLabel,
   polarDiameter,
   polarFontFamily,
   usePolarFontRevision,
+  windRadialRange,
 } from "./polar-label-fit";
 import type { BaseChartProps, BaseSeries, PlotlyChartConfig } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -308,12 +310,14 @@ export function WindRose({
               ...polar.radialaxis,
               tickmode: "array",
               tickvals: radial.split(",").map(Number),
-              ticktext: radial.split(","),
+              ticktext: radial
+                .split(",")
+                .map((value) => formatRadialTick(Number(value), windRadialRange(peak))),
             }
           : polar.radialaxis,
       },
     };
-  }, [figure, fit.step, radial, labels, tickText, directionTicks]);
+  }, [figure, fit.step, radial, labels, tickText, directionTicks, peak]);
   // Commit the measured dimensions with their ticks. Plotly's autosize would draw them separately.
   const layout = useMemo(
     () =>
