@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import type { ReactNode } from "react";
 import { env } from "~/env";
+import { inter } from "~/lib/fonts/families";
 import { QueryProvider } from "~/providers/query-provider";
 import { TranslationsProvider } from "~/providers/translations-provider";
 
@@ -11,14 +11,6 @@ import initTranslations, { loadNamespaceBundles } from "@repo/i18n/server";
 import { ThemeProvider } from "@repo/ui/components/theme";
 
 import "./globals.css";
-
-// The font variable has to sit on <html> so the `--font-sans` declaration in theme.css `:root`
-// can resolve it.
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-inter",
-});
 
 const PAGE_NAMESPACES: Namespace[] = ["status"];
 

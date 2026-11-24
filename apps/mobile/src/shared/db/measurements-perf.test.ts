@@ -81,6 +81,10 @@ vi.mock("uuid", () => ({
 // 5000, and increase HOOK_TIMEOUT accordingly.
 const N_ROWS = 100;
 const HOOK_TIMEOUT = 30_000;
+// Scenario H asserts nothing and seeds eight databases, which can outlast HOOK_TIMEOUT on a
+// loaded runner, so its scale curve runs on request:
+//   MEASUREMENTS_PERF_SCALE=1 pnpm --filter mobile exec vitest run src/shared/db/measurements-perf.test.ts
+const RUN_SCALE_CURVE = process.env.MEASUREMENTS_PERF_SCALE === "1";
 
 vi.setConfig({ testTimeout: HOOK_TIMEOUT });
 const EXPERIMENTS = [
@@ -806,7 +810,7 @@ describe("Scenario G — FULL PIPELINE: current vs proposed", () => {
 // Scenario H — SCALE: full pipeline at 100 / 500 / 1k / 2k rows
 // ===========================================================================
 
-describe("Scenario H — SCALE: full pipeline @ multiple row counts", () => {
+describe.runIf(RUN_SCALE_CURVE)("Scenario H — SCALE: full pipeline @ multiple row counts", () => {
   const sizes = [25, 50, 100, 200];
   const dbs: {
     size: number;
