@@ -10,6 +10,8 @@ import { renderCalibrationRunApprovedNotification } from "../render/calibration-
 import { renderCalibrationRunAwaitingApprovalNotification } from "../render/calibration-run-awaiting-approval-notification";
 import { renderCalibrationRunRejectedNotification } from "../render/calibration-run-rejected-notification";
 import { renderConfirmEmailOtp } from "../render/confirm-email-otp";
+import { renderDataExportFailedNotification } from "../render/data-export-failed-notification";
+import { renderDataExportReadyNotification } from "../render/data-export-ready-notification";
 import { renderDataUploadCompletedNotification } from "../render/data-upload-completed-notification";
 import { renderDataUploadFailedNotification } from "../render/data-upload-failed-notification";
 import { renderDataUploadPartlyCompletedNotification } from "../render/data-upload-partly-completed-notification";
@@ -233,6 +235,27 @@ async function main(): Promise<void> {
       baseUrl,
       experimentName: "Drought trial",
       tableName: "leaf_traits",
+      dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
+    }),
+  );
+
+  write(
+    "data-export-ready",
+    await renderDataExportReadyNotification({
+      host,
+      baseUrl,
+      experimentName: "Drought trial",
+      format: "CSV",
+      dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
+    }),
+  );
+
+  write(
+    "data-export-failed",
+    await renderDataExportFailedNotification({
+      host,
+      baseUrl,
+      experimentName: "Drought trial",
       dataUrl: `${baseUrl}/en-US/platform/experiments/123/data`,
     }),
   );
