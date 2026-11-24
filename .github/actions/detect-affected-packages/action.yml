@@ -32,6 +32,11 @@ runs:
 
         # The dry run reads only the workspace and the lockfile, so the pinned turbo needs no install.
         TURBO_VERSION=$(jq -r '.devDependencies.turbo' package.json)
+        # A range would let detection and the Docker images run a turbo the lockfile never chose.
+        if ! [[ "$TURBO_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error file=package.json::Root package.json must pin turbo to an exact version, not '$TURBO_VERSION'."
+          exit 1
+        fi
         npx --yes "turbo@$TURBO_VERSION" run build --dry-run=json --filter=...[$TURBO_REF_FILTER] --output-logs=none > affected.json
 
         # Extract project names from packages array and filter out "//" entry

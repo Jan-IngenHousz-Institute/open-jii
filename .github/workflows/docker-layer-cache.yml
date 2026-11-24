@@ -15,6 +15,9 @@ on:
       - turbo.json
       - .github/actions/docker-build-check/**
       - .github/workflows/docker-layer-cache.yml
+  # The images key `apk upgrade` on the ISO week, so warm the new week before pull requests build.
+  schedule:
+    - cron: "15 0 * * 1"
 
 permissions:
   contents: read
