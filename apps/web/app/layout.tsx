@@ -1,7 +1,6 @@
 import { ListDepartureProvider } from "@/components/navigation/list-departure/list-departure";
 import { INDEXABLE, SITE_URL } from "@/lib/site-url";
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@repo/ui/components/theme";
@@ -9,22 +8,8 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { CookieBanner } from "../components/cookie-banner";
 import { PostHogProvider } from "../providers/PostHogProvider";
+import { inter, jetbrainsMono } from "./fonts/families";
 import "./globals.css";
-
-// The font variables have to sit on <html> so the `--font-sans`/`--font-mono`
-// declarations in theme.css `:root` can resolve them.
-// Served from the repository so a build never depends on reaching Google Fonts.
-const inter = localFont({
-  src: "./fonts/inter-latin-wght-normal.woff2",
-  weight: "100 900",
-  variable: "--font-inter",
-});
-
-const jetbrainsMono = localFont({
-  src: "./fonts/jetbrains-mono-latin-wght-normal.woff2",
-  weight: "100 800",
-  variable: "--font-jetbrains-mono",
-});
 
 const title = "openJII - Open-science platform";
 const description =

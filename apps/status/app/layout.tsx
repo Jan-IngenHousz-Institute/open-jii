@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import { env } from "~/env";
 import { QueryProvider } from "~/providers/query-provider";
@@ -10,16 +9,8 @@ import type { Namespace } from "@repo/i18n/config";
 import initTranslations, { loadNamespaceBundles } from "@repo/i18n/server";
 import { ThemeProvider } from "@repo/ui/components/theme";
 
+import { inter } from "./fonts/families";
 import "./globals.css";
-
-// The font variable has to sit on <html> so the `--font-sans` declaration in theme.css `:root`
-// can resolve it.
-// Served from the repository so a build never depends on reaching Google Fonts.
-const inter = localFont({
-  src: "./fonts/inter-latin-wght-normal.woff2",
-  weight: "100 900",
-  variable: "--font-inter",
-});
 
 const PAGE_NAMESPACES: Namespace[] = ["status"];
 
