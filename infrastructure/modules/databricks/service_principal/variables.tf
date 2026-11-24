@@ -15,8 +15,3 @@ variable "group_names" {
   default     = []
 }
 
-variable "create_secret" {
-  description = "Whether to create a secret for the service principal."
-  type        = bool
-  default     = false
-}

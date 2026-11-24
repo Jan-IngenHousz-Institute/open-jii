@@ -14,12 +14,6 @@ resource "databricks_service_principal" "this" {
   active       = var.active
 }
 
-resource "databricks_service_principal_secret" "this" {
-  count                = var.create_secret ? 1 : 0
-  provider             = databricks.mws
-  service_principal_id = databricks_service_principal.this.id
-}
-
 data "databricks_group" "this" {
   for_each     = toset(var.group_names)
   provider     = databricks.mws

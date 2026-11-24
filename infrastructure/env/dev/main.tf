@@ -420,8 +420,7 @@ module "databricks_workspace" {
 module "node_service_principal" {
   source = "../../modules/databricks/service_principal"
 
-  display_name  = "node-service-principal-${var.environment}"
-  create_secret = false
+  display_name = "node-service-principal-${var.environment}"
 
   providers = {
     databricks.mws = databricks.mws
@@ -431,8 +430,7 @@ module "node_service_principal" {
 module "github_cicd_service_principal" {
   source = "../../modules/databricks/service_principal"
 
-  display_name  = "github-cicd-service-principal-${var.environment}"
-  create_secret = false
+  display_name = "github-cicd-service-principal-${var.environment}"
 
   providers = {
     databricks.mws = databricks.mws
