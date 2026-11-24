@@ -79,6 +79,7 @@ const overviewTableFeatures = tableFeatures({ rowSortingFeature });
 
 interface OverviewColumnMeta {
   className?: string;
+  header: ReactNode;
   spacer: boolean;
   label?: string;
 }
@@ -123,21 +124,22 @@ export function OverviewTable<T extends RowData, F extends string = string>({
     [sorting?.sort, sorting?.activityUnavailable],
   );
   const loading = isLoading === true;
+  // Headers and cells are rendered by calling them, never mounted through FlexRender: callers
+  // build `columns` on every render, and a new component type per render remounts every cell.
   const tableColumns = useMemo<ColumnDef<typeof overviewTableFeatures, T>[]>(
     () =>
       columns.map((column, index) => ({
         id: column.sortId ?? `column-${index}`,
         accessorFn: column.sortId ? () => null : undefined,
         enableSorting: Boolean(sorting && column.sortId),
-        header: () => column.header,
-        cell: ({ row }) => column.cell(row.original, getRowHref(row.original)),
         meta: {
           className: column.className,
+          header: column.header,
           spacer: column.header == null,
           label: typeof column.header === "string" ? column.header : undefined,
         } satisfies OverviewColumnMeta,
       })),
-    [columns, getRowHref, sorting],
+    [columns, sorting],
   );
   const table = useTable({
     features: overviewTableFeatures,
@@ -227,7 +229,7 @@ export function OverviewTable<T extends RowData, F extends string = string>({
                               className="inline-flex cursor-not-allowed items-center gap-1 text-left uppercase opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2"
                               aria-label={`${meta.label ?? header.column.id}: ${unavailableLabel}`}
                             >
-                              <table.FlexRender header={header} />
+                              {meta.header}
                               <ArrowUpDown aria-hidden className="size-3.5 opacity-50" />
                             </button>
                           </TooltipTrigger>
@@ -242,7 +244,7 @@ export function OverviewTable<T extends RowData, F extends string = string>({
                         // Sortable column ids are their `sortId`, so the id is one of the fields.
                         onClick={(event) => sorting.onToggle(header.column.id as F, event.shiftKey)}
                       >
-                        <table.FlexRender header={header} />
+                        {meta.header}
                         {header.column.getIsSorted() === "asc" ? (
                           <ArrowUp aria-hidden className="text-status-active-foreground size-3.5" />
                         ) : header.column.getIsSorted() === "desc" ? (
@@ -256,7 +258,7 @@ export function OverviewTable<T extends RowData, F extends string = string>({
                         {header.column.getSortIndex() > 0 ? <span aria-hidden>2</span> : null}
                       </button>
                     ) : (
-                      <table.FlexRender header={header} />
+                      meta.header
                     )}
                   </TableHead>
                 );
@@ -289,17 +291,14 @@ export function OverviewTable<T extends RowData, F extends string = string>({
                     )}
                     onClick={() => router.push(href)}
                   >
-                    {row.getAllCells().map((cell) => {
-                      const meta = cell.column.columnDef.meta as OverviewColumnMeta;
-                      return (
-                        <TableCell
-                          key={cell.id}
-                          className={cn("min-w-0 overflow-hidden px-6 py-3", meta.className)}
-                        >
-                          <table.FlexRender cell={cell} />
-                        </TableCell>
-                      );
-                    })}
+                    {columns.map((column, columnIndex) => (
+                      <TableCell
+                        key={columnIndex}
+                        className={cn("min-w-0 overflow-hidden px-6 py-3", column.className)}
+                      >
+                        {column.cell(row.original, href)}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 );
               })}
