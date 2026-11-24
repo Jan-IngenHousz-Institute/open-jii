@@ -30,7 +30,8 @@ someone who could read it leaves, or when it may have leaked.
    - prod: start the PROD Release Workflow from the current `release/*` branch with the app in
      `deploy_app` and `deploy_infrastructure` off. It passes the `prod-approval` gate like any release.
 4. **Check** the restarted app works with the new value: it now reads nothing else, so this is the
-   proof that the new value is right. For Contentful, a page with CMS content renders.
+   proof that the new value is right. For Contentful, see below: a page that renders proves little,
+   because cached content keeps it rendering after a bad token.
 5. **Revoke the old value** at its source.
 
 ## Secrets and what reads them
@@ -58,13 +59,30 @@ environment. Set it there too before redeploying web, or the build uses the old 
 So rotate them together from one new API key. Store its delivery token in all three places that hold
 it: `contentful` `CONTENTFUL_ACCESS_TOKEN`, `status-contentful` `CONTENTFUL_ACCESS_TOKEN`, and the
 `CONTENTFUL_ACCESS_TOKEN` GitHub secret the web build reads. Store its preview token as `contentful`
-`CONTENTFUL_PREVIEW_ACCESS_TOKEN`. Redeploy backend and web, check that a published page renders and
-that an editor's draft preview opens, and only then delete the old API key. Otherwise the status
-publisher, the next web build or the previews keep using a revoked token.
+`CONTENTFUL_PREVIEW_ACCESS_TOKEN`. Redeploy backend and web, then check that the deployed web app
+reads with the new token:
+
+- Open a CMS page in German, such as `/de-DE/about`, right after the redeploy. Only English pages
+  are built ahead, with the build's token, and published content is then cached for an hour, so an
+  English page renders even when the stored token is wrong. The first German visit reads Contentful
+  with the stored token.
+- Open an editor's draft preview, which reads with the preview token and is never cached.
+
+**Before deleting the old API key**, find everything else that uses it. Dev and prod read the same
+Contentful space, and the mobile app builds a delivery token into every release
+(`EXPO_PUBLIC_CONTENTFUL_ACCESS_TOKEN`), which installed versions keep using for alerts and the
+force-update check. Contentful, Settings, API keys lists each key by name. If prod still uses the old
+key, rotate it to the new key first. If a mobile release carries the old key, leave it until no
+supported version does, or give mobile a key of its own. Only then delete the old key. Otherwise the
+status publisher, the next web build, the previews or installed apps keep using a revoked token.
 
 **The status publisher** keeps its Contentful key until a read fails. After a failure it waits five
 minutes before reading Contentful again, and that read takes the secret afresh. Until then it keeps
-publishing the incidents it read last, so check the status page about ten minutes after revoking.
+publishing the incidents it read last, so the status page looks fine either way. About ten minutes
+after deleting the old key, check that its last successful read moved past that time:
+`aws s3 cp s3://open-jii-status-state-<env>/status-feed.json - | jq -r .content.fetchedAt`. A time
+before the deletion means it cannot read with the new token; the log group
+`/aws/lambda/<env>-status-publisher` says why.
 
 **The preview secret** is not an API key. It is the `x-contentful-preview-secret` value in the preview
 URLs of Contentful's content model, which the web app checks (`apps/web/app/api/enable-draft/route.ts`).
