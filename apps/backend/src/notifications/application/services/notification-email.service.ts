@@ -218,6 +218,25 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         unsubscribe,
       }),
   ),
+  data_export_completed: aboutResource(
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
+      email.sendDataExportReadyNotification({
+        experimentId,
+        experimentName: params.experimentName,
+        format: params.format,
+        email: recipientEmail,
+        unsubscribe,
+      }),
+  ),
+  data_export_failed: aboutResource(
+    (experimentId, email, { params, recipientEmail, unsubscribe }) =>
+      email.sendDataExportFailedNotification({
+        experimentId,
+        experimentName: params.experimentName,
+        email: recipientEmail,
+        unsubscribe,
+      }),
+  ),
   data_upload_completed: aboutResource(
     (experimentId, email, { params, recipientEmail, unsubscribe }) =>
       params.skippedCount && params.skippedFiles

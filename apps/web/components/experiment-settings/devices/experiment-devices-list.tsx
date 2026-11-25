@@ -7,9 +7,10 @@ import { ListFilterBar } from "@/components/list-filter-bar";
 import { ListPagination } from "@/components/list-pagination";
 import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { ArrowDown, ArrowUp, ArrowUpDown, Layers, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CircleDot, Layers, Lock } from "lucide-react";
 
 import type { ExperimentDeviceEntry } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+import type { IotDeviceSort } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
@@ -21,7 +22,7 @@ import type { ExperimentDevicesListModel } from "./use-experiment-devices-list";
 interface ExperimentDevicesListProps {
   list: ExperimentDevicesListModel;
   selectedClientId: string | null;
-  onSelect: (clientId: string) => void;
+  onSelect: (entry: ExperimentDeviceEntry) => void;
 }
 
 /** Rows compose `DeviceIdentity`: `DeviceRow`'s `selection` prop is multi-select grammar. */
@@ -34,7 +35,7 @@ export function ExperimentDevicesList({
   const { t: tCommon } = useTranslation("common");
   const pageRows = list.data?.items ?? [];
 
-  function renderSortHeader(field: "name" | "family", label: string) {
+  function renderSortHeader(field: IotDeviceSort[number]["field"], label: string) {
     const index = list.sort.findIndex((item) => item.field === field);
     const direction = list.sort.find((item) => item.field === field)?.direction;
     const Icon = direction === "asc" ? ArrowUp : direction === "desc" ? ArrowDown : ArrowUpDown;
@@ -67,7 +68,7 @@ export function ExperimentDevicesList({
           type="button"
           aria-current={isSelected ? "true" : undefined}
           onClick={() => {
-            onSelect(entry.clientId);
+            onSelect(entry);
           }}
           className={cn(
             "hover:bg-muted/50 relative flex w-full min-w-0 flex-col gap-1.5 px-3 py-2.5 text-left transition-colors",
@@ -139,6 +140,19 @@ export function ExperimentDevicesList({
           }
           filters={[
             {
+              key: "status",
+              label: t("iot.devices.columns.status"),
+              icon: CircleDot,
+              options: list.filterShape.status.options.map((value) => ({
+                value,
+                label: t(`iot.devices.status.${value}`),
+                count: list.response?.overview.pagination?.statusCounts[value],
+              })),
+              selected: list.filters.status,
+              onChange: (values) =>
+                list.setFilter("status", list.filterShape.status.array().parse(values)),
+            },
+            {
               key: "deviceFamily",
               label: t("iot.devices.columns.family"),
               icon: Layers,
@@ -157,9 +171,11 @@ export function ExperimentDevicesList({
           }
         />
       </div>
-      <div className="border-border text-muted-foreground flex justify-between gap-2 border-t px-3 py-2">
+      <div className="border-border text-muted-foreground flex flex-wrap justify-between gap-2 border-t px-3 py-2">
         {renderSortHeader("name", t("iot.devices.columns.name"))}
+        {renderSortHeader("status", t("iot.devices.columns.status"))}
         {renderSortHeader("family", t("iot.devices.columns.family"))}
+        {renderSortHeader("registered", t("iot.devices.columns.created"))}
       </div>
 
       {pageRows.length === 0 ? (

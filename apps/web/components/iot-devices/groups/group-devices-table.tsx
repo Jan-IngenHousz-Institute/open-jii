@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { AlertTriangle } from "lucide-react";
 
+import { isMemberSilent } from "@repo/api/domains/iot/device-group/group-health";
 import type {
   IotDeviceGroupMemberHealth,
   IotDeviceGroupMonitoring,
@@ -16,7 +17,6 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
-import { isMemberSilent } from "./group-health";
 import type { GroupDevicesList } from "./use-group-devices-list";
 
 interface GroupDevicesTableProps {

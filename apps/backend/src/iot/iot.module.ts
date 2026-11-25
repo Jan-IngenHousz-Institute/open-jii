@@ -74,12 +74,17 @@ import { UpdateIotDeviceGroupUseCase } from "./application/use-cases/update-iot-
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "./core/ports/databricks.port";
+import { EXPERIMENT_DEVICE_WAREHOUSE_CACHE } from "./core/ports/experiment-device-warehouse-cache.port";
+import type { ExperimentDeviceWarehouseFacts } from "./core/ports/experiment-device-warehouse-cache.port";
 import { GITHUB_PORT } from "./core/ports/github.port";
+import { GROUP_MONITORING_CACHE } from "./core/ports/group-monitoring-cache.port";
 import { ExperimentDeviceRepository } from "./core/repositories/experiment-device.repository";
 import { IotCalibrationDefinitionRepository } from "./core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "./core/repositories/iot-calibration-run.repository";
 import { IotDeviceGroupRepository } from "./core/repositories/iot-device-group.repository";
 import { IotDeviceRepository } from "./core/repositories/iot-device.repository";
+import { DeviceSnapshotCache } from "./infrastructure/device-snapshot-cache";
+import { GroupMonitoringCacheAdapter } from "./infrastructure/group-monitoring-cache.adapter";
 import { DeviceRegistryWebhookController } from "./presentation/device-registry-webhook.controller";
 import { ExperimentDeviceController } from "./presentation/experiment-device.controller";
 import { IotCalibrationRunController } from "./presentation/iot-calibration-run.controller";
@@ -186,6 +191,17 @@ import { IotController } from "./presentation/iot.controller";
     {
       provide: GITHUB_PORT,
       useExisting: GithubAdapter,
+    },
+    {
+      provide: GROUP_MONITORING_CACHE,
+      useClass: GroupMonitoringCacheAdapter,
+    },
+    {
+      provide: EXPERIMENT_DEVICE_WAREHOUSE_CACHE,
+      useFactory: () =>
+        new DeviceSnapshotCache<ExperimentDeviceWarehouseFacts>(
+          ({ publishers, stats }) => publishers !== null && stats !== null,
+        ),
     },
     {
       provide: IOT_DATABRICKS_PORT,

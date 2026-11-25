@@ -4,11 +4,13 @@ import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Fingerprint, Laptop, Loader2, Monitor, Smartphone, Usb } from "lucide-react";
 import { SettingsCard } from "~/components/shared/settings-card";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
+import { useSignInMethods } from "~/hooks/auth/useSignInMethods/useSignInMethods";
 import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
 import { useLocale } from "~/hooks/useLocale";
 import { getAuthenticatorName } from "~/lib/authenticator-names";
 import { formatShortDate } from "~/util/date";
 
+import { canRemoveSignInMethod } from "@repo/auth/sign-in-methods";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -32,6 +34,9 @@ export function PasskeysCard() {
   const locale = useLocale();
   const { data: passkeys, isError, isFetching, isLoading, refetch } = usePasskeys();
   const webAuthnSupported = useWebAuthnSupport();
+  const methods = useSignInMethods();
+  // Deleting any one passkey leaves the same ways in, so the rule answers for every row.
+  const lastWayIn = methods ? !canRemoveSignInMethod(methods, { kind: "passkey" }) : false;
 
   return (
     <SettingsCard
@@ -75,24 +80,35 @@ export function PasskeysCard() {
               const displayName = passkey.name ?? provider ?? t("passkeys.unnamed");
               const Icon = providerIcon(provider);
               return (
-                <div key={passkey.id} className="flex items-center gap-4 px-4 py-3.5">
-                  <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
-                    <Icon className="h-5 w-5" />
+                <div key={passkey.id} className="px-4 py-3.5">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{displayName}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {provider && provider !== displayName ? `${provider} · ` : ""}
+                        {t("passkeys.added")} {formatShortDate(passkey.createdAt, locale)}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
+                      {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
+                    </Badge>
+                    <div className="flex items-center">
+                      <RenamePasskeyDialog passkeyId={passkey.id} currentName={displayName} />
+                      <DeletePasskeyDialog
+                        passkeyId={passkey.id}
+                        passkeyName={displayName}
+                        disabled={lastWayIn}
+                      />
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{displayName}</p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {provider && provider !== displayName ? `${provider} · ` : ""}
-                      {t("passkeys.added")} {formatShortDate(passkey.createdAt, locale)}
+                  {lastWayIn && (
+                    <p className="text-muted-foreground mt-2.5 pl-14 text-xs">
+                      {t("passkeys.onlyWayIn")}
                     </p>
-                  </div>
-                  <Badge variant="secondary">
-                    {passkey.backedUp ? t("passkeys.synced") : t("passkeys.deviceBound")}
-                  </Badge>
-                  <div className="flex items-center">
-                    <RenamePasskeyDialog passkeyId={passkey.id} currentName={displayName} />
-                    <DeletePasskeyDialog passkeyId={passkey.id} passkeyName={displayName} />
-                  </div>
+                  )}
                 </div>
               );
             })}

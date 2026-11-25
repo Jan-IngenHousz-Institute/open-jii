@@ -6,6 +6,9 @@ import { allResourceCacheFamilies } from "@/hooks/sharing/resource-cache-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { revalidateAuth } from "~/app/actions/revalidate";
+import { ACCOUNT_INFO_KEY } from "~/hooks/auth/useAccountInfo/useAccountInfo";
+import { LINKED_ACCOUNTS_KEY } from "~/hooks/auth/useLinkedAccounts/useLinkedAccounts";
+import { PASSKEYS_KEY } from "~/hooks/auth/usePasskeys/usePasskeys";
 
 import { authClient } from "@repo/auth/client";
 
@@ -39,6 +42,11 @@ export function useSignOut() {
         // The signed-out user's own pending invitations name the organizations that
         // asked for them; invalidating the `auth` namespace would leave them readable.
         myOrganizationInvitationsFamily(),
+        // The signed-out person's ways to sign in: their GitHub and ORCID connections, the
+        // profiles read for them, and their passkeys.
+        LINKED_ACCOUNTS_KEY,
+        ACCOUNT_INFO_KEY,
+        PASSKEYS_KEY,
         ...allResourceCacheFamilies(),
       ];
       for (const queryKey of authorizationSensitiveKeys) {

@@ -193,7 +193,7 @@ minute may arrive in either order.
 
 ### Connect a channel
 
-This is a one-time job for whoever administers Slack and the repository's GitHub secrets. Each
+This is a one-time job for whoever administers Slack and the environment's AWS account. Each
 environment posts to the webhook it is given, so use a separate channel for dev, or leave dev
 without one. Messages from any environment other than production name it in their footer.
 
@@ -201,14 +201,13 @@ without one. Messages from any environment other than production name it in thei
 2. In the Slack app that holds the repository's webhooks, or a new one, switch on Incoming Webhooks
    and choose Add New Webhook to Workspace. Pick the channel and copy the address that Slack shows.
    Treat it like a password, since anyone who has it can post to the channel.
-3. Save the address as the GitHub secret `STATUS_SLACK_WEBHOOK_URL` for each environment that should
-   post. For production, save it in the `prod-plan` GitHub environment as well, which is the one
-   `pr.yml` uses for production plans. Without it, every pull request plan reads an empty address
-   and shows the Slack resources being destroyed. Do not reuse `SLACK_WEBHOOK_URL`, which belongs to
-   the monitoring channel.
-4. Run the tofu workflow for the environment. While the secret is empty or unset, the apply creates
-   nothing, so this is also how the feed is switched off. With the secret set, it stores the address
-   in Secrets Manager as `openjii-status-slack-<env>` and creates the function that posts.
+3. In a pull request, set `status_slack_enabled = true` in `infrastructure/env/<env>/main.tf`. Once
+   it is applied, the environment has an empty `openjii-status-slack-<env>` secret and the function
+   that posts. Setting it back to `false` is how the feed is switched off. Do not reuse
+   `SLACK_WEBHOOK_URL`, which belongs to the monitoring channel.
+4. Right after the apply, store the address with
+   `pbpaste | pnpm secrets:set <env> status-slack --aws-profile <your profile>`. OpenTofu never holds
+   it. Until it is set, every message fails and the `status-slack-errors` alert fires.
 5. Post a test incident in dev as described under One-time setup, check that the channel gets it,
    then resolve it.
 

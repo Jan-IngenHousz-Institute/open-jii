@@ -202,7 +202,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   private async contributorOrder(
     params: ExperimentQueryParams,
     idColumns: IdColumns,
-  ): Promise<Result<string[] | undefined>> {
+  ): Promise<Result<string[][] | undefined>> {
     if (params.ordering === undefined || params.ordering.mode !== undefined) {
       return success(undefined);
     }
@@ -219,19 +219,47 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     const byName = [...contributors.value.values()].sort(
       (a, b) => this.compareText(a.name, b.name) || this.compareText(a.id, b.id),
     );
-    return success(byName.map(({ id }) => id));
+    return success(
+      this.tiedGroups(
+        byName,
+        ({ name }) => name,
+        ({ id }) => id,
+      ),
+    );
   }
 
   /**
    * Registered devices by their registry id, the first field of the struct Spark compares; the
    * store breaks the rest by label.
    */
-  private registryOrder(devices: Map<string, DeviceCell>): string[] {
+  private registryOrder(devices: Map<string, DeviceCell>): string[][] {
     const registered = [...devices.entries()].flatMap(([clientId, { id }]) =>
       id === null ? [] : [{ clientId, id }],
     );
     registered.sort((a, b) => this.compareText(a.id, b.id));
-    return registered.map(({ clientId }) => clientId);
+    return this.tiedGroups(
+      registered,
+      ({ id }) => id,
+      ({ clientId }) => clientId,
+    );
+  }
+
+  /** Sorted ids, those with equal sort values in one group, so the row id orders their rows. */
+  private tiedGroups<T>(
+    sorted: T[],
+    valueOf: (item: T) => string,
+    idOf: (item: T) => string,
+  ): string[][] {
+    const groups: { value: string; ids: string[] }[] = [];
+    for (const item of sorted) {
+      const last = groups.at(-1);
+      if (last?.value === valueOf(item)) {
+        last.ids.push(idOf(item));
+      } else {
+        groups.push({ value: valueOf(item), ids: [idOf(item)] });
+      }
+    }
+    return groups.map(({ ids }) => ids);
   }
 
   /** Whether the read filters, sorts or lists by a device's label, which needs its serial. */

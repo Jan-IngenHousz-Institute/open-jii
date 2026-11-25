@@ -587,7 +587,7 @@ describe("numeric string ordering", () => {
     table: "measurements",
     variants: [{ columnName: "questions_data", schema: "OBJECT<answer: STRING>" }],
     reservedColumns: ["id"],
-    ordering: { column: "answer", mode: { kind: "numericString", rowId: "id" } },
+    ordering: { column: "answer", rowId: "id", mode: { kind: "numericString" } },
   } satisfies QueryParams;
   const extraction = `try_variant_get(\`questions_data\`, '$["answer"]', 'STRING')`;
   const keys = ["group", "decimal", "value", "row"].map((key) => `\`__numeric_order_${key}\``);
@@ -845,7 +845,8 @@ describe("as-of joins", () => {
         ordering: {
           column: "answer",
           direction: "DESC",
-          mode: { kind: "numericString", rowId: "id" },
+          rowId: "id",
+          mode: { kind: "numericString" },
         },
         limit: 5,
         offset: 5,
@@ -1047,6 +1048,32 @@ describe("ordered aggregate query inputs", () => {
   );
 });
 
+describe("ordering ties", () => {
+  const service = new QueryBuilderService();
+
+  it("breaks ties by the row id under any sort", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "measurements",
+        ordering: { column: "device_name", direction: "DESC", rowId: "id" },
+      }),
+    );
+    expect(sql).toMatch(/ORDER BY `device_name` DESC, `id` ASC$/);
+  });
+
+  it("leaves a distinct read ordered by its values alone", () => {
+    const sql = unwrap(
+      service.buildQuery({
+        table: "measurements",
+        columns: ["device_name"],
+        distinct: true,
+        ordering: { column: "device_name", rowId: "id" },
+      }),
+    );
+    expect(sql).toMatch(/ORDER BY `device_name` ASC$/);
+  });
+});
+
 describe("number question answers", () => {
   const service = new QueryBuilderService();
   const variants = [
@@ -1063,7 +1090,7 @@ describe("number question answers", () => {
           table: "measurements",
           variants,
           reservedColumns: ["id"],
-          ordering: { column: "height", direction, mode: { kind: "number", rowId: "id" } },
+          ordering: { column: "height", direction, rowId: "id", mode: { kind: "number" } },
         }),
       );
 

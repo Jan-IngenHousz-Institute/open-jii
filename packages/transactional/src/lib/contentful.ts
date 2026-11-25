@@ -12,6 +12,7 @@ import type { EmailRichTextInterface } from "../components/ctf-rich-text";
 export type CmsEmailType =
   | "access-granted-notification"
   | "api-key-created-notification"
+  | "confirm-email-otp"
   | "experiment-made-public-notification"
   | "otp-email"
   | "passkey-added-notification"
@@ -30,6 +31,8 @@ export type CmsEmailType =
   | "calibration-run-awaiting-approval-notification"
   | "calibration-run-approved-notification"
   | "calibration-run-rejected-notification"
+  | "data-export-failed-notification"
+  | "data-export-ready-notification"
   | "data-upload-completed-notification"
   | "data-upload-failed-notification"
   | "data-upload-partly-completed-notification";

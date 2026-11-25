@@ -147,13 +147,19 @@ describe("MacroPicker", () => {
 
   it("shows loading and error feedback instead of an empty result", async () => {
     const user = userEvent.setup();
-    const spy = server.mount(contract.macros.listMacros, { status: 500, delay: 50 });
+    let release: () => void = () => undefined;
+    const inFlight = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const spy = server.mount(contract.macros.listMacros, { status: 500, unblock: inFlight });
 
     renderPicker();
     await user.click(screen.getByRole("button", { name: /add macro/i }));
 
     expect(screen.getByRole("status")).toHaveTextContent("Loading macros...");
     expect(screen.queryByText("No macros available")).not.toBeInTheDocument();
+
+    release();
     expect(await screen.findByText("Unable to load macros.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
