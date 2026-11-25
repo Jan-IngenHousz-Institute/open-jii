@@ -1,7 +1,14 @@
-import { createExperimentDashboard, createRichTextWidget } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import {
+  createExperimentAccess,
+  createExperimentDashboard,
+  createRichTextWidget,
+} from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { useFormContext } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import { DashboardFormShell } from "./dashboard-form-shell";
 import type { DashboardFormValues } from "./dashboard-form-shell";
@@ -86,20 +93,29 @@ describe("DashboardFormShell", () => {
     expect(screen.getByTestId("probe-widgets")).toHaveTextContent("2");
   });
 
-  it("propagates the initialMode into the dashboard-mode provider", () => {
-    const dashboard = createExperimentDashboard();
-    render(
-      <DashboardFormShell
-        experimentId="exp-1"
-        dashboardId={dashboard.id}
-        dashboard={dashboard}
-        initialMode="edit"
-      >
-        <div />
-      </DashboardFormShell>,
-    );
-    expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit");
-  });
+  it.each(["active", "stale", "published"] as const)(
+    "honors the edit link for a %s experiment admin",
+    async (status) => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({
+          experiment: { id: "exp-1", status },
+          isAdmin: true,
+        }),
+      });
+      const dashboard = createExperimentDashboard();
+      render(
+        <DashboardFormShell
+          experimentId="exp-1"
+          dashboardId={dashboard.id}
+          dashboard={dashboard}
+          initialMode="edit"
+        >
+          <div />
+        </DashboardFormShell>,
+      );
+      await waitFor(() => expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit"));
+    },
+  );
 
   it("renders children inside the layout body", () => {
     const dashboard = createExperimentDashboard();

@@ -53,17 +53,20 @@ export function DashboardFormShell({
   );
 
   const form = useForm<DashboardFormValues>({ defaultValues: defaults });
+  const { data: accessData } = useExperimentAccess(experimentId);
+  const canEdit = canDuplicateExperimentChart(accessData);
 
   return (
     <AutosaveStatusProvider>
       <DashboardEditorProvider>
-        <DashboardModeProvider initialMode={initialMode}>
+        <DashboardModeProvider initialMode={initialMode} canEdit={canEdit}>
           <FormProvider {...form}>
             <Form {...form}>
               <DashboardFormShellBody
                 form={form}
                 experimentId={experimentId}
                 dashboardId={dashboardId}
+                canEdit={canEdit}
                 dashboard={dashboard}
               >
                 {children}
@@ -81,6 +84,7 @@ interface DashboardFormShellBodyProps {
   experimentId: string;
   dashboardId: string;
   dashboard: ExperimentDashboard;
+  canEdit: boolean;
   children: ReactNode;
 }
 
@@ -89,11 +93,9 @@ function DashboardFormShellBody({
   experimentId,
   dashboardId,
   dashboard,
+  canEdit,
   children,
 }: DashboardFormShellBodyProps) {
-  const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = canDuplicateExperimentChart(accessData);
-
   useDashboardAutosave({ form, experimentId, dashboardId, enabled: canEdit });
   return (
     <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>

@@ -1,14 +1,7 @@
-import {
-  createDashboardLayout,
-  createExperimentAccess,
-  createExperimentDashboard,
-} from "@/test/factories";
-import { server } from "@/test/msw/server";
+import { createDashboardLayout, createExperimentDashboard } from "@/test/factories";
 import { renderWithForm, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useFormContext } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
-
-import { contract } from "@repo/api/contract";
 
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { DashboardLayoutContent } from "./dashboard-layout-content";
@@ -57,13 +50,9 @@ function renderLayout({
   dashboard?: ReturnType<typeof createExperimentDashboard>;
   formDefaults?: DashboardFormValues;
 } = {}) {
-  server.mount(contract.experiments.getExperimentAccess, {
-    body: createExperimentAccess({ isAdmin }),
-  });
-
   return renderWithForm<DashboardFormValues>(
     () => (
-      <DashboardModeProvider initialMode={initialMode}>
+      <DashboardModeProvider initialMode={initialMode} canEdit={isAdmin}>
         <DashboardLayoutContent experimentId="exp-1" dashboard={dashboard}>
           <FormSync />
           <div data-testid="body">canvas</div>
