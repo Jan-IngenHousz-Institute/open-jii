@@ -349,9 +349,11 @@
       "renderAs": "Render as",
       "renderAsDefault": "Default ({{type}})",
       "axisAssignment": "Axis",
-      "secondaryAxisTitle": "Secondary axis title",
-      "secondaryAxisTitlePlaceholder": "Secondary axis title",
-      "secondaryAxisType": "Secondary axis scale",
+      "secondaryAxisTitle": "Axis 2 title",
+      "secondaryAxisTitlePlaceholder": "Axis 2 title",
+      "secondaryAxisType": "Axis 2 scale",
+      "numberedAxisType": "Axis {{index}} scale",
+      "numberedAxisTitle": "Axis {{index}} title",
       "errorColumn": "Error column (±)",
       "errorColumnPlaceholder": "None",
       "errorColumnNone": "None",
@@ -364,8 +366,12 @@
         "area": "Area"
       },
       "axis": {
-        "primary": "Primary",
-        "secondary": "Secondary (right)"
+        "primary": "Axis 1 (left)",
+        "secondary": "Axis 2 (right)",
+        "y3": "Axis 3 (left)",
+        "y4": "Axis 4 (right)",
+        "y5": "Axis 5 (left)",
+        "y6": "Axis 6 (right)"
       },
       "aggregate": "Aggregate",
       "aggregateNone": "None",

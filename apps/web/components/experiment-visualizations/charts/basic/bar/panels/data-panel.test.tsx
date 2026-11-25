@@ -162,7 +162,10 @@ describe("BarDataPanel", () => {
   it("hides the X-axis type picker (bar forces categorical) and keeps Y's", () => {
     renderPanel();
     // Only one axis-type select remains: Y axis.
-    expect(screen.getAllByText("workspace.shelves.axisType")).toHaveLength(1);
+    expect(screen.queryByText("workspace.shelves.axisType")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "workspace.shelves.numberedAxisType" }),
+    ).toBeInTheDocument();
   });
 
   it("seeds the X-axis trigger from the existing data source", () => {

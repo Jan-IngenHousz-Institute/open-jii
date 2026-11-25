@@ -508,3 +508,47 @@ describe("transformCartesianData", () => {
     expect(result.chartSeries).toHaveLength(1);
   });
 });
+
+describe("numbered Y axes", () => {
+  it.each(["line", "scatter", "bar", "area"] as const)(
+    "routes all six axes for %s",
+    (defaultTraceType) => {
+      const axes = ["primary", "secondary", "y3", "y4", "y5", "y6"] as const;
+      const sources = axes.map((axis, index) => ({ ...ds("y", `v${index}`), axis }));
+      const { chartSeries } = transformCartesianData(
+        [{ v0: 1, v1: 2, v2: 3, v3: 4, v4: 5, v5: 6 }],
+        sources,
+        {},
+        { ...baseOptions, defaultTraceType },
+      );
+      expect(chartSeries.map((series) => series.axis)).toEqual(axes);
+      expect(chartSeries.map((series) => series.y)).toEqual([[1], [2], [3], [4], [5], [6]]);
+    },
+  );
+
+  it.each(["y3", "y4", "y5", "y6"] as const)(
+    "uses axis 2 for a saved %s assignment with facets",
+    (axis) => {
+      const sources = [ds("y", "a"), { ...ds("y", "b"), axis }, ds("facet", "panel")];
+      const { chartSeries, subplots } = transformCartesianData(
+        [
+          { a: 1, b: 2, panel: "A" },
+          { a: 3, b: 4, panel: "B" },
+        ],
+        sources,
+        {},
+        baseOptions,
+      );
+      expect(subplots?.cells.map((cell) => cell.secondaryYaxisId)).toEqual(["y3", "y4"]);
+      expect(
+        chartSeries
+          .filter((series) => series.name === "b")
+          .map((series) => [series.axis, series.yaxisId]),
+      ).toEqual([
+        ["secondary", "y3"],
+        ["secondary", "y4"],
+      ]);
+      expect(sources[1].axis).toBe(axis);
+    },
+  );
+});

@@ -350,9 +350,11 @@
       "renderAs": "Darstellen als",
       "renderAsDefault": "Standard ({{type}})",
       "axisAssignment": "Achse",
-      "secondaryAxisTitle": "Titel der Sekundärachse",
-      "secondaryAxisTitlePlaceholder": "Titel der Sekundärachse",
-      "secondaryAxisType": "Skala der Sekundärachse",
+      "secondaryAxisTitle": "Titel der Achse 2",
+      "secondaryAxisTitlePlaceholder": "Titel der Achse 2",
+      "secondaryAxisType": "Skala der Achse 2",
+      "numberedAxisType": "Skala der Achse {{index}}",
+      "numberedAxisTitle": "Titel der Achse {{index}}",
       "errorColumn": "Fehlerspalte (±)",
       "errorColumnPlaceholder": "Keine",
       "errorColumnNone": "Keine",
@@ -365,8 +367,12 @@
         "area": "Fläche"
       },
       "axis": {
-        "primary": "Primär",
-        "secondary": "Sekundär (rechts)"
+        "primary": "Achse 1 (links)",
+        "secondary": "Achse 2 (rechts)",
+        "y3": "Achse 3 (links)",
+        "y4": "Achse 4 (rechts)",
+        "y5": "Achse 5 (links)",
+        "y6": "Achse 6 (rechts)"
       },
       "colorScaleHeatmap": "Heatmap-Farbskala",
       "windowFunctions": {

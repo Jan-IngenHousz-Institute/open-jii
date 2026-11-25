@@ -340,6 +340,31 @@ describe("YAxisShelf", () => {
     expect(form.getValues("config.y2AxisType")).toBe("log");
   });
 
+  it("edits axis 6 without creating settings for unused axes", async () => {
+    const user = userEvent.setup();
+    const values = defaults();
+    values.dataConfig.dataSources.push({
+      tableName: "readings",
+      columnName: "humidity",
+      role: "y",
+      axis: "y6",
+    });
+    const { form } = renderShelf(
+      (form) => <YAxisShelf form={form} columns={columns} showCartesianControls />,
+      { useFormProps: { defaultValues: values } },
+    );
+    const titles = screen.getAllByLabelText("workspace.shelves.numberedAxisTitle");
+    expect(titles).toHaveLength(2);
+    expect(screen.queryByText("workspace.shelves.secondaryAxisTitle")).not.toBeInTheDocument();
+    await user.type(titles[1], "Humidity");
+    await user.click(
+      screen.getAllByRole("combobox", { name: "workspace.shelves.numberedAxisType" })[1],
+    );
+    await user.click(await screen.findByRole("option", { name: "workspace.axisTypes.log" }));
+    expect(form.getValues("config.y6AxisTitle")).toBe("Humidity");
+    expect(form.getValues("config.y6AxisType")).toBe("log");
+  });
+
   it("omits the secondary axis fields when no Y series targets it (even with cartesian controls on)", () => {
     renderShelf((form) => <YAxisShelf form={form} columns={columns} showCartesianControls />, {
       useFormProps: { defaultValues: defaults() },

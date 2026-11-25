@@ -252,6 +252,26 @@ not mean the latest non-empty value. If several rows tie for the latest or
 earliest ordering value, the row ID breaks the tie when available. Without a row
 ID, any of the tied rows' Y values may be returned.
 
+### Plot several units on one chart
+
+Line, scatter, bar, area and bubble charts support up to six Y axes. Open a
+series' **Axis** picker to assign it to **Axis 1** through **Axis 6**. The first
+series stays on Axis 1. In the **Y axis** section, set a title and choose a
+**Linear** or **Logarithmic** scale for each axis in use.
+
+Axes 1 and 2 sit on the left and right. Axes 3 and 5 sit farther left. Axes 4
+and 6 sit farther right. The plot narrows to leave room for their labels. When
+any of axes 3 through 6 are in use, a side legend moves below the plot.
+An axis used by one series takes that series' colour. Click a legend entry
+to hide its series. When every series on an axis is hidden, the axis disappears
+and the plot widens. Click the entry again to bring it back. This visibility
+choice lasts only while the chart is open.
+
+With a **Facet** column set, charts support axes 1 and 2. Series saved on axes
+3 through 6 use Axis 2 while the chart is faceted. Removing the facet restores
+their original assignments. Existing charts with a secondary axis keep using
+Axis 2 and can still be edited and saved.
+
 ### Split a chart into panels
 
 In the visualization editor's **Data** tab, set **Facet (small multiples)**

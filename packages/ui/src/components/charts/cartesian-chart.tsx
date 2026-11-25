@@ -1,9 +1,24 @@
 "use client";
 
-import type { ColorBar, Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
+import type {
+  ColorBar,
+  Layout,
+  LayoutAxis,
+  PlotData,
+  PlotRelayoutEvent,
+  PlotRestyleEvent,
+} from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import {
+  applyCartesianAxes,
+  cartesianAxisId,
+  cartesianSeriesColors,
+  withAxisColor,
+  seriesIsVisible,
+  type CartesianAxis,
+} from "./cartesian-axes";
 import {
   chartTextWidth,
   HORIZONTAL_LEGEND_HEIGHT,
@@ -42,14 +57,14 @@ import {
 /**
  * One data series on a shared cartesian canvas. Visual encoding lives on
  * the series itself so a single chart can mix `line` + `bar` + `area`
- * traces. `axis: "secondary"` routes to a twin Y axis (`yaxis2`).
+ * traces. The axis assignment selects the corresponding numbered Y axis.
  */
 export interface CartesianSeries extends BaseSeries {
   traceType: "line" | "bar" | "scatter" | "area";
-  axis?: "primary" | "secondary";
+  axis?: CartesianAxis;
   /**
    * Direct subplot routing (Plotly axis IDs like `"x"`, `"x2"`, `"x3"`).
-   * When set, takes precedence over `axis: "primary" | "secondary"`.
+   * When set, takes precedence over the series axis assignment.
    * Faceted charts use these to pin each trace to its cell.
    */
   xaxisId?: string;
@@ -219,8 +234,7 @@ export interface CartesianChartProps extends BaseChartProps {
 /**
  * Mixed-trace cartesian renderer. Emits one Plotly trace per
  * `CartesianSeries`, with the trace `type` driven by the series' own
- * `traceType`. When any series targets the secondary axis a `yaxis2` is
- * composed alongside the primary.
+ * `traceType` and placed on its assigned Y axis.
  */
 export function CartesianChart({
   data,
@@ -245,6 +259,53 @@ export function CartesianChart({
       Boolean(config.y2AxisTitle),
     ...(subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {}),
   });
+  // A zoom can replace the points without changing which traces the legend controls.
+  const legendKey = useMemo(
+    () =>
+      JSON.stringify([
+        uirevision,
+        data.map(({ name, legendgroup, xaxisId, yaxisId, axis }) => [
+          name,
+          legendgroup,
+          xaxisId,
+          yaxisId,
+          axis,
+        ]),
+      ]),
+    [data, uirevision],
+  );
+  const [visibility, setVisibility] = React.useState<{
+    key: string;
+    values: Record<number, boolean | "legendonly">;
+  }>({ key: legendKey, values: {} });
+  const visibleData = useMemo(
+    () =>
+      data.map((series, index) => ({
+        ...series,
+        visible:
+          visibility.key === legendKey
+            ? (visibility.values[index] ?? series.visible)
+            : series.visible,
+      })),
+    [data, legendKey, visibility],
+  );
+  const handleRestyle = React.useCallback(
+    (event: Readonly<PlotRestyleEvent>) => {
+      const [update, indices] = event;
+      if (!("visible" in update)) return;
+      const raw: unknown = update.visible;
+      const values = Array.isArray(raw) ? raw : [raw];
+      setVisibility((previous) => {
+        const next = previous.key === legendKey ? { ...previous.values } : {};
+        indices.forEach((index, offset) => {
+          const value: unknown = values[offset % values.length];
+          if (value === true || value === false || value === "legendonly") next[index] = value;
+        });
+        return { key: legendKey, values: next };
+      });
+    },
+    [legendKey],
+  );
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
@@ -254,10 +315,10 @@ export function CartesianChart({
   const hasSharedColorAxis = sharedColorAxis !== undefined;
   const plotData: PlotData[] = useMemo(
     () =>
-      data.map((series) =>
+      visibleData.map((series) =>
         buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale),
       ),
-    [data, scatterPlotType, hasSharedColorAxis, traceColorScale],
+    [visibleData, scatterPlotType, hasSharedColorAxis, traceColorScale],
   );
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
@@ -266,18 +327,21 @@ export function CartesianChart({
   const axisScan = useMemo(() => {
     const x = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
     const y = data
-      .filter((s) => s.axis !== "secondary")
+      .filter((s) => !s.axis || s.axis === "primary")
       .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
   }, [data]);
 
   const { layout, boundHorizontalLegend } = useMemo(() => {
-    const hasSecondary = data.some((series) => series.axis === "secondary");
+    const activeData = visibleData.filter(seriesIsVisible);
+    const hasSecondary = activeData.some((series) => series.axis && series.axis !== "primary");
+    const hasExtraAxes = !subplots && data.some((series) => series.axis?.startsWith("y"));
     const hasOuterColorbar = hasSecondary && sharedColorAxis?.showscale === true;
     const chartWidth = config.width || sizing.width || 720;
-    const legendTraces = hasOuterColorbar
-      ? data.filter((series) => series.visible !== false && series.showlegend !== false)
-      : [];
+    const legendTraces =
+      hasOuterColorbar || hasExtraAxes
+        ? data.filter((series) => series.visible !== false && series.showlegend !== false)
+        : [];
     const showLegend = config.showLegend !== false && legendTraces.length > 0;
     const requestedLegend = config.legendPosition ?? "right";
     const sharedYTitle = sizing.cellVeryCompact || subplots?.sharedYTitle === true;
@@ -322,9 +386,10 @@ export function CartesianChart({
       longestLegendName + LEGEND_PADDING > insidePlotWidth * 0.96;
     // Plotly's container margins can squeeze the colour bar when both side gutters are occupied.
     const legendConfig =
-      hasOuterColorbar &&
-      showLegend &&
-      (requestedLegend === "right" || wideLeftLegend || wideInsideLegend)
+      (hasExtraAxes && (requestedLegend === "left" || requestedLegend === "right")) ||
+      (hasOuterColorbar &&
+        showLegend &&
+        (requestedLegend === "right" || wideLeftLegend || wideInsideLegend))
         ? { ...config, legendPosition: "bottom" as const }
         : config;
     const tiers = {
@@ -385,6 +450,9 @@ export function CartesianChart({
       // regardless of the user's toggle.
       const forceSharedTitles = sizing.cellVeryCompact;
       const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+      if (next.yaxis && !activeData.some((series) => !series.axis || series.axis === "primary")) {
+        next.yaxis = { ...next.yaxis, title: undefined };
+      }
       const faceted = extendLayoutForFacets(next, subplots.cells, {
         rows: subplots.rows,
         columns: subplots.columns,
@@ -432,33 +500,42 @@ export function CartesianChart({
     if (hasSecondary && subplots) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
-      applyFacetSecondaryAxes(next, data, subplots, config, config.height || sizing.height);
-    } else if (hasSecondary) {
-      const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
-      // Mirror tick/line styling from primary so the two axes look like a
-      // matched pair rather than two unrelated widgets. The primary slice
-      // was built by `createBaseLayout` above.
-      const primary = (next.yaxis ?? {}) as Record<string, unknown>;
-      const titleFont = (primary.title as { font?: unknown } | undefined)?.font;
+      applyFacetSecondaryAxes(next, visibleData, subplots, config, config.height || sizing.height);
+    } else if (!subplots) {
+      applyCartesianAxes(
+        next,
+        visibleData,
+        config,
+        chartWidth,
+        hasOuterColorbar ? (sharedColorAxis.colorbar ?? {}) : undefined,
+      );
+    }
 
-      const baseY2: Record<string, unknown> = {
-        title: config.y2AxisTitle ? { text: config.y2AxisTitle, font: titleFont } : undefined,
-        overlaying: "y",
-        side: "right",
-        type: config.y2AxisType ?? "linear",
-        // Hide secondary grid; doubling makes the plot area look striped.
-        showgrid: false,
-        automargin: true,
-        tickfont: primary.tickfont,
-        color: primary.color,
-        linecolor: primary.linecolor,
-        tickcolor: primary.tickcolor,
-        showline: true,
-      };
-      // Auto-detect type only when the user didn't pin one. `Layout` has
-      // no `yaxis2` field; Plotly accepts arbitrary `yaxisN` keys.
-      const refined = config.y2AxisType ? baseY2 : refineAxisType(baseY2, secondaryYValues);
-      (next as unknown as Record<string, unknown>).yaxis2 = refined;
+    if (subplots) {
+      const axes = next as Record<string, Partial<LayoutAxis> | undefined>;
+      const colors = cartesianSeriesColors(data, config.colorway);
+      const byAxis = new Map<string, { visible: boolean; colors: (string | undefined)[] }>();
+      visibleData.forEach((series, index) => {
+        const id = series.yaxisId ?? "y";
+        const entry = byAxis.get(id) ?? { visible: false, colors: [] };
+        entry.visible ||= seriesIsVisible(series);
+        entry.colors.push(colors[index]);
+        byAxis.set(id, entry);
+      });
+      for (const { yaxisId, secondaryYaxisId } of subplots.cells) {
+        for (const id of [yaxisId, secondaryYaxisId]) {
+          if (!id) continue;
+          const key = `yaxis${id.slice(1)}`;
+          const axis = axes[key];
+          const usage = byAxis.get(id);
+          if (axis) {
+            axes[key] = withAxisColor(
+              { ...axis, visible: !config.sparkline && usage?.visible === true },
+              usage?.colors.length === 1 ? usage.colors[0] : undefined,
+            );
+          }
+        }
+      }
     }
 
     // Reference-line overlays sit on top of everything else in the layout;
@@ -468,6 +545,7 @@ export function CartesianChart({
 
     if (uirevision !== undefined) {
       next.uirevision = uirevision;
+      next.legend = { ...next.legend, uirevision: legendKey };
     }
 
     return { layout: next, boundHorizontalLegend: topLegend || bottomLegend };
@@ -476,6 +554,8 @@ export function CartesianChart({
     config,
     sizing,
     data,
+    visibleData,
+    legendKey,
     axisScan,
     colorAxis,
     sharedColorAxis,
@@ -506,6 +586,7 @@ export function CartesianChart({
         loading={loading}
         error={error}
         onRelayout={onRelayout ? handleRelayout : undefined}
+        onRestyle={handleRestyle}
         {...eventHandlers}
       />
     </div>
@@ -597,14 +678,12 @@ function buildTrace(
   traceColorScale?: CartesianColorAxis,
 ): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
-  // charts pin each trace to its cell) wins over the legacy `axis:
-  // "secondary"` flag (single-canvas dual-Y). When both are unset the
-  // trace defaults to the implicit `x` / `y` pair Plotly assigns.
+  // charts pin each trace to its cell) wins over the single-chart assignment.
   const yaxisRouting =
     series.yaxisId !== undefined
       ? { yaxis: series.yaxisId }
-      : series.axis === "secondary"
-        ? { yaxis: "y2" as const }
+      : series.axis && series.axis !== "primary"
+        ? { yaxis: cartesianAxisId(series.axis) }
         : {};
   const xaxisRouting = series.xaxisId !== undefined ? { xaxis: series.xaxisId } : {};
 
