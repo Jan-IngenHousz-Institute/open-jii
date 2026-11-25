@@ -14,6 +14,7 @@ import { DropdownMenuItem } from "@repo/ui/components/dropdown-menu";
 export interface VisualizationRowActionsProps {
   visualization: ExperimentVisualization;
   experimentId: string;
+  canDuplicate: boolean;
   /** The chart's page, which is also where it is edited. */
   href: string;
 }
@@ -21,6 +22,7 @@ export interface VisualizationRowActionsProps {
 export function VisualizationRowActions({
   visualization,
   experimentId,
+  canDuplicate,
   href,
 }: VisualizationRowActionsProps) {
   const { t } = useTranslation("experimentVisualizations");
@@ -29,9 +31,12 @@ export function VisualizationRowActions({
 
   const locale = useLocale();
   const router = useRouter();
-  const { duplicate, disabled } = useExperimentVisualizationDuplicate(experimentId);
+  const { duplicate, disabled } = useExperimentVisualizationDuplicate(
+    experimentId,
+    visualization.id,
+  );
   const handleDuplicate = async () => {
-    const created = await duplicate(visualization.id);
+    const created = await duplicate();
     if (created) {
       router.push(
         `/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${created.id}`,
@@ -52,10 +57,12 @@ export function VisualizationRowActions({
       }}
       onDelete={() => deleteVisualization({ id: experimentId, visualizationId: visualization.id })}
     >
-      <DropdownMenuItem disabled={disabled} onSelect={() => void handleDuplicate()}>
-        <Copy className="mr-2 size-4" />
-        {t("ui.actions.duplicate")}
-      </DropdownMenuItem>
+      {canDuplicate && (
+        <DropdownMenuItem disabled={disabled} onSelect={() => void handleDuplicate()}>
+          <Copy className="mr-2 size-4" />
+          {t("ui.actions.duplicate")}
+        </DropdownMenuItem>
+      )}
     </RowActionsMenu>
   );
 }

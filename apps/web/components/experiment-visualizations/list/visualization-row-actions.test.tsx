@@ -12,6 +12,7 @@ function renderActions() {
     <VisualizationRowActions
       visualization={createVisualization({ id: "viz-7", name: "My Plot" })}
       experimentId="exp-1"
+      canDuplicate
       href="/platform/experiments/exp-1/analysis/visualizations/viz-7"
     />,
   );

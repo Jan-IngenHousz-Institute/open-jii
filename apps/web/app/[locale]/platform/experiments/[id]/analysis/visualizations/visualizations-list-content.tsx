@@ -83,6 +83,7 @@ export default function ExperimentVisualizationsPage() {
         visualizations={visualizationsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
+        canDuplicate={hasAccess === true && experimentData?.status === "active"}
       />
     </div>
   );
