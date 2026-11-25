@@ -18,7 +18,7 @@ import { useDrawTurn } from "./draw-queue";
 import { PlotlyErrorBoundary } from "./plotly-error-boundary";
 import { loadPlotlyRuntime, loadedPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
 import { PlotlyTraceGate } from "./plotly-trace-gate";
-import { withBrandedPngExport } from "./png-export";
+import { withBrandedPngExport, type PreparePngLayout } from "./png-export";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -102,6 +102,7 @@ const useIsClient = () =>
   );
 
 export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
+  preparePngLayout?: PreparePngLayout;
   className?: string;
   loading?: boolean;
   error?: string;
@@ -336,7 +337,18 @@ const validatePlotlyData = (data: Data[] | undefined): PlotData[] => {
  */
 export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
   (
-    { className, loading, error, data, layout, config, onRelayout, onRestyle, ...plotProps },
+    {
+      className,
+      loading,
+      error,
+      data,
+      layout,
+      config,
+      onRelayout,
+      onRestyle,
+      preparePngLayout,
+      ...plotProps
+    },
     ref,
   ) => {
     const isClient = useIsClient();
@@ -620,8 +632,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     // Prepare safe config
     const safeConfig = React.useMemo(() => {
-      return withBrandedPngExport(createSafeConfig(config));
-    }, [config]);
+      return withBrandedPngExport(createSafeConfig(config), preparePngLayout);
+    }, [config, preparePngLayout]);
 
     // Handle errors
     const displayError = error || localError;

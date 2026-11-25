@@ -104,6 +104,23 @@ describe("branded PNG export", () => {
     expect(document.querySelector("a[download]")).toBeNull();
   });
 
+  it("passes a resized figure to Plotly without replacing the live layout", async () => {
+    const live = Object.assign(graph, {
+      layout: { xaxis: { domain: [0.3, 0.7] } },
+      data: [{ y: [1, 2] }],
+    });
+    await downloadBrandedPng(live, { width: 1200, height: 800 }, (layout, width) => ({
+      ...layout,
+      xaxis: { domain: [0.1, 0.9] },
+      width,
+    }));
+    expect(toImage).toHaveBeenCalledWith(
+      { data: live.data, layout: { xaxis: { domain: [0.1, 0.9] }, width: 1200 } },
+      { format: "png", width: 1200, height: 800, scale: 1 },
+    );
+    expect(live.layout.xaxis.domain).toEqual([0.3, 0.7]);
+  });
+
   it("continues the chart's own background under the footer instead of a white band", async () => {
     cornerPixel = [17, 24, 39, 255];
 

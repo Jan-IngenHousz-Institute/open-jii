@@ -307,3 +307,30 @@ export function applyCartesianAxes(
   }
   styleCartesianAxes(layout, data, config);
 }
+
+export function prepareStackedAxesForExport(
+  current: Partial<Layout>,
+  base: Pick<Partial<Layout>, "xaxis" | "yaxis" | "margin">,
+  data: CartesianSeries[],
+  config: PlotlyChartConfig,
+  width: number,
+  colorbar: CartesianColorAxis["colorbar"],
+  sizing: ChartTierOptions,
+): Partial<Layout> {
+  const exported: Partial<Layout> = {
+    ...current,
+    xaxis: { ...base.xaxis },
+    yaxis: { ...base.yaxis },
+    margin: { ...current.margin, l: base.margin?.l, r: base.margin?.r },
+  };
+  applyCartesianAxes(exported, data, config, width, colorbar, sizing);
+
+  const exportAxes = exported as AxisLayout;
+  const liveAxes = current as AxisLayout;
+  for (const key of ["xaxis", ...CARTESIAN_AXIS_IDS.map((id) => `yaxis${id.slice(1)}`)]) {
+    const axis = exportAxes[key];
+    const live = liveAxes[key];
+    if (axis && live) exportAxes[key] = { ...axis, range: live.range, autorange: live.autorange };
+  }
+  return exported;
+}

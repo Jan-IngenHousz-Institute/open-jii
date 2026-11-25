@@ -6,6 +6,7 @@ import React, { useMemo } from "react";
 import { cn } from "../../lib/utils";
 import {
   applyCartesianAxes,
+  prepareStackedAxesForExport,
   cartesianAxisId,
   CARTESIAN_AXIS_IDS,
   colorbarGutter,
@@ -21,6 +22,7 @@ import {
   withBoundedRightLegend,
 } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
+import type { PreparePngLayout } from "./png-export";
 import type {
   BaseChartProps,
   BaseSeries,
@@ -30,7 +32,7 @@ import type {
   PlotlyChartConfig,
 } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
-import { facetTierStyles, useChartSizing } from "./use-is-compact";
+import { chartSizingTiers, facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
   applyAxisType,
   applyReferenceLines,
@@ -319,7 +321,7 @@ export function CartesianChart({
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
   }, [data]);
 
-  const { layout, boundHorizontalLegend } = useMemo(() => {
+  const { layout, boundHorizontalLegend, preparePngLayout } = useMemo(() => {
     const activeData = visibleData.filter(seriesIsVisible);
     const assignedAxes = new Set(data.map((series) => cartesianAxisId(series.axis)));
     const hasExtraAxes =
@@ -488,19 +490,27 @@ export function CartesianChart({
       }
     }
 
+    let preparePngLayout: PreparePngLayout | undefined;
     if (subplots && hasFacetOverlays) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
       applyFacetSecondaryAxes(next, data, subplots, config, config.height || sizing.height);
     } else if (!subplots) {
-      applyCartesianAxes(
-        next,
-        visibleData,
-        config,
-        chartWidth,
-        hasOuterColorbar ? (sharedColorAxis.colorbar ?? {}) : undefined,
-        sizing,
-      );
+      const colorbar = hasOuterColorbar ? (sharedColorAxis.colorbar ?? {}) : undefined;
+      if (hasExtraAxes) {
+        const base = { xaxis: next.xaxis, yaxis: next.yaxis, margin: next.margin };
+        preparePngLayout = (current, width, height) =>
+          prepareStackedAxesForExport(
+            current,
+            base,
+            visibleData,
+            config,
+            width,
+            colorbar,
+            chartSizingTiers(width, height),
+          );
+      }
+      applyCartesianAxes(next, visibleData, config, chartWidth, colorbar, sizing);
     }
 
     if (subplots) {
@@ -523,7 +533,7 @@ export function CartesianChart({
       next.legend = { ...next.legend, uirevision: legendKey };
     }
 
-    return { layout: next, boundHorizontalLegend: topLegend || bottomLegend };
+    return { layout: next, boundHorizontalLegend: topLegend || bottomLegend, preparePngLayout };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
   }, [
     config,
@@ -561,8 +571,9 @@ export function CartesianChart({
         loading={loading}
         error={error}
         onRelayout={onRelayout ? handleRelayout : undefined}
-        onRestyle={handleRestyle}
         {...eventHandlers}
+        onRestyle={handleRestyle}
+        preparePngLayout={preparePngLayout}
       />
     </div>
   );

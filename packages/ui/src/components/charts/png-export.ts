@@ -1,4 +1,4 @@
-import type { Config, ModeBarButton, ModeBarButtonAny, PlotlyHTMLElement } from "plotly.js";
+import type { Config, Layout, ModeBarButton, ModeBarButtonAny, PlotlyHTMLElement } from "plotly.js";
 
 import { toast } from "../../hooks/use-toast";
 
@@ -16,17 +16,34 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+export type PreparePngLayout = (
+  layout: Partial<Layout>,
+  width: number,
+  height: number,
+) => Partial<Layout>;
+
 export async function downloadBrandedPng(
   graph: PlotlyHTMLElement,
   options: Config["toImageButtonOptions"] = {},
+  prepareLayout?: PreparePngLayout,
 ): Promise<void> {
   const { Plotly } = await import("./plotly-runtime");
   const isDark = document.documentElement.classList.contains("dark");
+  const width = options.width ?? graph.layout?.width ?? graph.clientWidth;
+  const height = options.height ?? graph.layout?.height ?? graph.clientHeight;
+  const figure = prepareLayout
+    ? {
+        data: graph.data,
+        layout: prepareLayout(graph.layout, width, height),
+        // Plotly stores the current locale and render options in the graph context.
+        config: (graph as PlotlyHTMLElement & { _context?: Partial<Config> })._context,
+      }
+    : graph;
   const [chart, logo] = await Promise.all([
-    Plotly.toImage(graph, {
+    Plotly.toImage(figure, {
       format: "png",
-      width: options.width ?? null,
-      height: options.height ?? null,
+      width: prepareLayout ? width : (options.width ?? null),
+      height: prepareLayout ? height : (options.height ?? null),
       scale: options.scale ?? 1,
     }).then(loadImage),
     loadImage(isDark ? LOGO_DARK : LOGO_LIGHT),
@@ -76,7 +93,10 @@ export async function downloadBrandedPng(
   }
 }
 
-export function withBrandedPngExport(config: Partial<Config>): Partial<Config> {
+export function withBrandedPngExport(
+  config: Partial<Config>,
+  prepareLayout?: PreparePngLayout,
+): Partial<Config> {
   const options = config.toImageButtonOptions;
   const isBranded = (item: ModeBarButtonAny) =>
     typeof item !== "string" && item.name === EXPORT_BUTTON;
@@ -112,7 +132,7 @@ export function withBrandedPngExport(config: Partial<Config>): Partial<Config> {
       if (exporting) return;
       exporting = true;
       try {
-        await downloadBrandedPng(graph, options);
+        await downloadBrandedPng(graph, options, prepareLayout);
       } catch {
         toast({
           variant: "destructive",

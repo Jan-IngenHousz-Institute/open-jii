@@ -104,6 +104,17 @@ function tierFlags(
   };
 }
 
+export function chartSizingTiers(width: number, height: number): ChartSizing {
+  const outer = tierFlags(width, height, OUTER_BREAKPOINTS);
+  return {
+    ...outer,
+    cellSnug: outer.snug,
+    cellCompact: outer.compact,
+    cellVeryCompact: outer.veryCompact,
+    cellUltraCompact: outer.ultraCompact,
+  };
+}
+
 interface UseChartSizingOptions {
   trackWidth?: boolean | "pixel";
   trackHeight?: boolean | "pixel";
@@ -160,7 +171,7 @@ export function useChartSizing<T extends HTMLElement>(
     (width: number, height: number) => {
       if (trackViewportWidth && (width <= 0 || height <= 0)) return;
       // Outer-container tier (legend / modebar / chart title / margins).
-      const outer = tierFlags(width, height, OUTER_BREAKPOINTS);
+      const outer = chartSizingTiers(width, height);
       // Cell tier (axis chrome / per-cell titles). `Math.max(1, ...)`
       // guards against a 0-row / 0-column grid producing Infinity.
       const cellWidth = width / Math.max(1, gridCols);

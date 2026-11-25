@@ -10,11 +10,21 @@ import type { CartesianSeries } from "../../charts/cartesian-chart";
 import type { PlotlyChartProps } from "../../charts/plotly-chart";
 
 vi.mock("../../charts/plotly-chart", () => ({
-  PlotlyChart: ({ data, layout, onRestyle }: PlotlyChartProps) => (
+  PlotlyChart: ({ data, layout, onRestyle, preparePngLayout }: PlotlyChartProps) => (
     <div
       data-testid="chart"
       data-layout={JSON.stringify(layout)}
       data-traces={JSON.stringify(data)}
+      data-export-layout={JSON.stringify(
+        preparePngLayout?.(
+          {
+            ...layout,
+            xaxis: { ...layout.xaxis, range: [2, 4], autorange: false },
+          },
+          1200,
+          800,
+        ),
+      )}
     >
       <button onClick={() => onRestyle?.([{ visible: ["legendonly"] }, [data.length - 1]])}>
         Hide last series
@@ -128,10 +138,40 @@ describe("numbered Y-axis layout", () => {
     expect(narrow.yaxis2?.title?.text).toBe("Temperature");
     expect(narrow.yaxis3).toMatchObject({ visible: true, showline: true, showticklabels: false });
     expect(narrow.yaxis6?.title).toBeUndefined();
-    const [start, end] = narrow.xaxis?.domain ?? [0, 0];
+    const [start = 0, end = 0] = narrow.xaxis?.domain ?? [];
     expect(
       (end - start) * (320 - (narrow.margin?.l ?? 0) - (narrow.margin?.r ?? 0)),
     ).toBeGreaterThan(100);
+  });
+
+  it("reflows the PNG layout for its dimensions and keeps the on-screen zoom", () => {
+    render(
+      <CartesianChart
+        data={series(6)}
+        config={{
+          width: 420,
+          height: 540,
+          yAxisTitle: "A",
+          y2AxisTitle: "B",
+          y3AxisTitle: "C",
+          y4AxisTitle: "D",
+          y5AxisTitle: "E",
+          y6AxisTitle: "F",
+        }}
+        colorAxis={{ showscale: true }}
+      />,
+    );
+    const live = readLayout();
+    const image = JSON.parse(
+      screen.getByTestId("chart").getAttribute("data-export-layout") ?? "{}",
+    ) as ReturnType<typeof readLayout>;
+    expect(live.yaxis6?.showticklabels).toBe(false);
+    expect(image.yaxis6?.showticklabels).not.toBe(false);
+    expect(image.yaxis6?.title?.text).toBe("F");
+    expect(image.xaxis?.range).toEqual([2, 4]);
+    const [start = 0, end = 0] = image.xaxis?.domain ?? [];
+    const plotWidth = (end - start) * (1200 - (image.margin?.l ?? 0) - (image.margin?.r ?? 0));
+    expect(plotWidth).toBeGreaterThan(700);
   });
 
   it("uses the default colour for an axis shared by several series", () => {
