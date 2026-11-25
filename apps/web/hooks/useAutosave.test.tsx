@@ -278,6 +278,26 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
+  it("does not retry a failed save after autosave is disabled", async () => {
+    const save = vi.fn().mockRejectedValue(new Error("Save failed"));
+    const { result, rerender } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, enabled, delayMs: 50 }),
+      { initialProps: { value: "v0", enabled: true } },
+    );
+
+    rerender({ value: "v1", enabled: true });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(result.current.status).toBe("error");
+    const retry = result.current.flush;
+
+    rerender({ value: "v1", enabled: false });
+    await act(() => retry({ retryFailed: true }));
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("flush() with no pending save still awaits an in-flight save", async () => {
     let resolveSave: (() => void) | null = null;
     const save = vi.fn(

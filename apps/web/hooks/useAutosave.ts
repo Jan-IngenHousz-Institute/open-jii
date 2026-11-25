@@ -51,6 +51,8 @@ export function useAutosave<T>({
 
   const lastSavedKeyRef = useRef(key);
   const wasEnabledRef = useRef(enabled);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
 
   const valueRef = useRef(value);
   const keyRef = useRef(key);
@@ -161,9 +163,12 @@ export function useAutosave<T>({
 
   const flush = useCallback(
     async (options?: { retryFailed?: boolean }): Promise<void> => {
-      if (options?.retryFailed && inFlightRef.current) {
-        await inFlightRef.current;
-        return;
+      if (options?.retryFailed) {
+        if (!enabledRef.current) return;
+        if (inFlightRef.current) {
+          await inFlightRef.current;
+          return;
+        }
       }
       if (timerRef.current || pendingFlushRef.current || options?.retryFailed) {
         if (timerRef.current) {
