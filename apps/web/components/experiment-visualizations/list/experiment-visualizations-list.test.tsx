@@ -43,6 +43,24 @@ const sortButton = (column: "name" | "updated") =>
   screen.getByRole("button", { name: new RegExp(`^ui\\.labels\\.columns\\.${column}:`, "u") });
 
 describe("ExperimentVisualizationsList", () => {
+  it.each([
+    { canDuplicate: false, isArchived: false },
+    { canDuplicate: true, isArchived: true },
+  ])(
+    "omits Duplicate when canDuplicate=$canDuplicate and isArchived=$isArchived",
+    async (props) => {
+      const user = userEvent.setup();
+      render(
+        <ExperimentVisualizationsList visualizations={[viz()]} experimentId={expId} {...props} />,
+      );
+      await user.click(screen.getByRole("button", { name: "ui.actions.moreActions" }));
+      expect(screen.getByRole("menuitem", { name: "ui.actions.delete" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("menuitem", { name: "ui.actions.duplicate" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   beforeEach(() => {
     openOnUrl(PATH, "");
     vi.mocked(nav.useRouter().replace).mockClear();

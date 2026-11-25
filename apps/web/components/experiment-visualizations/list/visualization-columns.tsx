@@ -16,6 +16,7 @@ import { visualizationTypeBadgeTone } from "./visualization-type-badge-tone";
 export function getVisualizationColumns(
   t: (key: string) => string,
   experimentId: string,
+  canDuplicate: boolean,
 ): OverviewTableColumn<ExperimentVisualization, NameUpdatedSortField>[] {
   return [
     nameColumn(t("ui.labels.columns.name")),
@@ -38,6 +39,7 @@ export function getVisualizationColumns(
           visualization={visualization}
           experimentId={experimentId}
           href={href}
+          canDuplicate={canDuplicate}
         />
       ),
     },
