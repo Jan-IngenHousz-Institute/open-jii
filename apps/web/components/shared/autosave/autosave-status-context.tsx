@@ -29,28 +29,37 @@ const AutosaveStatusContext = createContext<AutosaveStatusValue | null>(null);
 
 /** Bridges autosave state from a descendant page up to a layout-level indicator. */
 export function AutosaveStatusProvider({ children }: { children: ReactNode }) {
-  const [report, setReportState] = useState<AutosaveReport>({
-    status: null,
-    error: null,
-    hasUnsavedChanges: false,
-  });
-  const lastReporter = useRef<symbol | null>(null);
+  const [reports, setReports] = useState(new Map<symbol, AutosaveReport>());
 
   const setReport = useCallback((reporter: symbol, next: AutosaveReport) => {
-    lastReporter.current = reporter;
-    setReportState(next);
+    setReports((previous) => {
+      const updated = new Map(previous);
+      updated.delete(reporter);
+      updated.set(reporter, next);
+      return updated;
+    });
   }, []);
 
   const clearReport = useCallback((reporter: symbol) => {
-    if (lastReporter.current !== reporter) return;
-    lastReporter.current = null;
-    setReportState({ status: null, error: null, hasUnsavedChanges: false });
+    setReports((previous) => {
+      const updated = new Map(previous);
+      updated.delete(reporter);
+      return updated;
+    });
   }, []);
 
-  const value = useMemo<AutosaveStatusValue>(
-    () => ({ ...report, setReport, clearReport }),
-    [report, setReport, clearReport],
-  );
+  const value = useMemo<AutosaveStatusValue>(() => {
+    const latest = [...reports.values()].at(-1);
+    return {
+      status: latest?.status ?? null,
+      error: latest?.error ?? null,
+      hasUnsavedChanges: [...reports.values()].some(
+        (entry) => entry.hasUnsavedChanges || entry.status === "saving",
+      ),
+      setReport,
+      clearReport,
+    };
+  }, [reports, setReport, clearReport]);
 
   return <AutosaveStatusContext.Provider value={value}>{children}</AutosaveStatusContext.Provider>;
 }

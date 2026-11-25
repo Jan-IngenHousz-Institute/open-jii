@@ -72,5 +72,6 @@ export function useVisualizationAutosave({
   useReportAutosaveStatus({
     status: enabled ? (valid ? autosave.status : "invalid") : null,
     error: autosave.error,
+    hasUnsavedChanges: enabled && stringifyChart(values) !== autosave.savedKey,
   });
 }
