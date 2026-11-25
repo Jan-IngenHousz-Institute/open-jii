@@ -70,12 +70,6 @@ jobs:
       - name: Capture Deployment Start Time
         uses: ./.github/actions/capture-dora-start
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "24"
-          hoisted: "false"
-
       - name: Check Docker
         run: |
           echo "🔍 Checking Docker..."
@@ -89,9 +83,8 @@ jobs:
           echo "🚀 Deploying backend to ${{ env.ENV }} environment in ${{ secrets.AWS_REGION }}"
           echo "📦 Using image tag: ${{ steps.get-sha.outputs.sha }}"
 
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-
+      # Nothing here installs dependencies: the image build installs its own, and a node_modules in
+      # the checkout would only be sent to it as build context.
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
