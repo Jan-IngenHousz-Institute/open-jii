@@ -4,7 +4,13 @@ import type { PlotData } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
-import { chartTextWidth, withOuterLabels } from "./outer-labels";
+import {
+  AUTOSIZE_TOLERANCE,
+  chartTextWidth,
+  fitsOuterPlot,
+  MIN_OUTER_PLOT_HEIGHT,
+  withOuterLabels,
+} from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
@@ -138,9 +144,18 @@ export function TernaryPlot({
   sum = 1,
   bgcolor = "white",
 }: TernaryPlotProps) {
-  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({ trackWidth: true });
+  const [containerRef, sizing] = useChartSizing<HTMLDivElement>({
+    trackWidth: true,
+    trackHeight: "pixel",
+  });
+  const { width, snug, compact: compactTier, veryCompact, ultraCompact } = sizing;
+  // The pixel height only decides the short layout. Tier changes alone rebuild the figure.
+  const chrome = useMemo(
+    () => ({ width, snug, compact: compactTier, veryCompact, ultraCompact }),
+    [width, snug, compactTier, veryCompact, ultraCompact],
+  );
   const themeVersion = useChartThemeRefresh();
-  const fontSizes = tierAxisFontSizes(sizing);
+  const fontSizes = tierAxisFontSizes(chrome);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatterternary", renderer);
 
@@ -235,32 +250,54 @@ export function TernaryPlot({
   // Combine all traces - boundaries first (background), then scatter points (foreground) for proper layering
   const allTraces = useMemo(() => [...boundaryTraces, ...plotData], [boundaryTraces, plotData]);
 
+  const options = useMemo(
+    () => ({
+      config,
+      sizing: chrome,
+      labels: {
+        left:
+          chartTextWidth(
+            ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle).text,
+            fontSizes.axisTitle,
+          ) /
+            2 +
+          36,
+        right:
+          chartTextWidth(
+            ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle).text,
+            fontSizes.axisTitle,
+          ) /
+            2 +
+          36,
+        top: 44,
+        bottom: 48,
+      },
+      traces: allTraces,
+    }),
+    [config, chrome, baxis.title, caxis.title, fontSizes.axisTitle, allTraces],
+  );
+  const normal = useMemo(() => withOuterLabels(options), [options]);
+  const height = config.height ?? sizing.height ?? 0;
+  const minPlotHeight = Math.max(MIN_OUTER_PLOT_HEIGHT, 6 * fontSizes.tick + 8);
+  const compactHeight =
+    height > 0 && !fitsOuterPlot(normal.layout, height - AUTOSIZE_TOLERANCE, minPlotHeight)
+      ? height
+      : 0;
+  const outer = useMemo(
+    () =>
+      compactHeight
+        ? withOuterLabels({
+            ...options,
+            labels: { ...options.labels, top: 38, bottom: 42 },
+            compact: { height: compactHeight, maxPlotHeight: minPlotHeight },
+          })
+        : normal,
+    [options, normal, compactHeight, minPlotHeight],
+  );
+
   // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
   const figure = useMemo(
     () => {
-      const outer = withOuterLabels({
-        config,
-        sizing,
-        labels: {
-          left:
-            chartTextWidth(
-              ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle).text,
-              fontSizes.axisTitle,
-            ) /
-              2 +
-            36,
-          right:
-            chartTextWidth(
-              ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle).text,
-              fontSizes.axisTitle,
-            ) /
-              2 +
-            36,
-          top: 44,
-          bottom: 48,
-        },
-        traces: allTraces,
-      });
       return {
         data: outer.data,
         layout: {
@@ -275,7 +312,7 @@ export function TernaryPlot({
               min: aaxis.min || 0,
               max: aaxis.max || sum,
               tick0: aaxis.tick0 || 0,
-              dtick: aaxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+              dtick: aaxis.dtick ?? (snug ? undefined : sum / 10),
               nticks: 5,
               gridcolor: aaxis.gridcolor || chartGridColor(),
               linecolor: aaxis.linecolor || chartGridColor(),
@@ -291,7 +328,7 @@ export function TernaryPlot({
               min: baxis.min || 0,
               max: baxis.max || sum,
               tick0: baxis.tick0 || 0,
-              dtick: baxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+              dtick: baxis.dtick ?? (snug ? undefined : sum / 10),
               nticks: 5,
               gridcolor: baxis.gridcolor || chartGridColor(),
               linecolor: baxis.linecolor || chartGridColor(),
@@ -307,7 +344,7 @@ export function TernaryPlot({
               min: caxis.min || 0,
               max: caxis.max || sum,
               tick0: caxis.tick0 || 0,
-              dtick: caxis.dtick ?? (sizing.snug ? undefined : sum / 10),
+              dtick: caxis.dtick ?? (snug ? undefined : sum / 10),
               nticks: 5,
               gridcolor: caxis.gridcolor || chartGridColor(),
               linecolor: caxis.linecolor || chartGridColor(),
@@ -353,17 +390,16 @@ export function TernaryPlot({
       caxis.showticklabels,
       caxis.tick0,
       caxis.title,
-      config,
-      allTraces,
+      outer,
       fontSizes.axisTitle,
       fontSizes.tick,
-      sizing,
+      snug,
       sum,
       themeVersion,
     ],
   ); // Layout type allows flexible property assignment
 
-  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, chrome), [config, chrome]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
