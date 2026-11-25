@@ -16,10 +16,15 @@ export class DeleteExperimentVisualizationUseCase {
     private readonly experimentVisualizationRepository: ExperimentVisualizationRepository,
   ) {}
 
-  async execute(visualizationId: string, userId: string): Promise<Result<void>> {
+  async execute(
+    experimentId: string,
+    visualizationId: string,
+    userId: string,
+  ): Promise<Result<void>> {
     this.logger.log({
       msg: "Deleting visualization",
       operation: "deleteExperimentVisualization",
+      experimentId,
       visualizationId,
       userId,
     });
@@ -29,9 +34,10 @@ export class DeleteExperimentVisualizationUseCase {
       await this.experimentVisualizationRepository.findById(visualizationId);
 
     return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
-      if (!visualization) {
+      if (visualization?.experimentId !== experimentId) {
         this.logger.warn({
-          msg: "Attempt to delete non-existent visualization",
+          msg: "Attempt to delete missing visualization in experiment",
+          experimentId,
           operation: "deleteExperimentVisualization",
           visualizationId,
           userId,

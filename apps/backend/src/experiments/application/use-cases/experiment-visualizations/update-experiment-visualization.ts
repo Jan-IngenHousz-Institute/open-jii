@@ -23,6 +23,7 @@ export class UpdateExperimentVisualizationUseCase {
   ) {}
 
   async execute(
+    experimentId: string,
     visualizationId: string,
     data: UpdateExperimentVisualizationDto,
     userId: string,
@@ -30,6 +31,7 @@ export class UpdateExperimentVisualizationUseCase {
     this.logger.log({
       msg: "Updating visualization",
       operation: "updateExperimentVisualization",
+      experimentId,
       visualizationId,
       userId,
     });
@@ -39,9 +41,10 @@ export class UpdateExperimentVisualizationUseCase {
       await this.experimentVisualizationRepository.findById(visualizationId);
 
     return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
-      if (!visualization) {
+      if (visualization?.experimentId !== experimentId) {
         this.logger.warn({
-          msg: "Attempt to update non-existent visualization",
+          msg: "Attempt to update missing visualization in experiment",
+          experimentId,
           operation: "updateExperimentVisualization",
           visualizationId,
           userId,

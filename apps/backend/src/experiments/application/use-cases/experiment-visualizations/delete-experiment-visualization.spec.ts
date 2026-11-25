@@ -61,7 +61,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -81,7 +81,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(faker.string.uuid(), visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -117,7 +117,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -160,7 +160,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -190,7 +190,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(nonExistentExperimentId, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -227,7 +227,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -240,7 +240,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(faker.string.uuid(), visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -275,7 +275,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isFailure()).toBe(true);
