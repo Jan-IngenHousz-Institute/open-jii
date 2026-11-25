@@ -5,6 +5,7 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/hooks/useLocale";
+import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
 import { Loader2, Plus } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
@@ -83,7 +84,7 @@ export default function ExperimentVisualizationsPage() {
         visualizations={visualizationsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
-        canDuplicate={hasAccess === true && experimentData?.status === "active"}
+        canDuplicate={canDuplicateExperimentChart(accessData)}
       />
     </div>
   );
