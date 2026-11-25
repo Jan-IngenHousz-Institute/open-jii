@@ -122,7 +122,7 @@ module "ses" {
 # First set up SES
 module "ses" {
   source        = "../../modules/ses"
-  region        = "us-east-1"
+  region        = "eu-central-1"
   domain_name   = "example.com"
   subdomain     = "mail"
   environment   = "dev"

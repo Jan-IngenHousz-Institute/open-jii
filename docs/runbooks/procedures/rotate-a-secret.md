@@ -129,8 +129,17 @@ result it processed after the start carries no error.
 once. `aws iam create-access-key --user-name <env>-ses-smtp-user | pnpm secrets:ses-smtp <env>`
 stores the SMTP address built from the new one and prints its id. Redeploy the backend, check that a
 sign-in code arrives, then delete the older key: `aws iam list-access-keys` names both. If the
-command fails after the key was made, its secret half is gone and the user is at its limit of two,
-so delete only the new key, the one the secret does not name, and start again.
+command fails after the key was made, its secret half is gone and the user is at its limit of two.
+Before deleting either, print only the key id the secret names, never the whole address, which holds
+the SMTP password:
+
+```bash
+aws secretsmanager get-secret-value --secret-id openjii-ses-secrets-<env> |
+  jq -r '.SecretString | fromjson | .AUTH_EMAIL_SERVER | capture("^smtp://(?<id>[^:]+):").id'
+```
+
+If it names the older key, the write did not land: delete the new key and start again. If it names the
+new key, the write landed: carry on as above, redeploying and then deleting the older key.
 
 **The serving store's passwords** are one secret per role, `openjii-serving-store-<env>-<role>`, each
 holding `username` and `password`. The store's instance hashes them into ClickHouse's users before
