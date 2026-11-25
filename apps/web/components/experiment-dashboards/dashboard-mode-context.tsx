@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 export type DashboardMode = "view" | "edit";
 
 interface DashboardModeContextValue {
+  canEdit: boolean;
   mode: DashboardMode;
   setMode: (mode: DashboardMode) => void;
   toggleMode: () => void;
@@ -15,18 +16,23 @@ const DashboardModeContext = createContext<DashboardModeContextValue | null>(nul
 
 interface DashboardModeProviderProps {
   initialMode?: DashboardMode;
+  canEdit?: boolean;
   children: ReactNode;
 }
 
 export function DashboardModeProvider({
   initialMode = "view",
+  canEdit = true,
   children,
 }: DashboardModeProviderProps) {
   const [mode, setMode] = useState<DashboardMode>(initialMode);
   const toggleMode = useCallback(() => {
     setMode((prev) => (prev === "edit" ? "view" : "edit"));
   }, []);
-  const value = useMemo(() => ({ mode, setMode, toggleMode }), [mode, toggleMode]);
+  const value = useMemo<DashboardModeContextValue>(
+    () => ({ canEdit, mode: canEdit ? mode : "view", setMode, toggleMode }),
+    [canEdit, mode, toggleMode],
+  );
   return <DashboardModeContext.Provider value={value}>{children}</DashboardModeContext.Provider>;
 }
 
