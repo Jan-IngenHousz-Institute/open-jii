@@ -577,12 +577,14 @@ jobs:
             echo "_Preview for ${HEAD_SHA:0:10} only. Actual releases are cut when this merges to \`main\`._"
           } > preview.md
           cat preview.md >> "$GITHUB_STEP_SUMMARY"
-          # A re-run of an older commit runs outside the head's cancel group, so it must not
-          # replace the head's preview; its own preview stays in the job summary.
+          # A re-run of an older commit runs outside the head's cancel group, so only a run known to be
+          # for the head may replace the comment; any other run's preview stays in its job summary.
           CURRENT_HEAD=$(gh pr view "$PR_NUMBER" --json headRefOid -q .headRefOid 2>/dev/null || true)
-          if [ -n "$CURRENT_HEAD" ] && [ "$CURRENT_HEAD" != "$HEAD_SHA" ]; then
+          if [ -z "$CURRENT_HEAD" ]; then
+            echo "::warning::Could not read the pull request's head; leaving the preview comment alone."
+          elif [ "$CURRENT_HEAD" != "$HEAD_SHA" ]; then
             echo "This run is for ${HEAD_SHA:0:10}, not the pull request's head ${CURRENT_HEAD:0:10}; leaving the comment alone."
-          elif [ -n "$PR_NUMBER" ]; then
+          else
             gh pr comment "$PR_NUMBER" --body-file preview.md --edit-last \
               || gh pr comment "$PR_NUMBER" --body-file preview.md \
               || echo "::warning::Could not post release-preview comment"

@@ -59,7 +59,7 @@ Local development commands that need a credential (a dev session, Linear access)
 
 5. Open a pull request against `main`. Describe the problem and the solution, and follow the release metadata contract below. CI must pass before review.
 
-   Changing a pull request's base branch does not rerun CI on its own. After a retarget, click **Update branch** if GitHub offers it, or push a commit (an empty one will do), so the checks run against the new base.
+   Changing a pull request's base branch does not rerun CI on its own. After a retarget, resolve any conflicts with the new base first, since no checks run while a pull request has one. Then click **Update branch** if GitHub offers it, or push a commit (an empty one will do), so the checks run against the new base.
 
 ## Review standards
 
