@@ -12,6 +12,7 @@ interface ExperimentVisualizationsListProps {
   experimentId: string;
   isLoading?: boolean;
   isArchived?: boolean;
+  canDuplicate?: boolean;
 }
 
 export default function ExperimentVisualizationsList({
@@ -19,6 +20,7 @@ export default function ExperimentVisualizationsList({
   experimentId,
   isLoading,
   isArchived = false,
+  canDuplicate = false,
 }: ExperimentVisualizationsListProps) {
   const { t } = useTranslation("experimentVisualizations");
   const basePath = isArchived ? "experiments-archive" : "experiments";
@@ -26,7 +28,7 @@ export default function ExperimentVisualizationsList({
   return (
     <NameUpdatedList
       items={visualizations}
-      columns={getVisualizationColumns(t, experimentId)}
+      columns={getVisualizationColumns(t, experimentId, canDuplicate && !isArchived)}
       getRowHref={(visualization) =>
         `/platform/${basePath}/${experimentId}/analysis/visualizations/${visualization.id}`
       }
