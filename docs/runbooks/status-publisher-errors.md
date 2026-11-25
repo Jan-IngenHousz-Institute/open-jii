@@ -143,10 +143,15 @@ none), which tells how stale the page's notes are. What the error says points at
 - **The secret cannot be read.** `openjii-status-contentful-<env>` is read from Secrets Manager on
   the first run of each Lambda instance and again after any failed read. `AccessDeniedException`
   means the role lost `secretsmanager:GetSecretValue` on it, and `ResourceNotFoundException` means
-  the secret was deleted or `STATUS_CONTENTFUL_SECRET_ARN` is stale. A message that the secret is
-  not valid JSON, or lacks `CONTENTFUL_SPACE_ID` or `CONTENTFUL_ACCESS_TOKEN`, means the stored
-  value was edited by hand. The environment's `main.tf` writes it from `contentful_space_id` and
-  `contentful_access_token`, so applying the environment restores it.
+  the secret was deleted, holds no value yet, or `STATUS_CONTENTFUL_SECRET_ARN` is stale. A message
+  that the secret is not valid JSON, or lacks `CONTENTFUL_SPACE_ID` or `CONTENTFUL_ACCESS_TOKEN`,
+  means the stored value was edited by hand. OpenTofu creates the secret but never writes its value,
+  so applying the environment restores nothing. Set a missing key with
+  `pbpaste | pnpm secrets:set <env> status-contentful --key <KEY>`, which prints any key still
+  without a value. `secrets:set` refuses to merge into a value that is not a JSON object, so replace
+  a malformed value whole in the AWS console, Secrets Manager, with both keys as one JSON object.
+  The values come from the same Contentful API key as the web app's;
+  [rotate-a-secret](procedures/rotate-a-secret.md) has where each one is made.
 
 An answer whose only errors carry the code `UNRESOLVABLE_LINK` is not a failed read. It means an
 incident links an update that is unpublished, archived or deleted, so that update stays off the page
