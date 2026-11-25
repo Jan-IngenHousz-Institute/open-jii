@@ -89,7 +89,7 @@ export function DashboardAutosaveBoundary({
       return remaining.size === previous.size ? previous : remaining;
     });
   }, []);
-  const { hasError, error, flush } = useDashboardAutosave({
+  const { hasError, error, flush, inFlightWidgetIds } = useDashboardAutosave({
     form,
     experimentId,
     dashboardId,
@@ -143,19 +143,30 @@ export function DashboardAutosaveBoundary({
   useEffect(() => {
     if (enabled || copies.size === 0) return;
     const current = form.getValues("widgets");
-    const removedCopies = current.flatMap((widget) => {
+    const removedCopies = new Map<string, CreatedChart>();
+    for (const widget of current) {
       const copy = copies.get(widget.id);
-      return copy ? [copy.chart] : [];
-    });
-    if (removedCopies.length === 0) return;
+      if (copy && !inFlightWidgetIds.some((ids) => ids.has(widget.id))) {
+        removedCopies.set(widget.id, copy.chart);
+      }
+    }
+    if (removedCopies.size === 0) return;
 
-    if (selectedWidgetId && copies.has(selectedWidgetId)) selectWidget(null);
-    const remaining = current.filter((widget) => !copies.has(widget.id));
+    if (selectedWidgetId && removedCopies.has(selectedWidgetId)) selectWidget(null);
+    const remaining = current.filter((widget) => !removedCopies.has(widget.id));
     form.setValue("widgets", compactWidgets(remaining, form.getValues("layout.columns")), {
       shouldDirty: true,
     });
-    showUnattachedCopies(removedCopies);
-  }, [enabled, copies, form, selectedWidgetId, selectWidget, showUnattachedCopies]);
+    showUnattachedCopies([...removedCopies.values()]);
+  }, [
+    enabled,
+    copies,
+    inFlightWidgetIds,
+    form,
+    selectedWidgetId,
+    selectWidget,
+    showUnattachedCopies,
+  ]);
 
   const duplicateSelectedChart = async () => {
     if (!enabled || selectedWidget?.type !== "visualization" || !sourceChartId || hasPendingCopy)

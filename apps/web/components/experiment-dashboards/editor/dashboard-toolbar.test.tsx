@@ -1,11 +1,21 @@
+import { orpc } from "@/lib/orpc";
 import {
   createExperimentDashboard,
   createTableWidget,
   createVisualization,
   createVisualizationWidget,
 } from "@/test/factories";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { act, assertExists, render, screen, userEvent, waitFor } from "@/test/test-utils";
+import {
+  act,
+  assertExists,
+  createTestQueryClient,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
@@ -454,4 +464,89 @@ describe("DashboardToolbar", () => {
     expect(update.callCount).toBe(1);
     expect(create.callCount).toBe(1);
   });
+  it.each([200, 500])(
+    "reconciles an attachment PATCH that returns %s after edit access is revoked",
+    async (status) => {
+      const user = userEvent.setup();
+      const original = createVisualization({ id: "source" });
+      const created = createVisualization({ id: "copy" });
+      const { promise, resolve } = Promise.withResolvers<void>();
+      server.mount(contract.experiments.getExperimentVisualization, { body: original });
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+      const create = server.mount(contract.experiments.createExperimentVisualization, {
+        body: created,
+      });
+      const savedDashboard = createExperimentDashboard({ id: "dash-1", name: "Dashboard" });
+      const attaching = server.mount(contract.experiments.updateExperimentDashboard, {
+        status,
+        body: ({ body }: SpyCall) => ({ ...savedDashboard, ...(body as DashboardFormValues) }),
+        unblock: promise,
+      });
+      const chart = createVisualizationWidget({
+        config: { visualizationId: original.id, showTitle: true, showDescription: false },
+      });
+      function RenameDashboard() {
+        const form = useFormContext<DashboardFormValues>();
+        return <button onClick={() => form.setValue("name", "Renamed")}>Rename dashboard</button>;
+      }
+      function dashboard(canEdit: boolean) {
+        return (
+          <Harness initialWidgets={[chart]} save canEdit={canEdit}>
+            <ChartSelection sourceWidgetId={chart.id} />
+            <RenameDashboard />
+            <DashboardToolbar visible experimentId="exp-1" />
+          </Harness>
+        );
+      }
+
+      const queryClient = createTestQueryClient();
+      const { rerender } = render(dashboard(true), { queryClient });
+      await user.click(screen.getByRole("button", { name: "select chart" }));
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+      await waitFor(() => expect(attaching.callCount).toBe(1));
+      expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
+
+      rerender(dashboard(false));
+      expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
+      act(() => resolve());
+      if (status === 500) {
+        await waitFor(() => expectOpenCopyLink(created.id));
+        expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
+      } else {
+        await waitFor(() =>
+          expect(
+            queryClient.getMutationCache().find({
+              mutationKey: orpc.experiments.updateExperimentDashboard.key(),
+              exact: false,
+            })?.state.status,
+          ).toBe("success"),
+        );
+        expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
+        expect(toast).not.toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "editor.inspector.copyNotAttached",
+          }),
+        );
+      }
+      await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+      expect(attaching.callCount).toBe(1);
+      expect(create.callCount).toBe(1);
+
+      const nextSave = server.mount(contract.experiments.updateExperimentDashboard, {
+        body: savedDashboard,
+      });
+      rerender(dashboard(true));
+      await user.click(screen.getByRole("button", { name: "Rename dashboard" }));
+      await waitFor(() => expect(nextSave.callCount).toBe(1));
+      expect(nextSave.body).toMatchObject({ name: "Renamed" });
+      if (status === 200) {
+        expect(nextSave.body).toMatchObject({
+          widgets: [chart, { type: "visualization", config: { visualizationId: created.id } }],
+        });
+      } else {
+        expect(nextSave.body).toMatchObject({ widgets: [chart] });
+      }
+    },
+  );
 });

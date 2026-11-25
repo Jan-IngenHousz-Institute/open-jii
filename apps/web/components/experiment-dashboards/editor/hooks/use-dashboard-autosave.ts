@@ -2,7 +2,7 @@
 
 import { useExperimentDashboardUpdate } from "@/hooks/experiment/useExperimentDashboardUpdate/useExperimentDashboardUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
@@ -32,6 +32,7 @@ export function useDashboardAutosave({
 }: UseDashboardAutosaveOptions) {
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
+  const [inFlightWidgetIds, setInFlightWidgetIds] = useState<ReadonlySet<string>[]>([]);
 
   const save = useCallback(
     async (snapshot: DashboardFormValues) => {
@@ -41,8 +42,14 @@ export function useDashboardAutosave({
         layout: snapshot.layout,
         widgets: snapshot.widgets,
       };
-      await mutateAsync({ id: experimentId, dashboardId, ...body });
-      onSaved?.(snapshot);
+      const widgetIds = new Set(snapshot.widgets.map((widget) => widget.id));
+      setInFlightWidgetIds((previous) => [...previous, widgetIds]);
+      try {
+        await mutateAsync({ id: experimentId, dashboardId, ...body });
+        onSaved?.(snapshot);
+      } finally {
+        setInFlightWidgetIds((previous) => previous.filter((ids) => ids !== widgetIds));
+      }
     },
     [mutateAsync, experimentId, dashboardId, onSaved],
   );
@@ -54,5 +61,5 @@ export function useDashboardAutosave({
     enabled,
   });
   useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
-  return autosave;
+  return { ...autosave, inFlightWidgetIds };
 }
