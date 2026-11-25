@@ -1,11 +1,8 @@
 "use client";
 
-import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
-import { useLocale } from "@/hooks/useLocale";
 import { Copy, Database, MoreHorizontal, Palette, RotateCw, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -18,9 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Separator } from "@repo/ui/components/separator";
-import { ToastAction } from "@repo/ui/components/toast";
 import { TooltipProvider } from "@repo/ui/components/tooltip";
-import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { DashboardFormValues } from "../dashboard-form-shell";
@@ -80,33 +75,12 @@ const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSec
 export default function DashboardToolbar({ visible, experimentId }: DashboardToolbarProps) {
   const { t } = useTranslation("experimentDashboards");
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
-  const locale = useLocale();
   const copySave = useDashboardCopySave();
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
   const form = useFormContext<DashboardFormValues>();
   const widgets = useWatch({ control: form.control, name: "widgets" });
 
   const widgetIndex = selectedWidgetId ? widgets.findIndex((w) => w.id === selectedWidgetId) : -1;
   const widget = widgetIndex >= 0 ? widgets[widgetIndex] : null;
-  const sourceChartId =
-    widget?.type === "visualization" ? widget.config.visualizationId : undefined;
-  const { duplicate, disabled: duplicateDisabled } = useExperimentVisualizationDuplicate(
-    experimentId,
-    sourceChartId,
-  );
-  const hasPendingCopy =
-    !!widget &&
-    !!copySave &&
-    [...copySave.pending].some(
-      ([copyId, sourceId]) => widget.id === copyId || widget.id === sourceId,
-    );
-
   const sections = widget ? SECTIONS_BY_WIDGET[widget.type] : [];
   const hasSections = sections.length > 1;
   const [activeSection, setActiveSection] = useState<InspectorSectionKey>("widget");
@@ -133,55 +107,6 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
     form.setValue("widgets", compactWidgets(remaining, layout.columns), {
       shouldDirty: true,
     });
-  };
-
-  const handleDuplicate = async () => {
-    if (widget?.type !== "visualization" || !sourceChartId || hasPendingCopy) return;
-    const sourceWidgetId = widget.id;
-    const created = await duplicate();
-    if (!created) return;
-    const current = form.getValues("widgets");
-    const source = current.find((candidate) => candidate.id === sourceWidgetId);
-    if (
-      !mounted.current ||
-      source?.type !== "visualization" ||
-      source.config.visualizationId !== sourceChartId
-    ) {
-      const openCopy = t("editor.inspector.openChartCopy");
-      toast({
-        title: t("editor.inspector.copyNotAttached"),
-        action: (
-          <ToastAction asChild altText={openCopy}>
-            <Link
-              href={`/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${created.id}`}
-            >
-              {openCopy}
-            </Link>
-          </ToastAction>
-        ),
-      });
-      return;
-    }
-    const copy = {
-      ...source,
-      id: crypto.randomUUID(),
-      config: { ...source.config, visualizationId: created.id },
-      layout: { ...source.layout, row: source.layout.row + source.layout.rowSpan },
-    };
-    const insertionRow = copy.layout.row;
-    const shifted = current.map((candidate) =>
-      candidate.layout.row >= insertionRow
-        ? {
-            ...candidate,
-            layout: { ...candidate.layout, row: candidate.layout.row + copy.layout.rowSpan },
-          }
-        : candidate,
-    );
-    copySave?.track(copy.id, source.id);
-    form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
-      shouldDirty: true,
-    });
-    selectWidget(copy.id);
   };
 
   const meta = widget ? widgetMetaFor(widget.type) : null;
@@ -241,16 +166,17 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
-                {hasPendingCopy && copySave.failed ? (
+                {copySave?.retryAvailable ? (
                   <DropdownMenuItem onSelect={copySave.retry}>
                     <RotateCw className="size-4" />
                     {t("editor.inspector.retryCopySave")}
                   </DropdownMenuItem>
                 ) : (
-                  widget.type === "visualization" && (
+                  widget.type === "visualization" &&
+                  copySave?.enabled && (
                     <DropdownMenuItem
-                      disabled={duplicateDisabled || hasPendingCopy || !sourceChartId}
-                      onSelect={() => void handleDuplicate()}
+                      disabled={copySave.duplicateDisabled}
+                      onSelect={() => void copySave.duplicateSelectedChart()}
                     >
                       <Copy className="size-4" />
                       {t("editor.inspector.duplicate")}
