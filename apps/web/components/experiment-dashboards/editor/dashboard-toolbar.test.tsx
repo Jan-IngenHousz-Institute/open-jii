@@ -1,4 +1,5 @@
 import {
+  createExperimentDashboard,
   createTableWidget,
   createVisualization,
   createVisualizationWidget,
@@ -12,9 +13,11 @@ import { describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
+import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { DashboardEditorProvider, useDashboardEditor } from "./context/dashboard-editor-context";
 import DashboardToolbar from "./dashboard-toolbar";
+import { useDashboardAutosave } from "./hooks/use-dashboard-autosave";
 
 vi.mock("./inspector-toolbar/strips/table-widget-strip", () => ({
   TableWidgetStrip: () => <div data-testid="table-widget-strip" />,
@@ -107,19 +110,27 @@ describe("DashboardToolbar", () => {
     );
     expect(screen.getByTestId("table-widget-strip")).toBeInTheDocument();
   });
-  it("inserts a separate same-size chart below the original and selects it", async () => {
+  it("selects a same-size chart copy below the original and saves the compacted dashboard", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
     const created = createVisualization({ id: "copy", name: "Growth (copy)" });
     server.mount(contract.experiments.getExperimentVisualization, { body: original });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
-    server.mount(contract.experiments.createExperimentVisualization, { body: created });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+    });
+    const save = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: createExperimentDashboard({ id: "dash-1" }),
+    });
     const chart = createVisualizationWidget({
       config: { visualizationId: original.id, showTitle: true, showDescription: false },
     });
     const below = createTableWidget({ layout: { col: 0, row: 4, colSpan: 6, rowSpan: 4 } });
+    const beside = createTableWidget({ layout: { col: 6, row: 0, colSpan: 6, rowSpan: 4 } });
+    const belowBeside = createTableWidget({ layout: { col: 6, row: 4, colSpan: 6, rowSpan: 4 } });
     function State() {
       const form = useFormContext<DashboardFormValues>();
+      useDashboardAutosave({ form, experimentId: "exp-1", dashboardId: "dash-1" });
       const widgets = useWatch({ control: form.control, name: "widgets" });
       const { selectWidget, selectedWidgetId } = useDashboardEditor();
       return (
@@ -130,10 +141,12 @@ describe("DashboardToolbar", () => {
       );
     }
     render(
-      <Harness initialWidgets={[chart, below]}>
-        <State />
-        <DashboardToolbar visible experimentId="exp-1" />
-      </Harness>,
+      <AutosaveStatusProvider>
+        <Harness initialWidgets={[chart, below, beside, belowBeside]}>
+          <State />
+          <DashboardToolbar visible experimentId="exp-1" />
+        </Harness>
+      </AutosaveStatusProvider>,
     );
     await user.click(screen.getByRole("button", { name: "select chart" }));
     await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
@@ -141,7 +154,7 @@ describe("DashboardToolbar", () => {
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent('"visualizationId":"copy"'),
     );
-    const state = JSON.parse(screen.getByRole("status").textContent ?? "{}") as {
+    const state = JSON.parse(screen.getByRole("status").textContent) as {
       widgets: ExperimentDashboardWidget[];
       selectedWidgetId: string;
     };
@@ -151,7 +164,20 @@ describe("DashboardToolbar", () => {
       layout: { ...chart.layout, row: 4 },
       config: { ...chart.config, visualizationId: "copy" },
     });
-    expect(state.widgets.find((widget) => widget.id === chart.id)).toEqual(chart);
-    expect(state.widgets.find((widget) => widget.id === below.id)?.layout.row).toBe(8);
+    await waitFor(
+      () =>
+        expect(save.body).toMatchObject({
+          widgets: [
+            chart,
+            { ...below, layout: { ...below.layout, row: 8 } },
+            beside,
+            belowBeside,
+            copy,
+          ],
+        }),
+      { timeout: 3_000 },
+    );
+    expect(create.callCount).toBe(1);
+    expect(save.callCount).toBe(1);
   });
 });

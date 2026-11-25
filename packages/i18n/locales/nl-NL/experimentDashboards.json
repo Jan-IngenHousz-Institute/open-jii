@@ -61,6 +61,7 @@
       "filterDescription": "Laat kijkers de getoonde gegevens van widgets beperken"
     },
     "inspector": {
+      "duplicate": "Dupliceren",
       "title": "Widget-instellingen",
       "noSelection": "Selecteer een widget om de instellingen te bewerken.",
       "layout": "Lay-out",

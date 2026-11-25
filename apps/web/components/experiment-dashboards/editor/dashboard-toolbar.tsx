@@ -3,7 +3,7 @@
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
 import { Copy, Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -75,13 +75,24 @@ const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSec
 export default function DashboardToolbar({ visible, experimentId }: DashboardToolbarProps) {
   const { t } = useTranslation("experimentDashboards");
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
-  const { duplicate, disabled: duplicateDisabled } =
-    useExperimentVisualizationDuplicate(experimentId);
   const form = useFormContext<DashboardFormValues>();
   const widgets = useWatch({ control: form.control, name: "widgets" });
 
   const widgetIndex = selectedWidgetId ? widgets.findIndex((w) => w.id === selectedWidgetId) : -1;
   const widget = widgetIndex >= 0 ? widgets[widgetIndex] : null;
+  const sourceChartId =
+    widget?.type === "visualization" ? widget.config.visualizationId : undefined;
+  const { duplicate, disabled: duplicateDisabled } = useExperimentVisualizationDuplicate(
+    experimentId,
+    sourceChartId,
+  );
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const sections = widget ? SECTIONS_BY_WIDGET[widget.type] : [];
   const hasSections = sections.length > 1;
@@ -112,13 +123,13 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
   };
 
   const handleDuplicate = async () => {
-    if (widget?.type !== "visualization" || !widget.config.visualizationId) return;
+    if (widget?.type !== "visualization" || !sourceChartId) return;
     const sourceWidgetId = widget.id;
-    const created = await duplicate(widget.config.visualizationId);
-    if (!created) return;
+    const created = await duplicate();
+    if (!created || !mounted.current) return;
     const current = form.getValues("widgets");
     const source = current.find((candidate) => candidate.id === sourceWidgetId);
-    if (source?.type !== "visualization") return;
+    if (source?.type !== "visualization" || source.config.visualizationId !== sourceChartId) return;
     const copy = {
       ...source,
       id: crypto.randomUUID(),
@@ -134,7 +145,9 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
           }
         : candidate,
     );
-    form.setValue("widgets", [...shifted, copy], { shouldDirty: true });
+    form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
+      shouldDirty: true,
+    });
     selectWidget(copy.id);
   };
 
@@ -197,7 +210,7 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
               <DropdownMenuContent align="end" side="top">
                 {widget.type === "visualization" && (
                   <DropdownMenuItem
-                    disabled={duplicateDisabled || !widget.config.visualizationId}
+                    disabled={duplicateDisabled || !sourceChartId}
                     onSelect={() => void handleDuplicate()}
                   >
                     <Copy className="size-4" />
