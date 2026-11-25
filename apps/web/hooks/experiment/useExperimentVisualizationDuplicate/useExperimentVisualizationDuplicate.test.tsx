@@ -34,22 +34,24 @@ function mountSource() {
 }
 
 describe("useExperimentVisualizationDuplicate", () => {
-  it("copies every saved setting and checks names beyond the first page", async () => {
+  it("copies every saved setting and checks all names in one list request", async () => {
     server.mount(contract.experiments.getExperimentVisualization, { body: source });
-    server.mount(contract.experiments.listExperimentVisualizations, {
-      body: ({ query }: { query: Record<string, string> }) =>
-        query.offset === "0"
-          ? Array.from({ length: 100 }, () => createVisualization())
-          : [createVisualization({ name: "Growth (copy)" })],
+    const list = server.mount(contract.experiments.listExperimentVisualizations, {
+      body: [
+        ...Array.from({ length: 100 }, () => createVisualization()),
+        createVisualization({ name: "Growth (copy)" }),
+      ],
     });
     const created = createVisualization({ name: "Growth (copy) 2" });
     const create = server.mount(contract.experiments.createExperimentVisualization, {
       body: created,
     });
-    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1"));
+    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1", source.id));
     await act(async () => {
-      expect(await result.current.duplicate(source.id)).toEqual(created);
+      expect(await result.current.duplicate()).toEqual(created);
     });
+    expect(list.callCount).toBe(1);
+    expect(create.callCount).toBe(1);
     expect(create.body).toEqual({
       name: "Growth (copy) 2",
       description: source.description,
@@ -70,14 +72,14 @@ describe("useExperimentVisualizationDuplicate", () => {
     const create = server.mount(contract.experiments.createExperimentVisualization, {
       body: source,
     });
-    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1"));
+    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1", source.id));
     let pending: ReturnType<typeof result.current.duplicate> | undefined;
     act(() => {
-      pending = result.current.duplicate(source.id);
+      pending = result.current.duplicate();
     });
     await waitFor(() => expect(fetchSource.called).toBe(true));
     await act(async () => {
-      await result.current.duplicate(source.id);
+      await result.current.duplicate();
     });
     await act(async () => {
       resolve();
@@ -89,16 +91,16 @@ describe("useExperimentVisualizationDuplicate", () => {
   it("can retry a failed create without changing the source", async () => {
     mountSource();
     server.mount(contract.experiments.createExperimentVisualization, { status: 500 });
-    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1"));
+    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1", source.id));
     await act(async () => {
-      expect(await result.current.duplicate(source.id)).toBeUndefined();
+      expect(await result.current.duplicate()).toBeUndefined();
     });
     expect(result.current.disabled).toBe(false);
     const create = server.mount(contract.experiments.createExperimentVisualization, {
       body: source,
     });
     await act(async () => {
-      expect(await result.current.duplicate(source.id)).toEqual(source);
+      expect(await result.current.duplicate()).toEqual(source);
     });
     expect(create.callCount).toBe(1);
     expect(source.name).toBe("Growth");
@@ -123,7 +125,7 @@ describe("useExperimentVisualizationDuplicate", () => {
       return null;
     }
     function Action() {
-      const { disabled } = useExperimentVisualizationDuplicate("exp-1");
+      const { disabled } = useExperimentVisualizationDuplicate("exp-1", source.id);
       return <button disabled={disabled}>Duplicate</button>;
     }
     render(
@@ -131,7 +133,7 @@ describe("useExperimentVisualizationDuplicate", () => {
         <Action />
       </Reports>,
     );
-    expect(screen.getByRole("button", { name: "Duplicate" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Duplicate$/u })).toBeDisabled();
   });
   it("waits for a real chart autosave, including a save that outlives the inspector", async () => {
     const user = userEvent.setup();
@@ -164,37 +166,55 @@ describe("useExperimentVisualizationDuplicate", () => {
         </button>
       );
     }
+    function OtherCopyActions() {
+      const otherChart = useExperimentVisualizationDuplicate("exp-1", "other");
+      const otherExperiment = useExperimentVisualizationDuplicate("exp-2", source.id);
+      return (
+        <>
+          <button disabled={otherChart.disabled}>Duplicate other chart</button>
+          <button disabled={otherExperiment.disabled}>Duplicate in other experiment</button>
+        </>
+      );
+    }
     function Workspace() {
       const [open, setOpen] = useState(true);
-      const { duplicate, disabled } = useExperimentVisualizationDuplicate("exp-1");
+      const { duplicate, disabled } = useExperimentVisualizationDuplicate("exp-1", source.id);
       return (
         <>
           {open && <ChartEditor />}
           <button onClick={() => setOpen(false)}>Close inspector</button>
-          <button disabled={disabled} onClick={() => void duplicate(source.id)}>
+          <button disabled={disabled} onClick={() => void duplicate()}>
             Duplicate
           </button>
         </>
       );
     }
     render(
-      <AutosaveStatusProvider>
-        <Workspace />
-      </AutosaveStatusProvider>,
+      <>
+        <AutosaveStatusProvider>
+          <Workspace />
+        </AutosaveStatusProvider>
+        <OtherCopyActions />
+      </>,
     );
     await user.click(screen.getByRole("button", { name: "Rename" }));
-    expect(screen.getByRole("button", { name: "Duplicate" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Duplicate$/u })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "Close inspector" }));
     await waitFor(() => expect(update.called).toBe(true));
-    expect(screen.getByRole("button", { name: "Duplicate" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Duplicate$/u })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Duplicate other chart" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Duplicate in other experiment" })).toBeEnabled();
     resolve();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Duplicate" })).toBeEnabled());
-    await user.click(screen.getByRole("button", { name: "Duplicate" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^Duplicate$/u })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: /^Duplicate$/u }));
     await waitFor(() => expect(create.body).toMatchObject({ name: "Updated growth (copy)" }));
   });
 
-  it("keeps a maximum-length chart name within the create limit", async () => {
-    const longName = "a".repeat(255);
+  it.each([
+    ["a".repeat(255), "a".repeat(248)],
+    ["a".repeat(247) + "🌱" + "a".repeat(6), "a".repeat(247)],
+    ["a".repeat(246) + "🌱" + "a".repeat(7), "a".repeat(246) + "🌱"],
+  ])("keeps a maximum-length chart name within the create limit (%#)", async (longName, prefix) => {
     server.mount(contract.experiments.getExperimentVisualization, {
       body: { ...source, name: longName },
     });
@@ -202,10 +222,10 @@ describe("useExperimentVisualizationDuplicate", () => {
     const create = server.mount(contract.experiments.createExperimentVisualization, {
       body: source,
     });
-    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1"));
+    const { result } = renderHook(() => useExperimentVisualizationDuplicate("exp-1", source.id));
     await act(async () => {
-      await result.current.duplicate(source.id);
+      await result.current.duplicate();
     });
-    expect(create.body).toMatchObject({ name: `${"a".repeat(248)} (copy)` });
+    expect(create.body).toMatchObject({ name: `${prefix} (copy)` });
   });
 });
