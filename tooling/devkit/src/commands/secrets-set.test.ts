@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseArgs, servingStoreReloader, setSecret } from "./secrets-set.js";
 import type { SecretsSetDependencies, SsmCommands } from "./secrets-set.js";
@@ -322,28 +322,35 @@ describe("servingStoreReloader", () => {
     return commands;
   }
   const noWait = () => Promise.resolve();
+  let write: ReturnType<typeof vi.fn<(output: string) => void>>;
+  beforeEach(() => {
+    write = vi.fn<(output: string) => void>();
+  });
 
-  it("runs the passwords script on the named instance and waits for it", async () => {
+  it("runs the passwords script on the named instance, checking the logins, and waits for it", async () => {
     const commands = ssm([
       { status: "Pending" },
       { status: "InProgress", targetCount: 1 },
       { status: "Success", targetCount: 1 },
     ]);
 
-    await servingStoreReloader(commands, noWait)("openjii-serving-store-dev");
+    await servingStoreReloader(commands, write, noWait)("openjii-serving-store-dev");
 
     expect(commands.run).toHaveBeenCalledWith(
       "openjii-serving-store-dev",
-      "/usr/local/bin/openjii-clickhouse-passwords",
+      "/usr/local/bin/openjii-clickhouse-passwords --check",
     );
     expect(commands.status).toHaveBeenCalledTimes(3);
+    expect(write).toHaveBeenCalledWith(
+      "Running the passwords script on openjii-serving-store-dev: SSM command cmd-1\n",
+    );
   });
 
   it("fails when no instance carries the name", async () => {
     const commands = ssm([{ status: "Success", targetCount: 0 }]);
 
     await expect(
-      servingStoreReloader(commands, noWait)("openjii-serving-store-dev"),
+      servingStoreReloader(commands, write, noWait)("openjii-serving-store-dev"),
     ).rejects.toThrow("No instance tagged Name=openjii-serving-store-dev");
   });
 
@@ -351,7 +358,18 @@ describe("servingStoreReloader", () => {
     const commands = ssm([{ status: "Failed", targetCount: 1 }], "AccessDeniedException");
 
     await expect(
-      servingStoreReloader(commands, noWait)("openjii-serving-store-dev"),
-    ).rejects.toThrow(/ended Failed:\nAccessDeniedException/);
+      servingStoreReloader(commands, write, noWait)("openjii-serving-store-dev"),
+    ).rejects.toThrow(/ended Failed \(SSM command cmd-1\):\nAccessDeniedException/);
+  });
+
+  it("names the command to follow when it outlasts the wait", async () => {
+    const commands = ssm([]);
+    commands.status.mockResolvedValue({ status: "InProgress", targetCount: 1 });
+
+    await expect(
+      servingStoreReloader(commands, write, noWait)("openjii-serving-store-dev"),
+    ).rejects.toThrow(
+      "It may still be running; follow it with aws ssm list-command-invocations --command-id cmd-1 --details",
+    );
   });
 });

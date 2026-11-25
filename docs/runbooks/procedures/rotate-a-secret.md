@@ -10,6 +10,11 @@ someone who could read it leaves, or when it may have leaked.
   through your SSO role: setting one key of a JSON secret reads the secret before writing it.
   CloudTrail records each change under your name. Nobody else needs access to the account: services
   pick up the new value through a deploy, below.
+- A serving store password also needs `ssm:SendCommand`, `ssm:ListCommands` and
+  `ssm:ListCommandInvocations`, because the command runs the store's passwords script. The webhook
+  key and the store's writer and reloader passwords also go into a Databricks secret scope, so sign
+  in with `databricks auth login` first. Without these, the command stops partway and says what
+  already holds the new value.
 - One person rotates a secret at a time. Two people setting different keys of one secret at once can
   both see success while the second write drops the first one's value.
 - Open a ticket for the rotation and note in it what you rotated, when, and the run that redeployed.
@@ -152,7 +157,8 @@ role:
 2. `printf %s "$PASSWORD" | pnpm secrets:set <env> serving-store-<role> --key password` stores the
    password, writes it to the `serving-store-<env>` scope too for `writer` and `reloader`, and has
    the store take it through SSM Run Command, so nobody needs a shell on the instance. ClickHouse
-   rereads its users without a restart. If the command fails, it names what already holds the new
+   rereads its users without a restart, and the command returns only once the store accepts the new
+   password. If the command fails, it names what already holds the new
    password; the feed may already be using it, and the store may still take it. Run the same command
    again with the same `$PASSWORD`, never a new one.
 3. Restart the role's consumer if the command says so. `reader`: redeploy the backend. `writer`:

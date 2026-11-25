@@ -17,7 +17,8 @@ resource "databricks_secret_scope" "this" {
 }
 
 # The values OpenTofu may hold. Credentials go into the scope with `pnpm secrets:set`, so they
-# reach no plan and no state.
+# reach no plan and no state. The Slack webhook is the exception: the jobs' notifications hold it
+# anyway, as `rotate-a-secret.md` explains under "Values that stay in OpenTofu".
 resource "databricks_secret" "value" {
   for_each = toset(nonsensitive(keys(var.secrets)))
 

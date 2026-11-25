@@ -26,8 +26,9 @@ write_files:
     content: |
       ${data_device} /var/lib/clickhouse ext4 defaults,noatime,nofail,x-systemd.makefs,x-systemd.device-timeout=10min 0 2
 
-  # The passwords script runs before every start, as root. A failed secret read fails the start, and
-  # the restart reads again, so the store comes up once Secrets Manager answers.
+  # The passwords script runs before every start, as root. A failed secret read keeps the last good
+  # passwords file; on a new instance, which has none, it fails the start, and the restart reads
+  # again, so the store comes up once Secrets Manager answers.
   - path: /etc/systemd/system/clickhouse-server.service.d/openjii.conf
     content: |
       [Unit]

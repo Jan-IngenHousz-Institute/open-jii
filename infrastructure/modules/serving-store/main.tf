@@ -95,8 +95,9 @@ locals {
   })
 
   passwords_script = templatefile("${path.module}/templates/passwords.sh.tftpl", {
-    region = data.aws_region.current.region
-    users  = [for role, user in local.users : { name = user.name, secret_name = "${local.name}-${role}" }]
+    region    = data.aws_region.current.region
+    http_port = var.http_port
+    users     = [for role, user in local.users : { name = user.name, secret_name = "${local.name}-${role}" }]
   })
 
   cloudwatch_agent_config_path = "/opt/aws/amazon-cloudwatch-agent/etc/openjii.json"

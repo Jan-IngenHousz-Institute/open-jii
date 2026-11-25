@@ -350,7 +350,8 @@ function databricksScopes(profile: string) {
 }
 
 // Written by the store's boot configuration (modules/serving-store/templates/cloud-config.yaml.tftpl).
-const PASSWORDS_SCRIPT = "/usr/local/bin/openjii-clickhouse-passwords";
+// --check makes it wait until ClickHouse accepts every user's password, not only write the file.
+const PASSWORDS_SCRIPT = "/usr/local/bin/openjii-clickhouse-passwords --check";
 
 /** The three SSM Run Command calls the reload needs, apart so a test can stand in for them. */
 export interface SsmCommands {
@@ -397,14 +398,19 @@ export function ssmCommands(profile: string): SsmCommands {
 
 /**
  * Runs the store's passwords script through SSM Run Command, so nobody needs a shell on the
- * instance, and waits for the outcome. ClickHouse rereads the file it writes without a restart.
+ * instance, and waits until the store accepts the passwords. ClickHouse rereads the file the script
+ * writes without a restart.
  */
 export function servingStoreReloader(
   ssm: SsmCommands,
+  write: (output: string) => void,
   sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 ) {
   return async (instanceName: string): Promise<void> => {
     const commandId = await ssm.run(instanceName, PASSWORDS_SCRIPT);
+    // Printed at once, so a command that outlasts the wait below can still be followed.
+    const follow = `aws ssm list-command-invocations --command-id ${commandId} --details`;
+    write(`Running the passwords script on ${instanceName}: SSM command ${commandId}\n`);
     for (let attempt = 0; attempt < 60; attempt++) {
       await sleep(2000);
       const { status, targetCount } = await ssm.status(commandId);
@@ -415,10 +421,14 @@ export function servingStoreReloader(
       if (status === "Success") return;
       const output = await ssm.output(commandId);
       throw new Error(
-        `The passwords script on ${instanceName} ended ${status}` + (output ? `:\n${output}` : ""),
+        `The passwords script on ${instanceName} ended ${status} (SSM command ${commandId})` +
+          (output ? `:\n${output}` : ""),
       );
     }
-    throw new Error(`The passwords script on ${instanceName} did not finish within two minutes`);
+    throw new Error(
+      `The passwords script on ${instanceName} did not finish within two minutes. ` +
+        `It may still be running; follow it with ${follow}`,
+    );
   };
 }
 
@@ -431,15 +441,16 @@ async function run(): Promise<number> {
     );
   }
   const store = secretsManager(args.awsProfile);
+  const write = (output: string) => {
+    process.stdout.write(output);
+  };
   await setSecret(args, {
     readInput: () => text(process.stdin),
     read: store.read,
     put: store.put,
     putScoped: databricksScopes(args.databricksProfile),
-    reloadServingStore: servingStoreReloader(ssmCommands(args.awsProfile)),
-    write: (output) => {
-      process.stdout.write(output);
-    },
+    reloadServingStore: servingStoreReloader(ssmCommands(args.awsProfile), write),
+    write,
   });
   return 0;
 }

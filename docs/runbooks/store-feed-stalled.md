@@ -52,12 +52,14 @@ or `[serving store] Handing 4000 rows of measurements back: ...`.
 | a timeout or connection error             | The store does not answer                                                | Work `store-answers`                                                                                          |
 
 OpenTofu no longer writes the writer's password. To pass the one in its secret to the scope and the
-store again, without changing it:
+store again, without changing it. When the secret holds no password, `jq -e` prints nothing, and the
+command refuses the empty input rather than set the text `null`:
 
 ```bash
 aws secretsmanager get-secret-value --profile openjii-<env> --region eu-central-1 \
   --secret-id openjii-serving-store-<env>-writer --query SecretString --output text |
-  jq -r .password | pnpm secrets:set <env> serving-store-writer --key password
+  jq -er '.password | select(type == "string" and length > 0)' |
+  pnpm secrets:set <env> serving-store-writer --key password
 ```
 
 Rows the store could not read never stall the feed: they go to `store.feed_rejects`, and
@@ -66,7 +68,7 @@ Rows the store could not read never stall the feed: they go to `store.feed_rejec
 ## Switching the feed off and on
 
 The feed is on in an environment when `local.serving_store_feed_start_versions` in
-`infrastructure/env/<env>/main.tf` holds a start version for each table, and off when it is empty;
+`infrastructure/env/<env>/locals.tf` holds a start version for each table, and off when it is empty;
 the pipelines carry the feed's notebook and settings only while it is on. Changing it and applying
 restarts both pipelines, and the feed's alerts go with the switch. When minutes matter more than a
 pull request, remove the `serving_store_feed` notebook from each pipeline's source code in the
