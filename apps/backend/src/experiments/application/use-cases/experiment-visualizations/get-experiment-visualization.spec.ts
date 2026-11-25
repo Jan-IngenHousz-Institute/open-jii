@@ -39,7 +39,7 @@ describe("GetExperimentVisualizationUseCase", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+      vi.spyOn(experimentVisualizationRepository, "findReadableById").mockResolvedValue(
         success({
           id: visualizationId,
           experimentId: experiment.id,
@@ -76,7 +76,7 @@ describe("GetExperimentVisualizationUseCase", () => {
         userId: testUserId,
       });
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+      vi.spyOn(experimentVisualizationRepository, "findReadableById").mockResolvedValue(
         failure({
           message: "Visualization not found",
           code: "NOT_FOUND",
@@ -103,7 +103,7 @@ describe("GetExperimentVisualizationUseCase", () => {
       // Arrange
       const differentExperimentId = faker.string.uuid();
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+      vi.spyOn(experimentVisualizationRepository, "findReadableById").mockResolvedValue(
         success({
           id: visualizationId,
           experimentId: differentExperimentId, // Different experiment ID
@@ -130,14 +130,16 @@ describe("GetExperimentVisualizationUseCase", () => {
       );
     });
 
-    it("should fail when visualization findById returns success with null", async () => {
+    it("should fail when visualization findReadableById returns success with null", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Test Experiment",
         userId: testUserId,
       });
 
-      // Mock findById to return success with null (instead of failure)
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
+      // Mock findReadableById to return success with null (instead of failure)
+      vi.spyOn(experimentVisualizationRepository, "findReadableById").mockResolvedValue(
+        success(null),
+      );
 
       // Act
       const result = await useCase.execute(experiment.id, visualizationId, testUserId);

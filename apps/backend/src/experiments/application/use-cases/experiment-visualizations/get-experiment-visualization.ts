@@ -45,7 +45,7 @@ export class GetExperimentVisualizationUseCase {
     }
 
     const visualizationResult =
-      await this.experimentVisualizationRepository.findById(visualizationId);
+      await this.experimentVisualizationRepository.findReadableById(visualizationId);
 
     if (visualizationResult.isFailure()) {
       this.logger.error({

@@ -1,4 +1,4 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, Logger } from "@nestjs/common";
 
 import {
   and,
@@ -11,7 +11,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import { ftsMatch, ftsRank, searchScore } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
@@ -23,6 +23,7 @@ import type {
   CreateExperimentVisualizationDto,
   UpdateExperimentVisualizationDto,
 } from "../models/experiment-visualizations.model";
+import { selectExperimentVisualizationSchema } from "../models/experiment-visualizations.model";
 import { searchableExperimentCondition } from "./experiment-search-scope";
 
 const { searchVector: _searchVector, ...visualizationColumns } =
@@ -37,6 +38,8 @@ function visualizationInExperiment(experimentId: string, id: string) {
 
 @Injectable()
 export class ExperimentVisualizationRepository {
+  private readonly logger = new Logger(ExperimentVisualizationRepository.name);
+
   constructor(
     @Inject("DATABASE")
     private readonly database: DatabaseInstance,
@@ -92,13 +95,15 @@ export class ExperimentVisualizationRepository {
         .where(eq(experimentVisualizations.experimentId, experimentId))
         .orderBy(desc(experimentVisualizations.createdAt));
 
-      return results.map((result) => {
-        const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
-        augmentedResult.createdByName =
-          result.profileUserId && result.firstName && result.lastName
-            ? `${result.firstName} ${result.lastName}`
-            : undefined;
-        return augmentedResult;
+      return results.flatMap((result) => {
+        const visualization = this.parseVisualization({
+          ...result.experiment_visualizations,
+          createdByName:
+            result.profileUserId && result.firstName && result.lastName
+              ? `${result.firstName} ${result.lastName}`
+              : undefined,
+        });
+        return visualization ? [visualization] : [];
       });
     });
   }
@@ -183,6 +188,34 @@ export class ExperimentVisualizationRepository {
 
       return rows.length > 0;
     });
+  }
+
+  async findReadableById(id: string): Promise<Result<ExperimentVisualizationDto | null>> {
+    const result = await this.findById(id);
+    if (result.isFailure()) {
+      return result;
+    }
+    return success(result.value ? this.parseVisualization(result.value) : null);
+  }
+
+  private parseVisualization(visualization: {
+    id: string;
+    experimentId: string;
+    [key: string]: unknown;
+  }): ExperimentVisualizationDto | null {
+    const parsed = selectExperimentVisualizationSchema.safeParse(visualization);
+    if (parsed.success) {
+      return parsed.data;
+    }
+
+    this.logger.warn({
+      msg: "Skipping unreadable experiment visualization",
+      operation: "readExperimentVisualization",
+      visualizationId: visualization.id,
+      experimentId: visualization.experimentId,
+      issues: parsed.error.issues.map(({ path, code, message }) => ({ path, code, message })),
+    });
+    return null;
   }
 
   async update(

@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import { eq, experimentVisualizations } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
@@ -115,6 +116,93 @@ describe("ExperimentVisualizationsController", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  describe("unreadable saved visualizations", () => {
+    async function insertVisualization(dataConfig: unknown, createdAt = new Date()) {
+      const [row] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: readableExperimentId,
+          createdBy: testUserId,
+          name: "Saved chart",
+          chartFamily: "basic",
+          chartType: "bar",
+          config: {},
+          dataConfig,
+          createdAt,
+        })
+        .returning({ id: experimentVisualizations.id });
+      return row;
+    }
+
+    const validDataConfig = {
+      tableName: "test_table",
+      dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+    };
+    const malformedConfigs = [
+      {
+        ...validDataConfig,
+        filters: [{ column: "school", operator: "equals", value: "" }],
+      },
+      { ...validDataConfig, dataSources: [{ role: "unknown" }] },
+    ];
+
+    it("returns valid charts in order when other saved charts fail validation", async () => {
+      const oldest = await insertVisualization(validDataConfig, new Date("2026-01-01"));
+      for (const dataConfig of malformedConfigs) {
+        await insertVisualization(dataConfig, new Date("2026-01-02"));
+      }
+      const newest = await insertVisualization(validDataConfig, new Date("2026-01-03"));
+
+      const response = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+            id: readableExperimentId,
+          }),
+        )
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({ id: newest.id, createdBy: testUserId }),
+        expect.objectContaining({ id: oldest.id, createdBy: testUserId }),
+      ]);
+    });
+
+    it("returns an empty list when every saved chart fails validation", async () => {
+      for (const dataConfig of malformedConfigs) {
+        await insertVisualization(dataConfig);
+      }
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+            id: readableExperimentId,
+          }),
+        )
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK)
+        .expect([]);
+    });
+
+    it.each(malformedConfigs)(
+      "returns 404 for an unreadable chart and still allows deletion",
+      async (dataConfig) => {
+        const row = await insertVisualization(dataConfig);
+        const path = testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+          id: readableExperimentId,
+          visualizationId: row.id,
+        });
+        await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+        await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+        expect(
+          await testApp.database
+            .select({ id: experimentVisualizations.id })
+            .from(experimentVisualizations)
+            .where(eq(experimentVisualizations.id, row.id)),
+        ).toEqual([]);
+      },
+    );
   });
 
   describe("listVisualizations", () => {
