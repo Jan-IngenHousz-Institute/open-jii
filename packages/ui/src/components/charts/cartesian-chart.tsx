@@ -229,6 +229,7 @@ export interface CartesianChartProps extends BaseChartProps {
   uirevision?: string;
   /** Called when the user zooms, pans or resets the view, with the layout keys that changed. */
   onRelayout?: (event: Readonly<Record<string, unknown>>) => void;
+  onRestyle?: (event: Readonly<PlotRestyleEvent>) => void;
 }
 
 /**
@@ -246,6 +247,7 @@ export function CartesianChart({
   subplots,
   uirevision,
   onRelayout,
+  onRestyle,
   ...eventHandlers
 }: CartesianChartProps) {
   // Faceted charts pass their grid so the sizing tier compares against
@@ -291,6 +293,7 @@ export function CartesianChart({
   );
   const handleRestyle = React.useCallback(
     (event: Readonly<PlotRestyleEvent>) => {
+      onRestyle?.(event);
       const [update, indices] = event;
       if (!("visible" in update)) return;
       const raw: unknown = update.visible;
@@ -304,7 +307,7 @@ export function CartesianChart({
         return { key: legendKey, values: next };
       });
     },
-    [legendKey],
+    [legendKey, onRestyle],
   );
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
