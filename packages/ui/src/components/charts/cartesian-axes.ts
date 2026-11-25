@@ -181,17 +181,23 @@ function fitStackedAxes(
   const right = visible.filter(({ index }) => index % 2 === 1);
   const minimumPlot = Math.max(160, 0.4 * (width - (base.l ?? 0) - (base.r ?? 0) - bar));
 
-  const measure = (level: "full" | "titles" | "lines") => {
-    const band = ({ id, index, axis }: AxisPlacement) =>
-      AXIS_GAP +
-      (index < 2 || level === "full" ? (tickSpace.get(id) ?? 0) : 0) +
-      (axis.title?.text && (index < 2 || level !== "lines")
-        ? fonts.axisTitle + TITLE_STANDOFF + 4
-        : 0);
-    const side = (axes: AxisPlacement[]) => {
-      const bands = axes.map(band);
+  type Detail = "full" | "titles" | "none";
+  const showTicks = ({ index }: AxisPlacement, detail: Detail) => index < 2 || detail === "full";
+  const showTitle = ({ index, axis }: AxisPlacement, detail: Detail) =>
+    Boolean(axis.title?.text) && (index < 2 || detail !== "none");
+  const hasChrome = (entry: AxisPlacement, detail: Detail) =>
+    showTicks(entry, detail) || showTitle(entry, detail);
+  const measure = (detail: Detail) => {
+    const side = (entries: AxisPlacement[]) => {
+      const axes = entries.filter((entry) => hasChrome(entry, detail));
+      const bands = axes.map(
+        (entry) =>
+          AXIS_GAP +
+          (showTicks(entry, detail) ? (tickSpace.get(entry.id) ?? 0) : 0) +
+          (showTitle(entry, detail) ? fonts.axisTitle + TITLE_STANDOFF + 4 : 0),
+      );
       const outer = bands.pop() ?? 0;
-      return { outer, inner: bands, inset: bands.reduce((sum, size) => sum + size, 0) };
+      return { axes, outer, inner: bands, inset: bands.reduce((sum, size) => sum + size, 0) };
     };
     const l = side(left);
     const r = side(right);
@@ -204,15 +210,15 @@ function fitStackedAxes(
     return { margin, paper, plot: paper - l.inset - r.inset, l, r };
   };
 
-  let level: "full" | "titles" | "lines" = "full";
-  let fit = measure(level);
+  let detail: Detail = "full";
+  let fit = measure(detail);
   if (fit.plot < minimumPlot) {
-    level = "titles";
-    fit = measure(level);
+    detail = "titles";
+    fit = measure(detail);
   }
   if (fit.plot < minimumPlot) {
-    level = "lines";
-    fit = measure(level);
+    detail = "none";
+    fit = measure(detail);
   }
   // Even after shedding extras, a very small widget may not fit its two main
   // axes and colour bar. Keep their space and leave what remains to the plot.
@@ -228,11 +234,24 @@ function fitStackedAxes(
     ...(fit.plot < 200 ? { nticks: Math.max(2, Math.floor(fit.plot / 32)) } : {}),
   };
 
+  for (const entry of visible) {
+    if (hasChrome(entry, detail)) continue;
+    Object.assign(entry.axis, {
+      automargin: false,
+      showline: false,
+      showticklabels: false,
+      ticks: "",
+      title: undefined,
+      zeroline: false,
+    });
+  }
+
   const placeSide = (axes: AxisPlacement[], bands: number[], edge: number, direction: number) => {
     let covered = 0;
-    axes.forEach(({ index, axis }, rank) => {
-      const ticks = index < 2 || level === "full";
-      const title = index < 2 || level !== "lines";
+    axes.forEach((entry, rank) => {
+      const { axis } = entry;
+      const ticks = showTicks(entry, detail);
+      const title = showTitle(entry, detail);
       Object.assign(axis, {
         anchor: "free",
         position: Math.min(1, Math.max(0, edge + (direction * covered) / fit.paper)),
@@ -251,8 +270,8 @@ function fitStackedAxes(
       covered += bands[rank] ?? 0;
     });
   };
-  placeSide(left, fit.l.inner, domain[0], -1);
-  placeSide(right, fit.r.inner, domain[1], 1);
+  placeSide(fit.l.axes, fit.l.inner, domain[0], -1);
+  placeSide(fit.r.axes, fit.r.inner, domain[1], 1);
 }
 
 export function applyCartesianAxes(

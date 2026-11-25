@@ -136,12 +136,38 @@ describe("numbered Y-axis layout", () => {
     expect(narrow.yaxis?.showticklabels).not.toBe(false);
     expect(narrow.yaxis?.title?.text).toBe("Fluorescence");
     expect(narrow.yaxis2?.title?.text).toBe("Temperature");
-    expect(narrow.yaxis3).toMatchObject({ visible: true, showline: true, showticklabels: false });
-    expect(narrow.yaxis6?.title).toBeUndefined();
-    const [start = 0, end = 0] = narrow.xaxis?.domain ?? [];
-    expect(
-      (end - start) * (320 - (narrow.margin?.l ?? 0) - (narrow.margin?.r ?? 0)),
-    ).toBeGreaterThan(100);
+    for (const id of ["yaxis3", "yaxis4", "yaxis5", "yaxis6"]) {
+      expect(narrow[id]).toMatchObject({
+        visible: true,
+        overlaying: "y",
+        showline: false,
+        showticklabels: false,
+        ticks: "",
+      });
+      expect(narrow[id]?.title).toBeUndefined();
+    }
+    expect(narrow.yaxis3?.type).toBe("log");
+    expect(narrow.xaxis?.domain).toEqual([0, 1]);
+  });
+
+  it("keeps the line on an extra axis with a title and reclaims untitled axes", () => {
+    const layout: Partial<Layout> = { yaxis: { title: { text: "Fluorescence" } } };
+    applyCartesianAxes(
+      layout,
+      series(6),
+      { y2AxisTitle: "Temperature", y3AxisTitle: "Light" },
+      500,
+      { thickness: 15 },
+    );
+    const axes = layout as ReturnType<typeof readLayout>;
+    expect(axes.yaxis3).toMatchObject({
+      title: { text: "Light" },
+      showline: true,
+      showticklabels: false,
+    });
+    expect(axes.yaxis4).toMatchObject({ visible: true, showline: false, showticklabels: false });
+    expect(layout.xaxis?.domain?.[0]).toBeGreaterThan(0);
+    expect(layout.xaxis?.domain?.[1]).toBe(1);
   });
 
   it("reflows the PNG layout for its dimensions and keeps the on-screen zoom", () => {
