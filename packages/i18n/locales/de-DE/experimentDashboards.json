@@ -83,7 +83,8 @@
       "viz": {
         "pickVisualizationFirst": "Zuerst eine Visualisierung auswählen"
       },
-      "moreShelves": "Mehr"
+      "moreShelves": "Mehr",
+      "duplicate": "Duplizieren"
     },
     "vizDataStrip": {
       "dataset": "Datensatz",
