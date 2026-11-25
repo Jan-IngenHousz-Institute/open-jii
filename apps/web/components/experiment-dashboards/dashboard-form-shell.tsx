@@ -1,6 +1,7 @@
 "use client";
 
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
@@ -91,7 +92,7 @@ function DashboardFormShellBody({
   children,
 }: DashboardFormShellBodyProps) {
   const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = accessData?.isAdmin ?? false;
+  const canEdit = canDuplicateExperimentChart(accessData);
 
   return (
     <DashboardAutosaveBoundary

@@ -1,11 +1,19 @@
-import { createExperimentDashboard, createRichTextWidget } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import {
+  createExperimentAccess,
+  createExperimentDashboard,
+  createRichTextWidget,
+} from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { useFormContext } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import { DashboardFormShell } from "./dashboard-form-shell";
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { useDashboardMode } from "./dashboard-mode-context";
+import { useDashboardCopySave } from "./editor/context/dashboard-copy-save-context";
 
 // Replace the heavy layout body with a probe that pulls form state out of
 // context. This isolates form-shell's responsibility: setting defaults and
@@ -34,6 +42,31 @@ function FormProbe() {
 }
 
 describe("DashboardFormShell", () => {
+  it.each(["stale", "published"] as const)(
+    "enables chart duplication for a %s experiment admin",
+    async (status) => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: createExperimentAccess({ experiment: { id: "exp-1", status }, isAdmin: true }),
+      });
+      const dashboard = createExperimentDashboard();
+      function CopyAvailability() {
+        const recovery = useDashboardCopySave();
+        return <button disabled={!recovery?.enabled}>Duplicate</button>;
+      }
+      render(
+        <DashboardFormShell
+          experimentId="exp-1"
+          dashboardId={dashboard.id}
+          dashboard={dashboard}
+          initialMode="edit"
+        >
+          <CopyAvailability />
+        </DashboardFormShell>,
+      );
+      await waitFor(() => expect(screen.getByRole("button", { name: "Duplicate" })).toBeEnabled());
+    },
+  );
+
   it("populates the form with the dashboard's name as the default", () => {
     const dashboard = createExperimentDashboard({ name: "Daily" });
     render(
