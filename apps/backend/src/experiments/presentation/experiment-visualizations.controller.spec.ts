@@ -119,7 +119,11 @@ describe("ExperimentVisualizationsController", () => {
   });
 
   describe("unreadable saved visualizations", () => {
-    async function insertVisualization(dataConfig: unknown, createdAt = new Date()) {
+    async function insertVisualization(
+      dataConfig: unknown,
+      createdAt = new Date(),
+      config: unknown = {},
+    ) {
       const [row] = await testApp.database
         .insert(experimentVisualizations)
         .values({
@@ -128,7 +132,7 @@ describe("ExperimentVisualizationsController", () => {
           name: "Saved chart",
           chartFamily: "basic",
           chartType: "bar",
-          config: {},
+          config,
           dataConfig,
           createdAt,
         })
@@ -203,6 +207,53 @@ describe("ExperimentVisualizationsController", () => {
         ).toEqual([]);
       },
     );
+
+    it("rejects a rename that leaves an unreadable config and accepts a repair", async () => {
+      const brokenConfig = "unreadable";
+      const brokenDataConfig = malformedConfigs[0];
+      const row = await insertVisualization(brokenDataConfig, new Date(), brokenConfig);
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, {
+        id: readableExperimentId,
+        visualizationId: row.id,
+      });
+      const rename = {
+        name: "Renamed chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        dataConfig: validDataConfig,
+      };
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send(rename)
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect((response) => {
+          expect(response.body).toHaveProperty("message", "Invalid saved chart fields: config");
+        });
+      expect(
+        await testApp.database
+          .select()
+          .from(experimentVisualizations)
+          .where(eq(experimentVisualizations.id, row.id)),
+      ).toEqual([
+        expect.objectContaining({
+          name: "Saved chart",
+          config: brokenConfig,
+          dataConfig: brokenDataConfig,
+        }),
+      ]);
+
+      const config = { title: "Repaired chart" };
+      const repaired = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ ...rename, config })
+        .expect(StatusCodes.OK);
+      expect(repaired.body).toMatchObject({ id: row.id, ...rename, config });
+      const read = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+      expect(read.body).toEqual(repaired.body);
+    });
   });
 
   describe("listVisualizations", () => {

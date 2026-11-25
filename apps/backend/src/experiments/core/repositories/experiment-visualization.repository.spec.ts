@@ -577,7 +577,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "renamed_table", dataSources: [] },
+        dataConfig: {
+          tableName: "renamed_table",
+          dataSources: [{ tableName: "renamed_table", columnName: "value", role: "y" }],
+        },
       };
       const updated = await repository.update(testExperimentId, visualization.id, updateDto);
       assertSuccess(updated);
@@ -598,7 +601,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "original_table", dataSources: [] },
+        dataConfig: {
+          tableName: "original_table",
+          dataSources: [{ tableName: "original_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -611,7 +617,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: { nbins: 20 } },
-        dataConfig: { tableName: "updated_table", dataSources: [] },
+        dataConfig: {
+          tableName: "updated_table",
+          dataSources: [{ tableName: "updated_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Act
@@ -678,7 +687,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "original_table", dataSources: [] },
+        dataConfig: {
+          tableName: "original_table",
+          dataSources: [{ tableName: "original_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);

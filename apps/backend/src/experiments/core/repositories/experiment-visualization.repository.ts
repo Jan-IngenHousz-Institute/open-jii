@@ -11,7 +11,7 @@ import {
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
+import { AppError, Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import { ftsMatch, ftsRank, searchScore } from "../../../common/utils/fts";
 import {
   getAnonymizedFirstName,
@@ -223,31 +223,53 @@ export class ExperimentVisualizationRepository {
     id: string,
     dto: UpdateExperimentVisualizationDto,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
-    return tryCatch(async () => {
-      const condition = visualizationInExperiment(experimentId, id);
-      await this.database.update(experimentVisualizations).set(dto).where(condition);
+    return tryCatch(() =>
+      this.database.transaction(async (tx) => {
+        const condition = visualizationInExperiment(experimentId, id);
+        const rows = await tx
+          .select({
+            experiment_visualizations: visualizationColumns,
+            profileUserId: profiles.userId,
+            firstName: getAnonymizedFirstName(),
+            lastName: getAnonymizedLastName(),
+          })
+          .from(experimentVisualizations)
+          .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
+          .where(condition)
+          .for("update", { of: experimentVisualizations });
+        const current = rows.at(0);
+        if (!current) {
+          return [];
+        }
 
-      // Fetch the updated record with profile information
-      const results = await this.database
-        .select({
-          experiment_visualizations: visualizationColumns,
-          profileUserId: profiles.userId,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-        })
-        .from(experimentVisualizations)
-        .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
-        .where(condition);
+        const changes = Object.fromEntries(
+          Object.entries<unknown>(dto).filter(([, value]) => value !== undefined),
+        );
+        const candidate = selectExperimentVisualizationSchema.safeParse({
+          ...current.experiment_visualizations,
+          ...changes,
+          updatedAt: new Date(),
+          createdByName:
+            current.profileUserId && current.firstName && current.lastName
+              ? `${current.firstName} ${current.lastName}`
+              : undefined,
+        });
+        if (!candidate.success) {
+          const fields = new Set(candidate.error.issues.map(({ path }) => path.join(".")));
+          throw AppError.validationError(`Invalid saved chart fields: ${[...fields].join(", ")}`);
+        }
 
-      return results.map((result) => {
-        const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
-        augmentedResult.createdByName =
-          result.profileUserId && result.firstName && result.lastName
-            ? `${result.firstName} ${result.lastName}`
-            : undefined;
-        return augmentedResult;
-      });
-    });
+        const updated = await tx
+          .update(experimentVisualizations)
+          .set(dto)
+          .where(condition)
+          .returning({ updatedAt: experimentVisualizations.updatedAt });
+        return updated.map(({ updatedAt }) => ({
+          ...candidate.data,
+          updatedAt,
+        }));
+      }),
+    );
   }
 
   async delete(experimentId: string, id: string): Promise<Result<void>> {
