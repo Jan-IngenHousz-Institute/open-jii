@@ -114,7 +114,13 @@ describe("DashboardFormShell", () => {
     expect(screen.getByTestId("probe-widgets")).toHaveTextContent("2");
   });
 
-  it("propagates the initialMode into the dashboard-mode provider", () => {
+  it("propagates the initial edit mode after experiment access is granted", async () => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: "exp-1", status: "active" },
+        isAdmin: true,
+      }),
+    });
     const dashboard = createExperimentDashboard();
     render(
       <DashboardFormShell
@@ -126,7 +132,7 @@ describe("DashboardFormShell", () => {
         <div />
       </DashboardFormShell>,
     );
-    expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit");
+    await waitFor(() => expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit"));
   });
 
   it("renders children inside the layout body", () => {

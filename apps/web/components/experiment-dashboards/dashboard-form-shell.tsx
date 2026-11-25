@@ -5,7 +5,6 @@ import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-cha
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import type { UseFormReturn } from "react-hook-form";
 
 import type {
   ExperimentDashboardLayout,
@@ -53,57 +52,29 @@ export function DashboardFormShell({
   );
 
   const form = useForm<DashboardFormValues>({ defaultValues: defaults });
+  const { data: accessData } = useExperimentAccess(experimentId);
+  const canEdit = canDuplicateExperimentChart(accessData);
 
   return (
     <AutosaveStatusProvider>
       <DashboardEditorProvider>
-        <DashboardModeProvider initialMode={initialMode}>
+        <DashboardModeProvider initialMode={initialMode} canEdit={canEdit}>
           <FormProvider {...form}>
             <Form {...form}>
-              <DashboardFormShellBody
+              <DashboardAutosaveBoundary
                 form={form}
                 experimentId={experimentId}
                 dashboardId={dashboardId}
-                dashboard={dashboard}
+                enabled={canEdit}
               >
-                {children}
-              </DashboardFormShellBody>
+                <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>
+                  {children}
+                </DashboardLayoutContent>
+              </DashboardAutosaveBoundary>
             </Form>
           </FormProvider>
         </DashboardModeProvider>
       </DashboardEditorProvider>
     </AutosaveStatusProvider>
-  );
-}
-
-interface DashboardFormShellBodyProps {
-  form: UseFormReturn<DashboardFormValues>;
-  experimentId: string;
-  dashboardId: string;
-  dashboard: ExperimentDashboard;
-  children: ReactNode;
-}
-
-function DashboardFormShellBody({
-  form,
-  experimentId,
-  dashboardId,
-  dashboard,
-  children,
-}: DashboardFormShellBodyProps) {
-  const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = canDuplicateExperimentChart(accessData);
-
-  return (
-    <DashboardAutosaveBoundary
-      form={form}
-      experimentId={experimentId}
-      dashboardId={dashboardId}
-      enabled={canEdit}
-    >
-      <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>
-        {children}
-      </DashboardLayoutContent>
-    </DashboardAutosaveBoundary>
   );
 }

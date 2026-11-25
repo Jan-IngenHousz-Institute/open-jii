@@ -1,9 +1,15 @@
 import { DashboardModeProvider } from "@/components/experiment-dashboards/dashboard-mode-context";
-import { render, screen } from "@/test/test-utils";
-import { useParams } from "next/navigation";
+import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
+import { createExperimentAccess, createExperimentDashboard } from "@/test/factories";
+import { server } from "@/test/msw/server";
+import { createTestQueryClient, render, screen, waitFor } from "@/test/test-utils";
+import { useParams, useSearchParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { contract } from "@repo/api/contract";
+
 import DashboardPage from "./dashboard-detail-content";
+import DashboardLayout from "./layout";
 
 vi.mock("@/components/experiment-dashboards/dashboard-view-body", () => ({
   DashboardViewBody: ({
@@ -49,6 +55,39 @@ describe("DashboardPage", () => {
     expect(body).toBeInTheDocument();
     expect(body).toHaveAttribute("data-experiment", "exp-1");
     expect(screen.queryByTestId("view-body")).not.toBeInTheDocument();
+  });
+
+  it("shows the read-only canvas and hides Edit for an archived experiment with ?edit=1", async () => {
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("edit=1") as ReturnType<typeof useSearchParams>,
+    );
+    server.mount(contract.experiments.getExperimentDashboard, {
+      body: createExperimentDashboard({ id: "dash-9", name: "Archived dashboard" }),
+    });
+    const access = createExperimentAccess({
+      experiment: { id: "exp-1", status: "archived" },
+      isAdmin: true,
+    });
+    server.mount(contract.experiments.getExperimentAccess, { body: access });
+    const queryClient = createTestQueryClient();
+    render(
+      <DashboardLayout>
+        <DashboardPage />
+      </DashboardLayout>,
+      { queryClient },
+    );
+
+    await waitFor(() =>
+      expect(queryClient.getQueryData(experimentAccessQueryKey(undefined, "exp-1"))).toEqual(
+        access,
+      ),
+    );
+    expect(await screen.findByTestId("view-body")).toBeInTheDocument();
+    expect(screen.queryByTestId("editor-body")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /ui\.actions\.(edit|done)/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("form.descriptionPlaceholder")).not.toBeInTheDocument();
   });
 
   it("forwards both the experimentId and dashboardId to the view body", () => {
