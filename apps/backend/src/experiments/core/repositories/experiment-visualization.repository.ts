@@ -213,7 +213,7 @@ export class ExperimentVisualizationRepository {
       operation: "readExperimentVisualization",
       visualizationId: visualization.id,
       experimentId: visualization.experimentId,
-      issues: parsed.error.issues.map(({ path, code, message }) => ({ path, code, message })),
+      issues: parsed.error.issues.map(({ path, code }) => ({ path, code })),
     });
     return null;
   }

@@ -114,6 +114,37 @@ describe("ExperimentVisualizationRepository readable rows", () => {
     expect(result.value).toEqual([]);
   });
 
+  it("logs the issue path and code without echoing an unrecognized property name", async () => {
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const privateKey = "syntheticPrivateKey";
+    const row = validVisualization();
+    orderBy.mockResolvedValue([
+      {
+        experiment_visualizations: {
+          ...row,
+          dataConfig: {
+            ...row.dataConfig,
+            filters: [
+              {
+                column: "time",
+                operator: "between",
+                value: { last: 7, unit: "days", [privateKey]: true },
+              },
+            ],
+          },
+        },
+      },
+    ]);
+
+    const result = await repository.listVisualizations(row.experimentId);
+    assertSuccess(result);
+    expect(result.value).toEqual([]);
+    expect(warn.mock.calls[0]?.[0]).toHaveProperty("issues", [
+      { path: ["dataConfig", "filters", 0, "value"], code: "unrecognized_keys" },
+    ]);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(privateKey);
+  });
+
   it("keeps database failures as failures", async () => {
     orderBy.mockRejectedValueOnce(new Error("database unavailable"));
     assertFailure(await repository.listVisualizations(crypto.randomUUID()));
