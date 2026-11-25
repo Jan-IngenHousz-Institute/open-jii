@@ -67,6 +67,16 @@ describe("ExperimentVisualizationRepository readable rows", () => {
       overrides: { name: "" },
       path: ["name"],
     },
+    {
+      title: "a creation timestamp outside the API's year range",
+      overrides: { createdAt: new Date("+010000-01-01T00:00:00.000Z") },
+      path: ["createdAt"],
+    },
+    {
+      title: "an update timestamp outside the API's year range",
+      overrides: { updatedAt: new Date("+010000-01-01T00:00:00.000Z") },
+      path: ["updatedAt"],
+    },
   ];
 
   it.each(malformedRows)("skips and logs a row with $title", async ({ overrides, path }) => {

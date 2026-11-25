@@ -37,8 +37,16 @@ export const updateExperimentVisualizationSchema = createInsertSchema(experiment
   });
 
 export const selectExperimentVisualizationSchema = zExperimentVisualization.extend({
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z
+    .date()
+    .refine(
+      (date) => zExperimentVisualization.shape.createdAt.safeParse(date.toISOString()).success,
+    ),
+  updatedAt: z
+    .date()
+    .refine(
+      (date) => zExperimentVisualization.shape.updatedAt.safeParse(date.toISOString()).success,
+    ),
 });
 
 // Define the types
