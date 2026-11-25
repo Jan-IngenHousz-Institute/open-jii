@@ -30,6 +30,7 @@ describe("DatabricksAdapter", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    testApp.module.get(DatabricksJobsService).clearJobIdCache();
 
     nock.cleanAll();
   });
@@ -74,19 +75,19 @@ describe("DatabricksAdapter", () => {
   });
 
   describe("triggerDataUploadJob", () => {
-    it("uses the upload id as the idempotency token and the record's year as the prefix", async () => {
-      const mockParams = {
-        sourceKind: "ambyte",
-        experimentId: "exp-123",
-        experimentName: "Test Experiment",
-        uploadDirectory: "upload_2026-01-01",
-        uploadId: "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
-        uploadTableId: "11111111-1111-1111-1111-111111111111",
-        uploadTableName: "ambyte_legacy",
-        userId: "user-1",
-        createdAt: new Date("2025-12-31T23:59:00Z"),
-      } satisfies DataUploadJobInput;
+    const uploadInput = {
+      sourceKind: "ambyte",
+      experimentId: "exp-123",
+      experimentName: "Test Experiment",
+      uploadDirectory: "upload_2026-01-01",
+      uploadId: "8c1f6a0e-4c35-4d7e-9a43-3f0b2a5d1e77",
+      uploadTableId: "11111111-1111-1111-1111-111111111111",
+      uploadTableName: "ambyte_legacy",
+      userId: "user-1",
+      createdAt: new Date("2025-12-31T23:59:00Z"),
+    } satisfies DataUploadJobInput;
 
+    it("uses the upload id as the idempotency token and the record's year as the prefix", async () => {
       const mockResponse = {
         run_id: 54321,
         number_in_job: 1,
@@ -104,27 +105,67 @@ describe("DatabricksAdapter", () => {
       });
 
       nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/list`)
+        .query({
+          name: process.env.DATABRICKS_DATA_UPLOAD_JOB_NAME,
+          limit: "2",
+          expand_tasks: "false",
+        })
+        .reply(200, { jobs: [{ job_id: 4242, settings: { name: "Data-Upload-Job-TEST" } }] });
+
+      nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
-          (body: { idempotency_token?: string; job_parameters?: Record<string, string> }) => {
+          (body: {
+            job_id?: number;
+            idempotency_token?: string;
+            job_parameters?: Record<string, string>;
+          }) => {
             return (
-              body.idempotency_token === mockParams.uploadId &&
+              body.job_id === 4242 &&
+              body.idempotency_token === uploadInput.uploadId &&
               body.job_parameters?.CATALOG_NAME === "main" &&
               body.job_parameters.EXPERIMENT_ID === "exp-123" &&
               body.job_parameters.SOURCE_KIND === "ambyte" &&
-              body.job_parameters.UPLOAD_ID === mockParams.uploadId &&
+              body.job_parameters.UPLOAD_ID === uploadInput.uploadId &&
               body.job_parameters.YEAR_PREFIX === "2025"
             );
           },
         )
         .reply(200, mockResponse);
 
-      const result = await databricksAdapter.triggerDataUploadJob(mockParams);
+      const result = await databricksAdapter.triggerDataUploadJob(uploadInput);
 
       // Assert result is success
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual(mockResponse);
+    });
+
+    it("fails without triggering a run when no job has the configured name", async () => {
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataUploadJobName").mockReturnValue("Data-Upload-Job-MISSING");
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/list`)
+        .query({ name: "Data-Upload-Job-MISSING", limit: "2", expand_tasks: "false" })
+        .reply(200, {});
+
+      const runNow = nock(databricksHost)
+        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
+        .reply(200, { run_id: 1, number_in_job: 1 });
+
+      const result = await databricksAdapter.triggerDataUploadJob(uploadInput);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(runNow.isDone()).toBe(false);
     });
   });
 
@@ -809,12 +850,26 @@ describe("DatabricksAdapter", () => {
       });
 
       nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/list`)
+        .query({
+          name: process.env.DATABRICKS_DATA_EXPORT_JOB_NAME,
+          limit: "2",
+          expand_tasks: "false",
+        })
+        .reply(200, { jobs: [{ job_id: 4343, settings: { name: "Data-Export-Job-TEST" } }] });
+
+      nock(databricksHost)
         .post(
           `${DatabricksJobsService.JOBS_ENDPOINT}/run-now`,
-          (body: { idempotency_token?: string; job_parameters?: Record<string, string> }) => {
+          (body: {
+            job_id?: number;
+            idempotency_token?: string;
+            job_parameters?: Record<string, string>;
+          }) => {
             const params = body.job_parameters;
             if (!params) return false;
             return (
+              body.job_id === 4343 &&
               body.idempotency_token === exportInput.exportId &&
               params.EXPORT_ID === exportInput.exportId &&
               params.EXPERIMENT_ID === exportInput.experimentId &&
@@ -846,6 +901,15 @@ describe("DatabricksAdapter", () => {
       });
 
       nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/list`)
+        .query({
+          name: process.env.DATABRICKS_DATA_EXPORT_JOB_NAME,
+          limit: "2",
+          expand_tasks: "false",
+        })
+        .reply(200, { jobs: [{ job_id: 4343, settings: { name: "Data-Export-Job-TEST" } }] });
+
+      nock(databricksHost)
         .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
         .reply(500, { message: "Internal server error" });
 
@@ -854,6 +918,32 @@ describe("DatabricksAdapter", () => {
       expect(result.isFailure()).toBe(true);
       assertFailure(result);
       expect(result.error.message).toContain("Databricks job trigger");
+    });
+
+    it("fails without triggering a run when no job has the configured name", async () => {
+      const configService = testApp.module.get(DatabricksConfigService);
+      vi.spyOn(configService, "getDataExportJobName").mockReturnValue("Data-Export-Job-MISSING");
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .get(`${DatabricksJobsService.JOBS_ENDPOINT}/list`)
+        .query({ name: "Data-Export-Job-MISSING", limit: "2", expand_tasks: "false" })
+        .reply(200, {});
+
+      const runNow = nock(databricksHost)
+        .post(`${DatabricksJobsService.JOBS_ENDPOINT}/run-now`)
+        .reply(200, { run_id: 1, number_in_job: 1 });
+
+      const result = await databricksAdapter.triggerDataExportJob(exportInput);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(runNow.isDone()).toBe(false);
     });
   });
 

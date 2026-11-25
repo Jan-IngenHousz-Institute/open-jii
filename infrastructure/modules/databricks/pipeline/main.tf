@@ -113,9 +113,12 @@ resource "databricks_pipeline" "this" {
     }
   }
 
+  # The publishing-mode migration moves the pipeline from target to schema outside OpenTofu.
   lifecycle {
     ignore_changes = [
-      run_as
+      run_as,
+      target,
+      schema,
     ]
   }
 }

@@ -126,8 +126,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       jobParams.YEAR_PREFIX = input.createdAt.getUTCFullYear().toString();
     }
 
-    const jobId = this.configService.getDataUploadJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, jobParams, input.uploadId);
+    const jobId = await this.jobsService.getJobIdByName(this.configService.getDataUploadJobName());
+    if (jobId.isFailure()) {
+      return failure(jobId.error);
+    }
+
+    return this.jobsService.triggerJob(jobId.value, jobParams, input.uploadId);
   }
 
   /** Run status for any Databricks job by runId. */
@@ -155,8 +159,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       ANONYMIZE_CONTRIBUTORS: input.anonymizeContributors ? "true" : "false",
     };
 
-    const jobId = this.configService.getDataExportJobIdAsNumber();
-    return this.jobsService.triggerJob(jobId, jobParams, input.exportId);
+    const jobId = await this.jobsService.getJobIdByName(this.configService.getDataExportJobName());
+    if (jobId.isFailure()) {
+      return failure(jobId.error);
+    }
+
+    return this.jobsService.triggerJob(jobId.value, jobParams, input.exportId);
   }
 
   /** Last data arrival from gold device_last_activity; lags by pipeline cadence. */

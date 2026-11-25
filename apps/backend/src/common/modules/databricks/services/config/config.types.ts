@@ -4,8 +4,8 @@ export interface DatabricksConfig {
   host: string;
   clientId: string;
   clientSecret: string;
-  dataExportJobId: string;
-  dataUploadJobId: string;
+  dataExportJobName: string;
+  dataUploadJobName: string;
   warehouseId: string;
   catalogName: string;
   centrumSchemaName: string;
@@ -20,18 +20,8 @@ export const databricksConfigSchema = z.object({
   host: z.string().url(),
   clientId: z.string().min(1),
   clientSecret: z.string().min(1),
-  dataExportJobId: z
-    .string()
-    .min(1)
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Data Export Job ID must be numeric",
-    }),
-  dataUploadJobId: z
-    .string()
-    .min(1)
-    .refine((val) => !isNaN(Number(val)), {
-      message: "Data Upload Job ID must be numeric",
-    }),
+  dataExportJobName: z.string().min(1),
+  dataUploadJobName: z.string().min(1),
   warehouseId: z.string().min(1),
   catalogName: z.string().min(1),
   centrumSchemaName: z.string().min(1),

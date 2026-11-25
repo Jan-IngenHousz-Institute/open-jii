@@ -54,7 +54,7 @@ jobs:
 
     steps:
       - name: Setup Databricks CLI
-        uses: databricks/setup-cli@d268e8b0d8f5d8cc0e743697fe702c9f8c53c950 # v0.299.2
+        uses: databricks/setup-cli@9625fdde9ba2607df0087e0d3ec7449198bf2180 # v1.23.0
 
       - name: Validate pipeline id
         run: |

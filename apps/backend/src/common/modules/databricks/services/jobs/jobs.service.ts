@@ -4,7 +4,7 @@ import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
+import { Result, AppError, tryCatch, apiErrorMapper, success } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
 import {
@@ -12,6 +12,7 @@ import {
   DatabricksJobRunResponse,
   DatabricksJobRunOutputResponse,
   DatabricksJobRunStatusResponse,
+  DatabricksJobSummary,
   DatabricksJobsListRequest,
   DatabricksJobsListResponse,
   DatabricksRunNowRequest,
@@ -21,6 +22,7 @@ import {
 @Injectable()
 export class DatabricksJobsService {
   private readonly logger = new Logger(DatabricksJobsService.name);
+  private readonly jobIdsByName = new Map<string, number>();
 
   public static readonly JOBS_ENDPOINT = "/api/2.2/jobs";
 
@@ -29,6 +31,83 @@ export class DatabricksJobsService {
     private readonly authService: DatabricksAuthService,
     private readonly configService: DatabricksConfigService,
   ) {}
+
+  public clearJobIdCache(): void {
+    this.jobIdsByName.clear();
+  }
+
+  // A job keeps its id for life, so a resolved name is cached for the process lifetime;
+  // failures are never cached.
+  async getJobIdByName(name: string): Promise<Result<number>> {
+    const cachedJobId = this.jobIdsByName.get(name);
+    if (cachedJobId !== undefined) {
+      return success(cachedJobId);
+    }
+
+    const result = await tryCatch(
+      async () => {
+        const tokenResult = await this.authService.getAccessToken();
+        if (tokenResult.isFailure()) {
+          throw tokenResult.error;
+        }
+
+        const host = this.configService.getHost();
+        const requestParams: DatabricksJobsListRequest = {
+          name,
+          // Two are enough to tell a unique name from a duplicate.
+          limit: 2,
+          expand_tasks: false,
+        };
+
+        const response = await this.httpService.axiosRef.get<DatabricksJobsListResponse>(
+          `${host}${DatabricksJobsService.JOBS_ENDPOINT}/list`,
+          {
+            headers: {
+              Authorization: `Bearer ${tokenResult.value}`,
+            },
+            params: requestParams,
+            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
+          },
+        );
+
+        return this.singleJobId(name, response.data.jobs ?? []);
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to find Databricks job by name",
+          errorCode: ErrorCodes.DATABRICKS_JOB_FAILED,
+          operation: "getJobIdByName",
+          jobName: name,
+          error,
+        });
+        return apiErrorMapper(error, "Databricks job lookup");
+      },
+    );
+
+    if (result.isSuccess()) {
+      this.jobIdsByName.set(name, result.value);
+    }
+
+    return result;
+  }
+
+  private singleJobId(name: string, jobs: DatabricksJobSummary[]): number {
+    if (jobs.length === 0) {
+      throw AppError.notFound(
+        `No Databricks job is named ${name}`,
+        ErrorCodes.DATABRICKS_JOB_FAILED,
+      );
+    }
+
+    if (jobs.length > 1) {
+      throw AppError.internal(
+        `More than one Databricks job is named ${name}`,
+        ErrorCodes.DATABRICKS_JOB_FAILED,
+      );
+    }
+
+    return jobs[0].job_id;
+  }
 
   async triggerJob(
     jobId: number,

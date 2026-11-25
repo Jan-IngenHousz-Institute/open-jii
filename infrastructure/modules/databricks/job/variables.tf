@@ -47,6 +47,8 @@ variable "tasks" {
     data_security_mode = optional(string)
     single_user_name   = optional(string)
     policy_id          = optional(string)
+    # Wheel paths installed on the task's cluster; serverless tasks take environments instead
+    libraries = optional(list(string), [])
 
     # Spark configurations for this task
     spark_conf = optional(map(string), {})

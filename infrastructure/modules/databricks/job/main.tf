@@ -102,6 +102,13 @@ resource "databricks_job" "this" {
         }
       }
 
+      dynamic "library" {
+        for_each = task.value.libraries
+        content {
+          whl = library.value
+        }
+      }
+
       # Only set existing_cluster_id if not using serverless and compute_type is existing_cluster
       existing_cluster_id = (!var.use_serverless && task.value.task_type == "notebook" && task.value.compute_type == "existing_cluster") ? task.value.cluster_id : null
 
@@ -244,14 +251,15 @@ resource "databricks_job" "this" {
   }
 }
 
-# Grant job permissions to principals if provided
+# Single authoritative resource: each apply PUTs the full ACL, so splitting
+# across `count` would let resources clobber each other's grants.
 resource "databricks_permissions" "job" {
-  count    = length(var.permissions)
+  count    = length(var.permissions) > 0 ? 1 : 0
   provider = databricks.workspace
   job_id   = databricks_job.this.id
 
   dynamic "access_control" {
-    for_each = [var.permissions[count.index]]
+    for_each = var.permissions
     content {
       service_principal_name = access_control.value.principal_application_id
       permission_level       = access_control.value.permission_level

@@ -23,6 +23,7 @@ describe("DatabricksJobsService", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     jobsService = testApp.module.get(DatabricksJobsService);
+    jobsService.clearJobIdCache();
 
     authService = testApp.module.get(DatabricksAuthService);
     authService.clearTokenCache();
@@ -104,6 +105,79 @@ describe("DatabricksJobsService", () => {
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toContain("Databricks service unavailable");
+    });
+  });
+
+  describe("getJobIdByName", () => {
+    const mockToken = () =>
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+    const mockList = (name: string) =>
+      nock(databricksHost)
+        .get(DatabricksJobsService.JOBS_ENDPOINT + "/list")
+        .query({ name, limit: "2", expand_tasks: "false" });
+
+    it("returns the id of the one job with that name, and caches it", async () => {
+      mockToken();
+      mockList("Lookup-Unique").reply(200, {
+        jobs: [{ job_id: 111, settings: { name: "Lookup-Unique" } }],
+      });
+
+      const first = await jobsService.getJobIdByName("Lookup-Unique");
+      const second = await jobsService.getJobIdByName("Lookup-Unique");
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(first.value).toBe(111);
+      expect(second.value).toBe(111);
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it("fails as not found when the response has no jobs", async () => {
+      mockToken();
+      mockList("Lookup-Missing").reply(200, {});
+
+      const result = await jobsService.getJobIdByName("Lookup-Missing");
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(404);
+      expect(result.error.message).toContain("No Databricks job is named Lookup-Missing");
+    });
+
+    it("fails when two jobs share the name", async () => {
+      mockToken();
+      mockList("Lookup-Duplicate").reply(200, {
+        jobs: [
+          { job_id: 1, settings: { name: "Lookup-Duplicate" } },
+          { job_id: 2, settings: { name: "Lookup-Duplicate" } },
+        ],
+      });
+
+      const result = await jobsService.getJobIdByName("Lookup-Duplicate");
+
+      assertFailure(result);
+      expect(result.error.message).toContain(
+        "More than one Databricks job is named Lookup-Duplicate",
+      );
+    });
+
+    it("does not cache a failed lookup", async () => {
+      mockToken();
+      mockList("Lookup-Retry").reply(503, { message: "Service unavailable" });
+      mockList("Lookup-Retry").reply(200, {
+        jobs: [{ job_id: 222, settings: { name: "Lookup-Retry" } }],
+      });
+
+      const failed = await jobsService.getJobIdByName("Lookup-Retry");
+      const retried = await jobsService.getJobIdByName("Lookup-Retry");
+
+      assertFailure(failed);
+      assertSuccess(retried);
+      expect(retried.value).toBe(222);
     });
   });
 
