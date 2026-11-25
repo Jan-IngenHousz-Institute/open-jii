@@ -262,8 +262,9 @@ series stays on Axis 1. In the **Y axis** section, set a title and choose a
 Axes 1 and 2 sit on the left and right. Axes 3 and 5 sit farther left. Axes 4
 and 6 sit farther right. The plot narrows to leave room for their labels. When
 any of axes 3 through 6 are in use, a side legend moves below the plot.
-An axis used by one series takes that series' colour. Click a legend entry
-to hide its series. When every series on an axis is hidden, the axis disappears
+When several axes are visible, an axis used by one series takes that series'
+colour. In a narrow chart, axes 3 through 6 may show fewer labels to leave room
+for the plot. Click a legend entry to hide its series. When every series on an axis is hidden, the axis disappears
 and the plot widens. Click the entry again to bring it back. This visibility
 choice lasts only while the chart is open.
 
@@ -301,14 +302,14 @@ says _Continuous gradient needs a numeric or temporal column._
 ### Read legends and circular charts
 
 An outside legend has its own space beside the chart's labels and colour bar.
-Cartesian charts with a secondary axis or colour bar wrap long right legend names.
+Cartesian charts with Axis 2 or a colour bar wrap long right legend names.
 If those names leave too little room for the plot, the legend moves below it.
-When a scatter or bubble chart has both a secondary Y axis and a visible
+When a scatter or bubble chart has both Axis 2 and a visible
 colour bar, the bar sits beyond the right axis and a right legend moves below
 the plot. A left legend also moves below when a shared Y title needs that
 space or the two sides leave too little room. Inside legends on these faceted
 charts move below when the plot is too narrow for their entries. Long names
-wrap in the legend. Panels stacked on a shared secondary Y scale show the
+wrap in the legend. Panels stacked with a shared scale for Axis 2 show the
 title once and keep ticks on each panel. Panels with independent scales also
 show the title once when the repeated titles would overlap. Their ranges
 and ticks stay independent. A top legend also scrolls within its own space

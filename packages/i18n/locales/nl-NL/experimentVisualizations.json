@@ -322,6 +322,8 @@
       "column": "Column",
       "selectColumn": "Select a column",
       "none": "Geen",
+      "yAxisTitle": "Titel van Y-as",
+      "yAxisScale": "Schaal van Y-as",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",

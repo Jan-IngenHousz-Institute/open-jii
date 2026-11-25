@@ -116,6 +116,13 @@ export function YAxisShelf({
   const usedOverlayAxes = ([2, 3, 4, 5, 6] as const).filter((axis) =>
     usedAxes.has(axis === 2 ? "secondary" : `y${axis}`),
   );
+  const numberedLabels = showCartesianControls && usedAxes.size > 1;
+  const yAxisTitleLabel = numberedLabels
+    ? t("workspace.shelves.numberedAxisTitle", { index: 1 })
+    : t(showCartesianControls ? "workspace.shelves.yAxisTitle" : "workspace.shelves.axisTitle");
+  const yAxisScaleLabel = numberedLabels
+    ? t("workspace.shelves.numberedAxisType", { index: 1 })
+    : t(showCartesianControls ? "workspace.shelves.yAxisScale" : "workspace.shelves.axisType");
   const canAddSeries = maxSeries === undefined || ySources.length < maxSeries;
 
   // GROUP BY activates when X is bucketed or any sibling has a row aggregate
@@ -387,11 +394,7 @@ export function YAxisShelf({
           name="config.yAxisTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs font-medium">
-                {showCartesianControls
-                  ? t("workspace.shelves.numberedAxisTitle", { index: 1 })
-                  : t("workspace.shelves.axisTitle")}
-              </FormLabel>
+              <FormLabel className="text-xs font-medium">{yAxisTitleLabel}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("workspace.shelves.axisTitlePlaceholder")}
@@ -413,11 +416,7 @@ export function YAxisShelf({
             name="config.yAxisType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-medium">
-                  {showCartesianControls
-                    ? t("workspace.shelves.numberedAxisType", { index: 1 })
-                    : t("workspace.shelves.axisType")}
-                </FormLabel>
+                <FormLabel className="text-xs font-medium">{yAxisScaleLabel}</FormLabel>
                 <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
@@ -456,7 +455,7 @@ export function YAxisShelf({
                       placeholder={
                         axis === 2
                           ? t("workspace.shelves.secondaryAxisTitlePlaceholder")
-                          : t("workspace.shelves.numberedAxisTitle", { index: axis })
+                          : undefined
                       }
                       value={field.value ?? ""}
                       onChange={field.onChange}

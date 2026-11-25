@@ -164,7 +164,7 @@ describe("BarDataPanel", () => {
     // Only one axis-type select remains: Y axis.
     expect(screen.queryByText("workspace.shelves.axisType")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("combobox", { name: "workspace.shelves.numberedAxisType" }),
+      screen.getByRole("combobox", { name: "workspace.shelves.yAxisScale" }),
     ).toBeInTheDocument();
   });
 

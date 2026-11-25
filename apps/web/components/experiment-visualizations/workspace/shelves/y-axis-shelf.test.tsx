@@ -370,6 +370,9 @@ describe("YAxisShelf", () => {
       useFormProps: { defaultValues: defaults() },
     });
 
+    expect(screen.getByLabelText("workspace.shelves.yAxisTitle")).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "workspace.shelves.yAxisScale" })).toBeVisible();
+    expect(screen.queryByText("workspace.shelves.numberedAxisTitle")).not.toBeInTheDocument();
     expect(screen.queryByText("workspace.shelves.secondaryAxisTitle")).not.toBeInTheDocument();
   });
 

@@ -324,6 +324,8 @@
       "column": "Column",
       "selectColumn": "Select a column",
       "none": "None",
+      "yAxisTitle": "Y-axis title",
+      "yAxisScale": "Y-axis scale",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
