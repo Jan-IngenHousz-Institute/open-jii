@@ -62,6 +62,15 @@ aws secretsmanager get-secret-value --profile openjii-<env> --region eu-central-
   pnpm secrets:set <env> serving-store-writer --key password
 ```
 
+Code 516 can also follow a restart of the store while Secrets Manager could not be read. ClickHouse
+then starts on the previous passwords file, so a password rotated since is refused. The journal
+shows it, and the command above installs the current file:
+
+```bash
+aws ssm start-session --profile openjii-<env> --region eu-central-1 --target <instance-id>
+journalctl -u clickhouse-server | grep 'Keeping the last good passwords file'
+```
+
 Rows the store could not read never stall the feed: they go to `store.feed_rejects`, and
 `store-feed-rejects` covers them.
 

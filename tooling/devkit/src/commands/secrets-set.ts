@@ -200,6 +200,14 @@ export function parseArgs(given: string[]): SecretsSetArgs {
   };
 }
 
+function isPlainPassword(value: string): boolean {
+  if (value !== value.trim()) return false;
+  return [...value].every((char) => {
+    const code = char.charCodeAt(0);
+    return code >= 32 && code !== 127;
+  });
+}
+
 export function parseObject(name: string, current: string): Record<string, unknown> {
   let parsed: unknown;
   try {
@@ -238,6 +246,15 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
   // The store's users are named in OpenTofu, so any other name would sign in as nobody.
   if (spec.servingStore && key === "username" && value !== spec.servingStore.username) {
     throw new Error(`${args.secret}'s username is ${spec.servingStore.username}; nothing was set`);
+  }
+  // The store's script reads the password through the shell and checks it in an HTTP header, which
+  // would drop or refuse surrounding whitespace and control characters, so the store would hash a
+  // different password from the one its consumers send.
+  if (spec.servingStore && key === "password" && !isPlainPassword(value)) {
+    throw new Error(
+      `${args.secret}'s password may not start or end with whitespace or hold a control ` +
+        "character; nothing was set",
+    );
   }
 
   if ("store" in spec && spec.store === "databricks" && key !== null) {

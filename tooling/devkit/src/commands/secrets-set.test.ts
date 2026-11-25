@@ -286,6 +286,31 @@ describe("setSecret", () => {
     expect(d.put).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["a second line break", "s3cr3t\n\n"],
+    ["a trailing space", "s3cr3t \n"],
+    ["a leading tab", "\ts3cr3t\n"],
+    ["a line break inside", "s3c\nr3t\n"],
+  ])("refuses a store password with %s before any write", async (_, input) => {
+    const d = deps(JSON.stringify({ username: "openjii_writer" }), input);
+
+    await expect(
+      setSecret(
+        {
+          environment: "dev",
+          secret: "serving-store-writer",
+          key: "password",
+          awsProfile: "p",
+          databricksProfile: "dev",
+        },
+        d.value,
+      ),
+    ).rejects.toThrow("may not start or end with whitespace or hold a control character");
+    expect(d.put).not.toHaveBeenCalled();
+    expect(d.putScoped).not.toHaveBeenCalled();
+    expect(d.reloadServingStore).not.toHaveBeenCalled();
+  });
+
   it("names what already holds the password when the store cannot reread it", async () => {
     const base = { environment: "dev", awsProfile: "p", databricksProfile: "dev" } as const;
     const reader = deps(JSON.stringify({ username: "openjii_reader" }));
