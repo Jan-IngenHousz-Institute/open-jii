@@ -200,12 +200,10 @@ export function parseArgs(given: string[]): SecretsSetArgs {
   };
 }
 
+// Printable ASCII without spaces, the same rule the store's passwords script applies, so a password
+// this command writes is never one the store then refuses.
 function isPlainPassword(value: string): boolean {
-  if (value !== value.trim()) return false;
-  return [...value].every((char) => {
-    const code = char.charCodeAt(0);
-    return code >= 32 && code !== 127;
-  });
+  return /^[!-~]+$/.test(value);
 }
 
 export function parseObject(name: string, current: string): Record<string, unknown> {
@@ -248,12 +246,12 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
     throw new Error(`${args.secret}'s username is ${spec.servingStore.username}; nothing was set`);
   }
   // The store's script reads the password through the shell and checks it in an HTTP header, which
-  // would drop or refuse surrounding whitespace and control characters, so the store would hash a
-  // different password from the one its consumers send.
+  // would drop or refuse whitespace and control characters, so the store would hash a different
+  // password from the one its consumers send.
   if (spec.servingStore && key === "password" && !isPlainPassword(value)) {
     throw new Error(
-      `${args.secret}'s password may not start or end with whitespace or hold a control ` +
-        "character; nothing was set",
+      `${args.secret}'s password may hold only printable ASCII characters without spaces; ` +
+        "nothing was set",
     );
   }
 

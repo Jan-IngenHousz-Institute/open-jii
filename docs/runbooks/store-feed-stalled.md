@@ -68,7 +68,7 @@ shows it, and the command above installs the current file:
 
 ```bash
 aws ssm start-session --profile openjii-<env> --region eu-central-1 --target <instance-id>
-journalctl -u clickhouse-server | grep 'Keeping the last good passwords file'
+sudo journalctl -u clickhouse-server | grep 'Keeping the last good passwords file'
 ```
 
 Rows the store could not read never stall the feed: they go to `store.feed_rejects`, and

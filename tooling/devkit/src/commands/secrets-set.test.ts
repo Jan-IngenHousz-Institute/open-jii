@@ -291,6 +291,9 @@ describe("setSecret", () => {
     ["a trailing space", "s3cr3t \n"],
     ["a leading tab", "\ts3cr3t\n"],
     ["a line break inside", "s3c\nr3t\n"],
+    ["a space inside", "s3c r3t\n"],
+    ["a trailing next-line character (U+0085)", "s3cr3t\u0085\n"],
+    ["a non-ASCII letter", "s3crét\n"],
   ])("refuses a store password with %s before any write", async (_, input) => {
     const d = deps(JSON.stringify({ username: "openjii_writer" }), input);
 
@@ -305,7 +308,7 @@ describe("setSecret", () => {
         },
         d.value,
       ),
-    ).rejects.toThrow("may not start or end with whitespace or hold a control character");
+    ).rejects.toThrow("may hold only printable ASCII characters without spaces");
     expect(d.put).not.toHaveBeenCalled();
     expect(d.putScoped).not.toHaveBeenCalled();
     expect(d.reloadServingStore).not.toHaveBeenCalled();
