@@ -143,7 +143,8 @@ jobs:
         run: |
           echo "Coverage artifacts not found, regenerating coverage..."
           pnpm install --frozen-lockfile
-          pnpm run test
+          # The root test script runs 20 suites at once, which starves a 4-vCPU runner past test timeouts.
+          pnpm turbo run test --concurrency=2
 
       - name: Collect coverage files
         id: collect
