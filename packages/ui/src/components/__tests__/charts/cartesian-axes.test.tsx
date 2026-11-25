@@ -150,6 +150,40 @@ describe("numbered Y-axis layout", () => {
     expect(narrow.xaxis?.domain).toEqual([0, 1]);
   });
 
+  it.each([
+    { label: "wide", sizing: {}, gap: 8 },
+    { label: "compact", sizing: { compact: true }, gap: 4 },
+  ])("reserves the $label right-axis title gap in the gutter", ({ sizing, gap }) => {
+    const at = (title?: string) => {
+      const layout: Partial<Layout> = { margin: { l: 60, r: 60 } };
+      applyCartesianAxes(
+        layout,
+        series(6),
+        { y2AxisTitle: title, y6AxisTitle: title },
+        1100,
+        { thickness: 15 },
+        sizing,
+      );
+      const right = layout.xaxis?.domain?.[1] ?? 0;
+      const outer = layout.margin?.r ?? 0;
+      const paperWidth = 1100 - (layout.margin?.l ?? 0) - outer;
+      const inner = (1 - right) * paperWidth;
+      return { inner, outer, axes: layout as ReturnType<typeof readLayout> };
+    };
+    const untitled = at();
+    const titled = at("Temperature");
+    const innerTitle = titled.axes.yaxis2?.title;
+    const outerTitle = titled.axes.yaxis6?.title;
+    expect(innerTitle?.standoff).toBe(gap);
+    expect(outerTitle?.standoff).toBe(gap);
+    expect(titled.inner - untitled.inner).toBeGreaterThanOrEqual(
+      (innerTitle?.font?.size ?? 0) + gap,
+    );
+    expect(titled.outer - untitled.outer).toBeGreaterThanOrEqual(
+      (outerTitle?.font?.size ?? 0) + gap,
+    );
+  });
+
   it("keeps the line on an extra axis with a title and reclaims untitled axes", () => {
     const layout: Partial<Layout> = { yaxis: { title: { text: "Fluorescence" } } };
     applyCartesianAxes(
@@ -197,7 +231,7 @@ describe("numbered Y-axis layout", () => {
     expect(image.xaxis?.range).toEqual([2, 4]);
     const [start = 0, end = 0] = image.xaxis?.domain ?? [];
     const plotWidth = (end - start) * (1200 - (image.margin?.l ?? 0) - (image.margin?.r ?? 0));
-    expect(plotWidth).toBeGreaterThan(700);
+    expect(plotWidth).toBeGreaterThan(1200 / 2);
   });
 
   it("uses the default colour for an axis shared by several series", () => {

@@ -116,7 +116,6 @@ type AxisPlacement = {
 };
 
 const AXIS_GAP = 5;
-const TITLE_STANDOFF = 4;
 
 function tickLabelWidth(axis: Partial<LayoutAxis>, values: AxisValues, font: number): number {
   const width = (label: string) => chartTextWidth(label, font);
@@ -169,6 +168,7 @@ function fitStackedAxes(
   colorbar?: CartesianColorAxis["colorbar"],
 ) {
   const fonts = tierAxisFontSizes(sizing);
+  const titleStandoff = sizing.compact || sizing.veryCompact ? 4 : 8;
   const tickSpace = new Map(
     visible.map(({ id, axis, values }) => [
       id,
@@ -194,7 +194,7 @@ function fitStackedAxes(
         (entry) =>
           AXIS_GAP +
           (showTicks(entry, detail) ? (tickSpace.get(entry.id) ?? 0) : 0) +
-          (showTitle(entry, detail) ? fonts.axisTitle + TITLE_STANDOFF + 4 : 0),
+          (showTitle(entry, detail) ? fonts.axisTitle + titleStandoff + 4 : 0),
       );
       const outer = bands.pop() ?? 0;
       return { axes, outer, inner: bands, inset: bands.reduce((sum, size) => sum + size, 0) };
@@ -263,7 +263,7 @@ function fitStackedAxes(
             ? {
                 ...axis.title,
                 font: { ...axis.title.font, size: fonts.axisTitle },
-                standoff: TITLE_STANDOFF,
+                standoff: titleStandoff,
               }
             : undefined,
       });
