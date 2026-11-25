@@ -521,6 +521,10 @@ describe("ExperimentVisualizationsController", () => {
         const missingId = faker.string.uuid();
         const missingResponse = await sendRequest(missingId).expect(StatusCodes.NOT_FOUND);
 
+        expect(missingResponse.body).toHaveProperty(
+          "message",
+          `Visualization with ID ${missingId} not found`,
+        );
         expect(mismatchResponse.body).toEqual({
           ...missingResponse.body,
           message: `Visualization with ID ${visualization.id} not found`,
@@ -532,7 +536,9 @@ describe("ExperimentVisualizationsController", () => {
       },
     );
 
-    it("updates and deletes a chart through its own experiment", async () => {
+    it("lets an experiment admin update and delete another user's chart using an uppercase experiment ID", async () => {
+      const adminId = await testApp.createTestUser({});
+      await testApp.addExperimentAdmin(readableExperimentId, adminId);
       const repository = testApp.module.get(ExperimentVisualizationRepository);
       const created = await repository.create(
         readableExperimentId,
@@ -541,11 +547,11 @@ describe("ExperimentVisualizationsController", () => {
       );
       assertSuccess(created);
       const visualization = created.value[0];
-      const params = { id: readableExperimentId, visualizationId: visualization.id };
+      const params = { id: readableExperimentId.toUpperCase(), visualizationId: visualization.id };
 
       const response = await testApp
         .patch(testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, params))
-        .withAuth(testUserId)
+        .withAuth(adminId)
         .send(createTestVisualizationData({ name: "Updated name" }))
         .expect(StatusCodes.OK);
       expect(response.body).toMatchObject({ id: visualization.id, name: "Updated name" });
@@ -555,7 +561,7 @@ describe("ExperimentVisualizationsController", () => {
 
       await testApp
         .delete(testApp.resolveOrpcPath(contract.experiments.deleteExperimentVisualization, params))
-        .withAuth(testUserId)
+        .withAuth(adminId)
         .expect(StatusCodes.NO_CONTENT);
       const deleted = await repository.findById(visualization.id);
       assertSuccess(deleted);

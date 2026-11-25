@@ -510,6 +510,40 @@ describe("ExperimentVisualizationRepository", () => {
     });
   });
 
+  it("scopes chart existence, update, and delete to the experiment", async () => {
+    const chart = await repository.create(
+      testExperimentId,
+      {
+        name: "Original chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      },
+      testUserId,
+    );
+    assertSuccess(chart);
+    const [original] = chart.value;
+
+    const exists = await repository.existsInExperiment(anotherExperimentId, original.id);
+    assertSuccess(exists);
+    expect(exists.value).toBe(false);
+
+    const updated = await repository.update(anotherExperimentId, original.id, {
+      name: "Renamed chart",
+      dataConfig: original.dataConfig,
+    });
+    assertSuccess(updated);
+    expect(updated.value).toEqual([]);
+
+    const deleted = await repository.delete(anotherExperimentId, original.id);
+    assertSuccess(deleted);
+
+    const unchanged = await repository.findById(original.id);
+    assertSuccess(unchanged);
+    expect(unchanged.value).toEqual(original);
+  });
+
   describe("update", () => {
     it("returns the updated visualization when its creator has no profile", async () => {
       const [visualization] = await testApp.database
@@ -533,7 +567,7 @@ describe("ExperimentVisualizationRepository", () => {
         config: { chartType: "bar", config: {} },
         dataConfig: { tableName: "renamed_table", dataSources: [] },
       };
-      const updated = await repository.update(visualization.id, updateDto);
+      const updated = await repository.update(testExperimentId, visualization.id, updateDto);
       assertSuccess(updated);
       expect(updated.value).toEqual([
         expect.objectContaining({
@@ -569,7 +603,7 @@ describe("ExperimentVisualizationRepository", () => {
       };
 
       // Act
-      const result = await repository.update(visualization.id, updateDto);
+      const result = await repository.update(testExperimentId, visualization.id, updateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -616,7 +650,7 @@ describe("ExperimentVisualizationRepository", () => {
       };
 
       // Act
-      const result = await repository.update(nonExistentId, updateDto);
+      const result = await repository.update(testExperimentId, nonExistentId, updateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -644,7 +678,7 @@ describe("ExperimentVisualizationRepository", () => {
       } as UpdateExperimentVisualizationDto;
 
       // Act
-      const result = await repository.update(visualization.id, partialUpdateDto);
+      const result = await repository.update(testExperimentId, visualization.id, partialUpdateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -669,7 +703,7 @@ describe("ExperimentVisualizationRepository", () => {
       };
 
       // Act
-      const result = await repository.update(invalidId, updateDto);
+      const result = await repository.update(testExperimentId, invalidId, updateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -700,7 +734,7 @@ describe("ExperimentVisualizationRepository", () => {
       expect(findBeforeResult.value).not.toBeNull();
 
       // Act
-      const result = await repository.delete(visualization.id);
+      const result = await repository.delete(testExperimentId, visualization.id);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -723,7 +757,7 @@ describe("ExperimentVisualizationRepository", () => {
       const nonExistentId = faker.string.uuid();
 
       // Act
-      const result = await repository.delete(nonExistentId);
+      const result = await repository.delete(testExperimentId, nonExistentId);
 
       // Assert - Should succeed even though nothing was deleted
       expect(result.isSuccess()).toBe(true);
@@ -736,7 +770,7 @@ describe("ExperimentVisualizationRepository", () => {
       const invalidId = "not-a-valid-uuid";
 
       // Act
-      const result = await repository.delete(invalidId);
+      const result = await repository.delete(testExperimentId, invalidId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -785,7 +819,7 @@ describe("ExperimentVisualizationRepository", () => {
         dataConfig: { tableName: "updated_table", dataSources: [] },
       };
 
-      const updateResult = await repository.update(visualization.id, updateDto);
+      const updateResult = await repository.update(testExperimentId, visualization.id, updateDto);
       assertSuccess(updateResult);
       expect(updateResult.value[0]).toMatchObject({
         name: updateDto.name,
@@ -803,7 +837,7 @@ describe("ExperimentVisualizationRepository", () => {
       });
 
       // Delete
-      const deleteResult = await repository.delete(visualization.id);
+      const deleteResult = await repository.delete(testExperimentId, visualization.id);
       assertSuccess(deleteResult);
 
       // Verify deletion
@@ -840,13 +874,13 @@ describe("ExperimentVisualizationRepository", () => {
       expect(listResult.value).toHaveLength(3);
 
       // Update middle one
-      const updateResult = await repository.update(visualizations[1].id, {
+      const updateResult = await repository.update(testExperimentId, visualizations[1].id, {
         name: "Updated Middle Visualization",
       } as UpdateExperimentVisualizationDto);
       assertSuccess(updateResult);
 
       // Delete first one
-      const deleteResult = await repository.delete(visualizations[0].id);
+      const deleteResult = await repository.delete(testExperimentId, visualizations[0].id);
       assertSuccess(deleteResult);
 
       // Verify final state
@@ -926,7 +960,7 @@ describe("ExperimentVisualizationRepository", () => {
       expect(findResult.value?.createdByName).toBe("Unknown User");
 
       // Test update (should still show anonymized name)
-      const updateResult = await repository.update(visualization.id, {
+      const updateResult = await repository.update(testExperimentId, visualization.id, {
         name: "Updated Visualization Name",
       } as UpdateExperimentVisualizationDto);
       assertSuccess(updateResult);

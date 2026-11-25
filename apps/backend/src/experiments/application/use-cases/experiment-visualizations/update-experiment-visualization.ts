@@ -36,12 +36,13 @@ export class UpdateExperimentVisualizationUseCase {
       userId,
     });
 
-    // Find the visualization first
-    const visualizationResult =
-      await this.experimentVisualizationRepository.findById(visualizationId);
+    const existsResult = await this.experimentVisualizationRepository.existsInExperiment(
+      experimentId,
+      visualizationId,
+    );
 
-    return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
-      if (visualization?.experimentId !== experimentId) {
+    return existsResult.chain(async (exists) => {
+      if (!exists) {
         this.logger.warn({
           msg: "Attempt to update missing visualization in experiment",
           experimentId,
@@ -54,27 +55,25 @@ export class UpdateExperimentVisualizationUseCase {
 
       // Authorization is enforced declaratively by @CanAccess on the route.
       // The experiment is still loaded to enforce the archived-state domain rule.
-      const experimentResult = await this.experimentRepository.findOne(visualization.experimentId);
+      const experimentResult = await this.experimentRepository.findOne(experimentId);
 
       return experimentResult.chain(async (experiment: ExperimentDto | null) => {
         if (!experiment) {
           this.logger.warn({
             msg: "Visualization belongs to non-existent experiment",
             operation: "updateExperimentVisualization",
-            experimentId: visualization.experimentId,
+            experimentId,
             visualizationId,
             userId,
           });
-          return failure(
-            AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
-          );
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (experiment.status === "archived") {
           this.logger.warn({
             msg: "Attempt to update visualization in an archived experiment",
             operation: "updateExperimentVisualization",
-            experimentId: visualization.experimentId,
+            experimentId,
             visualizationId,
             userId,
           });
@@ -84,12 +83,13 @@ export class UpdateExperimentVisualizationUseCase {
         this.logger.debug({
           msg: "Updating visualization in repository",
           operation: "updateExperimentVisualization",
-          experimentId: visualization.experimentId,
+          experimentId,
           visualizationId,
           userId,
         });
         // Update the visualization
         const updateResult = await this.experimentVisualizationRepository.update(
+          experimentId,
           visualizationId,
           data,
         );
@@ -100,7 +100,7 @@ export class UpdateExperimentVisualizationUseCase {
               msg: "Failed to update visualization",
               errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_UPDATE_FAILED,
               operation: "updateExperimentVisualization",
-              experimentId: visualization.experimentId,
+              experimentId,
               visualizationId,
               userId,
             });
@@ -111,7 +111,7 @@ export class UpdateExperimentVisualizationUseCase {
           this.logger.log({
             msg: "Successfully updated visualization",
             operation: "updateExperimentVisualization",
-            experimentId: visualization.experimentId,
+            experimentId,
             visualizationId,
             userId,
             status: "success",
