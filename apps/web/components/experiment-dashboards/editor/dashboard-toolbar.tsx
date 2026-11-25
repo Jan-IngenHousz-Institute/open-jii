@@ -1,6 +1,7 @@
 "use client";
 
-import { Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
+import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
+import { Copy, Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -74,6 +75,8 @@ const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSec
 export default function DashboardToolbar({ visible, experimentId }: DashboardToolbarProps) {
   const { t } = useTranslation("experimentDashboards");
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
+  const { duplicate, disabled: duplicateDisabled } =
+    useExperimentVisualizationDuplicate(experimentId);
   const form = useFormContext<DashboardFormValues>();
   const widgets = useWatch({ control: form.control, name: "widgets" });
 
@@ -106,6 +109,33 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
     form.setValue("widgets", compactWidgets(remaining, layout.columns), {
       shouldDirty: true,
     });
+  };
+
+  const handleDuplicate = async () => {
+    if (widget?.type !== "visualization" || !widget.config.visualizationId) return;
+    const sourceWidgetId = widget.id;
+    const created = await duplicate(widget.config.visualizationId);
+    if (!created) return;
+    const current = form.getValues("widgets");
+    const source = current.find((candidate) => candidate.id === sourceWidgetId);
+    if (source?.type !== "visualization") return;
+    const copy = {
+      ...source,
+      id: crypto.randomUUID(),
+      config: { ...source.config, visualizationId: created.id },
+      layout: { ...source.layout, row: source.layout.row + source.layout.rowSpan },
+    };
+    const insertionRow = copy.layout.row;
+    const shifted = current.map((candidate) =>
+      candidate.layout.row >= insertionRow
+        ? {
+            ...candidate,
+            layout: { ...candidate.layout, row: candidate.layout.row + copy.layout.rowSpan },
+          }
+        : candidate,
+    );
+    form.setValue("widgets", [...shifted, copy], { shouldDirty: true });
+    selectWidget(copy.id);
   };
 
   const meta = widget ? widgetMetaFor(widget.type) : null;
@@ -165,6 +195,15 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
+                {widget.type === "visualization" && (
+                  <DropdownMenuItem
+                    disabled={duplicateDisabled || !widget.config.visualizationId}
+                    onSelect={() => void handleDuplicate()}
+                  >
+                    <Copy className="size-4" />
+                    {t("editor.inspector.duplicate")}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem variant="destructive" onClick={handleRemove}>
                   <Trash2 className="size-4" />
                   {t("editor.inspector.delete")}
