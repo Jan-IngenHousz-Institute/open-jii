@@ -43,13 +43,22 @@ driver, `[serving store] measurements batch 812: 4000 rows not sent, writing the
 and the reason on the executors, `[serving store] Insert into measurements failed on attempt 5, ...`
 or `[serving store] Handing 4000 rows of measurements back: ...`.
 
-| Logged                                    | Meaning                                                                  | Fix                                                                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| code 516                                  | The writer's credentials are wrong                                       | Reapply infrastructure, which rewrites the `serving-store-<env>` secret scope; the sink reads it on every attempt |
-| `no credentials from serving-store-<env>` | The scope or a key is missing                                            | Reapply infrastructure                                                                                            |
-| `needs the store's migrations`            | A store table, or a column of one, that the feed's code sends is missing | Run the deploy's migration task                                                                                   |
-| code 241 or 252                           | Memory, or too many parts                                                | Work `store-feed-latency` step 2                                                                                  |
-| a timeout or connection error             | The store does not answer                                                | Work `store-answers`                                                                                              |
+| Logged                                    | Meaning                                                                  | Fix                                                                                                           |
+| ----------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| code 516                                  | The writer's credentials are wrong                                       | Pass the writer's stored password to the scope and the store again, below; the sink reads it on every attempt |
+| `no credentials from serving-store-<env>` | The scope or a key is missing                                            | Reapply infrastructure for `url` and the usernames; a missing `writer-password` is passed again, below        |
+| `needs the store's migrations`            | A store table, or a column of one, that the feed's code sends is missing | Run the deploy's migration task                                                                               |
+| code 241 or 252                           | Memory, or too many parts                                                | Work `store-feed-latency` step 2                                                                              |
+| a timeout or connection error             | The store does not answer                                                | Work `store-answers`                                                                                          |
+
+OpenTofu no longer writes the writer's password. To pass the one in its secret to the scope and the
+store again, without changing it:
+
+```bash
+aws secretsmanager get-secret-value --profile openjii-<env> --region eu-central-1 \
+  --secret-id openjii-serving-store-<env>-writer --query SecretString --output text |
+  jq -r .password | pnpm secrets:set <env> serving-store-writer --key password
+```
 
 Rows the store could not read never stall the feed: they go to `store.feed_rejects`, and
 `store-feed-rejects` covers them.

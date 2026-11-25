@@ -245,7 +245,7 @@ describe("setSecret", () => {
     );
     expect(d.reloadServingStore).toHaveBeenCalledWith("openjii-serving-store-prod");
     const output = d.lines.join("");
-    expect(output).toContain("Restart the pipelines' serving store feed now");
+    expect(output).toContain("the pipelines' feed reads the scope on every write");
     expect(output).not.toContain("s3cr3t-value");
   });
 
@@ -259,27 +259,55 @@ describe("setSecret", () => {
     expect(reader.reloadServingStore).toHaveBeenCalledWith("openjii-serving-store-dev");
     expect(reader.lines.join("")).toContain("Redeploy the backend now");
 
-    const username = deps("{}");
+    const username = deps("{}", "openjii_reader\n");
     await setSecret({ ...base, secret: "serving-store-reader", key: "username" }, username.value);
+    expect(username.put).toHaveBeenCalledWith(
+      "openjii-serving-store-dev-reader",
+      JSON.stringify({ username: "openjii_reader" }),
+    );
     expect(username.reloadServingStore).not.toHaveBeenCalled();
   });
 
-  it("says nothing has taken the password when the store cannot reread it", async () => {
-    const d = deps(JSON.stringify({ username: "openjii_reader" }));
-    d.reloadServingStore.mockRejectedValue(new Error("No instance tagged Name=x"));
+  it("refuses a username the store's users are not named", async () => {
+    const d = deps("{}", "reader\n");
 
     await expect(
       setSecret(
         {
           environment: "dev",
           secret: "serving-store-reader",
-          key: "password",
+          key: "username",
           awsProfile: "p",
           databricksProfile: "dev",
         },
         d.value,
       ),
-    ).rejects.toThrow(/No instance tagged Name=x\nNothing has taken the new password yet/);
+    ).rejects.toThrow("serving-store-reader's username is openjii_reader; nothing was set");
+    expect(d.put).not.toHaveBeenCalled();
+  });
+
+  it("names what already holds the password when the store cannot reread it", async () => {
+    const base = { environment: "dev", awsProfile: "p", databricksProfile: "dev" } as const;
+    const reader = deps(JSON.stringify({ username: "openjii_reader" }));
+    reader.reloadServingStore.mockRejectedValue(new Error("No instance tagged Name=x"));
+
+    await expect(
+      setSecret({ ...base, secret: "serving-store-reader", key: "password" }, reader.value),
+    ).rejects.toThrow(
+      /No instance tagged Name=x\nthe Secrets Manager secret already holds the new password.*same password, not a new one/s,
+    );
+
+    const writer = deps(JSON.stringify({ username: "openjii_writer" }));
+    writer.reloadServingStore.mockRejectedValue(new Error("timed out"));
+
+    const error = (await setSecret(
+      { ...base, secret: "serving-store-writer", key: "password" },
+      writer.value,
+    ).catch((caught: unknown) => caught)) as Error;
+    expect(error.message).toContain(
+      "the Secrets Manager secret and writer-password in serving-store-dev already hold",
+    );
+    expect(error.message).not.toContain("s3cr3t-value");
   });
 });
 

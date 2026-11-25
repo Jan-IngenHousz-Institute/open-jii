@@ -324,7 +324,8 @@ resource "aws_instance" "store" {
 
   tags = merge(var.tags, { Name = local.name })
 
-  depends_on = [aws_ec2_subnet_cidr_reservation.store]
+  # The policy before the instance, so its first boot can already read the passwords.
+  depends_on = [aws_ec2_subnet_cidr_reservation.store, aws_iam_role_policy.passwords]
 
   # A new AMI arrives through a deliberate replacement, not on every apply.
   lifecycle {

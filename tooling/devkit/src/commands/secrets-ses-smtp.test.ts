@@ -56,6 +56,26 @@ describe("setSesSmtp", () => {
     expect(output).not.toContain("EXAMPLEKEY");
   });
 
+  it("refuses a stored value that is not JSON without printing it", async () => {
+    const put = vi.fn();
+
+    const error = (await setSesSmtp(
+      { environment: "dev", awsProfile: "p" },
+      {
+        readInput: () => Promise.resolve(accessKey),
+        read: () => Promise.resolve("pasted-raw-password"),
+        put,
+        write: () => undefined,
+      },
+    ).catch((caught: unknown) => caught)) as Error;
+
+    expect(error.message).toBe(
+      "openjii-ses-secrets-dev does not hold a JSON object; refusing to replace it",
+    );
+    expect(error.cause).toBeUndefined();
+    expect(put).not.toHaveBeenCalled();
+  });
+
   it("refuses input that is not a new access key", async () => {
     const put = vi.fn();
     const deps = (input: string) => ({

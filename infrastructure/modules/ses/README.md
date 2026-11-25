@@ -134,15 +134,13 @@ module "ses" {
   ]
 }
 
-# Then store SMTP credentials in Secrets Manager
+# The secret holds the SMTP address, access key included, which OpenTofu never sees:
+# `aws iam create-access-key --user-name <env>-ses-smtp-user | pnpm secrets:ses-smtp <env>` sets it.
 module "ses_secrets" {
-  source      = "../../modules/secrets-manager"
-  secret_name = "openjii-ses-secrets-dev"
+  source = "../../modules/secrets-manager/container"
 
-  secret_string = jsonencode({
-    AUTH_EMAIL_SERVER = module.ses.auth_email_server
-    AUTH_EMAIL_FROM   = "noreply@mail.dev.example.com"
-  })
+  name        = "openjii-ses-secrets-dev"
+  description = "SES SMTP credentials for transactional email sending"
 }
 ```
 
@@ -172,7 +170,6 @@ module "ses_secrets" {
 | domain_identity_arn    | ARN of the SES domain identity                 |
 | smtp_user_name         | IAM user whose access key signs in to SES SMTP |
 | smtp_server            | SES SMTP server endpoint                       |
-| auth_email_server      | Complete AUTH_EMAIL_SERVER string for Auth.js  |
 | from_domain            | The configured from domain                     |
 | configuration_set_name | Name of the SES configuration set              |
 

@@ -116,28 +116,39 @@ with `openssl rand -hex 32`, the key id included, and keep them in shell variabl
 screen. Store the id and the secret twice, in `databricks` (`DATABRICKS_WEBHOOK_API_KEY_ID`,
 `DATABRICKS_WEBHOOK_SECRET`) and in `webhook-scope` (`webhook_api_key_id`, `webhook_secret`), and
 the key as `databricks` `DATABRICKS_WEBHOOK_API_KEY`. For example
-`printf %s "$WEBHOOK_SECRET" | pnpm secrets:set <env> webhook-scope --key webhook_secret`. Then
-redeploy the backend straight away: the pipelines read the scope on each call, so their calls fail
-from the scope write until the backend restarts.
+`printf %s "$WEBHOOK_SECRET" | pnpm secrets:set <env> webhook-scope --key webhook_secret`.
+
+The macro pipeline, `Macro-Execution-DLT-Pipeline-<ENV>`, reads the key once when it starts and
+signs with it until it stops, so its results would fail one by one after the switch. Stop it in the
+Databricks workspace before the first write. Then redeploy the backend straight away: the other
+pipelines read the scope on each call, so their calls fail from the scope write until the backend
+restarts. Once the backend has rolled out, start the macro pipeline again and check that a macro
+result it processed after the start carries no error.
 
 **The SES SMTP key** is an access key of the IAM user `<env>-ses-smtp-user`, which may hold two at
 once. `aws iam create-access-key --user-name <env>-ses-smtp-user | pnpm secrets:ses-smtp <env>`
 stores the SMTP address built from the new one and prints its id. Redeploy the backend, check that a
-sign-in code arrives, then delete the older key: `aws iam list-access-keys` names both.
+sign-in code arrives, then delete the older key: `aws iam list-access-keys` names both. If the
+command fails after the key was made, its secret half is gone and the user is at its limit of two,
+so delete only the new key, the one the secret does not name, and start again.
 
 **The serving store's passwords** are one secret per role, `openjii-serving-store-<env>-<role>`, each
-holding `username` and `password`. The store's instance hashes them into ClickHouse's users at boot,
-and again whenever its script runs. ClickHouse holds one password per user, so a consumer fails from
-the moment the store takes the new password until it restarts with it. For one role:
+holding `username` and `password`. The store's instance hashes them into ClickHouse's users before
+ClickHouse starts, and again whenever its script runs. ClickHouse holds one password per user, so a
+consumer fails from the moment one side has the new password until the other has it too. For one
+role:
 
-1. `openssl rand -hex 32 | tr -d '\n' | pnpm secrets:set <env> serving-store-<role> --key password`
-   stores the password, writes it to the `serving-store-<env>` scope too for `writer` and
-   `reloader`, and has the store take it through SSM Run Command, so nobody needs a shell on the
-   instance. ClickHouse rereads its users without a restart. If any step fails, nothing has taken
-   the new password yet, so run the command again with a new one.
-2. Restart the role's consumer straight away; the command names it. `reader`: redeploy the backend.
-   `writer`: restart the pipelines' feed, which reads the scope when it starts. `reloader`: nothing,
-   the next reload reads it. `admin`: nothing, the migration runner reads it on its next run.
+1. Make the password and keep it in a shell variable, `PASSWORD=$(openssl rand -hex 32)`, so a
+   failed run can be repeated with it.
+2. `printf %s "$PASSWORD" | pnpm secrets:set <env> serving-store-<role> --key password` stores the
+   password, writes it to the `serving-store-<env>` scope too for `writer` and `reloader`, and has
+   the store take it through SSM Run Command, so nobody needs a shell on the instance. ClickHouse
+   rereads its users without a restart. If the command fails, it names what already holds the new
+   password; the feed may already be using it, and the store may still take it. Run the same command
+   again with the same `$PASSWORD`, never a new one.
+3. Restart the role's consumer if the command says so. `reader`: redeploy the backend. `writer`:
+   nothing, the feed reads the scope on every write. `reloader`: nothing, the next reload reads it.
+   `admin`: nothing, the migration runner reads it on its next run.
 
 A new instance reads the passwords at boot, so replacing the instance needs no step here.
 

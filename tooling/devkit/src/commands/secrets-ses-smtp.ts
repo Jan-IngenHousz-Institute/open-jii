@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 import { text } from "node:stream/consumers";
 
 import { optionAfter } from "../lib/args.js";
-import { secretsManager } from "./secrets-set.js";
+import { parseObject, secretsManager } from "./secrets-set.js";
 import type { SecretsSetDependencies } from "./secrets-set.js";
 
 type Environment = "dev" | "prod";
@@ -85,14 +85,7 @@ export async function setSesSmtp(
 
   const name = `openjii-ses-secrets-${args.environment}`;
   const current = await deps.read(name);
-  let object: Record<string, unknown> = {};
-  if (current !== null) {
-    const parsed: unknown = JSON.parse(current);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new Error(`${name} does not hold a JSON object; refusing to replace it`);
-    }
-    object = parsed as Record<string, unknown>;
-  }
+  const object = current === null ? {} : parseObject(name, current);
   object.AUTH_EMAIL_SERVER = server;
   object.BACKEND_EMAIL_SERVER = server;
   await deps.put(name, JSON.stringify(object));

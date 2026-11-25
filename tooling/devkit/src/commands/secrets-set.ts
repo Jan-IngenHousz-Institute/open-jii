@@ -18,6 +18,8 @@ import { optionAfter } from "../lib/args.js";
 type Environment = "dev" | "prod";
 
 interface ServingStoreUser {
+  /** The ClickHouse user, whose name the store's users and grants are written with. */
+  username: string;
   /** The key the pipelines read this user's password from in the `serving-store-<env>` scope. */
   scopeKey?: string;
   /** Who still holds the old password once the store has the new one. */
@@ -100,6 +102,7 @@ export const secrets = {
     name: (env: Environment) => `openjii-serving-store-${env}-admin`,
     keys: ["username", "password"],
     servingStore: {
+      username: "openjii_admin",
       restart: "Nothing to restart: the migration runner reads it on its next run.",
     },
   },
@@ -107,14 +110,16 @@ export const secrets = {
     name: (env: Environment) => `openjii-serving-store-${env}-writer`,
     keys: ["username", "password"],
     servingStore: {
+      username: "openjii_writer",
       scopeKey: "writer-password",
-      restart: "Restart the pipelines' serving store feed now; it reads the scope when it starts.",
+      restart: "Nothing to restart: the pipelines' feed reads the scope on every write.",
     },
   },
   "serving-store-reloader": {
     name: (env: Environment) => `openjii-serving-store-${env}-reloader`,
     keys: ["username", "password"],
     servingStore: {
+      username: "openjii_reloader",
       scopeKey: "reloader-password",
       restart: "Nothing to restart: the next reload reads the scope.",
     },
@@ -123,6 +128,7 @@ export const secrets = {
     name: (env: Environment) => `openjii-serving-store-${env}-reader`,
     keys: ["username", "password"],
     servingStore: {
+      username: "openjii_reader",
       restart: "Redeploy the backend now; it reads the secret when a task starts.",
     },
   },
@@ -194,7 +200,7 @@ export function parseArgs(given: string[]): SecretsSetArgs {
   };
 }
 
-function parseObject(name: string, current: string): Record<string, unknown> {
+export function parseObject(name: string, current: string): Record<string, unknown> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(current);
@@ -229,6 +235,10 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
       "No value received on stdin. Pipe it in, for example pbpaste | pnpm secrets:set",
     );
   }
+  // The store's users are named in OpenTofu, so any other name would sign in as nobody.
+  if (spec.servingStore && key === "username" && value !== spec.servingStore.username) {
+    throw new Error(`${args.secret}'s username is ${spec.servingStore.username}; nothing was set`);
+  }
 
   if ("store" in spec && spec.store === "databricks" && key !== null) {
     await deps.putScoped(name, key, value);
@@ -261,9 +271,9 @@ export async function setSecret(args: SecretsSetArgs, deps: SecretsSetDependenci
 }
 
 /**
- * The scope first, the store last: until the store rereads its passwords, every consumer keeps
- * working on the old one, so a failure before that point is fixed by running the command again
- * with a fresh value.
+ * The scope first, the store last. The feed reads its scope on every write, so from the scope write
+ * until the store rereads its passwords the writer fails; a failure in between is put right by
+ * running the command again with the same value, never a new one.
  */
 async function passToServingStore(
   env: Environment,
@@ -271,18 +281,24 @@ async function passToServingStore(
   value: string,
   deps: SecretsSetDependencies,
 ): Promise<void> {
-  const retry = "Nothing has taken the new password yet; run the command again with a new one.";
   const scope = `serving-store-${env}`;
   const instance = `openjii-serving-store-${env}`;
+  const holders = ["the Secrets Manager secret"];
   try {
     if (user.scopeKey) {
       await deps.putScoped(scope, user.scopeKey, value);
+      holders.push(`${user.scopeKey} in ${scope}`);
       deps.write(`Set ${user.scopeKey} in the Databricks secret scope ${scope}\n`);
     }
     await deps.reloadServingStore(instance);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`${reason}\n${retry}`);
+    throw new Error(
+      `${reason}\n${holders.join(" and ")} already ${holders.length > 1 ? "hold" : "holds"} ` +
+        "the new password, and the store may take " +
+        "it too if its script is still running. Run the command again with the same password, " +
+        "not a new one.",
+    );
   }
   deps.write(`${instance} now accepts the new password. ${user.restart}\n`);
 }

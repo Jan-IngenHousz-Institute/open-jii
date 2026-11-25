@@ -456,8 +456,11 @@ start.
 A serving store `password` goes further than the secret. For `writer` and `reloader` the command
 also writes it to the pipelines' `serving-store-<env>` scope, then it runs the store's passwords
 script on the instance through SSM Run Command and waits for it, so the store accepts the new
-password before the command returns. It then names the consumer to restart. This needs
-`ssm:SendCommand` and `ssm:ListCommands` in the account, besides the Databricks CLI login.
+password before the command returns. It then names the consumer to restart, if any. If a step
+fails, it names what already holds the new password; run it again with the same value, not a new
+one. A `username` must be the role's ClickHouse user, `openjii_<role>`, which OpenTofu names. This
+needs `ssm:SendCommand`, `ssm:ListCommands` and `ssm:ListCommandInvocations` in the account, besides
+the Databricks CLI login.
 
 Two more targets are Databricks secret scopes, which the pipelines read. Each key is its own secret
 there, so nothing is merged. The command writes them through the Databricks CLI, which holds your
