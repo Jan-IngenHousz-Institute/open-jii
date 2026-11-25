@@ -353,15 +353,14 @@ export function transformCartesianData(
           ? buildPlainCellSeries(cellRows, xaxisId, yaxisId, undefined)
           : buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, undefined);
 
-    // Route this cell's secondary-axis traces onto the cell's overlay axis;
-    // the builders above pinned every trace to the primary yaxis.
+    if (!facetColumn) return cellSeries;
     const secondaryYaxisId = secondaryYaxisIdFor(cellIndex);
-    if (!secondaryYaxisId) {
-      return cellSeries;
-    }
-    return cellSeries.map((s) =>
-      s.axis === "secondary" ? { ...s, yaxisId: secondaryYaxisId } : s,
-    );
+    // The legend shows one entry for each series across all panels.
+    return cellSeries.map((series, index) => ({
+      ...series,
+      yaxisId: series.axis === "secondary" ? secondaryYaxisId : yaxisId,
+      legendgroup: `facet-series-${index}`,
+    }));
   };
 
   const allSeries: CartesianSeries[] = [];

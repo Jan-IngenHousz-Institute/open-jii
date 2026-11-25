@@ -336,6 +336,27 @@ describe("transformCartesianData", () => {
     expect(b?.y).toEqual([100]);
   });
 
+  it("groups each series across panels so one legend entry toggles all its traces", () => {
+    const sources = [
+      ds("x", "x"),
+      ds("y", "one"),
+      { ...ds("y", "two"), axis: "secondary" as const },
+      ds("facet", "panel"),
+    ];
+    const data = [
+      { x: 1, one: 2, two: 8, panel: "A" },
+      { x: 2, one: 4, two: 6, panel: "B" },
+    ];
+    const { chartSeries } = transformCartesianData(data, sources, baseConfig, baseOptions);
+    expect(chartSeries).toHaveLength(4);
+    expect(chartSeries[0].legendgroup).toBeTruthy();
+    expect(chartSeries[1].legendgroup).toBeTruthy();
+    expect(chartSeries[0].legendgroup).not.toBe(chartSeries[1].legendgroup);
+    expect(chartSeries[2].legendgroup).toBe(chartSeries[0].legendgroup);
+    expect(chartSeries[3].legendgroup).toBe(chartSeries[1].legendgroup);
+    expect(chartSeries.slice(2).map((series) => series.showlegend)).toEqual([false, false]);
+  });
+
   it("routes secondary-axis series onto per-cell overlay axes in facet mode", () => {
     const rows = [
       { x: 1, a: 10, b: 100, site: "X" },
