@@ -24,6 +24,7 @@ jobs:
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+      checks_matrix: ${{ steps.plan.outputs.checks_matrix }}
       has_infrastructure_changes: ${{ steps.infra.outputs.has_infrastructure_changes }}
     env:
       DO_NOT_TRACK: 1
@@ -35,14 +36,36 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "24"
-
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
+
+      # One job per check. The slowest test suites get jobs of their own, web and
+      # backend split in two, and every other package's tests share one job.
+      - name: Plan Checks
+        id: plan
+        shell: bash
+        env:
+          AFFECTED_APPS: ${{ steps.detect.outputs.affected_apps }}
+        run: |
+          MATRIX=$(jq -c '
+            def affected($pkg): any(.[]; . == $pkg);
+            def shards($pkg; $n): [range(1; $n + 1) as $i | {name: "test-\($pkg)-\($i)", label: "Test (\($pkg) \($i)/\($n))", task: "test", filters: [$pkg], shard: "\($i)/\($n)"}];
+            def alone($pkg; $label): [{name: "test-\($label)", label: "Test (\($label))", task: "test", filters: [$pkg], shard: ""}];
+            . as $apps
+            | ["web", "backend", "mobile", "@repo/ui"] as $own
+            | [$apps[] | select(IN($own[]) | not)] as $rest
+            | [{name: "build", label: "Build", task: "build", filters: $apps, shard: ""},
+               {name: "types", label: "Type Check", task: "types", filters: $apps, shard: ""},
+               {name: "lint", label: "Lint", task: "lint", filters: $apps, shard: ""}]
+              + (if affected("web") then shards("web"; 2) else [] end)
+              + (if affected("backend") then shards("backend"; 2) else [] end)
+              + (if affected("mobile") then alone("mobile"; "mobile") else [] end)
+              + (if affected("@repo/ui") then alone("@repo/ui"; "ui") else [] end)
+              + (if ($rest | length) > 0 then [{name: "test-rest", label: "Test (other packages)", task: "test", filters: $rest, shard: ""}] else [] end)
+            | {include: .}' <<<"$AFFECTED_APPS")
+          echo "checks_matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "$MATRIX" | jq -r '.include[] | "\(.label): \(.filters | join(", "))"'
 
       - name: Detect Infrastructure Changes
         id: infra
@@ -315,11 +338,14 @@ jobs:
             exit 1
           fi
 
-  build_lint_test:
-    name: Build, Lint, & Test
+  checks:
+    name: ${{ matrix.label }}
     needs: detect
     runs-on: ubuntu-latest
     if: needs.detect.outputs.has_affected_apps == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.checks_matrix) }}
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
@@ -336,9 +362,9 @@ jobs:
         with:
           node-version: "24"
 
-      # apps/data builds/lints/tests through uv; only provision it when that app is affected.
+      # apps/data builds/lints/tests through uv; only provision it when that app is in this check.
       - name: Setup uv
-        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
+        if: contains(matrix.filters, 'data')
         uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
@@ -349,37 +375,46 @@ jobs:
       # PySpark 4.0 runs on Java 17 or 21. The runner's default JDK is newer and lacks
       # Subject.getSubject, so Spark cannot start without a pinned one.
       - name: Setup Java
-        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
+        if: matrix.task == 'test' && contains(matrix.filters, 'data')
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "21"
 
+      # Each check keeps its own cache per pull request, so a later push replays
+      # the tasks whose inputs did not change. The build check keeps none: one web
+      # build alone is several hundred MB, and every push would store another.
+      - name: Turbo Cache
+        if: matrix.task != 'build'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ matrix.name }}-${{ github.event.pull_request.number || github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ matrix.name }}-${{ github.event.pull_request.number || github.ref_name }}-
+
       - name: Build Packages
+        if: matrix.task == 'build'
         uses: ./.github/actions/build-packages
         with:
-          affected_apps: ${{ needs.detect.outputs.affected_apps }}
-
-      - name: Lint Packages
-        uses: ./.github/actions/lint-packages
-        with:
-          affected_apps: ${{ needs.detect.outputs.affected_apps }}
+          affected_apps: ${{ toJSON(matrix.filters) }}
 
       - name: Type Check Packages
+        if: matrix.task == 'types'
         shell: bash
+        env:
+          FILTERS: ${{ toJSON(matrix.filters) }}
         run: |
-          echo "🔎 Type-checking affected packages"
-          AFFECTED_APPS='${{ needs.detect.outputs.affected_apps }}'
-          APPS=($(echo $AFFECTED_APPS | jq -r '.[]'))
-          CHECK_CMD="pnpm turbo run check-types"
+          mapfile -t APPS < <(jq -r '.[]' <<<"$FILTERS")
+          ARGS=()
           for APP in "${APPS[@]}"; do
-            CHECK_CMD="$CHECK_CMD --filter=$APP"
+            ARGS+=("--filter=$APP")
           done
-          echo "Running: $CHECK_CMD"
-          eval "$CHECK_CMD"
+          echo "Running: pnpm turbo run check-types ${ARGS[*]}"
+          pnpm turbo run check-types "${ARGS[@]}"
 
       - name: Validate Documentation Static Export
-        if: contains(fromJSON(needs.detect.outputs.affected_apps), 'docs')
+        if: matrix.task == 'build' && contains(matrix.filters, 'docs')
         shell: bash
         run: |
           pnpm --filter docs check-media-tooling
@@ -388,18 +423,28 @@ jobs:
           pnpm --filter docs check-deploy-workflow
           pnpm --filter docs validate:local
 
+      - name: Lint Packages
+        if: matrix.task == 'lint'
+        uses: ./.github/actions/lint-packages
+        with:
+          affected_apps: ${{ toJSON(matrix.filters) }}
+
       - name: Test Packages
+        if: matrix.task == 'test'
         uses: ./.github/actions/test-packages
         with:
-          affected_apps: ${{ needs.detect.outputs.affected_apps }}
+          affected_apps: ${{ toJSON(matrix.filters) }}
+          shard: ${{ matrix.shard }}
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           macro-sb-test-key: ${{ secrets.MACRO_SB_TEST_KEY }}
           skip-coverage: ${{ github.actor == 'dependabot[bot]' }}
 
       - name: Save coverage artifacts for main branch upload
+        if: matrix.task == 'test'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: coverage-reports-${{ github.event.pull_request.head.sha }}
+          # main-coverage.yml downloads every artifact with this prefix.
+          name: coverage-reports-${{ github.event.pull_request.head.sha }}-${{ matrix.name }}
           # Keep this in sync with the codecov `files` globs so a cache hit on
           # main uploads the same set a regenerate would (apps + packages + tooling).
           path: |
@@ -411,6 +456,30 @@ jobs:
             tooling/*/coverage/lcov.info
           if-no-files-found: ignore
           retention-days: 1
+
+  build_lint_test:
+    # The main ruleset requires this check by name, so it stands for every job in `checks`.
+    name: Build, Lint, & Test
+    needs: [detect, checks]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Every Check
+        shell: bash
+        env:
+          DETECT: ${{ needs.detect.result }}
+          CHECKS: ${{ needs.checks.result }}
+        run: |
+          echo "Detect: $DETECT. Checks: $CHECKS."
+          if [ "$DETECT" != "success" ]; then
+            echo "::error::Detecting affected packages did not succeed, so nothing was checked."
+            exit 1
+          fi
+          # Skipped means no package was affected.
+          if [ "$CHECKS" != "success" ] && [ "$CHECKS" != "skipped" ]; then
+            echo "::error::At least one check did not pass."
+            exit 1
+          fi
 
   production_checks:
     name: Production Checks
