@@ -346,6 +346,20 @@ describe("useAutosave", () => {
     expect(save).toHaveBeenCalledWith("v1");
   });
 
+  it("does not flush a pending save on unmount after editing is disabled", () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { rerender, unmount } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, enabled, delayMs: 5_000 }),
+      { initialProps: { value: "v0", enabled: true } },
+    );
+
+    rerender({ value: "v1", enabled: true });
+    rerender({ value: "v1", enabled: false });
+    unmount();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("skips the unmount flush when flushOnUnmount is false", () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const { rerender, unmount } = renderHook(

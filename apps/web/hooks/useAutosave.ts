@@ -75,6 +75,7 @@ export function useAutosave<T>({
   const inFlightRef = useRef<Promise<void> | null>(null);
 
   const runSave = useCallback(async () => {
+    if (!enabledRef.current) return;
     const v = valueRef.current;
     const k = keyRef.current;
 

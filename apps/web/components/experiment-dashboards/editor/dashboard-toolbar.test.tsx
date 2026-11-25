@@ -101,6 +101,34 @@ function renderToolbar() {
   );
 }
 
+function ChartSelection({ sourceWidgetId }: { sourceWidgetId: string }) {
+  const { control } = useFormContext<DashboardFormValues>();
+  const widgets = useWatch({ name: "widgets", control });
+  const { selectWidget, selectedWidgetId } = useDashboardEditor();
+  const charts = widgets.flatMap((widget) =>
+    widget.type === "visualization" ? [widget.config.visualizationId] : [],
+  );
+  return (
+    <>
+      <button onClick={() => selectWidget(sourceWidgetId)}>select chart</button>
+      <output aria-label="Chart IDs">{charts.join(", ")}</output>
+      <output aria-label="Selected widget">{selectedWidgetId ?? "none"}</output>
+    </>
+  );
+}
+
+function expectOpenCopyLink(chartId: string) {
+  const action = vi
+    .mocked(toast)
+    .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached")?.[0].action;
+  assertExists(action);
+  expect(action.props).toMatchObject({
+    children: {
+      props: { href: `/en-US/platform/experiments/exp-1/analysis/visualizations/${chartId}` },
+    },
+  });
+}
+
 describe("DashboardToolbar", () => {
   it("keeps the chosen section while the same widget stays selected", async () => {
     const user = userEvent.setup();
@@ -324,37 +352,69 @@ describe("DashboardToolbar", () => {
       ),
     );
 
-    const action = vi
-      .mocked(toast)
-      .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached")?.[0].action;
-    assertExists(action);
-    expect(action.props).toMatchObject({
-      children: {
-        props: { href: "/en-US/platform/experiments/exp-1/analysis/visualizations/copy" },
-      },
-    });
+    expectOpenCopyLink(created.id);
   });
-  it("dismisses copy recovery and hides retry when dashboard editing is revoked", async () => {
+
+  it("offers Open copy without inserting a widget when edit access is revoked during create", async () => {
+    const user = userEvent.setup();
+    const original = createVisualization({ id: "source" });
+    const created = createVisualization({ id: "copy" });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    server.mount(contract.experiments.getExperimentVisualization, { body: original });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+      unblock: promise,
+    });
+    const update = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: createExperimentDashboard({ id: "dash-1" }),
+    });
+    const chart = createVisualizationWidget({
+      config: { visualizationId: original.id, showTitle: true, showDescription: false },
+    });
+    function dashboard(canEdit: boolean) {
+      return (
+        <Harness initialWidgets={[chart]} save canEdit={canEdit}>
+          <ChartSelection sourceWidgetId={chart.id} />
+          <DashboardToolbar visible experimentId="exp-1" />
+        </Harness>
+      );
+    }
+
+    const { rerender } = render(dashboard(true));
+    await user.click(screen.getByRole("button", { name: "select chart" }));
+    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+    await waitFor(() => expect(create.callCount).toBe(1));
+
+    rerender(dashboard(false));
+    act(() => resolve());
+    await waitFor(() => expectOpenCopyLink(created.id));
+    expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
+    expect(screen.getByLabelText("Selected widget")).toHaveTextContent(chart.id);
+    expect(update.callCount).toBe(0);
+    expect(create.callCount).toBe(1);
+  });
+
+  it("drops an unsaved copy after access is revoked and allows Duplicate again when access returns", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source" });
     const created = createVisualization({ id: "copy" });
     server.mount(contract.experiments.getExperimentVisualization, { body: original });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
-    server.mount(contract.experiments.createExperimentVisualization, { body: created });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+    });
     const update = server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
     const dismiss = vi.fn();
     vi.mocked(toast).mockReturnValue({ id: "copy-error", dismiss, update: vi.fn() });
     const chart = createVisualizationWidget({
       config: { visualizationId: original.id, showTitle: true, showDescription: false },
     });
-    function SelectSource() {
-      const { selectWidget } = useDashboardEditor();
-      return <button onClick={() => selectWidget(chart.id)}>select chart</button>;
-    }
     function dashboard(canEdit: boolean) {
       return (
         <Harness initialWidgets={[chart]} save canEdit={canEdit}>
-          <SelectSource />
+          <ChartSelection sourceWidgetId={chart.id} />
           <DashboardToolbar visible experimentId="exp-1" />
         </Harness>
       );
@@ -372,13 +432,26 @@ describe("DashboardToolbar", () => {
       ),
     );
 
+    expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
     rerender(dashboard(false));
     expect(dismiss).toHaveBeenCalled();
+    expectOpenCopyLink(created.id);
+    expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
+    expect(screen.getByLabelText("Selected widget")).toHaveTextContent("none");
+    await user.click(screen.getByRole("button", { name: "select chart" }));
     await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
     expect(screen.getByRole("menuitem", { name: "editor.inspector.delete" })).toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: "editor.inspector.retryCopySave" }),
     ).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    rerender(dashboard(true));
+    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+    expect(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" })).toBeEnabled();
+    expect(
+      screen.queryByRole("menuitem", { name: "editor.inspector.retryCopySave" }),
+    ).not.toBeInTheDocument();
     expect(update.callCount).toBe(1);
+    expect(create.callCount).toBe(1);
   });
 });

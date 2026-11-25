@@ -25,6 +25,16 @@ interface DashboardCopySave {
   retry: () => void;
 }
 
+interface CreatedChart {
+  id: string;
+  name: string;
+}
+
+interface PendingCopy {
+  sourceWidgetId: string;
+  chart: CreatedChart;
+}
+
 const DashboardCopySaveContext = createContext<DashboardCopySave | null>(null);
 
 export function useDashboardCopySave() {
@@ -50,6 +60,8 @@ export function DashboardAutosaveBoundary({
   const locale = useLocale();
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
   const mounted = useRef(false);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -57,7 +69,8 @@ export function DashboardAutosaveBoundary({
     };
   }, []);
 
-  const [copies, setCopies] = useState(new Map<string, string>());
+  const [copies, setCopies] = useState(new Map<string, PendingCopy>());
+  const unattachedCharts = useRef(new Map<string, CreatedChart>());
   const widgets = useWatch({ control: form.control, name: "widgets" });
   const selectedWidget = widgets.find((widget) => widget.id === selectedWidgetId);
   const sourceChartId =
@@ -65,7 +78,8 @@ export function DashboardAutosaveBoundary({
   const { duplicate, disabled } = useExperimentVisualizationDuplicate(experimentId, sourceChartId);
   const pending = [...copies].filter(([id]) => widgets.some((widget) => widget.id === id));
   const hasPendingCopy = pending.some(
-    ([copyId, sourceId]) => selectedWidgetId === copyId || selectedWidgetId === sourceId,
+    ([copyId, { sourceWidgetId }]) =>
+      selectedWidgetId === copyId || selectedWidgetId === sourceWidgetId,
   );
   if (pending.length < copies.size) setCopies(new Map(pending));
   const onSaved = useCallback(({ widgets: savedWidgets }: DashboardFormValues) => {
@@ -102,6 +116,47 @@ export function DashboardAutosaveBoundary({
     return notification.dismiss;
   }, [showFailure, error, retry, retryLabel, failureTitle]);
 
+  const showUnattachedCopies = useCallback(
+    (charts: CreatedChart[]) => {
+      for (const chart of charts) unattachedCharts.current.set(chart.id, chart);
+      const openCopy = t("editor.inspector.openChartCopy");
+      const nameLinks = unattachedCharts.current.size > 1;
+      const links = [...unattachedCharts.current.values()].map((chart) => (
+        <ToastAction key={chart.id} asChild altText={`${openCopy} ${chart.name}`}>
+          <Link
+            href={`/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${chart.id}`}
+          >
+            {nameLinks ? chart.name : openCopy}
+          </Link>
+        </ToastAction>
+      ));
+      toast({
+        title: t("editor.inspector.copyNotAttached"),
+        ...(nameLinks
+          ? { description: <div className="mt-1 flex flex-wrap gap-1">{links}</div> }
+          : { action: links[0] }),
+      });
+    },
+    [experimentId, locale, t],
+  );
+
+  useEffect(() => {
+    if (enabled || copies.size === 0) return;
+    const current = form.getValues("widgets");
+    const removedCopies = current.flatMap((widget) => {
+      const copy = copies.get(widget.id);
+      return copy ? [copy.chart] : [];
+    });
+    if (removedCopies.length === 0) return;
+
+    if (selectedWidgetId && copies.has(selectedWidgetId)) selectWidget(null);
+    const remaining = current.filter((widget) => !copies.has(widget.id));
+    form.setValue("widgets", compactWidgets(remaining, form.getValues("layout.columns")), {
+      shouldDirty: true,
+    });
+    showUnattachedCopies(removedCopies);
+  }, [enabled, copies, form, selectedWidgetId, selectWidget, showUnattachedCopies]);
+
   const duplicateSelectedChart = async () => {
     if (!enabled || selectedWidget?.type !== "visualization" || !sourceChartId || hasPendingCopy)
       return;
@@ -112,22 +167,11 @@ export function DashboardAutosaveBoundary({
     const source = current.find((candidate) => candidate.id === sourceWidgetId);
     if (
       !mounted.current ||
+      !enabledRef.current ||
       source?.type !== "visualization" ||
       source.config.visualizationId !== sourceChartId
     ) {
-      const openCopy = t("editor.inspector.openChartCopy");
-      toast({
-        title: t("editor.inspector.copyNotAttached"),
-        action: (
-          <ToastAction asChild altText={openCopy}>
-            <Link
-              href={`/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${created.id}`}
-            >
-              {openCopy}
-            </Link>
-          </ToastAction>
-        ),
-      });
+      showUnattachedCopies([created]);
       return;
     }
     const copy = {
@@ -148,7 +192,9 @@ export function DashboardAutosaveBoundary({
     form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
       shouldDirty: true,
     });
-    setCopies((previous) => new Map(previous).set(copy.id, source.id));
+    setCopies((previous) =>
+      new Map(previous).set(copy.id, { sourceWidgetId: source.id, chart: created }),
+    );
     selectWidget(copy.id);
   };
 
