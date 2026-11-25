@@ -14,12 +14,18 @@ vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-l
     experimentId,
     visualizations,
     isLoading,
+    canDuplicate,
   }: {
     experimentId: string;
     visualizations: { id: string; name: string }[];
     isLoading: boolean;
+    canDuplicate: boolean;
   }) => (
-    <div data-testid="visualizations-list" data-loading={isLoading}>
+    <div
+      data-testid="visualizations-list"
+      data-loading={isLoading}
+      data-can-duplicate={canDuplicate}
+    >
       <div>Experiment: {experimentId}</div>
       {visualizations.map((viz) => (
         <div key={viz.id} data-testid={`viz-${viz.id}`}>
@@ -178,6 +184,25 @@ describe("VisualizationsPage", () => {
   });
 
   describe("Component integration", () => {
+    it.each([true, false])(
+      "allows Duplicate when an active experiment's isAdmin is %s",
+      async (isAdmin) => {
+        mountDefaults();
+        server.mount(contract.experiments.getExperimentAccess, {
+          body: { ...accessPayload, isAdmin },
+        });
+
+        render(<VisualizationsPage />);
+
+        await waitFor(() => {
+          expect(screen.getByTestId("visualizations-list")).toHaveAttribute(
+            "data-can-duplicate",
+            String(isAdmin),
+          );
+        });
+      },
+    );
+
     it("should pass correct experiment ID to list component", async () => {
       mountDefaults();
 
