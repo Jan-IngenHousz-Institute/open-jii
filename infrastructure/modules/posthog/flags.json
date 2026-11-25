@@ -58,7 +58,7 @@
   },
   "store-experiment-reads": {
     "name": "An experiment's tables, pages, filter values and columns read from the serving store; charts stay on the warehouse. On for one organisation's members while both read paths are compared, off for everyone else.",
-    "active": true,
+    "active": false,
     "continuity": false,
     "tags": ["backend", "serving-store"],
     "filters": {
