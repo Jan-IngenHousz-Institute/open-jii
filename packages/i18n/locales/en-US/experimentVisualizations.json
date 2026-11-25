@@ -9,7 +9,8 @@
       "create": "New Visualization",
       "back": "Back",
       "error": "Something went wrong",
-      "moreActions": "More actions"
+      "moreActions": "More actions",
+      "duplicate": "Duplicate"
     },
     "messages": {
       "noVisualizations": "No visualizations yet",
@@ -19,7 +20,8 @@
       "updateSuccess": "Visualization updated successfully",
       "loading": "Loading visualization...",
       "loadingData": "Loading visualization data...",
-      "failedToLoad": "Failed to load visualization"
+      "failedToLoad": "Failed to load visualization",
+      "duplicateFailed": "Could not duplicate visualization"
     },
     "labels": {
       "createdAt": "Created",
