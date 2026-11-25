@@ -184,12 +184,17 @@ describe("VisualizationsPage", () => {
   });
 
   describe("Component integration", () => {
-    it.each([true, false])(
-      "allows Duplicate when an active experiment's isAdmin is %s",
-      async (isAdmin) => {
+    it.each([
+      { status: "active", isAdmin: true },
+      { status: "active", isAdmin: false },
+      { status: "stale", isAdmin: true },
+      { status: "published", isAdmin: true },
+    ] as const)(
+      "matches Duplicate eligibility for $status with admin=$isAdmin",
+      async ({ status, isAdmin }) => {
         mountDefaults();
         server.mount(contract.experiments.getExperimentAccess, {
-          body: { ...accessPayload, isAdmin },
+          body: createExperimentAccess({ experiment: { id: "exp-123", status }, isAdmin }),
         });
 
         render(<VisualizationsPage />);
@@ -227,6 +232,10 @@ describe("VisualizationsPage", () => {
 
       await waitFor(() => {
         expect(notFound).toHaveBeenCalled();
+        expect(screen.getByTestId("visualizations-list")).toHaveAttribute(
+          "data-can-duplicate",
+          "false",
+        );
       });
     });
   });
