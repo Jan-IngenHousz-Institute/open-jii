@@ -19,7 +19,10 @@ import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotation
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
-import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentDataFilter,
+  ExperimentTableMetadata,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Form } from "@repo/ui/components/form";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -76,6 +79,7 @@ export function ExperimentDataTable({
   defaultSortColumn,
   errorColumn,
   tableRowCount,
+  tableType,
   latestRowAt,
   canContribute = false,
 }: {
@@ -86,6 +90,7 @@ export function ExperimentDataTable({
   defaultSortColumn?: string;
   errorColumn?: string;
   tableRowCount?: number;
+  tableType?: ExperimentTableMetadata["tableType"];
   latestRowAt?: string | null;
   /** Whether annotation controls are available. */
   canContribute?: boolean;
@@ -182,11 +187,14 @@ export function ExperimentDataTable({
     sortDirection,
     filtersKey,
   ].join("|");
+  // An upload's newest-row time is when it was uploaded, and a `processed_timestamp` in its rows is
+  // a column of the file, so nothing in them can be compared with it.
+  const isUpload = tableType === "upload";
   // The previous page stands in while the next one loads, so it is no baseline for the new view.
   const landedRowIds = useLandedRowIds(
     isRefreshing ? undefined : tableRows,
     viewKey,
-    latestRowAt,
+    isUpload ? null : latestRowAt,
     dataUpdatedAt,
   );
 

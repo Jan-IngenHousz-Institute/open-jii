@@ -201,6 +201,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           defaultSortColumn={activeTable.defaultSortColumn}
           errorColumn={activeTable.errorColumn}
           tableRowCount={activeTable.totalRows}
+          tableType={activeTable.tableType}
           latestRowAt={activeTable.latestRowAt}
           pageSize={10}
           canContribute={canContribute}

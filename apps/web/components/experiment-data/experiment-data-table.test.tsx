@@ -318,6 +318,20 @@ describe("ExperimentDataTable", () => {
       expect(screen.getByTestId("landed-rows")).toHaveTextContent("3");
     });
 
+    it("tints nothing on an upload table, whatever its file's processed_timestamp column says", () => {
+      setupHook();
+      const { rerender } = render(
+        <ExperimentDataTable {...defaultProps} tableType="upload" latestRowAt={readAt} />,
+      );
+
+      setupHook({ tableRows: [arrived, ...mockTableRows] });
+      rerender(
+        <ExperimentDataTable {...defaultProps} tableType="upload" latestRowAt={nextReadAt} />,
+      );
+
+      expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
+    });
+
     it("tints nothing when an arrival pushes an older row onto the open page", () => {
       setupHook();
       const { rerender } = render(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
