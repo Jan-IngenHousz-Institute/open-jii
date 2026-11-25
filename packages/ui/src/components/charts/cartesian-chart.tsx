@@ -1,21 +1,15 @@
 "use client";
 
-import type {
-  ColorBar,
-  Layout,
-  LayoutAxis,
-  PlotData,
-  PlotRelayoutEvent,
-  PlotRestyleEvent,
-} from "plotly.js";
+import type { ColorBar, Layout, PlotData, PlotRelayoutEvent, PlotRestyleEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import {
   applyCartesianAxes,
   cartesianAxisId,
-  cartesianSeriesColors,
-  withAxisColor,
+  CARTESIAN_AXIS_IDS,
+  colorbarGutter,
+  styleCartesianAxes,
   seriesIsVisible,
   type CartesianAxis,
 } from "./cartesian-axes";
@@ -193,17 +187,7 @@ function estimateFacetedPlotWidth(
 ): number {
   const primaryGutter = sharedYTitle ? SHARED_FACET_Y_TITLE_GUTTER : 56;
   const secondaryGutter = secondaryTitle ? 64 : 48;
-  const title = colorbar?.title;
-  const rightTitleWidth = title?.text && title.side === "right" ? 24 : 0;
-  const horizontalTitleWidth =
-    title?.text && title.side !== "right"
-      ? chartTextWidth(title.text, title.font?.size ?? 14) + 24
-      : 0;
-  const colorbarGutter = Math.max(
-    (colorbar?.thickness ?? 30) + 56 + rightTitleWidth,
-    horizontalTitleWidth,
-  );
-  return width - primaryGutter - secondaryGutter - colorbarGutter;
+  return width - primaryGutter - secondaryGutter - colorbarGutter(colorbar);
 }
 
 function independentFacetGap(plotWidth: number, columns: number, tickSize: number): number {
@@ -337,8 +321,12 @@ export function CartesianChart({
 
   const { layout, boundHorizontalLegend } = useMemo(() => {
     const activeData = visibleData.filter(seriesIsVisible);
-    const hasSecondary = activeData.some((series) => series.axis && series.axis !== "primary");
-    const hasExtraAxes = !subplots && data.some((series) => series.axis?.startsWith("y"));
+    const assignedAxes = new Set(data.map((series) => cartesianAxisId(series.axis)));
+    const hasExtraAxes =
+      !subplots && CARTESIAN_AXIS_IDS.slice(2).some((id) => assignedAxes.has(id));
+    const hasFacetOverlays =
+      subplots?.cells.some((cell) => Boolean(cell.secondaryYaxisId)) ?? false;
+    const hasSecondary = assignedAxes.has("y2") || hasExtraAxes || hasFacetOverlays;
     const hasOuterColorbar = hasSecondary && sharedColorAxis?.showscale === true;
     const chartWidth = config.width || sizing.width || 720;
     const legendTraces =
@@ -500,10 +488,10 @@ export function CartesianChart({
       }
     }
 
-    if (hasSecondary && subplots) {
+    if (subplots && hasFacetOverlays) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
-      applyFacetSecondaryAxes(next, visibleData, subplots, config, config.height || sizing.height);
+      applyFacetSecondaryAxes(next, data, subplots, config, config.height || sizing.height);
     } else if (!subplots) {
       applyCartesianAxes(
         next,
@@ -515,30 +503,13 @@ export function CartesianChart({
     }
 
     if (subplots) {
-      const axes = next as Record<string, Partial<LayoutAxis> | undefined>;
-      const colors = cartesianSeriesColors(data, config.colorway);
-      const byAxis = new Map<string, { visible: boolean; colors: (string | undefined)[] }>();
-      visibleData.forEach((series, index) => {
-        const id = series.yaxisId ?? "y";
-        const entry = byAxis.get(id) ?? { visible: false, colors: [] };
-        entry.visible ||= seriesIsVisible(series);
-        entry.colors.push(colors[index]);
-        byAxis.set(id, entry);
-      });
-      for (const { yaxisId, secondaryYaxisId } of subplots.cells) {
-        for (const id of [yaxisId, secondaryYaxisId]) {
-          if (!id) continue;
-          const key = `yaxis${id.slice(1)}`;
-          const axis = axes[key];
-          const usage = byAxis.get(id);
-          if (axis) {
-            axes[key] = withAxisColor(
-              { ...axis, visible: !config.sparkline && usage?.visible === true },
-              usage?.colors.length === 1 ? usage.colors[0] : undefined,
-            );
-          }
-        }
-      }
+      styleCartesianAxes(
+        next,
+        visibleData,
+        config,
+        subplots,
+        sharedYTitle && Boolean(config.yAxisTitle),
+      );
     }
 
     // Reference-line overlays sit on top of everything else in the layout;

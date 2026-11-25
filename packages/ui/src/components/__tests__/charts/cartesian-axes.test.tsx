@@ -19,6 +19,12 @@ vi.mock("../../charts/plotly-chart", () => ({
       <button onClick={() => onRestyle?.([{ visible: ["legendonly"] }, [data.length - 1]])}>
         Hide last series
       </button>
+      <button onClick={() => onRestyle?.([{ visible: ["legendonly"] }, [1, 3]])}>
+        Hide secondary traces
+      </button>
+      <button onClick={() => onRestyle?.([{ visible: [true] }, [1, 3]])}>
+        Show secondary traces
+      </button>
       <button onClick={() => onRestyle?.([{ visible: [true] }, [data.length - 1]])}>
         Show last series
       </button>
@@ -71,7 +77,7 @@ describe("numbered Y-axis layout", () => {
     axes.slice(0, count).forEach((_, index) => {
       const axis = record[index ? `yaxis${index + 1}` : "yaxis"];
       expect(axis?.visible).toBe(true);
-      expect(axis?.color).toBe(colors[index]);
+      expect(axis?.color).toBe(count === 1 ? undefined : colors[index]);
       if (index) expect(axis?.side).toBe(index % 2 ? "right" : "left");
       if (index) expect(axis?.overlaying).toBe("y");
     });
@@ -93,6 +99,66 @@ describe("numbered Y-axis layout", () => {
   it("uses the default colour for an axis shared by several series", () => {
     const data = series(2).map((trace): CartesianSeries => ({ ...trace, axis: "primary" }));
     expect(layoutFor(data).yaxis?.color).toBeUndefined();
+  });
+
+  it("keeps facet overlays and the colour-bar legend layout when all secondary traces are hidden", () => {
+    const data = [
+      ...series(2).map((trace, i) => ({ ...trace, xaxisId: "x", yaxisId: i === 0 ? "y" : "y3" })),
+      ...series(2).map((trace, i) => ({
+        ...trace,
+        xaxisId: "x2",
+        yaxisId: i === 0 ? "y2" : "y4",
+        showlegend: false,
+      })),
+    ];
+    render(
+      <CartesianChart
+        data={data}
+        config={{
+          width: 600,
+          height: 500,
+          yAxisTitle: "Primary unit",
+          y2AxisTitle: "Secondary unit",
+        }}
+        colorAxis={{ showscale: true }}
+        subplots={{
+          rows: 1,
+          columns: 2,
+          sharedYTitle: true,
+          cells: [
+            { title: "A", xaxisId: "x", yaxisId: "y", secondaryYaxisId: "y3" },
+            { title: "B", xaxisId: "x2", yaxisId: "y2", secondaryYaxisId: "y4" },
+          ],
+        }}
+      />,
+    );
+    const initial = readLayout();
+    expect(initial.yaxis?.tickfont?.color).not.toBe(colors[0]);
+    expect(initial.yaxis4?.tickfont?.color).toBe(colors[1]);
+    fireEvent.click(screen.getByText("Hide secondary traces"));
+    const hidden = readLayout();
+    expect(hidden.yaxis3).toMatchObject({ overlaying: "y", side: "right", visible: false });
+    expect(hidden.yaxis4).toMatchObject({ overlaying: "y2", side: "right", visible: false });
+    expect(hidden.legend).toEqual(initial.legend);
+    expect(hidden.coloraxis).toEqual(initial.coloraxis);
+    fireEvent.click(screen.getByText("Show secondary traces"));
+    expect(readLayout().yaxis4).toEqual(initial.yaxis4);
+  });
+
+  it("leaves a right legend below the colour bar after hiding Axis 2", () => {
+    render(
+      <CartesianChart
+        data={series(2)}
+        config={{ width: 800, height: 500, legendPosition: "right" }}
+        colorAxis={{ showscale: true }}
+      />,
+    );
+    const original = readLayout();
+    expect(original.legend?.orientation).toBe("h");
+    fireEvent.click(screen.getByText("Hide last series"));
+    expect(readLayout().legend).toEqual(original.legend);
+    expect(readLayout().coloraxis).toEqual(original.coloraxis);
+    expect(readLayout().yaxis?.tickfont?.color).not.toBe(colors[0]);
   });
 
   it("reclaims a hidden outer axis and restores it through legend restyle events", () => {
