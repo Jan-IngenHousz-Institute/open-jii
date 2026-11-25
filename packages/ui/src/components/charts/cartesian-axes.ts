@@ -3,7 +3,13 @@ import type { Layout, LayoutAxis } from "plotly.js";
 import type { CartesianColorAxis, CartesianSeries, FacetGridConfig } from "./cartesian-chart";
 import { chartTextWidth } from "./outer-labels";
 import type { PlotlyChartConfig } from "./types";
-import { refineAxisType, resolveChartColorway } from "./utils";
+import type { ChartTierOptions } from "./utils";
+import {
+  refineAxisType,
+  resolveChartColorway,
+  tierAxisFontSizes,
+  truncateCategoryTicks,
+} from "./utils";
 
 export type CartesianAxis = "primary" | "secondary" | "y3" | "y4" | "y5" | "y6";
 
@@ -101,50 +107,170 @@ export function styleCartesianAxes(
   }
 }
 
+type AxisValues = (number | string | Date | null)[];
+type AxisPlacement = {
+  id: string;
+  index: number;
+  axis: Partial<LayoutAxis>;
+  values: AxisValues;
+};
+
+const AXIS_GAP = 5;
+const TITLE_STANDOFF = 4;
+
+function tickLabelWidth(axis: Partial<LayoutAxis>, values: AxisValues, font: number): number {
+  const width = (label: string) => chartTextWidth(label, font);
+  if (axis.ticktext?.length) {
+    return axis.ticktext.reduce((widest, label) => Math.max(widest, width(label)), 0);
+  }
+  if (axis.type === "date") return width("Sep 28, 2026");
+  if (axis.type === "category" || axis.type === "multicategory") {
+    return values.reduce<number>(
+      (widest, value) => Math.max(widest, width(String(value ?? ""))),
+      0,
+    );
+  }
+
+  let min = Infinity;
+  let max = -Infinity;
+  for (const value of values) {
+    if (value === null || value === "") continue;
+    const n = Number(value);
+    if (!Number.isFinite(n) || (axis.type === "log" && n <= 0)) continue;
+    min = Math.min(min, n);
+    max = Math.max(max, n);
+  }
+  if (min === Infinity) return width("0");
+
+  // Plotly rounds regular ticks to their step. Measure the extrema with enough
+  // precision for that step, leaving Plotly's default display format alone.
+  const span = max - min || Math.abs(max) || 1;
+  const decimals = Math.min(20, Math.max(0, Math.ceil(-Math.log10(span / (axis.nticks || 12)))));
+  const formatted = (n: number) =>
+    (n !== 0 && (Math.abs(n) >= 1e5 || Math.abs(n) < 1e-4)
+      ? n.toExponential(Math.min(6, Math.max(1, decimals)))
+      : n.toFixed(decimals)
+    ).replace(/^-/, "−");
+  const extremes = Math.max(width(formatted(min)), width(formatted(max)));
+  if (axis.type !== "log") return extremes;
+  // A log decade can be rendered as scientific notation with a superscript.
+  const exponent = Math.max(
+    Math.abs(Math.floor(Math.log10(min))),
+    Math.abs(Math.ceil(Math.log10(max))),
+  );
+  return Math.max(extremes, width(`10${exponent}`));
+}
+
+function fitStackedAxes(
+  layout: Partial<Layout>,
+  visible: AxisPlacement[],
+  width: number,
+  sizing: ChartTierOptions,
+  colorbar?: CartesianColorAxis["colorbar"],
+) {
+  const fonts = tierAxisFontSizes(sizing);
+  const tickSpace = new Map(
+    visible.map(({ id, axis, values }) => [
+      id,
+      tickLabelWidth(axis, values, fonts.tick) + (axis.ticklen ?? 4) + 5,
+    ]),
+  );
+  const base = layout.margin ?? {};
+  const bar = colorbar ? colorbarGutter(colorbar) : 0;
+  const left = visible.filter(({ index }) => index % 2 === 0);
+  const right = visible.filter(({ index }) => index % 2 === 1);
+  const minimumPlot = Math.max(160, 0.4 * (width - (base.l ?? 0) - (base.r ?? 0) - bar));
+
+  const measure = (level: "full" | "titles" | "lines") => {
+    const band = ({ id, index, axis }: AxisPlacement) =>
+      AXIS_GAP +
+      (index < 2 || level === "full" ? (tickSpace.get(id) ?? 0) : 0) +
+      (axis.title?.text && (index < 2 || level !== "lines")
+        ? fonts.axisTitle + TITLE_STANDOFF + 4
+        : 0);
+    const side = (axes: AxisPlacement[]) => {
+      const bands = axes.map(band);
+      const outer = bands.pop() ?? 0;
+      return { outer, inner: bands, inset: bands.reduce((sum, size) => sum + size, 0) };
+    };
+    const l = side(left);
+    const r = side(right);
+    const margin = {
+      ...base,
+      l: Math.max(base.l ?? 0, l.outer),
+      r: Math.max(base.r ?? 0, r.outer + bar),
+    };
+    const paper = Math.max(1, width - margin.l - margin.r);
+    return { margin, paper, plot: paper - l.inset - r.inset, l, r };
+  };
+
+  let level: "full" | "titles" | "lines" = "full";
+  let fit = measure(level);
+  if (fit.plot < minimumPlot) {
+    level = "titles";
+    fit = measure(level);
+  }
+  if (fit.plot < minimumPlot) {
+    level = "lines";
+    fit = measure(level);
+  }
+  // Even after shedding extras, a very small widget may not fit its two main
+  // axes and colour bar. Keep their space and leave what remains to the plot.
+  const domain: [number, number] = [
+    Math.min(1, fit.l.inset / fit.paper),
+    Math.max(0, 1 - fit.r.inset / fit.paper),
+  ];
+  if (domain[0] >= domain[1]) domain[1] = domain[0];
+  layout.margin = fit.margin;
+  layout.xaxis = {
+    ...layout.xaxis,
+    domain,
+    ...(fit.plot < 200 ? { nticks: Math.max(2, Math.floor(fit.plot / 32)) } : {}),
+  };
+
+  const placeSide = (axes: AxisPlacement[], bands: number[], edge: number, direction: number) => {
+    let covered = 0;
+    axes.forEach(({ index, axis }, rank) => {
+      const ticks = index < 2 || level === "full";
+      const title = index < 2 || level !== "lines";
+      Object.assign(axis, {
+        anchor: "free",
+        position: Math.min(1, Math.max(0, edge + (direction * covered) / fit.paper)),
+        automargin: false,
+        ...(ticks ? {} : { showticklabels: false, ticks: "" }),
+        tickfont: { ...axis.tickfont, size: fonts.tick },
+        title:
+          title && axis.title
+            ? {
+                ...axis.title,
+                font: { ...axis.title.font, size: fonts.axisTitle },
+                standoff: TITLE_STANDOFF,
+              }
+            : undefined,
+      });
+      covered += bands[rank] ?? 0;
+    });
+  };
+  placeSide(left, fit.l.inner, domain[0], -1);
+  placeSide(right, fit.r.inner, domain[1], 1);
+}
+
 export function applyCartesianAxes(
   layout: Partial<Layout>,
   data: CartesianSeries[],
   config: PlotlyChartConfig,
   width: number,
   colorbar?: CartesianColorAxis["colorbar"],
+  sizing: ChartTierOptions = {},
 ): void {
-  const record = layout as Record<string, unknown>;
+  const record = layout as AxisLayout;
   const primary = layout.yaxis ?? {};
-  const active = data.filter(seriesIsVisible);
-  const ids: readonly string[] = CARTESIAN_AXIS_IDS;
-  const used = ids.filter((id) => active.some((series) => cartesianAxisId(series.axis) === id));
-  const left = used.filter((id) => ids.indexOf(id) % 2 === 0);
-  const right = used.filter((id) => ids.indexOf(id) % 2 === 1);
-  const extraLeft = Math.max(0, left.length - 1);
-  const extraRight = Math.max(0, right.length - 1);
-  const compact = width < 540;
-  const stackAxes = extraLeft + extraRight > 0;
-  const defaultTickSize = primary.tickfont?.size ?? 12;
-  const tickSize = compact ? Math.min(defaultTickSize, 9) : defaultTickSize;
-  // Leave a band outside the paper for the outer axes; the domain makes room for the inner ones.
-  const gutter = Math.ceil(chartTextWidth("−9.99999k", tickSize) + tickSize + 12);
-  if (stackAxes) {
-    const colorbarWidth = colorbar ? colorbarGutter(colorbar) : 0;
-    layout.margin = {
-      ...layout.margin,
-      l: Math.max(layout.margin?.l ?? 0, left.length ? gutter : 0),
-      r: Math.max(layout.margin?.r ?? 0, (right.length ? gutter : 0) + colorbarWidth),
-    };
-  }
-  const paperWidth = Math.max(1, width - (layout.margin?.l ?? 60) - (layout.margin?.r ?? 60));
-  const step = Math.min(gutter / paperWidth, 0.8 / Math.max(1, extraLeft + extraRight));
-  const domain: [number, number] = [extraLeft * step, 1 - extraRight * step];
-  const plotWidth = paperWidth * (domain[1] - domain[0]);
-  layout.xaxis = {
-    ...layout.xaxis,
-    domain,
-    ...(stackAxes && plotWidth < 200 ? { nticks: Math.max(2, Math.floor(plotWidth / 32)) } : {}),
-  };
-
-  for (const [index, id] of ids.entries()) {
-    const key = index === 0 ? "yaxis" : `yaxis${index + 1}`;
+  const visible: AxisPlacement[] = [];
+  for (const [index, id] of CARTESIAN_AXIS_IDS.entries()) {
+    const key = `yaxis${id.slice(1)}`;
     const assigned = data.filter((series) => cartesianAxisId(series.axis) === id);
     if (index > 0 && assigned.length === 0) continue;
+    const values = assigned.flatMap((series) => (series.orientation === "h" ? series.x : series.y));
     const number = (index + 1) as 2 | 3 | 4 | 5 | 6;
     const title = index === 0 ? config.yAxisTitle : config[`y${number}AxisTitle`];
     const axisType = index === 0 ? config.yAxisType : config[`y${number}AxisType`];
@@ -164,28 +290,20 @@ export function applyCartesianAxes(
             linecolor: primary.linecolor,
             tickcolor: primary.tickcolor,
           };
-    const axis =
-      index === 0 || axisType
-        ? { ...base }
-        : refineAxisType(
-            base,
-            assigned.flatMap((series) => (series.orientation === "h" ? series.x : series.y)),
-          );
-    if (stackAxes) {
-      const sideAxes = index % 2 === 0 ? left : right;
-      const rank = Math.max(0, sideAxes.indexOf(id));
-      Object.assign(axis, {
-        anchor: "free",
-        position: index % 2 === 0 ? domain[0] - rank * step : domain[1] + rank * step,
-        automargin: false,
-        ...(axis.type === "linear" ? { tickformat: "~s" } : {}),
-        ...(compact
-          ? { nticks: 5, ticklen: 2, tickfont: { ...axis.tickfont, size: tickSize } }
-          : {}),
-        title: axis.title ? { ...axis.title, standoff: compact ? 1 : 8 } : undefined,
-      });
-    }
+    const axis = index === 0 || axisType ? { ...base } : refineAxisType(base, values);
     record[key] = axis;
+    if (assigned.some(seriesIsVisible)) visible.push({ id, index, axis, values });
+  }
+  const left = visible.filter(({ index }) => index % 2 === 0).length;
+  const right = visible.length - left;
+  if (left > 1 || right > 1) {
+    visible.forEach((entry) => {
+      // Only configure a label array if this axis is categorical.
+      Object.assign(entry.axis, truncateCategoryTicks(entry.axis, entry.values, sizing));
+    });
+    fitStackedAxes(layout, visible, width, sizing, colorbar);
+  } else {
+    layout.xaxis = { ...layout.xaxis, domain: [0, 1] };
   }
   styleCartesianAxes(layout, data, config);
 }

@@ -499,6 +499,7 @@ export function CartesianChart({
         config,
         chartWidth,
         hasOuterColorbar ? (sharedColorAxis.colorbar ?? {}) : undefined,
+        sizing,
       );
     }
 

@@ -96,6 +96,44 @@ describe("numbered Y-axis layout", () => {
     expect(layout.yaxis3?.type).toBe("log");
   });
 
+  it("keeps the default tick format and sheds only extra-axis labels to protect narrow plots", () => {
+    const config = {
+      y2AxisTitle: "Temperature",
+      y3AxisTitle: "Light",
+      y3AxisType: "log" as const,
+      y4AxisTitle: "Humidity",
+      y5AxisTitle: "Pressure",
+      y6AxisTitle: "Deficit",
+    };
+    const at = (width: number) => {
+      const layout: Partial<Layout> = { yaxis: { title: { text: "Fluorescence" } } };
+      applyCartesianAxes(
+        layout,
+        series(6),
+        config,
+        width,
+        { thickness: 15 },
+        { compact: width < 480 },
+      );
+      return layout as ReturnType<typeof readLayout>;
+    };
+    const wide = at(1100);
+    expect(wide.yaxis?.tickformat).toBeUndefined();
+    expect(wide.yaxis3?.showticklabels).not.toBe(false);
+    expect(wide.yaxis6?.title?.text).toBe("Deficit");
+
+    const narrow = at(320);
+    expect(narrow.yaxis?.showticklabels).not.toBe(false);
+    expect(narrow.yaxis?.title?.text).toBe("Fluorescence");
+    expect(narrow.yaxis2?.title?.text).toBe("Temperature");
+    expect(narrow.yaxis3).toMatchObject({ visible: true, showline: true, showticklabels: false });
+    expect(narrow.yaxis6?.title).toBeUndefined();
+    const [start, end] = narrow.xaxis?.domain ?? [0, 0];
+    expect(
+      (end - start) * (320 - (narrow.margin?.l ?? 0) - (narrow.margin?.r ?? 0)),
+    ).toBeGreaterThan(100);
+  });
+
   it("uses the default colour for an axis shared by several series", () => {
     const data = series(2).map((trace): CartesianSeries => ({ ...trace, axis: "primary" }));
     expect(layoutFor(data).yaxis?.color).toBeUndefined();
@@ -180,9 +218,10 @@ describe("numbered Y-axis layout", () => {
     expect(hidden.xaxis?.domain?.[1]).toBeGreaterThan(initial.xaxis?.domain?.[1] ?? 1);
     const updated = series(6).map((trace) => ({ ...trace, x: [1], y: trace.y.slice(0, 1) }));
     rerender(<CartesianChart data={updated} config={config} />);
-    expect(readLayout().yaxis6?.visible).toBe(false);
+    const updatedHidden = readLayout();
+    expect(updatedHidden.yaxis6?.visible).toBe(false);
     fireEvent.click(screen.getByText("Show last series"));
-    expect(readLayout().xaxis?.domain).toEqual(initial.xaxis?.domain);
+    expect(readLayout().xaxis?.domain?.[1]).toBeLessThan(updatedHidden.xaxis?.domain?.[1] ?? 0);
     expect(readLayout().yaxis6?.visible).toBe(true);
     fireEvent.click(screen.getByText("Isolate right axes"));
     expect(readLayout().yaxis?.visible).toBe(false);
