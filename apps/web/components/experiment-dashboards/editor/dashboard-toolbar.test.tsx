@@ -1,18 +1,22 @@
 import {
+  createExperimentDashboard,
   createTableWidget,
   createVisualization,
   createVisualizationWidget,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, assertExists, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import { toast } from "@repo/ui/hooks/use-toast";
 
+import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
 import type { DashboardFormValues } from "../dashboard-form-shell";
+import { DashboardAutosaveBoundary } from "./context/dashboard-copy-save-context";
 import { DashboardEditorProvider, useDashboardEditor } from "./context/dashboard-editor-context";
 import DashboardToolbar from "./dashboard-toolbar";
 
@@ -35,9 +39,11 @@ const second = createTableWidget();
 function Harness({
   children,
   initialWidgets = [first, second],
+  save = false,
 }: {
   children: ReactNode;
   initialWidgets?: ExperimentDashboardWidget[];
+  save?: boolean;
 }) {
   const form = useForm<DashboardFormValues>({
     defaultValues: {
@@ -49,7 +55,22 @@ function Harness({
   });
   return (
     <FormProvider {...form}>
-      <DashboardEditorProvider>{children}</DashboardEditorProvider>
+      <DashboardEditorProvider>
+        {save ? (
+          <AutosaveStatusProvider>
+            <DashboardAutosaveBoundary
+              form={form}
+              experimentId="exp-1"
+              dashboardId="dash-1"
+              enabled
+            >
+              {children}
+            </DashboardAutosaveBoundary>
+          </AutosaveStatusProvider>
+        ) : (
+          children
+        )}
+      </DashboardEditorProvider>
     </FormProvider>
   );
 }
@@ -107,17 +128,23 @@ describe("DashboardToolbar", () => {
     );
     expect(screen.getByTestId("table-widget-strip")).toBeInTheDocument();
   });
-  it("inserts a separate same-size chart below the original and selects it", async () => {
+  it("selects a same-size copy and retries the compacted dashboard save without creating another chart", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
     const created = createVisualization({ id: "copy", name: "Growth (copy)" });
     server.mount(contract.experiments.getExperimentVisualization, { body: original });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
-    server.mount(contract.experiments.createExperimentVisualization, { body: created });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+    });
+    vi.mocked(toast).mockReturnValue({ id: "copy-error", dismiss: vi.fn(), update: vi.fn() });
+    const failed = server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
     const chart = createVisualizationWidget({
       config: { visualizationId: original.id, showTitle: true, showDescription: false },
     });
     const below = createTableWidget({ layout: { col: 0, row: 4, colSpan: 6, rowSpan: 4 } });
+    const beside = createTableWidget({ layout: { col: 6, row: 0, colSpan: 6, rowSpan: 4 } });
+    const belowBeside = createTableWidget({ layout: { col: 6, row: 4, colSpan: 6, rowSpan: 4 } });
     function State() {
       const form = useFormContext<DashboardFormValues>();
       const widgets = useWatch({ control: form.control, name: "widgets" });
@@ -130,7 +157,7 @@ describe("DashboardToolbar", () => {
       );
     }
     render(
-      <Harness initialWidgets={[chart, below]}>
+      <Harness initialWidgets={[chart, below, beside, belowBeside]} save>
         <State />
         <DashboardToolbar visible experimentId="exp-1" />
       </Harness>,
@@ -141,7 +168,7 @@ describe("DashboardToolbar", () => {
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent('"visualizationId":"copy"'),
     );
-    const state = JSON.parse(screen.getByRole("status").textContent ?? "{}") as {
+    const state = JSON.parse(screen.getByRole("status").textContent) as {
       widgets: ExperimentDashboardWidget[];
       selectedWidgetId: string;
     };
@@ -152,6 +179,93 @@ describe("DashboardToolbar", () => {
       config: { ...chart.config, visualizationId: "copy" },
     });
     expect(state.widgets.find((widget) => widget.id === chart.id)).toEqual(chart);
-    expect(state.widgets.find((widget) => widget.id === below.id)?.layout.row).toBe(8);
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "editor.inspector.copySaveFailed",
+        }),
+      ),
+    );
+    expect(failed.callCount).toBe(1);
+
+    const resumed = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: createExperimentDashboard({ id: "dash-1" }),
+    });
+    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+    expect(
+      screen.queryByRole("menuitem", { name: "editor.inspector.duplicate" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.retryCopySave" }));
+
+    await waitFor(() =>
+      expect(resumed.body).toMatchObject({
+        widgets: [
+          chart,
+          { ...below, layout: { ...below.layout, row: 8 } },
+          beside,
+          belowBeside,
+          copy,
+        ],
+      }),
+    );
+    expect(resumed.body).toEqual(failed.body);
+    expect(resumed.callCount).toBe(1);
+    expect(create.callCount).toBe(1);
+    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" })).toBeEnabled(),
+    );
+  });
+
+  it("offers a link to the saved copy if the source widget disappears before create finishes", async () => {
+    const user = userEvent.setup();
+    const original = createVisualization({ id: "source", name: "Growth" });
+    const created = createVisualization({ id: "copy", name: "Growth (copy)" });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    server.mount(contract.experiments.getExperimentVisualization, { body: original });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+      unblock: promise,
+    });
+    const chart = createVisualizationWidget({
+      config: { visualizationId: original.id, showTitle: true, showDescription: false },
+    });
+
+    function SelectSource() {
+      const { selectWidget } = useDashboardEditor();
+      return <button onClick={() => selectWidget(chart.id)}>select chart</button>;
+    }
+    render(
+      <Harness initialWidgets={[chart]}>
+        <SelectSource />
+        <DashboardToolbar visible experimentId="exp-1" />
+      </Harness>,
+    );
+    await user.click(screen.getByRole("button", { name: "select chart" }));
+    const more = screen.getByRole("button", { name: "editor.inspector.more" });
+    await user.click(more);
+    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+    await waitFor(() => expect(create.called).toBe(true));
+    await user.click(more);
+    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.delete" }));
+    act(() => resolve());
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "editor.inspector.copyNotAttached",
+        }),
+      ),
+    );
+
+    const action = vi
+      .mocked(toast)
+      .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached")?.[0].action;
+    assertExists(action);
+    expect(action.props).toMatchObject({
+      children: {
+        props: { href: "/en-US/platform/experiments/exp-1/analysis/visualizations/copy" },
+      },
+    });
   });
 });

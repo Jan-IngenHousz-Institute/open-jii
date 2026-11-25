@@ -20,6 +20,7 @@ interface UseDashboardAutosaveOptions {
   dashboardId: string;
   /** The backend's `manage` gate; without it nothing saves and no status is reported. */
   enabled?: boolean;
+  onSaved?: (snapshot: DashboardFormValues) => void;
 }
 
 export function useDashboardAutosave({
@@ -27,6 +28,7 @@ export function useDashboardAutosave({
   experimentId,
   dashboardId,
   enabled = true,
+  onSaved,
 }: UseDashboardAutosaveOptions) {
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
@@ -40,8 +42,9 @@ export function useDashboardAutosave({
         widgets: snapshot.widgets,
       };
       await mutateAsync({ id: experimentId, dashboardId, ...body });
+      onSaved?.(snapshot);
     },
-    [mutateAsync, experimentId, dashboardId],
+    [mutateAsync, experimentId, dashboardId, onSaved],
   );
 
   const autosave = useAutosave<DashboardFormValues>({
@@ -51,4 +54,5 @@ export function useDashboardAutosave({
     enabled,
   });
   useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
+  return autosave;
 }

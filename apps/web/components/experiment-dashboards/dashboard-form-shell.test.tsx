@@ -19,11 +19,6 @@ vi.mock("./dashboard-layout-content", () => ({
   ),
 }));
 
-// Autosave attaches a `form.watch` subscriber; that's tested separately.
-vi.mock("./editor/hooks/use-dashboard-autosave", () => ({
-  useDashboardAutosave: vi.fn(),
-}));
-
 function FormProbe() {
   const form = useFormContext<DashboardFormValues>();
   const values = form.getValues();

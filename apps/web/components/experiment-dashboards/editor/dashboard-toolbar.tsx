@@ -1,9 +1,11 @@
 "use client";
 
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
-import { Copy, Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
+import { useLocale } from "@/hooks/useLocale";
+import { Copy, Database, MoreHorizontal, Palette, RotateCw, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -16,12 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 import { Separator } from "@repo/ui/components/separator";
+import { ToastAction } from "@repo/ui/components/toast";
 import { TooltipProvider } from "@repo/ui/components/tooltip";
+import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { widgetMetaFor } from "../widgets/widget-meta";
 import { compactWidgets } from "./canvas/dashboard-grid-helpers";
+import { useDashboardCopySave } from "./context/dashboard-copy-save-context";
 import { useDashboardEditor } from "./context/dashboard-editor-context";
 import { ComingSoonStrip } from "./inspector-toolbar/strips/coming-soon-strip";
 import { FilterDataStrip } from "./inspector-toolbar/strips/filter-data-strip";
@@ -75,13 +80,32 @@ const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSec
 export default function DashboardToolbar({ visible, experimentId }: DashboardToolbarProps) {
   const { t } = useTranslation("experimentDashboards");
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
-  const { duplicate, disabled: duplicateDisabled } =
-    useExperimentVisualizationDuplicate(experimentId);
+  const locale = useLocale();
+  const copySave = useDashboardCopySave();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const form = useFormContext<DashboardFormValues>();
   const widgets = useWatch({ control: form.control, name: "widgets" });
 
   const widgetIndex = selectedWidgetId ? widgets.findIndex((w) => w.id === selectedWidgetId) : -1;
   const widget = widgetIndex >= 0 ? widgets[widgetIndex] : null;
+  const sourceChartId =
+    widget?.type === "visualization" ? widget.config.visualizationId : undefined;
+  const { duplicate, disabled: duplicateDisabled } = useExperimentVisualizationDuplicate(
+    experimentId,
+    sourceChartId,
+  );
+  const hasPendingCopy =
+    !!widget &&
+    !!copySave &&
+    [...copySave.pending].some(
+      ([copyId, sourceId]) => widget.id === copyId || widget.id === sourceId,
+    );
 
   const sections = widget ? SECTIONS_BY_WIDGET[widget.type] : [];
   const hasSections = sections.length > 1;
@@ -112,13 +136,32 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
   };
 
   const handleDuplicate = async () => {
-    if (widget?.type !== "visualization" || !widget.config.visualizationId) return;
+    if (widget?.type !== "visualization" || !sourceChartId || hasPendingCopy) return;
     const sourceWidgetId = widget.id;
-    const created = await duplicate(widget.config.visualizationId);
+    const created = await duplicate();
     if (!created) return;
     const current = form.getValues("widgets");
     const source = current.find((candidate) => candidate.id === sourceWidgetId);
-    if (source?.type !== "visualization") return;
+    if (
+      !mounted.current ||
+      source?.type !== "visualization" ||
+      source.config.visualizationId !== sourceChartId
+    ) {
+      const openCopy = t("editor.inspector.openChartCopy");
+      toast({
+        title: t("editor.inspector.copyNotAttached"),
+        action: (
+          <ToastAction asChild altText={openCopy}>
+            <Link
+              href={`/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${created.id}`}
+            >
+              {openCopy}
+            </Link>
+          </ToastAction>
+        ),
+      });
+      return;
+    }
     const copy = {
       ...source,
       id: crypto.randomUUID(),
@@ -134,7 +177,10 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
           }
         : candidate,
     );
-    form.setValue("widgets", [...shifted, copy], { shouldDirty: true });
+    copySave?.track(copy.id, source.id);
+    form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
+      shouldDirty: true,
+    });
     selectWidget(copy.id);
   };
 
@@ -195,14 +241,21 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
-                {widget.type === "visualization" && (
-                  <DropdownMenuItem
-                    disabled={duplicateDisabled || !widget.config.visualizationId}
-                    onSelect={() => void handleDuplicate()}
-                  >
-                    <Copy className="size-4" />
-                    {t("editor.inspector.duplicate")}
+                {hasPendingCopy && copySave.failed ? (
+                  <DropdownMenuItem onSelect={copySave.retry}>
+                    <RotateCw className="size-4" />
+                    {t("editor.inspector.retryCopySave")}
                   </DropdownMenuItem>
+                ) : (
+                  widget.type === "visualization" && (
+                    <DropdownMenuItem
+                      disabled={duplicateDisabled || hasPendingCopy || !sourceChartId}
+                      onSelect={() => void handleDuplicate()}
+                    >
+                      <Copy className="size-4" />
+                      {t("editor.inspector.duplicate")}
+                    </DropdownMenuItem>
+                  )
                 )}
                 <DropdownMenuItem variant="destructive" onClick={handleRemove}>
                   <Trash2 className="size-4" />

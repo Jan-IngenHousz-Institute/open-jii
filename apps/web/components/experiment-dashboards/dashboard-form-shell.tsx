@@ -16,8 +16,8 @@ import { Form } from "@repo/ui/components/form";
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { DashboardLayoutContent } from "./dashboard-layout-content";
 import { DashboardModeProvider } from "./dashboard-mode-context";
+import { DashboardAutosaveBoundary } from "./editor/context/dashboard-copy-save-context";
 import { DashboardEditorProvider } from "./editor/context/dashboard-editor-context";
-import { useDashboardAutosave } from "./editor/hooks/use-dashboard-autosave";
 
 export interface DashboardFormValues {
   name: string;
@@ -93,10 +93,16 @@ function DashboardFormShellBody({
   const { data: accessData } = useExperimentAccess(experimentId);
   const canEdit = accessData?.isAdmin ?? false;
 
-  useDashboardAutosave({ form, experimentId, dashboardId, enabled: canEdit });
   return (
-    <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>
-      {children}
-    </DashboardLayoutContent>
+    <DashboardAutosaveBoundary
+      form={form}
+      experimentId={experimentId}
+      dashboardId={dashboardId}
+      enabled={canEdit}
+    >
+      <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>
+        {children}
+      </DashboardLayoutContent>
+    </DashboardAutosaveBoundary>
   );
 }
