@@ -85,6 +85,22 @@ const readLayout = (): Partial<Layout> & Record<string, Partial<Layout["yaxis"]>
   JSON.parse(screen.getByTestId("chart").getAttribute("data-layout") ?? "{}");
 
 describe("numbered Y-axis layout", () => {
+  it("uses explicit Y-axis IDs for both routing and layout on a single canvas", () => {
+    const data: CartesianSeries[] = [
+      { traceType: "line", x: [1, 2], y: ["Low", "High"], axis: "secondary", yaxisId: "y" },
+      { traceType: "line", x: [1, 2], y: [3, 4], axis: "primary", yaxisId: "y3" },
+    ];
+    render(<CartesianChart data={data} config={{ width: 900, height: 500 }} />);
+
+    const traces: unknown = JSON.parse(
+      screen.getByTestId("chart").getAttribute("data-traces") ?? "[]",
+    );
+    expect(traces).toMatchObject([{ yaxis: "y" }, { yaxis: "y3" }]);
+    expect(readLayout().yaxis).toMatchObject({ visible: true, type: "category" });
+    expect(readLayout().yaxis2).toBeUndefined();
+    expect(readLayout().yaxis3).toMatchObject({ visible: true, overlaying: "y" });
+  });
+
   it("widens the gap for decimal ticks after a Y zoom and restores it on autorange", () => {
     const onRelayout = vi.fn();
     render(
@@ -127,7 +143,7 @@ describe("numbered Y-axis layout", () => {
         screen.getByTestId("chart").getAttribute("data-export-layout") ?? "{}",
       );
       for (const layout of [readLayout(), exported]) {
-      const [left = 0, right = 1] = layout.xaxis?.domain ?? [];
+        const [left = 0, right = 1] = layout.xaxis?.domain ?? [];
         expect(left).toBeGreaterThan(0);
         expect(right).toBeLessThan(1);
         expect(layout.legend).toMatchObject({ xanchor: anchor, xref: "paper" });

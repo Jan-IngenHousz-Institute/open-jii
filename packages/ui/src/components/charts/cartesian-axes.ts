@@ -14,8 +14,8 @@ import {
 
 export type CartesianAxis = "primary" | "secondary" | "y3" | "y4" | "y5" | "y6";
 
-export function cartesianAxisId(axis: CartesianAxis = "primary"): string {
-  return axis === "primary" ? "y" : axis === "secondary" ? "y2" : axis;
+export function cartesianYAxisId({ axis = "primary", yaxisId }: CartesianSeries): string {
+  return yaxisId ?? (axis === "primary" ? "y" : axis === "secondary" ? "y2" : axis);
 }
 
 export const CARTESIAN_AXIS_IDS = ["y", "y2", "y3", "y4", "y5", "y6"] as const;
@@ -121,7 +121,7 @@ export function styleCartesianAxes(
   const tracesByAxis = new Map<string, { count: number; visible: boolean; color?: string }>();
   const visibleAxes = new Set<string>();
   data.forEach((series, index) => {
-    const id = facets ? (series.yaxisId ?? "y") : cartesianAxisId(series.axis);
+    const id = cartesianYAxisId(series);
     const trace = tracesByAxis.get(id) ?? { count: 0, visible: false, color: colors[index] };
     trace.count++;
     if (seriesIsVisible(series)) {
@@ -336,7 +336,7 @@ export function applyCartesianAxes(
   const visible: AxisPlacement[] = [];
   for (const [index, id] of CARTESIAN_AXIS_IDS.entries()) {
     const key = `yaxis${id.slice(1)}`;
-    const assigned = data.filter((series) => cartesianAxisId(series.axis) === id);
+    const assigned = data.filter((series) => cartesianYAxisId(series) === id);
     if (index > 0 && assigned.length === 0) continue;
     const values = assigned.flatMap((series) => (series.orientation === "h" ? series.x : series.y));
     const number = (index + 1) as 2 | 3 | 4 | 5 | 6;

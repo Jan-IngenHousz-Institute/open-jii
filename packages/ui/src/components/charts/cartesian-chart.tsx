@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils";
 import {
   applyCartesianAxes,
   prepareStackedAxesForExport,
-  cartesianAxisId,
+  cartesianYAxisId,
   CARTESIAN_AXIS_IDS,
   colorbarGutter,
   styleCartesianAxes,
@@ -319,15 +319,12 @@ export function CartesianChart({
   const axisScan = useMemo(() => {
     const x = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
     const y = data
-      .filter((s) => !s.axis || s.axis === "primary")
+      .filter((s) => (subplots ? !s.axis || s.axis === "primary" : cartesianYAxisId(s) === "y"))
       .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
-  }, [data]);
+  }, [data, subplots]);
 
-  const assignedAxes = useMemo(
-    () => new Set(data.map((series) => cartesianAxisId(series.axis))),
-    [data],
-  );
+  const assignedAxes = useMemo(() => new Set(data.map(cartesianYAxisId)), [data]);
   const hasExtraAxes = !subplots && CARTESIAN_AXIS_IDS.slice(2).some((id) => assignedAxes.has(id));
   const trackYZoom = hasExtraAxes && !config.sparkline;
   const chartRevision = uirevision ?? (trackYZoom ? legendKey : undefined);
@@ -347,7 +344,10 @@ export function CartesianChart({
     const activeData = visibleData.filter(seriesIsVisible);
     const hasFacetOverlays =
       subplots?.cells.some((cell) => Boolean(cell.secondaryYaxisId)) ?? false;
-    const hasSecondary = assignedAxes.has("y2") || hasExtraAxes || hasFacetOverlays;
+    const hasSecondarySeries = subplots
+      ? data.some((series) => series.axis === "secondary")
+      : assignedAxes.has("y2");
+    const hasSecondary = hasSecondarySeries || hasExtraAxes || hasFacetOverlays;
     const hasOuterColorbar = hasSecondary && sharedColorAxis?.showscale === true;
     const chartWidth = config.width || sizing.width || 720;
     const legendTraces =
@@ -690,7 +690,7 @@ function groupedBarOffsets(data: CartesianSeries[]): (string | undefined)[] {
     if (series.traceType !== "bar") return undefined;
 
     const x = series.xaxisId ?? "x";
-    const y = series.yaxisId ?? cartesianAxisId(series.axis);
+    const y = cartesianYAxisId(series);
     const [positionAxis, valueAxis] = series.orientation === "h" ? [y, x] : [x, y];
     const group = groups.get(positionAxis) ?? { valueAxes: new Set<string>(), nextSlot: 0 };
     group.valueAxes.add(valueAxis);
@@ -717,12 +717,8 @@ function buildTrace(
 ): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
   // charts pin each trace to its cell) wins over the single-chart assignment.
-  const yaxisRouting =
-    series.yaxisId !== undefined
-      ? { yaxis: series.yaxisId }
-      : series.axis && series.axis !== "primary"
-        ? { yaxis: cartesianAxisId(series.axis) }
-        : {};
+  const yaxis = cartesianYAxisId(series);
+  const yaxisRouting = series.yaxisId !== undefined || yaxis !== "y" ? { yaxis } : {};
   const xaxisRouting = series.xaxisId !== undefined ? { xaxis: series.xaxisId } : {};
 
   const baseShared = {
