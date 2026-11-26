@@ -751,4 +751,55 @@ describe("DashboardFormShell reopen while saving", () => {
       closeSave.resolve();
     }
   });
+
+  it("opens the editor after a successful detail read follows a failed close reload", async () => {
+    const editor = setupDashboardReopen();
+    const closeSave = Promise.withResolvers<void>();
+    const patch = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: editor.persist,
+      unblock: closeSave.promise,
+    });
+    const freshDetail = Promise.withResolvers<void>();
+
+    try {
+      await waitFor(() => expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit"));
+      const name = await screen.findByRole(
+        "textbox",
+        { name: "Dashboard name" },
+        { timeout: 1500 },
+      );
+      fireEvent.change(name, { target: { value: "Renamed on close" } });
+      editor.leave();
+      await waitFor(() => expect(patch.callCount).toBe(1), { timeout: 1500 });
+      editor.reopen();
+      await screen.findByText("common.loading", {}, { timeout: 1500 });
+      const failedDetail = server.mount(contract.experiments.getExperimentDashboard, {
+        status: 503,
+      });
+      act(() => closeSave.resolve());
+      await screen.findByRole("heading", { name: "errors.error" }, { timeout: 1500 });
+      expect(failedDetail.called).toBe(true);
+      expect(editor.getStored().name).toBe("Renamed on close");
+      expect(screen.queryByRole("textbox", { name: "Dashboard name" })).toBeNull();
+
+      act(() => onlineManager.setOnline(false));
+      const detail = server.mount(contract.experiments.getExperimentDashboard, {
+        body: { ...editor.getStored(), name: "Confirmed by detail" },
+        unblock: freshDetail.promise,
+      });
+      act(() => onlineManager.setOnline(true));
+      await waitFor(() => expect(detail.called).toBe(true), { timeout: 1500 });
+      expect(screen.queryByRole("textbox", { name: "Dashboard name" })).toBeNull();
+
+      act(() => freshDetail.resolve());
+      expect(
+        await screen.findByRole("textbox", { name: "Dashboard name" }, { timeout: 1500 }),
+      ).toHaveValue("Confirmed by detail");
+      await waitFor(() => expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit"));
+    } finally {
+      onlineManager.setOnline(true);
+      closeSave.resolve();
+      freshDetail.resolve();
+    }
+  });
 });
