@@ -294,6 +294,11 @@ panel above an empty grid cell. Box and violin plots keep their categories
 aligned across panels; multiple series keep the same grouped positions in
 each panel.
 
+For grouped bars on multiple Y axes with a linear X scale, sharing the X scale
+reserves the same slots in each panel, even for a category missing from that
+panel. With independent X scales, each panel reserves slots for its own
+categories.
+
 ### Colour a scatter chart by a column
 
 On a scatter chart, the **Group by** shelf colours the points by a column. When

@@ -747,7 +747,6 @@ interface BarGrouping {
 
 interface GroupedBar {
   index: number;
-  slot: number;
   series: CartesianSeries;
   valueAxis: string;
   grouping: BarGrouping;
@@ -769,7 +768,6 @@ function groupedBars(
     const group = groups.get(positionAxis) ?? [];
     group.push({
       index,
-      slot: group.length,
       series,
       valueAxis,
       grouping: { offsetgroup: String(group.length), alignmentgroup: "multi-axis-bars" },
@@ -793,12 +791,19 @@ function groupedBars(
     positionGroups.set(positionGroup, cells);
   }
 
-  for (const cells of positionGroups.values()) {
+  for (const [positionGroup, cells] of positionGroups) {
+    const matched = positionGroup === "shared-x";
     const placements = cells.map((bars) => {
-      const drawnBars = bars.filter(
-        ({ series }) => seriesIsVisible(series) && series.x.length > 0 && series.y.length > 0,
-      );
-      return { drawnBars, ...measureGroupedBars(drawnBars) };
+      const drawnBars: (GroupedBar & { slot: number })[] = [];
+      let populatedSlots = 0;
+      for (const [index, bar] of bars.entries()) {
+        if (bar.series.x.length === 0 || bar.series.y.length === 0) continue;
+        const slot = matched ? index : populatedSlots;
+        populatedSlots++;
+        if (seriesIsVisible(bar.series)) drawnBars.push({ ...bar, slot });
+      }
+      const slotCount = matched ? bars.length : populatedSlots;
+      return { drawnBars, slotCount, ...measureGroupedBars(drawnBars) };
     });
     // Only positions drawn in the same panel can constrain each other's widths.
     const spacing = placements.reduce(
@@ -809,7 +814,7 @@ function groupedBars(
 
     // Plotly computes widths per value axis. A shared slot width keeps bars on
     // distinct X grids from overlapping when their value axes differ.
-    const slotCount = Math.max(...cells.map((bars) => bars.length));
+    const slotCount = Math.max(...placements.map((cell) => cell.slotCount));
     const slotWidth = (spacing * (1 - bargap)) / slotCount;
     const width = slotWidth * (1 - bargroupgap);
     for (const { drawnBars, hasRepeatedPosition } of placements) {
