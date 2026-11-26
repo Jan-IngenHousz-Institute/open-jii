@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { Layout } from "plotly.js";
 import { describe, expect, it, vi } from "vitest";
 
-import { applyCartesianAxes } from "../../charts/cartesian-axes";
+import { applyCartesianAxes, yRangesAfterRelayout } from "../../charts/cartesian-axes";
 import type { CartesianAxis } from "../../charts/cartesian-axes";
 import { CartesianChart } from "../../charts/cartesian-chart";
 import type { CartesianSeries } from "../../charts/cartesian-chart";
@@ -137,6 +137,21 @@ describe("numbered Y-axis layout", () => {
 
     fireEvent.click(screen.getByText("Reset Y axis"));
     expect(leftAxisGap()).toBeCloseTo(initial);
+  });
+
+  it("tracks a numbered Y-axis range independently of other axes", () => {
+    const otherRanges = { y: [1, 5], y2: [10, 20] } as const;
+    const zoomed = yRangesAfterRelayout(otherRanges, {
+      "yaxis3.range[0]": 3,
+      "yaxis3.range[1]": 7,
+    });
+    expect(zoomed).toEqual({ ...otherRanges, y3: [3, 7] });
+
+    const adjusted = yRangesAfterRelayout(zoomed, { "yaxis3.range[1]": 8 });
+    expect(adjusted).toEqual({ ...otherRanges, y3: [3, 8] });
+    expect(yRangesAfterRelayout(adjusted, { "xaxis.autorange": true })).toEqual(adjusted);
+
+    expect(yRangesAfterRelayout(adjusted, { "yaxis3.autorange": true })).toEqual(otherRanges);
   });
 
   it.each([
@@ -362,8 +377,14 @@ describe("numbered Y-axis layout", () => {
   });
 
   it("uses the default colour for an axis shared by several series", () => {
-    const data = series(2).map((trace): CartesianSeries => ({ ...trace, axis: "primary" }));
-    expect(layoutFor(data).yaxis?.color).toBeUndefined();
+    const data = series(3).map(
+      (trace, index): CartesianSeries => (index === 2 ? { ...trace, axis: "primary" } : trace),
+    );
+    const layout = layoutFor(data);
+
+    expect(layout.yaxis?.visible).toBe(true);
+    expect(layout.yaxis?.color).toBeUndefined();
+    expect(layout.yaxis2).toMatchObject({ visible: true, color: colors[1] });
   });
 
   it("keeps facet overlays and the colour-bar legend layout when all secondary traces are hidden", () => {
