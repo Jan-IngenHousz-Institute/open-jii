@@ -230,7 +230,8 @@ function fitStackedAxes(
   const minimumPlot = Math.max(160, 0.4 * (width - (base.l ?? 0) - (base.r ?? 0) - bar));
 
   type Detail = "full" | "titles" | "none";
-  const showTicks = ({ index }: AxisPlacement, detail: Detail) => index < 2 || detail === "full";
+  const showTicks = (entry: AxisPlacement, detail: Detail) =>
+    entry === left[0] || entry === right[0] || detail === "full";
   const showTitle = ({ index, axis }: AxisPlacement, detail: Detail) =>
     Boolean(axis.title?.text) && (index < 2 || detail !== "none");
   const hasChrome = (entry: AxisPlacement, detail: Detail) =>

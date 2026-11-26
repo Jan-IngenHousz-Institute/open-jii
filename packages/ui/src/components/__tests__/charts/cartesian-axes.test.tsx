@@ -293,6 +293,28 @@ describe("numbered Y-axis layout", () => {
   });
 
   it.each([
+    { inner: [3], outer: [5] },
+    { inner: [3, 4], outer: [5, 6] },
+  ])("keeps ticks on axes $inner when only higher axes are visible", ({ inner, outer }) => {
+    const visible = new Set([...inner, ...outer]);
+    const data = series(6).map((trace, index) => ({ ...trace, visible: visible.has(index + 1) }));
+    render(<CartesianChart data={data} config={{ width: 170, height: 250 }} />);
+
+    const layout = readLayout();
+    for (const axis of inner) {
+      expect(layout[`yaxis${axis}`]?.visible).toBe(true);
+      expect(layout[`yaxis${axis}`]?.showticklabels).not.toBe(false);
+    }
+    for (const axis of outer) {
+      expect(layout[`yaxis${axis}`]).toMatchObject({
+        visible: true,
+        showticklabels: false,
+        ticks: "",
+      });
+    }
+  });
+
+  it.each([
     { label: "wide", sizing: {}, gap: 8 },
     { label: "compact", sizing: { compact: true }, gap: 4 },
   ])("reserves the $label right-axis title gap in the gutter", ({ sizing, gap }) => {
