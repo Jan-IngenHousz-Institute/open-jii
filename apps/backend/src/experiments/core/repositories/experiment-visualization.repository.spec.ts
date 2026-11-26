@@ -335,7 +335,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "table1", dataSources: [] },
+        dataConfig: {
+          tableName: "table1",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createDto2: CreateExperimentVisualizationDto = {
@@ -344,7 +347,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: {} },
-        dataConfig: { tableName: "table2", dataSources: [] },
+        dataConfig: {
+          tableName: "table2",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Create visualizations
@@ -380,7 +386,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Create multiple visualizations with different names
@@ -434,7 +443,10 @@ describe("ExperimentVisualizationRepository", () => {
           chartFamily: "basic",
           chartType: "bar",
           config: {},
-          dataConfig: {},
+          dataConfig: {
+            tableName: "test_table",
+            dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+          },
         })
         .returning({ id: experimentVisualizations.id });
       await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
@@ -565,7 +577,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "renamed_table", dataSources: [] },
+        dataConfig: {
+          tableName: "renamed_table",
+          dataSources: [{ tableName: "renamed_table", columnName: "value", role: "y" }],
+        },
       };
       const updated = await repository.update(testExperimentId, visualization.id, updateDto);
       assertSuccess(updated);
@@ -586,7 +601,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "original_table", dataSources: [] },
+        dataConfig: {
+          tableName: "original_table",
+          dataSources: [{ tableName: "original_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -599,7 +617,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: { nbins: 20 } },
-        dataConfig: { tableName: "updated_table", dataSources: [] },
+        dataConfig: {
+          tableName: "updated_table",
+          dataSources: [{ tableName: "updated_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Act
@@ -666,7 +687,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "original_table", dataSources: [] },
+        dataConfig: {
+          tableName: "original_table",
+          dataSources: [{ tableName: "original_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -721,7 +745,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -788,7 +815,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -816,7 +846,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: { nbins: 30 } },
-        dataConfig: { tableName: "updated_table", dataSources: [] },
+        dataConfig: {
+          tableName: "updated_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const updateResult = await repository.update(testExperimentId, visualization.id, updateDto);
@@ -860,7 +893,10 @@ describe("ExperimentVisualizationRepository", () => {
           chartFamily: "basic",
           chartType: "bar",
           config: { chartType: "bar", config: { index: i } },
-          dataConfig: { tableName: `table_${i}`, dataSources: [] },
+          dataConfig: {
+            tableName: `table_${i}`,
+            dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+          },
         };
 
         const result = await repository.create(testExperimentId, createDto, testUserId);
@@ -908,7 +944,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, activeUserId);
@@ -941,7 +980,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, inactiveUserId);

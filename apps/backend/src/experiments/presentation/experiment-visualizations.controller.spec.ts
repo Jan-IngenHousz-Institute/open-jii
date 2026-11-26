@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import { eq, experimentVisualizations } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
@@ -115,6 +116,144 @@ describe("ExperimentVisualizationsController", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  describe("unreadable saved visualizations", () => {
+    async function insertVisualization(
+      dataConfig: unknown,
+      createdAt = new Date(),
+      config: unknown = {},
+    ) {
+      const [row] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: readableExperimentId,
+          createdBy: testUserId,
+          name: "Saved chart",
+          chartFamily: "basic",
+          chartType: "bar",
+          config,
+          dataConfig,
+          createdAt,
+        })
+        .returning({ id: experimentVisualizations.id });
+      return row;
+    }
+
+    const validDataConfig = {
+      tableName: "test_table",
+      dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+    };
+    const malformedConfigs = [
+      {
+        ...validDataConfig,
+        filters: [{ column: "school", operator: "equals", value: "" }],
+      },
+      { ...validDataConfig, dataSources: [{ role: "unknown" }] },
+    ];
+
+    it("returns valid charts in order when other saved charts fail validation", async () => {
+      const oldest = await insertVisualization(validDataConfig, new Date("2026-01-01"));
+      for (const dataConfig of malformedConfigs) {
+        await insertVisualization(dataConfig, new Date("2026-01-02"));
+      }
+      const newest = await insertVisualization(validDataConfig, new Date("2026-01-03"));
+
+      const response = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+            id: readableExperimentId,
+          }),
+        )
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({ id: newest.id, createdBy: testUserId }),
+        expect.objectContaining({ id: oldest.id, createdBy: testUserId }),
+      ]);
+    });
+
+    it("returns an empty list when every saved chart fails validation", async () => {
+      for (const dataConfig of malformedConfigs) {
+        await insertVisualization(dataConfig);
+      }
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+            id: readableExperimentId,
+          }),
+        )
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK)
+        .expect([]);
+    });
+
+    it.each(malformedConfigs)(
+      "returns 404 for an unreadable chart and still allows deletion",
+      async (dataConfig) => {
+        const row = await insertVisualization(dataConfig);
+        const path = testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+          id: readableExperimentId,
+          visualizationId: row.id,
+        });
+        await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+        await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+        expect(
+          await testApp.database
+            .select({ id: experimentVisualizations.id })
+            .from(experimentVisualizations)
+            .where(eq(experimentVisualizations.id, row.id)),
+        ).toEqual([]);
+      },
+    );
+
+    it("rejects a rename that leaves an unreadable config and accepts a repair", async () => {
+      const brokenConfig = "unreadable";
+      const brokenDataConfig = malformedConfigs[0];
+      const row = await insertVisualization(brokenDataConfig, new Date(), brokenConfig);
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, {
+        id: readableExperimentId,
+        visualizationId: row.id,
+      });
+      const rename = {
+        name: "Renamed chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        dataConfig: validDataConfig,
+      };
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send(rename)
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect((response) => {
+          expect(response.body).toHaveProperty("message", "Invalid saved chart fields: config");
+        });
+      expect(
+        await testApp.database
+          .select()
+          .from(experimentVisualizations)
+          .where(eq(experimentVisualizations.id, row.id)),
+      ).toEqual([
+        expect.objectContaining({
+          name: "Saved chart",
+          config: brokenConfig,
+          dataConfig: brokenDataConfig,
+        }),
+      ]);
+
+      const config = { title: "Repaired chart" };
+      const repaired = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ ...rename, config })
+        .expect(StatusCodes.OK);
+      expect(repaired.body).toMatchObject({ id: row.id, ...rename, config });
+      const read = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+      expect(read.body).toEqual(repaired.body);
+    });
   });
 
   describe("listVisualizations", () => {
@@ -461,6 +600,34 @@ describe("ExperimentVisualizationsController", () => {
   });
 
   describe("experiment ownership", () => {
+    it("returns the same 404 before and after a chart is saved in another experiment", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment: otherExperiment } = await testApp.createExperiment({
+        name: "Private experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+      const visualizationId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+        id: readableExperimentId,
+        visualizationId,
+      });
+      const get = () => testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+      const missing = await get();
+
+      const chart = createTestVisualizationData();
+      await testApp.database.insert(experimentVisualizations).values({
+        ...chart,
+        config: chart.config ?? {},
+        id: visualizationId,
+        experimentId: otherExperiment.id,
+        createdBy: otherUserId,
+      });
+
+      const foreign = await get();
+      expect(foreign.body).toEqual(missing.body);
+    });
+
     it.each(["update", "delete"] as const)(
       "returns the same 404 for a missing chart and a chart from another experiment on %s",
       async (action) => {
