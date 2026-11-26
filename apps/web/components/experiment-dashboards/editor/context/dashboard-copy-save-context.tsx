@@ -5,6 +5,7 @@ import { experimentAccessQuery } from "@/hooks/experiment/useExperimentAccess/ex
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
+import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -141,18 +142,25 @@ export function DashboardAutosaveBoundary({
     });
     if (charts.length > 0) void showUnattachedCopies(charts);
   }, [form, showUnattachedCopies]);
+  const hasEditAccess = useCallback(() => {
+    // The access cache updates before the form shell receives its new enabled prop.
+    const query = experimentAccessQuery(orpc, userId, experimentId);
+    const access = queryClient.getQueryData(query.queryKey);
+    return access === undefined || canDuplicateExperimentChart(access);
+  }, [experimentId, queryClient, userId]);
   const { hasError, error, flush, inFlightWidgetIds } = useDashboardAutosave({
     form,
     experimentId,
     dashboardId,
     enabled,
+    hasEditAccess,
     onSaved,
     onUnmountFlushed,
   });
   const retry = useCallback(() => {
     if (mounted.current) void flush({ retryFailed: true });
   }, [flush]);
-  const showFailure = enabled && hasError && pending.length > 0;
+  const showFailure = enabled && hasError && pending.length > 0 && hasEditAccess();
   const retryLabel = t("editor.inspector.retryCopySave");
   const failureTitle = t("editor.inspector.copySaveFailed");
   useEffect(() => {

@@ -20,6 +20,7 @@ interface UseDashboardAutosaveOptions {
   dashboardId: string;
   /** The backend's `manage` gate; without it nothing saves and no status is reported. */
   enabled?: boolean;
+  hasEditAccess?: () => boolean;
   onSaved?: (snapshot: DashboardFormValues) => void;
   onUnmountFlushed?: () => void;
 }
@@ -29,6 +30,7 @@ export function useDashboardAutosave({
   experimentId,
   dashboardId,
   enabled = true,
+  hasEditAccess,
   onSaved,
   onUnmountFlushed,
 }: UseDashboardAutosaveOptions) {
@@ -62,6 +64,7 @@ export function useDashboardAutosave({
     toKey: stringifyDashboard,
     save,
     enabled,
+    isValid: hasEditAccess,
     flushOnUnmount: false,
   });
   const { flush } = autosave;
