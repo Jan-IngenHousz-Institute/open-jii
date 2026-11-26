@@ -1,4 +1,7 @@
-import { useExperimentDashboard } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
+import {
+  experimentDashboardQuery,
+  useExperimentDashboard,
+} from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import {
   createExperimentAccess,
   createExperimentDashboard,
@@ -11,12 +14,14 @@ import { server } from "@/test/msw/server";
 import {
   act,
   assertExists,
+  createTestQueryClient,
   fireEvent,
   render,
   screen,
   userEvent,
   waitFor,
 } from "@/test/test-utils";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
@@ -337,6 +342,18 @@ function setupDashboardReopen() {
   }
 
   const { rerender } = render(<DashboardRoute />);
+  function replace() {
+    const incomingCache = createTestQueryClient();
+    incomingCache.setQueryData(
+      experimentDashboardQuery(dashboard.id, experimentId).queryKey,
+      stored,
+    );
+    rerender(
+      <QueryClientProvider key="new-locale" client={incomingCache}>
+        <DashboardRoute />
+      </QueryClientProvider>,
+    );
+  }
   async function duplicateChart() {
     await user.click(screen.getByRole("button", { name: "Select chart" }));
     const duplicate = screen.getByRole("button", { name: "Duplicate" });
@@ -350,6 +367,7 @@ function setupDashboardReopen() {
     source,
     experimentId,
     persist,
+    replace,
     leave: () => rerender(<></>),
     reopen: () => rerender(<DashboardRoute />),
     getStored: () => stored,
@@ -363,12 +381,17 @@ function setupDashboardReopen() {
 }
 
 describe("DashboardFormShell reopen while saving", () => {
-  it.each([
+  const editActions = [
     { action: "Duplicate", count: 3, run: "duplicateChart" },
     { action: "Delete notes", count: 1, run: "deleteNotes" },
-  ] as const)(
-    "preserves edits made after reopening the dashboard ($action)",
-    async ({ action, count, run }) => {
+  ] as const;
+  it.each(
+    (["separate commits", "one commit"] as const).flatMap((transition) =>
+      editActions.map((edit) => ({ ...edit, transition })),
+    ),
+  )(
+    "preserves edits made after reopening the dashboard in $transition ($action)",
+    async ({ action, count, run, transition }) => {
       const editor = setupDashboardReopen();
       const closeSave = Promise.withResolvers<void>();
       const closeSaved = Promise.withResolvers<void>();
@@ -386,7 +409,8 @@ describe("DashboardFormShell reopen while saving", () => {
         fireEvent.change(screen.getByRole("textbox", { name: "Dashboard name" }), {
           target: { value: "Renamed on close" },
         });
-        editor.leave();
+        if (transition === "one commit") editor.replace();
+        else editor.leave();
         await waitFor(() => expect(oldPatch.callCount).toBe(1), { timeout: 1200 });
         expect(oldPatch.body).toMatchObject({
           name: "Renamed on close",
@@ -399,7 +423,7 @@ describe("DashboardFormShell reopen while saving", () => {
         const newPatch = server.mount(contract.experiments.updateExperimentDashboard, {
           body: editor.persist,
         });
-        editor.reopen();
+        if (transition === "separate commits") editor.reopen();
 
         // If the form opens early, let the new edit reach the server ahead of the old PATCH.
         const reopened = await screen.findByText(/^(common.loading|edit)$/);
