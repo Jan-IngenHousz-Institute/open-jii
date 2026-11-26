@@ -1,0 +1,184 @@
+# Infrastructure Drift
+# Plans every root against the live resources each night and posts to Slack when they differ.
+# It never applies and takes no state lock.
+
+name: Infrastructure Drift
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Which environment to check"
+        required: false
+        type: choice
+        default: both
+        options:
+          - both
+          - dev
+          - prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infrastructure-drift
+  cancel-in-progress: false
+
+jobs:
+  # Drift is the difference between the live resources and the code that put them there. Dev
+  # deploys every merge to main; prod runs what its last successful release deployed, and planning
+  # main against prod would report every merged but unreleased change as drift.
+  deployed:
+    name: Find the deployed commits
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      prod_sha: ${{ steps.prod.outputs.sha }}
+    steps:
+      - name: Find the last prod release
+        id: prod
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          read -r SHA BRANCH < <(gh run list --repo "$REPO" --workflow production-release.yml \
+            --status success --limit 1 --json headSha,headBranch --jq '.[0] | "\(.headSha) \(.headBranch)"')
+          # An empty answer fails only prod's checks, in their first step, so dev is still checked.
+          if [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Prod is compared with ${SHA:0:7} from $BRANCH"
+            echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          fi
+
+  drift:
+    name: Drift (${{ matrix.environment }} ${{ matrix.root }})
+    needs: deployed
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ fromJSON(inputs.environment == 'dev' && '["dev"]' || inputs.environment == 'prod' && '["prod"]' || '["dev", "prod"]') }}
+        root: [env, foundation]
+    # A refresh reads every resource, which the read-only plan roles cannot, so this uses the
+    # deploy identities. It has no apply step.
+    environment: ${{ matrix.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      environment: ${{ matrix.environment }}
+      TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
+      TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      TF_VAR_databricks_auth_type: github-oidc
+      TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
+      TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_slack_webhook_url_databricks: ${{ secrets.SLACK_WEBHOOK_URL_DATABRICKS }}
+      TF_VAR_slack_webhook_url_grafana: ${{ secrets.SLACK_WEBHOOK_URL_GRAFANA }}
+      TF_VAR_slack_webhook_url_posthog: ${{ secrets.SLACK_WEBHOOK_URL_POSTHOG }}
+      TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
+      TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
+      TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
+      ROOT_DIR: infrastructure/${{ matrix.root }}/${{ matrix.environment }}
+      LABEL: ${{ matrix.environment }} ${{ matrix.root == 'env' && 'environment root' || 'foundation' }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Check the prod commit was found
+        if: matrix.environment == 'prod' && needs.deployed.outputs.prod_sha == ''
+        run: |
+          echo "::error::Found no successful prod release to compare prod with."
+          exit 1
+
+      - name: Checkout the deployed commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.environment == 'prod' && needs.deployed.outputs.prod_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup OpenTofu and AWS Credentials
+        uses: ./.github/actions/tofu/tofu-setup
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ secrets.AWS_REGION }}
+
+      - name: OpenTofu Init and Validate
+        uses: ./.github/actions/tofu/tofu-init-validate
+        with:
+          root: ${{ matrix.root }}
+
+      - name: Create a Grafana token for this run
+        id: grafana
+        if: matrix.root == 'env'
+        uses: ./.github/actions/tofu/grafana-token
+        with:
+          workspace_id: ${{ matrix.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ matrix.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+
+      # Exit code 0 is no difference, 2 is a difference, and 1 is a failed check. The saved plan holds
+      # the configuration's secret values, so it stays on the runner and only addresses are reported.
+      - name: Plan against the live resources
+        id: plan
+        working-directory: ${{ env.ROOT_DIR }}
+        env:
+          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token }}
+        run: |
+          set +e
+          tofu plan -input=false -lock=false -detailed-exitcode -out="$RUNNER_TEMP/drift.tfplan" 2>&1
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "drift=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "drift=true" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$code" ;;
+          esac
+
+      - name: List the drifted resources
+        id: list
+        if: steps.plan.outputs.drift == 'true'
+        working-directory: ${{ env.ROOT_DIR }}
+        run: |
+          tofu show -json "$RUNNER_TEMP/drift.tfplan" | jq -r '
+            [.resource_changes[]?
+              | select(.change.actions != ["no-op"] and .change.actions != ["read"])
+              | "\(.address) (\(.change.actions | join(", ")))"]
+            | if length == 0 then ["only outputs differ"] else . end
+            | .[]' > "$RUNNER_TEMP/drift.txt"
+          {
+            echo "### Drift in the $LABEL"
+            echo '```'
+            cat "$RUNNER_TEMP/drift.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Drift in the $LABEL: $(wc -l < "$RUNNER_TEMP/drift.txt") resources"
+
+      - name: Report the drift to Slack
+        if: steps.plan.outputs.drift == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -n --arg label "$LABEL" --rawfile list "$RUNNER_TEMP/drift.txt" --arg run "$RUN_URL" \
+            '{text: ":warning: Infrastructure drift in the \($label). These resources differ from the code:\n```\n\($list)```\n<\($run)|Nightly drift run>"}' \
+            | curl -sSf -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL" > /dev/null
+
+      - name: Report a failed check to Slack
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          jq -n --arg label "$LABEL" --arg run "$RUN_URL" \
+            '{text: ":x: The nightly drift check for the \($label) failed, so its drift is unknown. <\($run)|See the run>"}' \
+            | curl -sSf -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL" > /dev/null
+
+      - name: Delete the plan
+        if: always()
+        run: rm -f "$RUNNER_TEMP/drift.tfplan"
+
+      - name: Delete the Grafana token
+        if: always() && steps.grafana.outputs.token_id != ''
+        uses: ./.github/actions/tofu/grafana-token-delete
+        with:
+          workspace_id: ${{ matrix.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
+          service_account_id: ${{ matrix.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
+          token_id: ${{ steps.grafana.outputs.token_id }}
