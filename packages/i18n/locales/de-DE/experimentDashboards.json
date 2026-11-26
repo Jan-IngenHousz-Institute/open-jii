@@ -18,6 +18,7 @@
       "deleteSuccess": "Dashboard gelöscht",
       "deleteConfirm": "\"{{name}}\" dauerhaft löschen? Visualisierungen, auf die dieses Dashboard verweist, sind nicht betroffen.",
       "loading": "Dashboard wird geladen…",
+      "saveStillInProgress": "Dein Dashboard wird noch gespeichert. Du kannst es wieder bearbeiten, sobald es neu geladen wurde.",
       "loadFailed": "Dashboard konnte nicht geladen werden",
       "emptyDashboard": "Noch nichts hier"
     },

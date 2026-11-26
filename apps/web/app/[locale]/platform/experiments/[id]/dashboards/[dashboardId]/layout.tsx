@@ -1,11 +1,8 @@
 "use client";
 
 import { DashboardFormShell } from "@/components/experiment-dashboards/dashboard-form-shell";
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentDashboard } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import { useParams, useSearchParams } from "next/navigation";
-
-import { useTranslation } from "@repo/i18n";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,7 +10,6 @@ interface LayoutProps {
 
 export default function DashboardLayout({ children }: LayoutProps) {
   const { id: experimentId, dashboardId } = useParams<{ id: string; dashboardId: string }>();
-  const { t } = useTranslation("common");
   const searchParams = useSearchParams();
   const initialMode = searchParams.get("edit") === "1" ? "edit" : "view";
 
@@ -21,24 +17,16 @@ export default function DashboardLayout({ children }: LayoutProps) {
 
   return (
     <div className="page-fluid flex flex-1 flex-col">
-      <EntityLayoutShell
+      <DashboardFormShell
+        experimentId={experimentId}
+        dashboardId={dashboardId}
+        dashboard={data}
         isLoading={isLoading}
         error={error}
-        hasData={Boolean(data)}
-        loadingMessage={t("common.loading")}
+        initialMode={initialMode}
       >
-        {data && (
-          <DashboardFormShell
-            key={data.id}
-            experimentId={experimentId}
-            dashboardId={dashboardId}
-            dashboard={data}
-            initialMode={initialMode}
-          >
-            {children}
-          </DashboardFormShell>
-        )}
-      </EntityLayoutShell>
+        {children}
+      </DashboardFormShell>
     </div>
   );
 }

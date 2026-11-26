@@ -18,6 +18,7 @@
       "deleteSuccess": "Dashboard deleted",
       "deleteConfirm": "Permanently delete \"{{name}}\"? Visualizations referenced by this dashboard are not affected.",
       "loading": "Loading dashboard\u2026",
+      "saveStillInProgress": "Your last dashboard save is still in progress. You can edit again once the dashboard reloads.",
       "loadFailed": "Failed to load dashboard",
       "emptyDashboard": "Nothing here yet",
       "emptyDashboardEditorHint": "Pick a widget from the toolbar to get started."

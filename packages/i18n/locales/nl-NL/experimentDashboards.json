@@ -18,6 +18,7 @@
       "deleteSuccess": "Dashboard verwijderd",
       "deleteConfirm": "\"{{name}}\" definitief verwijderen? Visualisaties waarnaar dit dashboard verwijst, worden niet beïnvloed.",
       "loading": "Dashboard wordt geladen…",
+      "saveStillInProgress": "Je dashboard wordt nog opgeslagen. Je kunt het weer bewerken zodra het opnieuw is geladen.",
       "loadFailed": "Dashboard kon niet worden geladen",
       "emptyDashboard": "Nog niets hier"
     },

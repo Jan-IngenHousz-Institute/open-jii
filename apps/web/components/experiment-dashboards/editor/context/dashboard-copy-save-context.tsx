@@ -35,6 +35,11 @@ interface CreatedChart {
   name: string;
 }
 
+function chartCopyHref(locale: string, experimentId: string, chartId: string, isArchived: boolean) {
+  const basePath = isArchived ? "experiments-archive" : "experiments";
+  return `/${locale}/platform/${basePath}/${experimentId}/analysis/visualizations/${chartId}`;
+}
+
 interface PendingCopy {
   sourceWidgetId: string;
   chart: CreatedChart;
@@ -103,15 +108,12 @@ export function DashboardAutosaveBoundary({
       const access = await queryClient
         .fetchQuery({ ...query, staleTime: 0, retry: false })
         .catch(() => queryClient.getQueryData(query.queryKey));
-      const basePath =
-        access?.experiment.status === "archived" ? "experiments-archive" : "experiments";
+      const isArchived = access?.experiment.status === "archived";
       const openCopy = t("editor.inspector.openChartCopy");
       const nameLinks = unattachedCharts.current.size > 1;
       const links = [...unattachedCharts.current.values()].map((chart) => (
         <ToastAction key={chart.id} asChild altText={`${openCopy} ${chart.name}`}>
-          <Link
-            href={`/${locale}/platform/${basePath}/${experimentId}/analysis/visualizations/${chart.id}`}
-          >
+          <Link href={chartCopyHref(locale, experimentId, chart.id, isArchived)}>
             {nameLinks ? chart.name : openCopy}
           </Link>
         </ToastAction>
@@ -134,14 +136,27 @@ export function DashboardAutosaveBoundary({
     },
     [updateCopies],
   );
+  const getPendingCharts = useCallback(
+    () =>
+      form.getValues("widgets").flatMap(({ id }) => {
+        const copy = copiesRef.current.get(id);
+        return copy ? [copy.chart] : [];
+      }),
+    [form],
+  );
   const onUnmountFlushed = useCallback(() => {
     if (mounted.current) return;
-    const charts = form.getValues("widgets").flatMap(({ id }) => {
-      const copy = copiesRef.current.get(id);
-      return copy ? [copy.chart] : [];
-    });
+    const charts = getPendingCharts();
     if (charts.length > 0) void showUnattachedCopies(charts);
-  }, [form, showUnattachedCopies]);
+  }, [getPendingCharts, showUnattachedCopies]);
+  const getCopyLinks = (linkLocale: string) => {
+    const query = experimentAccessQuery(orpc, userId, experimentId);
+    const isArchived = queryClient.getQueryData(query.queryKey)?.experiment.status === "archived";
+    return getPendingCharts().map((chart) => ({
+      ...chart,
+      href: chartCopyHref(linkLocale, experimentId, chart.id, isArchived),
+    }));
+  };
   const hasEditAccess = useCallback(() => {
     // The access cache updates before the form shell receives its new enabled prop.
     const query = experimentAccessQuery(orpc, userId, experimentId);
@@ -156,6 +171,7 @@ export function DashboardAutosaveBoundary({
     hasEditAccess,
     onSaved,
     onUnmountFlushed,
+    getCopyLinks,
   });
   const retry = useCallback(() => {
     if (mounted.current) void flush({ retryFailed: true });

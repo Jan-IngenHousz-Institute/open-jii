@@ -19,7 +19,14 @@ import type { DashboardFormValues } from "../../dashboard-form-shell";
 // Module-scoped: inline arrows churn useAutosave's memo every render.
 const stringifyDashboard = (v: DashboardFormValues) => JSON.stringify(v);
 
-const pendingCloseSaves = new Map<string, Promise<ExperimentDashboard>>();
+type GetCopyLinks = (locale: string) => { id: string; name: string; href: string }[];
+
+export interface DashboardCloseSave {
+  dashboard: Promise<ExperimentDashboard>;
+  getCopyLinks?: GetCopyLinks;
+}
+
+const pendingCloseSaves = new Map<string, DashboardCloseSave>();
 
 function dashboardKey(experimentId: string, dashboardId: string) {
   return JSON.stringify([experimentId, dashboardId]);
@@ -38,6 +45,7 @@ interface UseDashboardAutosaveOptions {
   hasEditAccess?: () => boolean;
   onSaved?: (snapshot: DashboardFormValues) => void;
   onUnmountFlushed?: () => void;
+  getCopyLinks?: GetCopyLinks;
 }
 
 export function useDashboardAutosave({
@@ -48,6 +56,7 @@ export function useDashboardAutosave({
   hasEditAccess,
   onSaved,
   onUnmountFlushed,
+  getCopyLinks,
 }: UseDashboardAutosaveOptions) {
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
@@ -55,6 +64,8 @@ export function useDashboardAutosave({
   const [inFlightWidgetIds, setInFlightWidgetIds] = useState<ReadonlySet<string> | null>(null);
   const onUnmountFlushedRef = useRef(onUnmountFlushed);
   onUnmountFlushedRef.current = onUnmountFlushed;
+  const getCopyLinksRef = useRef(getCopyLinks);
+  getCopyLinksRef.current = getCopyLinks;
 
   const save = useCallback(
     async (snapshot: DashboardFormValues) => {
@@ -97,9 +108,10 @@ export function useDashboardAutosave({
         await queryClient.cancelQueries({ queryKey: query.queryKey, exact: true });
         return queryClient.fetchQuery({ ...query, staleTime: 0 });
       });
-      pendingCloseSaves.set(key, settledDashboard);
+      const closeSave = { dashboard: settledDashboard, getCopyLinks: getCopyLinksRef.current };
+      pendingCloseSaves.set(key, closeSave);
       const clear = () => {
-        if (pendingCloseSaves.get(key) === settledDashboard) pendingCloseSaves.delete(key);
+        if (pendingCloseSaves.get(key) === closeSave) pendingCloseSaves.delete(key);
       };
       void settledDashboard.then(clear, clear);
     };

@@ -21,7 +21,7 @@ import {
   userEvent,
   waitFor,
 } from "@/test/test-utils";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
@@ -328,26 +328,31 @@ function setupDashboardReopen() {
   }
 
   function DashboardRoute() {
-    const { data } = useExperimentDashboard(dashboard.id, experimentId);
-    return data ? (
+    const { data, isLoading, error } = useExperimentDashboard(dashboard.id, experimentId);
+    return (
       <DashboardFormShell
         experimentId={experimentId}
         dashboardId={dashboard.id}
         dashboard={data}
+        isLoading={isLoading}
+        error={error}
         initialMode="edit"
       >
         <EditActions />
       </DashboardFormShell>
-    ) : null;
+    );
   }
 
-  const { rerender } = render(<DashboardRoute />);
-  function replace() {
+  const queryClient = createTestQueryClient();
+  const { rerender } = render(<DashboardRoute />, { queryClient });
+  function replace({ warm = true } = {}) {
     const incomingCache = createTestQueryClient();
-    incomingCache.setQueryData(
-      experimentDashboardQuery(dashboard.id, experimentId).queryKey,
-      stored,
-    );
+    if (warm) {
+      incomingCache.setQueryData(
+        experimentDashboardQuery(dashboard.id, experimentId).queryKey,
+        stored,
+      );
+    }
     rerender(
       <QueryClientProvider key="new-locale" client={incomingCache}>
         <DashboardRoute />
@@ -363,6 +368,7 @@ function setupDashboardReopen() {
 
   return {
     copy,
+    queryClient,
     notes,
     source,
     experimentId,
@@ -465,6 +471,69 @@ describe("DashboardFormShell reopen while saving", () => {
         }
       } finally {
         closeSave.resolve();
+      }
+    },
+  );
+
+  it.each([true, false])(
+    "offers the copy during an offline save and waits for a reload (warm cache %s)",
+    async (warm) => {
+      const editor = setupDashboardReopen();
+      const patch = server.mount(contract.experiments.updateExperimentDashboard, {
+        body: editor.persist,
+      });
+      const reload = Promise.withResolvers<void>();
+
+      try {
+        await screen.findByRole("textbox", { name: "Dashboard name" });
+        await editor.duplicateChart();
+        await waitFor(() => expect(screen.getByTestId("probe-widgets")).toHaveTextContent("3"));
+
+        vi.useFakeTimers();
+        act(() => {
+          onlineManager.setOnline(false);
+          editor.replace({ warm });
+        });
+        expect(
+          editor.queryClient
+            .getMutationCache()
+            .getAll()
+            .some(({ state }) => state.isPaused),
+        ).toBe(true);
+        expect(screen.getByText("common.loading")).toBeInTheDocument();
+
+        await act(() => vi.advanceTimersByTimeAsync(10_000));
+        expect(screen.getByRole("status")).toHaveTextContent("ui.messages.saveStillInProgress");
+        expect(
+          screen.getByRole("link", { name: "editor.inspector.openChartCopy" }),
+        ).toHaveAttribute(
+          "href",
+          `/en-US/platform/experiments/${editor.experimentId}/analysis/visualizations/${editor.copy.id}`,
+        );
+        expect(screen.queryByRole("textbox", { name: "Dashboard name" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "Duplicate" })).toBeNull();
+        expect(patch.callCount).toBe(0);
+        vi.useRealTimers();
+
+        const detail = server.mount(contract.experiments.getExperimentDashboard, {
+          body: editor.getStored,
+          unblock: reload.promise,
+        });
+        act(() => onlineManager.setOnline(true));
+        await waitFor(() => {
+          expect(editor.getStored().widgets).toHaveLength(3);
+          expect(detail.called).toBe(true);
+        });
+        expect(screen.queryByRole("textbox", { name: "Dashboard name" })).toBeNull();
+
+        act(() => reload.resolve());
+        expect(await screen.findByTestId("probe-widgets")).toHaveTextContent("3");
+        expect(screen.queryByRole("status")).toBeNull();
+        expect(patch.callCount).toBe(1);
+      } finally {
+        vi.useRealTimers();
+        onlineManager.setOnline(true);
+        reload.resolve();
       }
     },
   );
