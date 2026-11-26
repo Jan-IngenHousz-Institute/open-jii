@@ -15,6 +15,12 @@ vi.mock("~/features/connection/services/device-connection-manager/device-connect
   createDeviceCommandExecutor: (device: Device | undefined) => createDeviceCommandExecutor(device),
 }));
 
+const ensureConnectedRegistered = vi.fn();
+vi.mock("~/shared/composition/ensure-connected-registered", () => ({
+  ensureConnectedRegistered: (identity: DeviceIdentity, device: Device) =>
+    ensureConnectedRegistered(identity, device),
+}));
+
 interface ExecuteCall {
   command: string | object;
   resolve: (data: object | string) => void;
@@ -435,6 +441,19 @@ describe("useScannerCommandExecutorStore", () => {
           deviceId: "SN-42",
           raw: {},
         });
+      });
+    });
+
+    it("hands each fresh identity and its device to connected registration", async () => {
+      const identity: DeviceIdentity = { family: "multispeq", deviceId: "03:25:05:25", raw: {} };
+      const exec = createControllableExecutor();
+      exec.getIdentity = vi.fn().mockResolvedValue(identity);
+      createDeviceCommandExecutor.mockResolvedValueOnce(exec);
+
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+
+      await vi.waitFor(() => {
+        expect(ensureConnectedRegistered).toHaveBeenCalledWith(identity, USB_DEVICE_A);
       });
     });
 

@@ -10,7 +10,7 @@
  * identified over a local transport.
  * This documents ownership, not driver enablement.
  */
-export const SENSOR_FAMILIES = ["multispeq", "ambit", "minipar", "generic"] as const;
+export const SENSOR_FAMILIES = ["multispeq", "ambit", "minipar", "co2dot", "generic"] as const;
 
 export type SensorFamily = (typeof SENSOR_FAMILIES)[number];
 

@@ -71,6 +71,26 @@ describe("DeleteIotDeviceUseCase", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("deletes a device registered by connection without calling AWS (decision 2)", async () => {
+    const listSpy = vi.spyOn(awsAdapter, "listThingPrincipals");
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      deviceType: "co2dot",
+      thingArn: null,
+    });
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertSuccess(result);
+    expect(listSpy).not.toHaveBeenCalled();
+    expect(deleteThingSpy).not.toHaveBeenCalled();
+    const rows = await testApp.database
+      .select()
+      .from(iotDevices)
+      .where(eq(iotDevices.id, device.id));
+    expect(rows).toHaveLength(0);
+  });
+
   it("revokes and detaches a live certificate before deleting the Thing", async () => {
     const revokeSpy = vi
       .spyOn(awsAdapter, "setCertificateStatus")

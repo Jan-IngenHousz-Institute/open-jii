@@ -58,6 +58,13 @@ Two things intentionally do **not** change per family:
 
 The `mobile` family is special: phones register themselves silently when someone signs into the mobile app (one Thing per install, Cognito-authenticated, no certificate lifecycle), so it never appears in the manual registration dialog, has no credentials or onboarding surface, and cannot be selected as a protocol family.
 
+A MultispeQ, Ambit, MiniPAR or CO2Dot connected in the mobile app is registered through `ensureConnectedDevice` (`POST /api/v1/devices/connected`) once its identity handshake returns. The key is the family plus a normalized serial (`packages/api/src/domains/iot/device-identity.ts`), never the phone or the transport:
+
+- **Ambit, MiniPAR, CO2Dot:** the eFuse MAC the unit reports, uppercase and colon-separated with byte zero first, the form of the Ambit's INFO reply and trace `sensor_id`. The Ambit reads it from INFO at connect (firmware 1.3.0 and later); the MiniPAR and CO2Dot from the `mac` key of their JSON hello, or from INFO.
+- **MultispeQ:** the full Bluetooth address, which the phone holds only over Bluetooth. The four bytes the firmware reports must equal the first four or the last four bytes of that address; four bytes alone are never a key. Over USB a MultispeQ is not registered automatically.
+
+Serials are matched without separators or letter case, so a unit registered on the web as `58cf79123456` is the same unit. A second connection reuses the row, a serial held by another family is a 409, and firmware that reports no MAC registers nothing. Registering by connection creates no AWS thing: the row stores the thing name, `thingArn` stays null, and issuing credentials creates the thing. Deleting a device that never had a thing calls no AWS API.
+
 ## Adding a new family
 
 Work through the layers top to bottom; the exhaustive types surface most omissions as compile errors.
@@ -68,5 +75,7 @@ Work through the layers top to bottom; the exhaustive types surface most omissio
 4. **Web host**: add the mapping case in `sensorFamilyToDeviceType`, the `createDriver` case, and an execution branch in `executeProtocolWithDriver` when the generic flow does not fit. If push is off and the inline-procedure wording is wrong for the hardware, add a note key to `DOWNLOAD_ONLY_NOTE_KEYS` with copy in all three locales.
 5. **Fixtures and tests**: extend the seed if the family should exist in dev data, and update the specs that pin the registries: `onboarding.spec.ts` in `@repo/iot`, and the web tests for the mapping, browser support, communication, protocol execution, and config delivery.
 6. **Docs**: extend [Device Integration](/developers/device-integration) when the configuration contract gains family-specific behavior.
+7. **Registration by connection**: if the phone should register the family when it connects, add it to `CONNECTED_FAMILIES` in `device-identity.ts` and make its driver report the unit's serial as `deviceId`.
+8. **Firmware releases**: set `FIRMWARE_REPO_<FAMILY>` in `infrastructure/env/{dev,prod}/main.tf` and the devkit env manifest. A repository that also publishes other release lines needs a tag prefix in `FIRMWARE_TAG_PREFIX` (`github.adapter.ts`), as the CO2Dot's `fw/` has.
 
 Capability changes for an existing family follow the same path minus the enum work: flip the registry flag, adjust the host branches the compiler points at, and update the pinned specs.

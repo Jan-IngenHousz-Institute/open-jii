@@ -15,6 +15,7 @@ const EXPECTED_DEVICE_TYPE: Record<SensorFamily, DeviceType> = {
   multispeq: "multispeq",
   ambit: "ambit",
   minipar: "minipar",
+  co2dot: "co2dot",
   generic: "generic",
   ambyte: "ambyte",
   mobile: "mobile",

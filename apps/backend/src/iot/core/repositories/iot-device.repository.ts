@@ -279,6 +279,25 @@ export class IotDeviceRepository {
     });
   }
 
+  /**
+   * The device whose serial equals this one compared without `:` or `-` separators and
+   * without letter case, so a MAC typed on the web in another form still matches the one a
+   * unit reports. Not owner-scoped: a serial belongs to one physical unit, whoever owns it.
+   */
+  async findBySerialNumberNormalized(serialNumber: string): Promise<Result<IotDeviceDto | null>> {
+    const compact = serialNumber.replace(/[:-]/g, "").toUpperCase();
+    return tryCatch(async () => {
+      const results = await this.database
+        .select(deviceColumns)
+        .from(iotDevices)
+        .where(
+          sql`upper(replace(replace(${iotDevices.serialNumber}, ':', ''), '-', '')) = ${compact}`,
+        )
+        .limit(1);
+      return results.length === 0 ? null : results[0];
+    });
+  }
+
   // Not owner-scoped: an experiment's publishers resolve to their registry rows
   // by the thing names they authenticated as, whoever owns the devices.
   async findByThingNames(thingNames: string[]): Promise<Result<IotDeviceDto[]>> {

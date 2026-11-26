@@ -491,6 +491,13 @@
       "when": 1795108570358,
       "tag": "0069_outbox_contributors_and_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1795711349098,
+      "tag": "0070_connected_device_registration",
+      "breakpoints": true
     }
   ]
 }

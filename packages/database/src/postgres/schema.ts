@@ -197,6 +197,7 @@ export const sensorFamilyEnum = pgEnum("sensor_family", [
   "minipar",
   "generic",
   "ambit",
+  "co2dot",
   "mobile",
 ]);
 
@@ -1210,7 +1211,8 @@ export const iotDevices = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     thingName: text("thing_name").notNull().unique(),
-    thingArn: text("thing_arn").notNull(),
+    // Null until credentials are issued: registering creates no AWS thing (decision 2).
+    thingArn: text("thing_arn"),
     serialNumber: text("serial_number").notNull().unique(),
     name: varchar("name", { length: 255 }),
     deviceType: sensorFamilyEnum("device_type").notNull(),

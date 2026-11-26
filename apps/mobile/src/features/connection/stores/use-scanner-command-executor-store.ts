@@ -5,6 +5,7 @@ import type {
   DeviceCommandProgress,
 } from "~/features/connection/services/device-command-executor";
 import { createDeviceCommandExecutor } from "~/features/connection/services/device-connection-manager/device-connection";
+import { ensureConnectedRegistered } from "~/shared/composition/ensure-connected-registered";
 import { createLogger } from "~/shared/observability/logger";
 import type { Device } from "~/shared/types/device";
 
@@ -149,8 +150,10 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
       .getIdentity()
       .then((identity) => {
         // A replaced executor's late identity must not label its successor.
-        if (get().executors.get(deviceId)?.executor !== executor) return;
+        const entry = get().executors.get(deviceId);
+        if (entry?.executor !== executor) return;
         patchEntry(deviceId, { identity });
+        void ensureConnectedRegistered(identity, entry.device);
       })
       .catch((e) => log.warn("identity handshake failed", { err: (e as Error)?.message }));
   };

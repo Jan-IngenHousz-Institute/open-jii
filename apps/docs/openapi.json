@@ -5559,6 +5559,7 @@
                     "minipar",
                     "generic",
                     "ambit",
+                    "co2dot",
                     "mobile"
                   ],
                   "type": "string"
@@ -5572,6 +5573,7 @@
                       "minipar",
                       "generic",
                       "ambit",
+                      "co2dot",
                       "mobile"
                     ],
                     "type": "string"
@@ -5700,6 +5702,7 @@
                                       "minipar",
                                       "generic",
                                       "ambit",
+                                      "co2dot",
                                       "mobile"
                                     ],
                                     "type": "string"
@@ -6039,6 +6042,7 @@
                                         "minipar",
                                         "generic",
                                         "ambit",
+                                        "co2dot",
                                         "mobile"
                                       ],
                                       "type": "string"
@@ -15947,7 +15951,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "co2dot"
                         ],
                         "type": "string",
                         "default": "multispeq"
@@ -16325,6 +16330,7 @@
                               "minipar",
                               "generic",
                               "ambit",
+                              "co2dot",
                               "mobile"
                             ],
                             "type": "string"
@@ -16415,7 +16421,14 @@
                       "type": "string"
                     },
                     "thingArn": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "serialNumber": {
                       "type": "string"
@@ -16437,6 +16450,7 @@
                         "minipar",
                         "generic",
                         "ambit",
+                        "co2dot",
                         "mobile"
                       ],
                       "type": "string"
@@ -16524,6 +16538,210 @@
         }
       }
     },
+    "/api/v1/devices/connected": {
+      "post": {
+        "operationId": "iot.ensureConnectedDevice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "family": {
+                    "enum": [
+                      "multispeq",
+                      "ambit",
+                      "minipar",
+                      "co2dot"
+                    ],
+                    "type": "string"
+                  },
+                  "serialNumber": {
+                    "type": "string",
+                    "description": "The unit's eFuse MAC, or a MultispeQ's full Bluetooth address"
+                  },
+                  "reportedId": {
+                    "type": "string",
+                    "description": "The four bytes a MultispeQ reports as device_info.device_id"
+                  },
+                  "firmwareVersion": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9_.,@/:#=[\\]-]+$",
+                    "description": "Firmware that reported the identity, kept as registration provenance"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "The name the unit reports"
+                  }
+                },
+                "required": [
+                  "family",
+                  "serialNumber"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "enum": [
+                        "created",
+                        "existing"
+                      ],
+                      "type": "string"
+                    },
+                    "device": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "thingName": {
+                              "type": "string"
+                            },
+                            "thingArn": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "serialNumber": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "deviceType": {
+                              "enum": [
+                                "multispeq",
+                                "ambyte",
+                                "minipar",
+                                "generic",
+                                "ambit",
+                                "co2dot",
+                                "mobile"
+                              ],
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "registered",
+                                "active",
+                                "revoked",
+                                "retired"
+                              ],
+                              "type": "string"
+                            },
+                            "certificateId": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "certificateArn": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "createdBy": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "organizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "visibility": {
+                              "enum": [
+                                "private",
+                                "public"
+                              ],
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "thingName",
+                            "thingArn",
+                            "serialNumber",
+                            "name",
+                            "deviceType",
+                            "status",
+                            "certificateId",
+                            "certificateArn",
+                            "createdBy",
+                            "organizationId",
+                            "visibility",
+                            "createdAt",
+                            "updatedAt"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "outcome",
+                    "device"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices": {
       "get": {
         "operationId": "iot.listIotDevices",
@@ -16582,6 +16800,7 @@
                     "minipar",
                     "generic",
                     "ambit",
+                    "co2dot",
                     "mobile"
                   ],
                   "type": "string"
@@ -16595,6 +16814,7 @@
                       "minipar",
                       "generic",
                       "ambit",
+                      "co2dot",
                       "mobile"
                     ],
                     "type": "string"
@@ -16690,7 +16910,14 @@
                             "type": "string"
                           },
                           "thingArn": {
-                            "type": "string"
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "serialNumber": {
                             "type": "string"
@@ -16712,6 +16939,7 @@
                               "minipar",
                               "generic",
                               "ambit",
+                              "co2dot",
                               "mobile"
                             ],
                             "type": "string"
@@ -16847,7 +17075,14 @@
                                 "type": "string"
                               },
                               "thingArn": {
-                                "type": "string"
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "serialNumber": {
                                 "type": "string"
@@ -16869,6 +17104,7 @@
                                   "minipar",
                                   "generic",
                                   "ambit",
+                                  "co2dot",
                                   "mobile"
                                 ],
                                 "type": "string"
@@ -17070,7 +17306,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string",
                     "description": "IotDevice class, maps to the ingest topic sensorType"
@@ -17104,7 +17341,14 @@
                       "type": "string"
                     },
                     "thingArn": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "serialNumber": {
                       "type": "string"
@@ -17126,6 +17370,7 @@
                         "minipar",
                         "generic",
                         "ambit",
+                        "co2dot",
                         "mobile"
                       ],
                       "type": "string"
@@ -17443,7 +17688,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string"
                   },
@@ -17518,7 +17764,14 @@
                                     "type": "string"
                                   },
                                   "thingArn": {
-                                    "type": "string"
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   },
                                   "serialNumber": {
                                     "type": "string"
@@ -17540,6 +17793,7 @@
                                       "minipar",
                                       "generic",
                                       "ambit",
+                                      "co2dot",
                                       "mobile"
                                     ],
                                     "type": "string"
@@ -17709,7 +17963,14 @@
                       "type": "string"
                     },
                     "thingArn": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "serialNumber": {
                       "type": "string"
@@ -17731,6 +17992,7 @@
                         "minipar",
                         "generic",
                         "ambit",
+                        "co2dot",
                         "mobile"
                       ],
                       "type": "string"
@@ -18713,7 +18975,14 @@
                       "type": "string"
                     },
                     "thingArn": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "serialNumber": {
                       "type": "string"
@@ -18735,6 +19004,7 @@
                         "minipar",
                         "generic",
                         "ambit",
+                        "co2dot",
                         "mobile"
                       ],
                       "type": "string"
@@ -18906,7 +19176,14 @@
                       "type": "string"
                     },
                     "thingArn": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "serialNumber": {
                       "type": "string"
@@ -18928,6 +19205,7 @@
                         "minipar",
                         "generic",
                         "ambit",
+                        "co2dot",
                         "mobile"
                       ],
                       "type": "string"
@@ -19046,7 +19324,14 @@
                       "type": "string"
                     },
                     "thingArn": {
-                      "type": "string"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "serialNumber": {
                       "type": "string"
@@ -19068,6 +19353,7 @@
                         "minipar",
                         "generic",
                         "ambit",
+                        "co2dot",
                         "mobile"
                       ],
                       "type": "string"
@@ -19214,7 +19500,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -19275,7 +19562,8 @@
                                         "ambyte",
                                         "minipar",
                                         "generic",
-                                        "ambit"
+                                        "ambit",
+                                        "co2dot"
                                       ],
                                       "type": "string"
                                     },
@@ -20098,7 +20386,8 @@
                                       "ambyte",
                                       "minipar",
                                       "generic",
-                                      "ambit"
+                                      "ambit",
+                                      "co2dot"
                                     ],
                                     "type": "string"
                                   },
@@ -20159,7 +20448,8 @@
                                                       "ambyte",
                                                       "minipar",
                                                       "generic",
-                                                      "ambit"
+                                                      "ambit",
+                                                      "co2dot"
                                                     ],
                                                     "type": "string"
                                                   },
@@ -20787,6 +21077,7 @@
                     "minipar",
                     "generic",
                     "ambit",
+                    "co2dot",
                     "mobile"
                   ],
                   "type": "string"
@@ -20800,6 +21091,7 @@
                       "minipar",
                       "generic",
                       "ambit",
+                      "co2dot",
                       "mobile"
                     ],
                     "type": "string"
@@ -20886,6 +21178,7 @@
                               "minipar",
                               "generic",
                               "ambit",
+                              "co2dot",
                               "mobile"
                             ],
                             "type": "string"
@@ -21268,6 +21561,7 @@
                           "minipar",
                           "generic",
                           "ambit",
+                          "co2dot",
                           "mobile"
                         ],
                         "type": "string"
@@ -21401,6 +21695,7 @@
                           "minipar",
                           "generic",
                           "ambit",
+                          "co2dot",
                           "mobile"
                         ],
                         "type": "string"
@@ -21520,7 +21815,8 @@
               "enum": [
                 "ambyte",
                 "minipar",
-                "ambit"
+                "ambit",
+                "co2dot"
               ],
               "type": "string"
             }
@@ -21639,7 +21935,8 @@
                 "ambyte",
                 "minipar",
                 "generic",
-                "ambit"
+                "ambit",
+                "co2dot"
               ],
               "type": "string"
             },
@@ -21667,7 +21964,8 @@
                           "ambyte",
                           "minipar",
                           "generic",
-                          "ambit"
+                          "ambit",
+                          "co2dot"
                         ],
                         "type": "string"
                       },
@@ -21765,7 +22063,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string"
                   },
@@ -22708,7 +23007,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -23728,7 +24028,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -24779,7 +25080,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string"
                   },
@@ -25725,7 +26027,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -33316,6 +33619,7 @@
                                   "minipar",
                                   "generic",
                                   "ambit",
+                                  "co2dot",
                                   "mobile"
                                 ],
                                 "type": "string"
@@ -33487,6 +33791,7 @@
                                   "minipar",
                                   "generic",
                                   "ambit",
+                                  "co2dot",
                                   "mobile"
                                 ],
                                 "type": "string"
@@ -33605,6 +33910,7 @@
                                   "minipar",
                                   "generic",
                                   "ambit",
+                                  "co2dot",
                                   "mobile"
                                 ],
                                 "type": "string"
@@ -34697,7 +35003,8 @@
                     "ambyte",
                     "minipar",
                     "generic",
-                    "ambit"
+                    "ambit",
+                    "co2dot"
                   ],
                   "type": "string"
                 },
@@ -34709,7 +35016,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string"
                   }
@@ -34809,7 +35117,8 @@
                               "ambyte",
                               "minipar",
                               "generic",
-                              "ambit"
+                              "ambit",
+                              "co2dot"
                             ],
                             "type": "string"
                           },
@@ -34966,7 +35275,8 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit"
+                                  "ambit",
+                                  "co2dot"
                                 ],
                                 "type": "string"
                               },
@@ -35233,7 +35543,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string"
                   },
@@ -35386,7 +35697,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -35613,7 +35925,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -35846,7 +36159,8 @@
                       "ambyte",
                       "minipar",
                       "generic",
-                      "ambit"
+                      "ambit",
+                      "co2dot"
                     ],
                     "type": "string"
                   }
@@ -35979,7 +36293,8 @@
                         "ambyte",
                         "minipar",
                         "generic",
-                        "ambit"
+                        "ambit",
+                        "co2dot"
                       ],
                       "type": "string"
                     },
@@ -39478,6 +39793,7 @@
                                   "minipar",
                                   "generic",
                                   "ambit",
+                                  "co2dot",
                                   "mobile"
                                 ],
                                 "type": "string"
@@ -40548,6 +40864,7 @@
                                       "minipar",
                                       "generic",
                                       "ambit",
+                                      "co2dot",
                                       "mobile"
                                     ],
                                     "type": "string"
@@ -41068,6 +41385,7 @@
                                         "minipar",
                                         "generic",
                                         "ambit",
+                                        "co2dot",
                                         "mobile"
                                       ],
                                       "type": "string"
@@ -41661,6 +41979,7 @@
                                         "minipar",
                                         "generic",
                                         "ambit",
+                                        "co2dot",
                                         "mobile"
                                       ],
                                       "type": "string"
@@ -42274,6 +42593,7 @@
                                       "minipar",
                                       "generic",
                                       "ambit",
+                                      "co2dot",
                                       "mobile"
                                     ],
                                     "type": "string"
@@ -42776,6 +43096,7 @@
                                         "minipar",
                                         "generic",
                                         "ambit",
+                                        "co2dot",
                                         "mobile"
                                       ],
                                       "type": "string"
@@ -43526,6 +43847,7 @@
                                         "minipar",
                                         "generic",
                                         "ambit",
+                                        "co2dot",
                                         "mobile"
                                       ],
                                       "type": "string"
@@ -43602,7 +43924,8 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit"
+                                  "ambit",
+                                  "co2dot"
                                 ],
                                 "type": "string"
                               }
@@ -44124,6 +44447,7 @@
                                         "minipar",
                                         "generic",
                                         "ambit",
+                                        "co2dot",
                                         "mobile"
                                       ],
                                       "type": "string"
@@ -44200,7 +44524,8 @@
                                   "ambyte",
                                   "minipar",
                                   "generic",
-                                  "ambit"
+                                  "ambit",
+                                  "co2dot"
                                 ],
                                 "type": "string"
                               }

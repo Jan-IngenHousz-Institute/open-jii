@@ -193,6 +193,61 @@ describe("MiniParDriver", () => {
     });
   });
 
+  it("reads the MAC from the JSON hello without asking INFO", async () => {
+    const transport = tableTransport({
+      "hello\n": '{"device":"MiniPAR","version":"2.4","mac":"24:6f:28:aa:bb:03"}\n',
+      "get_name\n": "NoName\n",
+    });
+    driver.initialize(transport);
+
+    const identity = await driver.getDeviceIdentity();
+    expect(identity.deviceId).toBe("24:6F:28:AA:BB:03");
+    expect(transport.send).not.toHaveBeenCalledWith('{"command":"INFO"}\n');
+  });
+
+  it("falls back to the JSON INFO when the info line is refused", async () => {
+    driver.initialize(
+      tableTransport({
+        "hello\n": "MiniPAR,1.1,1.05\n",
+        "get_name\n": "NoName\n",
+        "info\n": "error:unknown command\n",
+        '{"command":"INFO"}\n':
+          '{"status":"success","data":{"device_type":"minipar","device_id":"24:6F:28:AA:BB:04","firmware_version":"1.05"}}\n',
+      }),
+    );
+
+    const identity = await driver.getDeviceIdentity();
+    expect(identity).toMatchObject({ family: "minipar", deviceId: "24:6F:28:AA:BB:04" });
+  });
+
+  it("asks the plain-mode info line first", async () => {
+    const transport = tableTransport({
+      "hello\n": "MiniPAR,1.1,1.07\n",
+      "get_name\n": "NoName\n",
+      "info\n":
+        '{"status":"success","data":{"device_name":"NoName","device_type":"minipar","device_id":"58:CF:79:12:34:56","firmware_version":"1.07"}}\n',
+    });
+    driver.initialize(transport);
+
+    const identity = await driver.getDeviceIdentity();
+    expect(identity).toMatchObject({ deviceId: "58:CF:79:12:34:56", name: "MiniPAR" });
+    expect(transport.send).not.toHaveBeenCalledWith('{"command":"INFO"}\n');
+  });
+
+  it("leaves the serial unknown on firmware that refuses INFO", async () => {
+    driver.initialize(
+      tableTransport({
+        "hello\n": "MiniPAR,1.1,1.04\n",
+        "get_name\n": "NoName\n",
+        '{"command":"INFO"}\n': "error:unknown command\n",
+      }),
+    );
+
+    const identity = await driver.getDeviceIdentity();
+    expect(identity.deviceId).toBeUndefined();
+    expect(identity.firmwareVersion).toBe("1.04");
+  });
+
   it("clears buffered state and disconnects when destroyed", async () => {
     const transport = tableTransport({});
     driver.initialize(transport);

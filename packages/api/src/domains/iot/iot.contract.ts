@@ -22,6 +22,8 @@ import {
   zObservedExperimentsQuery,
   zIotUploadUrl,
   zEnsureMobileDeviceBody,
+  zEnsureConnectedDeviceBody,
+  zEnsureConnectedDeviceResult,
   zIotUploadUrlRequest,
   zIssueIotCredentialsResponse,
   zOnboardDeviceBody,
@@ -54,6 +56,12 @@ export const iotContract = {
     .route({ method: "POST", path: "/api/v1/devices/mobile", successStatus: 200 })
     .input(zEnsureMobileDeviceBody)
     .output(zIotDevice),
+  // Idempotent registration of a unit the mobile app connected, by family and serial.
+  // Static path, like the phone route above.
+  ensureConnectedDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/connected", successStatus: 200 })
+    .input(zEnsureConnectedDeviceBody)
+    .output(zEnsureConnectedDeviceResult),
   listIotDevices: oc
     .route({ method: "GET", path: "/api/v1/devices", successStatus: 200 })
     .input(zIotDeviceFilterQuery)

@@ -106,6 +106,67 @@ describe("IssueIotCredentialsUseCase", () => {
     expect(stored.value?.certificateArn).toBe(CERT.certificateArn);
   });
 
+  it("creates the thing first for a device registered by connection (decision 2)", async () => {
+    mockHappyPath();
+    const createThing = vi.spyOn(awsAdapter, "createThing").mockResolvedValue(
+      success({
+        thingName: "minipar_58:CF:79:12:34:56",
+        thingArn: "arn:aws:iot:eu-central-1:000000000000:thing/minipar_58:CF:79:12:34:56",
+      }),
+    );
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      deviceType: "minipar",
+      serialNumber: "58:CF:79:12:34:56",
+      thingName: "minipar_58:CF:79:12:34:56",
+      thingArn: null,
+    });
+
+    const result = await useCase.execute(device.id, userId);
+
+    assertSuccess(result);
+    expect(createThing).toHaveBeenCalledWith({
+      thingName: "minipar_58:CF:79:12:34:56",
+      attributes: { deviceType: "minipar", serialNumber: "58:CF:79:12:34:56" },
+    });
+    const stored = await repo.findById(device.id);
+    assertSuccess(stored);
+    expect(stored.value?.thingArn).toBe(
+      "arn:aws:iot:eu-central-1:000000000000:thing/minipar_58:CF:79:12:34:56",
+    );
+    expect(stored.value?.status).toBe("active");
+  });
+
+  it("keeps the device without a certificate when creating its thing fails", async () => {
+    const createCert = vi.spyOn(awsAdapter, "createDeviceCertificate");
+    vi.spyOn(awsAdapter, "createThing").mockResolvedValue(
+      failure(AppError.internal("CreateThing failed")),
+    );
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      deviceType: "ambit",
+      thingArn: null,
+    });
+
+    assertFailure(await useCase.execute(device.id, userId));
+
+    expect(createCert).not.toHaveBeenCalled();
+    const stored = await repo.findById(device.id);
+    assertSuccess(stored);
+    expect(stored.value?.thingArn).toBeNull();
+    expect(stored.value?.status).toBe("registered");
+  });
+
+  it("does not create a thing for a device that already has one", async () => {
+    mockHappyPath();
+    const createThing = vi.spyOn(awsAdapter, "createThing");
+    const device = await createDevice("registered");
+
+    assertSuccess(await useCase.execute(device.id, userId));
+
+    expect(createThing).not.toHaveBeenCalled();
+  });
+
   it("re-issues a certificate for a revoked device", async () => {
     mockHappyPath();
     const device = await createDevice("revoked");

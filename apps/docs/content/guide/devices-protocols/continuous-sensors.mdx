@@ -217,6 +217,21 @@ vendor and product numbers and the port's number, in the form
 `vendor:product #number`. Once it is identified, the connected row shows the
 name the MiniPAR reports, with **Measurement device** underneath.
 
+### Sensors join your device registry when connected
+
+The first time the Android app connects an Ambit, a MiniPAR or a CO2Dot, openJII
+adds it to **Devices** on the web, with the unit's chip MAC address as its
+serial (for example `58:CF:79:12:34:56`). It lands in your personal
+organization; to share it with a team, transfer it to that organization from the
+device page. Connecting the same unit again, from any phone or account, reuses
+the existing record. Registering creates no broker credentials.
+
+The unit's firmware must report its MAC address: an Ambit from firmware 1.3.0,
+and a MiniPAR or CO2Dot from the firmware release that adds it. Older firmware
+connects and measures as before but is not registered automatically.
+
+{/* NEEDS-LIVE-CHECK: connect a real Ambit, MiniPAR and CO2Dot to the Android app and confirm each appears under Devices with its MAC as the serial. */}
+
 ## Ambyte support by surface
 
 Ambyte behaves differently in three separate contexts; keep them distinct:

@@ -7,6 +7,7 @@ import { AppError, Result, failure, success } from "../../../../common/utils/fp-
 import { ExperimentDataOutboxWorker } from "../../../../experiments/application/services/experiment-data-outbox.worker";
 import { ExperimentDataOutboxRepository } from "../../../../experiments/core/repositories/experiment-data-outbox.repository";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
+import { buildThingName } from "../../../core/models/thing-name";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
@@ -48,7 +49,7 @@ export class RegisterIotDeviceUseCase {
       );
     }
 
-    const thingName = this.buildThingName(body.deviceType, body.serialNumber);
+    const thingName = buildThingName(body.deviceType, body.serialNumber);
     const thingResult = await this.awsPort.createThing({
       thingName,
       attributes: {
@@ -91,9 +92,4 @@ export class RegisterIotDeviceUseCase {
   }
 
   // AWS IoT thing names allow [a-zA-Z0-9:_-]; sanitise so MAC-style serials are safe.
-  private buildThingName(deviceType: string, serialNumber: string): string {
-    const safeType = deviceType.replace(/[^a-zA-Z0-9:_-]/g, "-");
-    const safeSerial = serialNumber.replace(/[^a-zA-Z0-9:_-]/g, "-");
-    return `${safeType}_${safeSerial}`;
-  }
 }

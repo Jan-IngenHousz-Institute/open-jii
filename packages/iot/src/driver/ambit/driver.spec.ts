@@ -476,6 +476,20 @@ describe("AmbitDriver", () => {
     expect(identity).toEqual({ family: "ambit", raw: { helloReply: HELLO_REPLY.trim() } });
   });
 
+  it("reads the eFuse MAC from INFO at connect, without a restart", async () => {
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      '{"command":"INFO"}\n':
+        '{"status":"success","data":{"device_name":"AmbitV003","device_type":"ambit","device_id":"A0:B1:C2:D3:E4:F5","firmware_version":"1.4.0"}}\n',
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const identity = await driver.getDeviceIdentity();
+    expect(identity.deviceId).toBe("A0:B1:C2:D3:E4:F5");
+    expect(transport.send).not.toHaveBeenCalledWith("reboot\n");
+  });
+
   it("clears buffered state and disconnects when destroyed", async () => {
     const transport = tableTransport({ "hello\n": HELLO_REPLY });
     const driver = fastDriver();

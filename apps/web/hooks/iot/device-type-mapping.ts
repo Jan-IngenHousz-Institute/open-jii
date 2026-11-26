@@ -18,6 +18,8 @@ export function sensorFamilyToDeviceType(sensorFamily: SensorFamily): DeviceType
       return "ambyte";
     case "minipar":
       return "minipar";
+    case "co2dot":
+      return "co2dot";
     case "generic":
       return "generic";
     case "mobile":

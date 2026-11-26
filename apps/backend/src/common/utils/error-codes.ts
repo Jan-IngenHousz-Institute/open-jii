@@ -122,6 +122,7 @@ export enum ErrorCodes {
   IOT_DEVICE_NOT_FOUND = "IOT_DEVICE_NOT_FOUND", // Device not found
   IOT_DEVICE_ALREADY_EXISTS = "IOT_DEVICE_ALREADY_EXISTS", // Device serial number or thing name already registered
   IOT_DEVICE_OWNED_BY_ANOTHER_USER = "IOT_DEVICE_OWNED_BY_ANOTHER_USER", // Install id registered by a different user
+  IOT_DEVICE_IDENTITY_COLLISION = "IOT_DEVICE_IDENTITY_COLLISION", // Serial already held by a device of another family
   IOT_CREDENTIALS_INVALID_STATE = "IOT_CREDENTIALS_INVALID_STATE", // Credential op not allowed from the device's current status
   IOT_CREDENTIALS_ISSUE_FAILED = "IOT_CREDENTIALS_ISSUE_FAILED", // Failed to issue device certificate
   IOT_CREDENTIALS_REVOKE_FAILED = "IOT_CREDENTIALS_REVOKE_FAILED", // Failed to revoke device certificate

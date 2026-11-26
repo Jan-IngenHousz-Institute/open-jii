@@ -3006,7 +3006,13 @@ module "backend_ecs" {
     },
     {
       name  = "FIRMWARE_REPO_MINIPAR"
-      value = ""
+      value = "Jan-IngenHousz-Institute/miniPar"
+    },
+    {
+      # The CO2Dot repository also releases its GUI and hardware; the backend
+      # lists only its fw/v* tags as firmware.
+      name  = "FIRMWARE_REPO_CO2DOT"
+      value = "Jan-IngenHousz-Institute/CO2Dot"
     },
     {
       name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"

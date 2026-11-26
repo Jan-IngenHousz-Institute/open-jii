@@ -13,6 +13,7 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { BulkRegisterIotDevicesUseCase } from "../application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
+import { EnsureConnectedDeviceUseCase } from "../application/use-cases/ensure-connected-device/ensure-connected-device";
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
 import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
 import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
@@ -36,6 +37,7 @@ export class IotDeviceController {
     private readonly registerIotDeviceUseCase: RegisterIotDeviceUseCase,
     private readonly bulkRegisterIotDevicesUseCase: BulkRegisterIotDevicesUseCase,
     private readonly ensureMobileDeviceUseCase: EnsureMobileDeviceUseCase,
+    private readonly ensureConnectedDeviceUseCase: EnsureConnectedDeviceUseCase,
     private readonly listIotDevicesUseCase: ListIotDevicesUseCase,
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
@@ -135,6 +137,20 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "ensureMobileDevice");
+    });
+  }
+
+  @Implement(iotContract.ensureConnectedDevice)
+  ensureConnectedDevice(@Session() session: UserSession) {
+    return implement(iotContract.ensureConnectedDevice).handler(async ({ input }) => {
+      const result = await this.ensureConnectedDeviceUseCase.execute(input, session.user.id);
+
+      if (result.isSuccess()) {
+        const { device, outcome } = result.value;
+        return { outcome, device: device === null ? null : formatDates(device) };
+      }
+
+      return throwOrpcFailure(result, this.logger, "ensureConnectedDevice");
     });
   }
 

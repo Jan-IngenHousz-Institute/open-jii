@@ -48,22 +48,13 @@ export class DeleteIotDeviceUseCase {
       }
     }
 
-    // DeleteThing fails while ANY principal is attached: certificates on X.509
-    // devices, Cognito identities on mobile devices. Detach whatever is there.
-    const principalsResult = await this.awsPort.listThingPrincipals(device.thingName);
-    if (principalsResult.isFailure()) {
-      return failure(principalsResult.error);
-    }
-    for (const principal of principalsResult.value) {
-      const detachResult = await this.awsPort.detachThingPrincipal(device.thingName, principal);
-      if (detachResult.isFailure()) {
-        return failure(detachResult.error);
+    // A device registered by connection never had a thing (decision 2): nothing in AWS
+    // to clean up, so deleting it works with no cloud reachable.
+    if (device.thingArn) {
+      const cleanup = await this.deleteThing(device.thingName);
+      if (cleanup.isFailure()) {
+        return cleanup;
       }
-    }
-
-    const deleteThingResult = await this.awsPort.deleteThing(device.thingName);
-    if (deleteThingResult.isFailure()) {
-      return failure(deleteThingResult.error);
     }
 
     const members = await this.sharingRepository.listMemberIds("device", deviceId);
@@ -94,5 +85,21 @@ export class DeleteIotDeviceUseCase {
     }
 
     return success(undefined);
+  }
+
+  // DeleteThing fails while ANY principal is attached: certificates on X.509
+  // devices, Cognito identities on mobile devices. Detach whatever is there.
+  private async deleteThing(thingName: string): Promise<Result<void>> {
+    const principalsResult = await this.awsPort.listThingPrincipals(thingName);
+    if (principalsResult.isFailure()) {
+      return failure(principalsResult.error);
+    }
+    for (const principal of principalsResult.value) {
+      const detachResult = await this.awsPort.detachThingPrincipal(thingName, principal);
+      if (detachResult.isFailure()) {
+        return failure(detachResult.error);
+      }
+    }
+    return this.awsPort.deleteThing(thingName);
   }
 }

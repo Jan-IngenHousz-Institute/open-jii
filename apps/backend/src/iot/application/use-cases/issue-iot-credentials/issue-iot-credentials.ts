@@ -7,6 +7,7 @@ import { ExperimentDataOutboxRepository } from "../../../../experiments/core/rep
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort, CertificateResult } from "../../../core/ports/aws.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { DeviceThingService } from "../../services/device-thing";
 
 @Injectable()
 export class IssueIotCredentialsUseCase {
@@ -18,6 +19,7 @@ export class IssueIotCredentialsUseCase {
     private readonly deviceRepository: IotDeviceRepository,
     private readonly outboxRepository: ExperimentDataOutboxRepository,
     private readonly outboxWorker: ExperimentDataOutboxWorker,
+    private readonly deviceThingService: DeviceThingService,
   ) {}
 
   async execute(deviceId: string, userId: string): Promise<Result<CertificateResult>> {
@@ -32,8 +34,8 @@ export class IssueIotCredentialsUseCase {
     if (deviceResult.isFailure()) {
       return failure(deviceResult.error);
     }
-    const device = deviceResult.value;
-    if (!device) {
+    const found = deviceResult.value;
+    if (!found) {
       return failure(
         AppError.notFound(
           `IotDevice with ID ${deviceId} not found`,
@@ -44,7 +46,7 @@ export class IssueIotCredentialsUseCase {
 
     // Allowed from pending (never provisioned) or revoked (re-provision the same
     // device). Blocked while a live certificate exists: rotate or revoke first.
-    if (device.status === "retired") {
+    if (found.status === "retired") {
       return failure(
         AppError.badRequest(
           "A retired device cannot be issued a certificate. Reinstate it first.",
@@ -53,14 +55,21 @@ export class IssueIotCredentialsUseCase {
       );
     }
 
-    if (device.status === "active") {
+    if (found.status === "active") {
       return failure(
         AppError.badRequest(
-          `Device already has a certificate (status: ${device.status}). Rotate or revoke it first.`,
+          `Device already has a certificate (status: ${found.status}). Rotate or revoke it first.`,
           ErrorCodes.IOT_CREDENTIALS_INVALID_STATE,
         ),
       );
     }
+
+    // A device registered by connection has no thing yet (decision 2).
+    const thingResult = await this.deviceThingService.ensureThing(found);
+    if (thingResult.isFailure()) {
+      return failure(thingResult.error);
+    }
+    const device = thingResult.value;
 
     const certResult = await this.awsPort.createDeviceCertificate();
     if (certResult.isFailure()) {

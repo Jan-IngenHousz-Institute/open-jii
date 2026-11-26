@@ -15,6 +15,7 @@
  */
 import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
+import { INFO_COMMAND, parseInfoData, reportedMac } from "../../utils/device-info/device-info";
 import {
   collectReply,
   parseOpenJiiEnvelope,
@@ -301,18 +302,29 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
 
   /**
    * Identity from the hello sentinel line; the printed name is hardcoded
-   * upstream. The hardware MAC is not reachable over the text console (the
-   * firmware's cmd 33 writes a raw binary struct), so `deviceId` is only
-   * populated once a measurement has carried the trace's `sensor_id`.
+   * upstream. The serial is the eFuse MAC: firmware 1.3.0 and later answers
+   * INFO with it as `device_id`, without a restart, in the same form as the
+   * trace's `sensor_id`. Older firmware refuses INFO, and then `deviceId` is
+   * only populated once a measurement has carried the trace's `sensor_id`.
    */
   async getDeviceIdentity(): Promise<DeviceIdentity> {
     const result = await this.execute<unknown>(AMBIT_COMMANDS.HELLO);
     const text = typeof result.data === "string" ? result.data : "";
+    this.sensorId ??= await this.readInfoMac();
     return {
       family: this.family,
       ...(this.sensorId ? { deviceId: this.sensorId } : {}),
       raw: { helloReply: text, ...(this.sensorId ? { sensor_id: this.sensorId } : {}) },
     };
+  }
+
+  /** The eFuse MAC from INFO, or undefined when the firmware does not answer it. */
+  private async readInfoMac(): Promise<string | undefined> {
+    const info = await this.execute<unknown>(INFO_COMMAND, {
+      timeoutMs: Math.min(2_000, this.defaultTimeoutMs),
+    });
+    if (!info.success || typeof info.data !== "string") return undefined;
+    return reportedMac(parseInfoData(info.data)?.device_id);
   }
 
   /**

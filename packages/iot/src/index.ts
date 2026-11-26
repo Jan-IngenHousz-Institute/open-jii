@@ -232,6 +232,14 @@ export type {
 
 // ── MiniPAR driver (LINE + JSON protocol modes) ─────
 export { MiniParDriver } from "./driver/minipar/driver";
+export { Co2DotDriver } from "./driver/co2dot/driver";
+export { CO2DOT_COMMANDS } from "./driver/co2dot/commands";
+export {
+  INFO_COMMAND,
+  parseInfoData,
+  parseInfoReply,
+  reportedMac,
+} from "./utils/device-info/device-info";
 export type { MiniParDriverConfig } from "./driver/minipar/config";
 export { MINIPAR_SERIAL_DEFAULTS, MINIPAR_FRAMING } from "./driver/minipar/config";
 export { MINIPAR_COMMANDS } from "./driver/minipar/commands";

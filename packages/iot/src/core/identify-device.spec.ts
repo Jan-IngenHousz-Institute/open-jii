@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { AmbitDriver } from "../driver/ambit/driver";
+import { Co2DotDriver } from "../driver/co2dot/driver";
 import { GenericCommandConnector } from "../driver/generic/command-connector";
 import { GenericDeviceDriver } from "../driver/generic/driver";
 import { MiniParDriver } from "../driver/minipar/driver";
@@ -200,20 +201,50 @@ describe("identifyDevice", () => {
     expect(identified.info.firmwareVersion).toBe("2.0");
   });
 
-  it("keeps a self-declared unknown device (CO2Dot) off the AmbitDriver and on the raw fallback", async () => {
+  it("keeps a self-declared unknown device off the AmbitDriver and on the raw fallback", async () => {
     const transport = createMockTransport((payload, reply) => {
       if (payload === HELLO)
-        reply('{"device":"CO2Dot","version":"0.4","name":"Bench CO2"}\nCO2Dot Ready\n');
+        reply(
+          '{"device":"PhotonBox","version":"0.4","name":"Bench box","mac":"24:6f:28:aa:bb:01"}\nPhotonBox Ready\n',
+        );
     });
 
     const identified = await identifyDevice(transport, { probeTimeoutMs: 30 });
 
     expect(identified.family).toBe("generic");
     expect(identified.connector).toBeInstanceOf(GenericCommandConnector);
-    expect(identified.info.name).toBe("Bench CO2");
+    expect(identified.info.name).toBe("Bench box");
     expect(identified.info.firmwareVersion).toBe("0.4");
+    expect(identified.info.deviceId).toBe("24:6F:28:AA:BB:01");
     // The Ready line alone must not classify it as ambit; INFO was still tried.
     expect(transport.sent).toContain(INFO);
+  });
+
+  it("identifies a CO2Dot by its JSON hello and keeps its MAC", async () => {
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO)
+        reply('{"device":"CO2Dot","version":"1.1","name":"Bench CO2","mac":"24:6F:28:AA:BB:02"}\n');
+    });
+
+    const identified = await identifyDevice(transport, { probeTimeoutMs: 30 });
+
+    expect(identified.family).toBe("co2dot");
+    expect(identified.connector).toBeInstanceOf(Co2DotDriver);
+    expect(identified.info.name).toBe("Bench CO2");
+    expect(identified.info.firmwareVersion).toBe("1.1");
+    expect(identified.info.deviceId).toBe("24:6F:28:AA:BB:02");
+    expect(transport.sent).not.toContain(INFO);
+  });
+
+  it("identifies a CO2Dot on older firmware without a MAC", async () => {
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO) reply('{"device":"CO2Dot","version":"1.0"}\n');
+    });
+
+    const identified = await identifyDevice(transport, { probeTimeoutMs: 30 });
+
+    expect(identified.family).toBe("co2dot");
+    expect(identified.info.deviceId).toBeUndefined();
   });
 
   it("falls through to the INFO probe and picks the generic driver", async () => {
@@ -320,6 +351,7 @@ describe("createConnectorForFamily", () => {
     expect(createConnectorForFamily("multispeq")).toBeInstanceOf(MultispeqDriver);
     expect(createConnectorForFamily("ambit")).toBeInstanceOf(AmbitDriver);
     expect(createConnectorForFamily("minipar")).toBeInstanceOf(MiniParDriver);
+    expect(createConnectorForFamily("co2dot")).toBeInstanceOf(Co2DotDriver);
     const generic = createConnectorForFamily("generic");
     expect(generic).toBeInstanceOf(GenericDeviceDriver);
     expect(generic).not.toBeInstanceOf(GenericCommandConnector);
