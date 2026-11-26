@@ -12,8 +12,9 @@ export const FEATURE_FLAGS = {
   // The PostHog key is the one that once hid the device registry; it was kept there when
   // the registry shipped and now hides device calibration instead.
   CALIBRATION: "iot-devices",
-  // An experiment's tables, pages, filter values and columns read from the serving store together,
-  // so a page never mixes the store's columns with the warehouse's cells.
+  // Every read the serving store answers, switched together so a page never mixes the store's
+  // columns with the warehouse's cells. The platform metrics, which no user reads, follow it under a
+  // condition on `environment`.
   STORE_EXPERIMENT_READS: "store-experiment-reads",
 } as const;
 

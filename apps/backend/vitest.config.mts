@@ -13,6 +13,7 @@ import { baseConfig } from "@repo/vitest-config/base";
  */
 const LAYER_ORDER: [string, number][] = [
   ["/utils/", 0],
+  ["/src/test/", 0],
   ["/guards/", 1],
   ["/authorization/", 2],
   ["/services/", 2],
@@ -37,7 +38,7 @@ function layerPriority(filepath: string): number {
 
 /**
  * Custom sequencer that orders test files by architectural layer (bottom-up):
- *   0. utils         - pure functions, no dependencies
+ *   0. utils, test   - pure functions and test helpers, no dependencies
  *   1. guards        - request guards
  *   2. services      - module-level services
  *   3. repositories  - data-access layer

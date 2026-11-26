@@ -3,6 +3,7 @@ import { QueryBuilderInputError } from "../query-builder.types";
 import {
   buildAggregateExpression,
   hasAggregationContent,
+  keepsEveryRow,
   wrapWithAggregation,
 } from "./aggregation";
 
@@ -19,6 +20,24 @@ describe("hasAggregationContent", () => {
 
   it("returns true when functions has entries", () => {
     expect(hasAggregationContent({ functions: [{ column: "value", function: "avg" }] })).toBe(true);
+  });
+});
+
+describe("keepsEveryRow", () => {
+  it("holds for windows alone, which keep every row they read, and not for a group or an aggregate", () => {
+    expect(keepsEveryRow({ functions: [{ column: "*", function: "cumsum" }] })).toBe(true);
+    expect(
+      keepsEveryRow({
+        functions: [{ column: "v", function: "previous", orderColumn: "timestamp" }],
+      }),
+    ).toBe(true);
+    expect(
+      keepsEveryRow({
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "cumsum" }],
+      }),
+    ).toBe(false);
+    expect(keepsEveryRow({ functions: [{ column: "v", function: "avg" }] })).toBe(false);
   });
 });
 

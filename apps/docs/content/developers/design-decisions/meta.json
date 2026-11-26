@@ -12,6 +12,7 @@
     "mqtt-topic-proposal",
     "data-governance-adr",
     "data-ingestion-adr",
+    "serving-store-parity-adr",
     "proposal-template",
     "adr-template"
   ]

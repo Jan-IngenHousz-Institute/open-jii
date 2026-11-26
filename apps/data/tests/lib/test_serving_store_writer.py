@@ -295,6 +295,30 @@ def test_the_leading_float64_fields_are_written_as_17_digits_without_an_exponent
     assert json.loads(written)["device_battery"] == 99.99999999999999
 
 
+def test_the_sensor_readings_after_them_are_written_as_17_digits_too() -> None:
+    line = (
+        '{"latitude":51.986383,"par_readings":[5.6631109,1.0E-7,"NaN"],"temperature_readings":[],'
+        '"humidity_readings":[19.5],"id":1,"data":"[{\\"par\\":5.6631109}]"}'
+    )
+
+    written = exact_doubles(line)
+
+    assert written == (
+        '{"latitude":51.986382999999996,"par_readings":[5.6631109000000004,0.000000099999999999999995,"NaN"],'
+        '"temperature_readings":[],"humidity_readings":[19.500000000000000],"id":1,'
+        '"data":"[{\\"par\\":5.6631109}]"}'
+    )
+    assert json.loads(written)["par_readings"][:2] == [5.6631109, 1e-7]
+
+
+def test_a_float64_field_spark_writes_as_nan_keeps_the_rewrite_going() -> None:
+    written = exact_doubles('{"latitude":"NaN","longitude":5.1,"par_readings":[1.0E-7],"id":1}')
+
+    assert written == (
+        '{"latitude":"NaN","longitude":5.0999999999999996,"par_readings":[0.000000099999999999999995],"id":1}'
+    )
+
+
 def test_a_line_without_leading_float64_fields_is_left_as_it_is() -> None:
     line = '{"experiment_id":"e1","latitude":51.986383}'
 

@@ -7,52 +7,67 @@ import type {
 
 import { success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
+import type { MetricsDataSource } from "../../../core/models/metrics-data.model";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
-import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type {
   ActivityWindowsRow,
   DailyActivityRow,
-  DatabricksPort,
   PlatformTotalsRow,
   PoolFactsRow,
-} from "../../../core/ports/databricks.port";
+} from "../../../core/ports/metrics-reads.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
+import { MetricsDataSourceService } from "../../services/metrics-data-source.service";
 
-export const PUBLIC_METRICS_CACHE_KEY = "public-snapshot";
+// Keyed by source, so a snapshot never mixes sources and a switch reads the other key at once.
+export const publicMetricsCacheKey = (source: MetricsDataSource) => `public-snapshot:${source}`;
 
 const DAILY_ACTIVITY_DAYS = 366;
 
 // Milestone thresholds follow the 1-2-5 decade pattern.
 const MILESTONE_STEPS = [1, 2, 5];
 
+// Complete when every read and lookup answered and the totals, windows, pool facts
+// and parameter views have refreshed, so no slot is missing for a failure or a
+// refresh still on its way.
+interface LoadedSnapshot {
+  snapshot: PublicMetricsResponse;
+  isComplete: boolean;
+}
+
 /**
  * Serves the public metrics snapshot behind the read-through cache so
- * anonymous page views never fan out to the warehouse directly. Warehouse
- * reads degrade gracefully (the tables lag one pipeline refresh and may not
- * exist before the first run); an empty snapshot is still a valid response.
+ * anonymous page views never fan out to the source directly. Source reads
+ * degrade gracefully (the figures lag one refresh and may not exist before the
+ * first); an empty snapshot is still a valid response.
  */
 @Injectable()
 export class GetPublicMetricsUseCase {
   private readonly logger = new Logger(GetPublicMetricsUseCase.name);
 
   constructor(
-    @Inject(METRICS_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly dataSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
   ) {}
 
   async execute(): Promise<Result<PublicMetricsResponse>> {
-    const snapshot = await this.cachePort.tryCache(PUBLIC_METRICS_CACHE_KEY, () => this.load());
+    const source = await this.dataSource.sourceFor();
+    const loaded = await this.cachePort.tryCache(
+      publicMetricsCacheKey(source),
+      () => this.load(source),
+      // So one failed read cannot blank a complete snapshot's slots for a TTL.
+      (candidate) => candidate.isComplete,
+    );
 
-    if (snapshot === null) {
-      // A fully-failed refresh serves empty slots and is never cached, so a
-      // transient warehouse blip cannot pin an empty snapshot for a TTL.
+    if (loaded === null) {
+      // A failed or not yet refreshed source serves empty slots and is never
+      // cached, so neither a transient blip nor a fresh store pins an empty
+      // snapshot for a TTL.
       return success(this.emptySnapshot());
     }
 
-    return success(snapshot);
+    return success(loaded.snapshot);
   }
 
   private emptySnapshot(): PublicMetricsResponse {
@@ -70,7 +85,8 @@ export class GetPublicMetricsUseCase {
     };
   }
 
-  private async load(): Promise<PublicMetricsResponse | null> {
+  private async load(source: MetricsDataSource): Promise<LoadedSnapshot | null> {
+    const reads = this.dataSource.readsFor(source);
     const [
       totals,
       daily,
@@ -82,21 +98,47 @@ export class GetPublicMetricsUseCase {
       poolFacts,
       contributorPairs,
     ] = await Promise.all([
-      this.databricksPort.getPublicPlatformTotals(),
-      this.databricksPort.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
-      this.databricksPort.getPublicFamilyTotals(),
-      this.databricksPort.getActivityWindows(),
-      this.databricksPort.getHourlyActivity(),
-      this.databricksPort.getTopParameter("derived"),
-      this.databricksPort.getTopParameter("sensor"),
-      this.databricksPort.getPoolFacts(),
-      this.databricksPort.getContributorPairs(),
+      reads.getPublicPlatformTotals(),
+      reads.getPublicDailyActivity(DAILY_ACTIVITY_DAYS),
+      reads.getPublicFamilyTotals(),
+      reads.getActivityWindows(),
+      reads.getHourlyActivity(),
+      reads.getTopParameter("derived"),
+      reads.getTopParameter("sensor"),
+      reads.getPoolFacts(),
+      reads.getContributorPairs(),
     ]);
 
     if (totals.isFailure() && daily.isFailure() && windows.isFailure()) {
-      this.logger.warn({ msg: "Warehouse unavailable for public metrics", operation: "load" });
+      this.logger.warn({
+        msg: "Metrics source unavailable for public metrics",
+        operation: "load",
+        source,
+      });
       return null;
     }
+
+    const totalsRow = totals.isSuccess() ? totals.value : null;
+    const dailyRows = daily.isSuccess() ? daily.value : [];
+    const windowsRow = windows.isSuccess() ? windows.value : null;
+    const poolRow = poolFacts.isSuccess() ? poolFacts.value : null;
+
+    // A store view before its first refresh holds no row, where a refreshed one
+    // on an empty platform holds zeros, so no figures at all is not yet a snapshot.
+    const hasNoFigures = totalsRow === null && windowsRow === null && dailyRows.length === 0;
+    if (hasNoFigures) {
+      this.logger.warn({
+        msg: "Metrics source has no platform figures yet",
+        operation: "load",
+        source,
+      });
+      return null;
+    }
+
+    // The views refresh one after another, so a cold store can hold the totals
+    // before the windows and pool facts. The parameter view refreshes last and
+    // fails its reads until it has, so it counts with the failures below.
+    const hasUnrefreshedView = totalsRow === null || windowsRow === null || poolRow === null;
 
     const failures = [
       totals,
@@ -111,16 +153,12 @@ export class GetPublicMetricsUseCase {
     ].filter((result) => result.isFailure());
     if (failures.length > 0) {
       this.logger.warn({
-        msg: "Some warehouse metrics are unavailable, serving a partial snapshot",
+        msg: "Some metrics are unavailable, serving a partial snapshot",
         operation: "load",
+        source,
         unavailable: failures.length,
       });
     }
-
-    const totalsRow = totals.isSuccess() ? totals.value : null;
-    const dailyRows = daily.isSuccess() ? daily.value : [];
-    const windowsRow = windows.isSuccess() ? windows.value : null;
-    const poolRow = poolFacts.isSuccess() ? poolFacts.value : null;
 
     const windowVolumeBytes = dailyRows.reduce((sum, row) => sum + row.volumeBytes, 0);
     const windowMeasurements = dailyRows.reduce((sum, row) => sum + row.measurements, 0);
@@ -128,8 +166,13 @@ export class GetPublicMetricsUseCase {
     const institutions = contributorPairs.isSuccess()
       ? await this.countInstitutions(contributorPairs.value.map((pair) => pair.experimentId))
       : null;
+    const openDatasets = await this.metricsRepository.countPublicExperiments();
+    const sharedExperiments = await this.metricsRepository.countSharedExperiments();
+    const hasFailedLookup = [institutions, openDatasets, sharedExperiments].some(
+      (lookup) => lookup?.isFailure() === true,
+    );
 
-    return {
+    const snapshot: PublicMetricsResponse = {
       hero: this.buildHero(totalsRow, poolRow),
       liveness: windowsRow
         ? {
@@ -140,13 +183,13 @@ export class GetPublicMetricsUseCase {
       // Hidden rather than shown with an invented zero when the institution
       // inputs are unavailable.
       community:
-        windowsRow && institutions !== null
+        windowsRow && institutions?.isSuccess()
           ? {
               measurements30d: windowsRow.measurements30d,
               activeExperiments30d: windowsRow.experiments30d,
               contributors30d: windowsRow.contributors30d,
               devices30d: windowsRow.devices30d,
-              institutions30d: institutions,
+              institutions30d: institutions.value,
             }
           : null,
       activity: dailyRows,
@@ -154,15 +197,22 @@ export class GetPublicMetricsUseCase {
       families: families.isSuccess() ? families.value : [],
       derivedParameter: derivedParameter.isSuccess() ? derivedParameter.value : null,
       sensorParameter: sensorParameter.isSuccess() ? sensorParameter.value : null,
-      captions: await this.buildCaptions(
+      captions: this.buildCaptions(
         totalsRow,
         dailyRows,
         windowsRow,
         poolRow,
         windowVolumeBytes,
         windowMeasurements,
+        openDatasets,
+        sharedExperiments,
       ),
       computedAt: windowsRow?.computedAt ?? totalsRow?.computedAt ?? null,
+    };
+
+    return {
+      snapshot,
+      isComplete: failures.length === 0 && !hasUnrefreshedView && !hasFailedLookup,
     };
   }
 
@@ -180,12 +230,12 @@ export class GetPublicMetricsUseCase {
     };
   }
 
-  private async countInstitutions(activeExperimentIds: string[]): Promise<number | null> {
+  private async countInstitutions(activeExperimentIds: string[]): Promise<Result<number>> {
     const organizations = await this.metricsRepository.getExperimentOrganizations(
       Array.from(new Set(activeExperimentIds)),
     );
     if (organizations.isFailure()) {
-      return null;
+      return organizations;
     }
 
     const distinct = new Set(
@@ -193,17 +243,19 @@ export class GetPublicMetricsUseCase {
         .map((row) => row.organizationId)
         .filter((organizationId) => organizationId !== null),
     );
-    return distinct.size;
+    return success(distinct.size);
   }
 
-  private async buildCaptions(
+  private buildCaptions(
     totals: PlatformTotalsRow | null,
     daily: DailyActivityRow[],
     windows: ActivityWindowsRow | null,
     poolFacts: PoolFactsRow | null,
     windowVolumeBytes: number,
     windowMeasurements: number,
-  ): Promise<MetricsCaption[]> {
+    openDatasets: Result<number>,
+    sharedExperiments: Result<number>,
+  ): MetricsCaption[] {
     const captions: MetricsCaption[] = [];
 
     if (poolFacts?.currentStreakDays != null && poolFacts.currentStreakDays > 1) {
@@ -255,12 +307,10 @@ export class GetPublicMetricsUseCase {
       }
     }
 
-    const openDatasets = await this.metricsRepository.countPublicExperiments();
     if (openDatasets.isSuccess() && openDatasets.value > 0) {
       captions.push({ kind: "openDatasets", count: openDatasets.value });
     }
 
-    const sharedExperiments = await this.metricsRepository.countSharedExperiments();
     if (sharedExperiments.isSuccess() && sharedExperiments.value > 0) {
       captions.push({ kind: "sharedExperiments", count: sharedExperiments.value });
     }

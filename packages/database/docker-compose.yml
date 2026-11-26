@@ -17,6 +17,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # The serving store the backend's and the data pipelines' tests read and write, which only the
+  # test scripts start. Keep the tag at clickhouse_version in
+  # infrastructure/modules/serving-store/variables.tf.
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8.33.6
+    profiles: ["store"]
+    ports:
+      - "127.0.0.1:${CLICKHOUSE_TEST_PORT:-8124}:8123"
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_TEST_USER:-openjii_admin}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_TEST_PASSWORD:-local}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1:8123/ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
 volumes:
   postgres_data:
     driver: local

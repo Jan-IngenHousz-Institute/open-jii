@@ -48,7 +48,9 @@ describe("ResourceMetricsController", () => {
       ]),
     );
 
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
   });
 
   afterEach(() => {
