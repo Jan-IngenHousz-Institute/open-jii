@@ -437,7 +437,7 @@ function applyManualStacking(
   const groups = new Map<string, number[]>();
   for (let i = 0; i < series.length; i++) {
     const trace = series[i];
-    if (!trace?.stackgroup) continue;
+    if (!trace.stackgroup) continue;
     const key = `${trace.yaxisId ?? "y"}:${trace.stackgroup}`;
     const list = groups.get(key) ?? [];
     list.push(i);
