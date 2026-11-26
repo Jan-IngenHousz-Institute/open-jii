@@ -100,7 +100,7 @@ variable "target_group_arn" {
 }
 
 variable "health_check_grace_period_seconds" {
-  description = "How long ECS ignores a failing load balancer health check after a task starts. It covers the image pull and the app's start, so a slow cold start is not killed; a healthy task still takes traffic at its first passing check."
+  description = "How long ECS ignores a failing load balancer health check after a task starts. The clock starts after the image pull, so it covers the app's start: a slow cold start is not killed, and a healthy task still takes traffic at its first passing check."
   type        = number
   default     = 120
 }
