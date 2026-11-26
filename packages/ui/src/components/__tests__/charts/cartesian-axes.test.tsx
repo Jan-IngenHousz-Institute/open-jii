@@ -81,6 +81,32 @@ const readLayout = (): Partial<Layout> & Record<string, Partial<Layout["yaxis"]>
   JSON.parse(screen.getByTestId("chart").getAttribute("data-layout") ?? "{}");
 
 describe("numbered Y-axis layout", () => {
+  it.each([
+    { position: "inside-top-right", anchor: "right", fraction: 0.98 },
+    { position: "inside-bottom-left", anchor: "left", fraction: 0.02 },
+  ] as const)(
+    "anchors the $position legend inside the narrowed plot and its export",
+    ({ position, anchor, fraction }) => {
+      render(
+        <CartesianChart
+          data={series(6)}
+          config={{ width: 900, height: 500, legendPosition: position }}
+        />,
+      );
+
+      const exported: Partial<Layout> = JSON.parse(
+        screen.getByTestId("chart").getAttribute("data-export-layout") ?? "{}",
+      );
+      for (const layout of [readLayout(), exported]) {
+        const [left = 0, right = 1] = layout.xaxis?.domain ?? [];
+        expect(left).toBeGreaterThan(0);
+        expect(right).toBeLessThan(1);
+        expect(layout.legend).toMatchObject({ xanchor: anchor, xref: "paper" });
+        expect(layout.legend?.x).toBeCloseTo(left + (right - left) * fraction);
+      }
+    },
+  );
+
   it.each([1, 2, 3, 4, 5, 6])("draws %i used axes in alternating side order", (count) => {
     const layout = layoutFor(series(count));
     const record = layout as Record<string, Partial<Layout["yaxis"]>>;

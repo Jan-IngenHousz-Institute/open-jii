@@ -5,6 +5,7 @@ import { chartTextWidth } from "./outer-labels";
 import type { PlotlyChartConfig } from "./types";
 import type { ChartTierOptions } from "./utils";
 import {
+  legendAnchorFor,
   refineAxisType,
   resolveChartColorway,
   tierAxisFontSizes,
@@ -323,6 +324,11 @@ export function applyCartesianAxes(
     fitStackedAxes(layout, visible, width, sizing, colorbar);
   } else {
     layout.xaxis = { ...layout.xaxis, domain: [0, 1] };
+  }
+  if (layout.legend && config.legendPosition?.startsWith("inside-") && layout.xaxis?.domain) {
+    const [left = 0, right = 1] = layout.xaxis.domain;
+    const { x } = legendAnchorFor(config.legendPosition);
+    layout.legend = { ...layout.legend, xref: "paper", x: left + (right - left) * x };
   }
   styleCartesianAxes(layout, data, config);
 }
