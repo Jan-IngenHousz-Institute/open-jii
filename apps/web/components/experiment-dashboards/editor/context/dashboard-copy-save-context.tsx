@@ -133,26 +133,21 @@ export function DashboardAutosaveBoundary({
     },
     [updateCopies],
   );
-  const onSaveFailed = useCallback(
-    (failedWidgetIds: ReadonlySet<string>, inFlightWidgetIds: readonly ReadonlySet<string>[]) => {
-      if (mounted.current) return;
-      const charts = form.getValues("widgets").flatMap(({ id }) => {
-        const copy = copiesRef.current.get(id);
-        return copy && failedWidgetIds.has(id) && !inFlightWidgetIds.some((ids) => ids.has(id))
-          ? [copy.chart]
-          : [];
-      });
-      if (charts.length > 0) void showUnattachedCopies(charts);
-    },
-    [form, showUnattachedCopies],
-  );
+  const onUnmountFlushed = useCallback(() => {
+    if (mounted.current) return;
+    const charts = form.getValues("widgets").flatMap(({ id }) => {
+      const copy = copiesRef.current.get(id);
+      return copy ? [copy.chart] : [];
+    });
+    if (charts.length > 0) void showUnattachedCopies(charts);
+  }, [form, showUnattachedCopies]);
   const { hasError, error, flush, inFlightWidgetIds } = useDashboardAutosave({
     form,
     experimentId,
     dashboardId,
     enabled,
     onSaved,
-    onSaveFailed,
+    onUnmountFlushed,
   });
   const retry = useCallback(() => {
     if (mounted.current) void flush({ retryFailed: true });

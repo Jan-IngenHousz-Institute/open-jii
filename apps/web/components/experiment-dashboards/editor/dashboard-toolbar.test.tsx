@@ -129,6 +129,11 @@ function ChartSelection({ sourceWidgetId }: { sourceWidgetId: string }) {
   );
 }
 
+function RenameDashboard() {
+  const form = useFormContext<DashboardFormValues>();
+  return <button onClick={() => form.setValue("name", "Renamed")}>Rename dashboard</button>;
+}
+
 function expectOpenCopyLink(chartId: string, basePath = "experiments") {
   const action = vi
     .mocked(toast)
@@ -411,6 +416,65 @@ describe("DashboardToolbar", () => {
     expect(attach.callCount).toBe(1);
   });
 
+  it("waits for the queued dashboard save before offering copy recovery after leaving", async () => {
+    const user = userEvent.setup();
+    const original = createVisualization({ id: "source" });
+    const created = createVisualization({ id: "copy" });
+    const firstSave = Promise.withResolvers<void>();
+    server.mount(contract.experiments.getExperimentVisualization, { body: original });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    server.mount(contract.experiments.createExperimentVisualization, { body: created });
+    const attach = server.mount(contract.experiments.updateExperimentDashboard, {
+      status: 500,
+      unblock: firstSave.promise,
+    });
+    const chart = createVisualizationWidget({
+      config: { visualizationId: original.id, showTitle: true, showDescription: false },
+    });
+    const queryClient = createTestQueryClient();
+    const { unmount } = render(
+      <Harness initialWidgets={[chart]} save>
+        <ChartSelection sourceWidgetId={chart.id} />
+        <RenameDashboard />
+        <DashboardToolbar visible experimentId="exp-1" />
+      </Harness>,
+      { queryClient },
+    );
+
+    await user.click(screen.getByRole("button", { name: "select chart" }));
+    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+    await waitFor(() => expect(attach.callCount).toBe(1));
+
+    const savedDashboard = createExperimentDashboard({ id: "dash-1" });
+    const queuedSave = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: ({ body }: SpyCall) => ({ ...savedDashboard, ...(body as DashboardFormValues) }),
+    });
+    try {
+      await user.click(screen.getByRole("button", { name: "Rename dashboard" }));
+      unmount();
+      expect(queuedSave.callCount).toBe(0);
+    } finally {
+      act(() => firstSave.resolve());
+    }
+
+    await waitFor(() =>
+      expect(
+        queryClient.getMutationCache().findAll({
+          mutationKey: orpc.experiments.updateExperimentDashboard.key(),
+          status: "success",
+        }),
+      ).toHaveLength(1),
+    );
+    expect(queuedSave.body).toMatchObject({
+      name: "Renamed",
+      widgets: [chart, { type: "visualization", config: { visualizationId: created.id } }],
+    });
+    expect(toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "editor.inspector.copyNotAttached" }),
+    );
+  });
+
   it("offers a link to the saved copy if the source widget disappears before create finishes", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
@@ -582,10 +646,6 @@ describe("DashboardToolbar", () => {
       const chart = createVisualizationWidget({
         config: { visualizationId: original.id, showTitle: true, showDescription: false },
       });
-      function RenameDashboard() {
-        const form = useFormContext<DashboardFormValues>();
-        return <button onClick={() => form.setValue("name", "Renamed")}>Rename dashboard</button>;
-      }
       function dashboard(canEdit: boolean) {
         return (
           <Harness initialWidgets={[chart]} save canEdit={canEdit}>
