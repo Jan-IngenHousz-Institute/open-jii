@@ -375,10 +375,8 @@ resource "aws_ecs_service" "app_service" {
     }
   }
 
-  # Time to wait for tasks to pass health checks before considering deployment failed
-  # Should account for application startup time + health check intervals
-  # Only needed when a load balancer is attached
-  health_check_grace_period_seconds = var.target_group_arn != null ? 60 : null
+  # Only needed when a load balancer is attached.
+  health_check_grace_period_seconds = var.target_group_arn != null ? var.health_check_grace_period_seconds : null
 
   # ECS managed rolling deployments (vs CODE_DEPLOY for blue/green)
   # ECS controller is simpler and sufficient for most use cases

@@ -81,25 +81,26 @@ module "migration_runner" {
 
 ## Key Inputs
 
-| Name                     | Description                                                  | Type           | Default | Required |
-| ------------------------ | ------------------------------------------------------------ | -------------- | ------- | -------- |
-| `service_name`           | Name of the ECS service                                      | `string`       | —       | yes      |
-| `create_ecs_service`     | `true` for long-running services, `false` for run-once tasks | `bool`         | —       | yes      |
-| `repository_url`         | ECR repository URL                                           | `string`       | —       | yes      |
-| `repository_arn`         | ECR repository ARN                                           | `string`       | —       | yes      |
-| `security_groups`        | Security group IDs                                           | `list(string)` | —       | yes      |
-| `subnets`                | Subnet IDs                                                   | `list(string)` | —       | yes      |
-| `vpc_id`                 | VPC ID                                                       | `string`       | —       | yes      |
-| `region`                 | AWS region                                                   | `string`       | —       | yes      |
-| `cpu`                    | Task CPU units (256, 512, 1024, etc.)                        | `number`       | `256`   | no       |
-| `memory`                 | Task memory in MiB                                           | `number`       | `512`   | no       |
-| `container_port`         | Container port (null to disable)                             | `number`       | `null`  | no       |
-| `target_group_arn`       | ALB target group ARN                                         | `string`       | `null`  | no       |
-| `enable_autoscaling`     | Enable CPU-based auto-scaling                                | `bool`         | `true`  | no       |
-| `enable_mixed_capacity`  | Use both Fargate and Fargate Spot                            | `bool`         | `false` | no       |
-| `secrets`                | Secrets Manager references to inject                         | `list(object)` | `[]`    | no       |
-| `environment_variables`  | Environment variables for the container                      | `list(object)` | `[]`    | no       |
-| `enable_circuit_breaker` | Enable deployment circuit breaker                            | `bool`         | `false` | no       |
+| Name                                | Description                                                          | Type           | Default | Required |
+| ----------------------------------- | -------------------------------------------------------------------- | -------------- | ------- | -------- |
+| `service_name`                      | Name of the ECS service                                              | `string`       | —       | yes      |
+| `create_ecs_service`                | `true` for long-running services, `false` for run-once tasks         | `bool`         | —       | yes      |
+| `repository_url`                    | ECR repository URL                                                   | `string`       | —       | yes      |
+| `repository_arn`                    | ECR repository ARN                                                   | `string`       | —       | yes      |
+| `security_groups`                   | Security group IDs                                                   | `list(string)` | —       | yes      |
+| `subnets`                           | Subnet IDs                                                           | `list(string)` | —       | yes      |
+| `vpc_id`                            | VPC ID                                                               | `string`       | —       | yes      |
+| `region`                            | AWS region                                                           | `string`       | —       | yes      |
+| `cpu`                               | Task CPU units (256, 512, 1024, etc.)                                | `number`       | `256`   | no       |
+| `memory`                            | Task memory in MiB                                                   | `number`       | `512`   | no       |
+| `container_port`                    | Container port (null to disable)                                     | `number`       | `null`  | no       |
+| `target_group_arn`                  | ALB target group ARN                                                 | `string`       | `null`  | no       |
+| `health_check_grace_period_seconds` | Seconds a failing load balancer check is ignored after a task starts | `number`       | `120`   | no       |
+| `enable_autoscaling`                | Enable CPU-based auto-scaling                                        | `bool`         | `true`  | no       |
+| `enable_mixed_capacity`             | Use both Fargate and Fargate Spot                                    | `bool`         | `false` | no       |
+| `secrets`                           | Secrets Manager references to inject                                 | `list(object)` | `[]`    | no       |
+| `environment_variables`             | Environment variables for the container                              | `list(object)` | `[]`    | no       |
+| `enable_circuit_breaker`            | Enable deployment circuit breaker                                    | `bool`         | `false` | no       |
 
 ## Outputs
 
