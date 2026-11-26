@@ -4,6 +4,8 @@ import { usePrincipalSession } from "@/components/auth/principal-context";
 import { isCurrentSession, waitForCurrentSession } from "@/hooks/auth/is-current-session";
 import {
   experimentAccessQuery,
+  experimentAccessQueryKey,
+  hasConfirmedExperimentReadDenial,
   isExperimentReadDenied,
 } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
@@ -99,13 +101,16 @@ export function DashboardAutosaveBoundary({
     undefined,
   );
   const readCopyAccess = useCallback(() => {
-    const { queryKey } = experimentAccessQuery(orpc, userId, experimentId);
-    const state = queryClient.getQueryState(queryKey);
-    if (isExperimentReadDenied(state?.error)) {
+    const queryKey = experimentAccessQueryKey(userId, experimentId);
+    if (
+      hasConfirmedExperimentReadDenial(queryClient, queryKey) ||
+      isExperimentReadDenied(queryClient.getQueryState(queryKey)?.error)
+    ) {
       lastReadableStatus.current = undefined;
-    } else if (state?.status === "success") {
+    } else {
       const access = queryClient.getQueryData(queryKey);
-      lastReadableStatus.current = access?.hasAccess ? access.experiment.status : undefined;
+      if (access)
+        lastReadableStatus.current = access.hasAccess ? access.experiment.status : undefined;
     }
     return lastReadableStatus.current;
   }, [experimentId, queryClient, userId]);

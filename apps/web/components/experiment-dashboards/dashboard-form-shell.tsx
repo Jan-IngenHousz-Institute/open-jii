@@ -5,6 +5,7 @@ import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { PageLoading } from "@/components/shared/page-loading";
 import {
   experimentAccessQuery,
+  hasConfirmedExperimentReadDenial,
   isExperimentReadDenied,
 } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -101,10 +102,8 @@ function DashboardFormAfterCloseSave({
   const sameSession = closeSave.userId === userId && closeSave.sessionId === sessionId;
   const [result, setResult] = useState<{ dashboard?: ExperimentDashboard; error?: unknown }>();
   const [showStatus, setShowStatus] = useState(false);
-  const { data: copyAccess, error: copyAccessError } = useQuery({
-    ...experimentAccessQuery(orpc, userId, experimentId),
-    enabled: false,
-  });
+  const accessQuery = experimentAccessQuery(orpc, userId, experimentId);
+  const { data: copyAccess, error: copyAccessError } = useQuery({ ...accessQuery, enabled: false });
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
@@ -147,11 +146,11 @@ function DashboardFormAfterCloseSave({
   }, [closeSave, dashboardId, experimentId, queryClient, sameSession, userId]);
 
   if (!result && showStatus) {
-    const pendingLinks = sameSession ? (closeSave.getCopyLinks?.(locale) ?? []) : [];
-    const links =
-      copyAccess?.hasAccess === false || isExperimentReadDenied(copyAccessError)
-        ? []
-        : pendingLinks;
+    const readDenied =
+      copyAccess?.hasAccess === false ||
+      isExperimentReadDenied(copyAccessError) ||
+      hasConfirmedExperimentReadDenial(queryClient, accessQuery.queryKey);
+    const links = sameSession && !readDenied ? (closeSave.getCopyLinks?.(locale) ?? []) : [];
     return (
       <div className="space-y-3 p-8 text-center">
         <p role="status">{t("ui.messages.saveStillInProgress")}</p>
