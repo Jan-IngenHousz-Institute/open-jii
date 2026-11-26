@@ -1,7 +1,12 @@
 import { withPrincipal } from "@/hooks/principal-query-key";
-import { orpc } from "@/lib/orpc";
+import { getOrpcError, orpc } from "@/lib/orpc";
 import type { QueryUtils } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
+
+export function isExperimentReadDenied(error: unknown) {
+  const status = getOrpcError(error)?.status;
+  return status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
 
 /** Cache key for an experiment-access response, scoped to the asking principal. */
 export function experimentAccessQueryKey(userId: string | undefined, experimentId: string) {
