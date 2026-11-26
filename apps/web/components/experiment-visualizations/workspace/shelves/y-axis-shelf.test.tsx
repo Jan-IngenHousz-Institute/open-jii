@@ -1,4 +1,4 @@
-import { renderWithForm, screen, userEvent } from "@/test/test-utils";
+import { act, renderWithForm, screen, userEvent } from "@/test/test-utils";
 import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { describe, expect, it } from "vitest";
@@ -374,6 +374,31 @@ describe("YAxisShelf", () => {
     expect(screen.getByRole("combobox", { name: "workspace.shelves.yAxisScale" })).toBeVisible();
     expect(screen.queryByText("workspace.shelves.numberedAxisTitle")).not.toBeInTheDocument();
     expect(screen.queryByText("workspace.shelves.secondaryAxisTitle")).not.toBeInTheDocument();
+  });
+
+  it("hides the axis picker for horizontal bars and restores it when they turn vertical", () => {
+    const values = defaults({ chartType: "bar", config: { orientation: "h", y3AxisType: "log" } });
+    values.dataConfig.dataSources.push(
+      { tableName: "readings", columnName: "humidity", role: "y", axis: "y3" },
+      { tableName: "readings", columnName: "temp", role: "y", traceType: "line", axis: "y4" },
+    );
+    const { form } = renderShelf(
+      (form) => (
+        <YAxisShelf form={form} columns={columns} showCartesianControls defaultTraceType="bar" />
+      ),
+      { useFormProps: { defaultValues: values } },
+    );
+    const axisPickers = () =>
+      screen.getAllByRole("combobox", { name: "workspace.shelves.axisAssignment" });
+    expect(axisPickers()).toHaveLength(1);
+    expect(axisPickers()[0]).toHaveTextContent("workspace.shelves.axis.y4");
+    expect(screen.getAllByLabelText("workspace.shelves.numberedAxisTitle")).toHaveLength(2);
+    expect(screen.getAllByRole("combobox", { name: "workspace.shelves.renderAs" })).toHaveLength(2);
+
+    act(() => form.setValue("config.orientation", "v"));
+    expect(axisPickers()).toHaveLength(2);
+    expect(axisPickers()[0]).toHaveTextContent("workspace.shelves.axis.y3");
+    expect(screen.getAllByLabelText("workspace.shelves.numberedAxisTitle")).toHaveLength(3);
   });
 
   it("hides the y-axis-type select when hideAxisType is true", () => {

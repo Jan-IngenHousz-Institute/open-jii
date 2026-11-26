@@ -18,7 +18,7 @@ import { aggregateAliasForSource } from "../data/aggregation";
 import { coerceCell, toBucketKey } from "../data/cell-coercion";
 import type { IndexedDataSource } from "../data/data-sources";
 import { dataSourcesByRole } from "../data/data-sources";
-import { effectiveSeriesAxis } from "./series-axis";
+import { effectiveSeriesAxis, effectiveSeriesTraceType } from "./series-axis";
 
 export interface CartesianTransformOptions {
   defaultTraceType: ExperimentSeriesTraceType;
@@ -65,9 +65,11 @@ export function transformCartesianData(
   const facetColumn = dataSourcesByRole(dataSources, "facet")[0]?.source.columnName;
 
   const { effectiveYEntries, useIndexForX } = resolveSeries(yEntries, xColumn);
-  const axes = effectiveYEntries.map(({ source }, index) =>
-    effectiveSeriesAxis(source.axis, index, Boolean(facetColumn)),
-  );
+  const axes = effectiveYEntries.map(({ source }, index) => {
+    const traceType = effectiveSeriesTraceType(source.traceType, index, defaultTraceType);
+    const horizontalBar = traceType === "bar" && chartConfig.orientation === "h";
+    return effectiveSeriesAxis(source.axis, index, Boolean(facetColumn), horizontalBar);
+  });
 
   if (effectiveYEntries.length === 0) {
     return { chartSeries: [], subplots: undefined, useIndexForX };
@@ -700,8 +702,7 @@ function buildSeries({
         color: fallbackColor,
       }
     : chartConfig.error_y;
-  const isFirstSeries = seriesOrdinal === 0;
-  const traceType = isFirstSeries ? defaultTraceType : (source.traceType ?? defaultTraceType);
+  const traceType = effectiveSeriesTraceType(source.traceType, seriesOrdinal, defaultTraceType);
   const orientation = traceType === "bar" ? (chartConfig.orientation ?? "v") : undefined;
   const isScatter = traceType === "scatter";
   const markerStyle = chartConfig.marker;

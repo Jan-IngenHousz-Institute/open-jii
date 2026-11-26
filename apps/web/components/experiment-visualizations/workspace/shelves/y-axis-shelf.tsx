@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { effectiveSeriesAxis } from "../../charts/cartesian/series-axis";
+import { effectiveSeriesAxis, effectiveSeriesTraceType } from "../../charts/cartesian/series-axis";
 import { defaultAxisTypeFor } from "../../charts/chart-config";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { getDefaultSeriesColor } from "../../charts/colors/palettes";
@@ -104,14 +104,21 @@ export function YAxisShelf({
 
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const aggregation = useWatch({ control: form.control, name: "dataConfig.aggregation" });
+  const orientation = useWatch({ control: form.control, name: "config.orientation" });
 
   const ySources = dataSourcesByRole(sources, "y");
   const colorSources = dataSourcesByRole(sources, "color");
   const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0].source.columnName);
   const xColumnName = firstDataSourceByRole(sources, "x")?.source.columnName ?? "";
   const faceted = sources.some((source) => source.role === "facet" && source.columnName);
+  const horizontalBars = ySources.map(({ source }, index) => {
+    const traceType = effectiveSeriesTraceType(source.traceType, index, defaultTraceType ?? "line");
+    return orientation === "h" && traceType === "bar";
+  });
   const usedAxes = new Set(
-    ySources.map(({ source }, index) => effectiveSeriesAxis(source.axis, index, faceted)),
+    ySources.map(({ source }, index) =>
+      effectiveSeriesAxis(source.axis, index, faceted, horizontalBars[index]),
+    ),
   );
   const usedOverlayAxes = ([2, 3, 4, 5, 6] as const).filter((axis) =>
     usedAxes.has(axis === 2 ? "secondary" : `y${axis}`),
@@ -358,6 +365,7 @@ export function YAxisShelf({
               dsIndex={dsIndex}
               seriesIndex={seriesIndex}
               faceted={faceted}
+              hideAxisAssignment={horizontalBars[seriesIndex]}
               seriesColumn={seriesColumn}
               canRemove={ySources.length > 1}
               willBeSilentlyDropped={willBeSilentlyDropped}
