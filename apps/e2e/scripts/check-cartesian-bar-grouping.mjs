@@ -173,6 +173,43 @@ try {
         }
       }
     },
+    hidden: async () => {
+      const rows = [
+        ...[0, 10].map((x) => ({ x, color: "Sparse" })),
+        ...[0, 0.001, 10].map((x) => ({ x, color: "Dense" })),
+      ].map((row) => ({ ...row, first: 2, third: 3 }));
+      const { chartSeries } = transform(rows, { role: "color", columnName: "color" });
+      const range = [-3, 13];
+      const reference = await render(
+        chartSeries.map((series) => ({ ...series, x: [0, 10], y: [2, 3] })),
+        range,
+      );
+      const hidden = await render(
+        chartSeries.map((series) =>
+          series.name.endsWith("Dense") ? { ...series, visible: "legendonly" } : series,
+        ),
+        range,
+      );
+      const sparse = reference.filter(({ name }) => name.endsWith("Sparse"));
+      assert.deepEqual(
+        hidden.map(({ index }) => index),
+        sparse.map(({ index }) => index),
+      );
+      assert.deepEqual(
+        hidden.map(({ bars }) => bars.length),
+        [2, 2],
+      );
+      for (const [index, { bars }] of sparse.entries()) {
+        for (const [point, expected] of bars.entries()) {
+          const actual = hidden[index].bars[point];
+          assert.ok(
+            Math.abs(actual.width - expected.width) <= 1,
+            JSON.stringify({ hidden, sparse }),
+          );
+          assert.ok(Math.abs(actual.left - expected.left) <= 1, JSON.stringify({ hidden, sparse }));
+        }
+      }
+    },
   };
   for (const [name, check] of Object.entries(cases)) {
     if (process.argv[2] && process.argv[2] !== name) continue;

@@ -793,27 +793,24 @@ function groupedBars(
     positionGroups.set(positionGroup, cells);
   }
 
-  for (const [positionGroup, cells] of positionGroups) {
-    const matched = positionGroup === "shared-x";
-    const slots = cells
+  for (const cells of positionGroups.values()) {
+    const drawnBars = cells
       .flat()
       .filter(
-        ({ series }) => series.visible !== false && series.x.length > 0 && series.y.length > 0,
+        ({ series }) => seriesIsVisible(series) && series.x.length > 0 && series.y.length > 0,
       );
-    if (!matched && new Set(slots.map(({ valueAxis }) => valueAxis)).size < 2) continue;
 
-    const spacing = groupedBarSpacing(slots);
+    const spacing = groupedBarSpacing(drawnBars);
     if (spacing === undefined) continue;
 
     // Plotly computes widths per value axis. A shared slot width keeps bars on
     // distinct X grids from overlapping when their value axes differ.
-    const slotCount = matched ? Math.max(...cells.map((bars) => bars.length)) : slots.length;
+    const slotCount = Math.max(...cells.map((bars) => bars.length));
     const slotWidth = (spacing * (1 - bargap)) / slotCount;
     const width = slotWidth * (1 - bargroupgap);
-    slots.forEach(({ grouping, slot }, index) => {
-      const position = matched ? slot : index;
+    drawnBars.forEach(({ grouping, slot }) => {
       grouping.width = width;
-      grouping.offset = (position - (slotCount - 1) / 2) * slotWidth - width / 2;
+      grouping.offset = (slot - (slotCount - 1) / 2) * slotWidth - width / 2;
     });
   }
   return grouping;

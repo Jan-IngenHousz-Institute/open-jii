@@ -265,7 +265,9 @@ Horizontal bar series always use Axis 1 and share the horizontal value scale.
 **Horizontal** orientation is available when every series is a bar. Bar charts
 with other series types render vertically.
 In **Group** mode, bars for the same category appear side by side, including
-when their series use different Y axes.
+when their series use different Y axes. For grouped bars on different Y axes
+with a linear X scale, the visible X values set the bar spacing. Hiding a
+series leaves its slot open in the group.
 
 Axes 1 and 2 sit on the left and right. Axes 3 and 5 sit farther left. Axes 4
 and 6 sit farther right. The plot narrows to leave room for their labels. When
