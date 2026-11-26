@@ -376,29 +376,37 @@ describe("YAxisShelf", () => {
     expect(screen.queryByText("workspace.shelves.secondaryAxisTitle")).not.toBeInTheDocument();
   });
 
-  it("hides the axis picker for horizontal bars and restores it when they turn vertical", () => {
+  it("hides series overrides for horizontal bars and restores them when they turn vertical", () => {
     const values = defaults({ chartType: "bar", config: { orientation: "h", y3AxisType: "log" } });
-    values.dataConfig.dataSources.push(
-      { tableName: "readings", columnName: "humidity", role: "y", axis: "y3" },
-      { tableName: "readings", columnName: "temp", role: "y", traceType: "line", axis: "y4" },
-    );
+    values.dataConfig.dataSources.push({
+      tableName: "readings",
+      columnName: "humidity",
+      role: "y",
+      axis: "y3",
+    });
     const { form } = renderShelf(
       (form) => (
         <YAxisShelf form={form} columns={columns} showCartesianControls defaultTraceType="bar" />
       ),
       { useFormProps: { defaultValues: values } },
     );
-    const axisPickers = () =>
-      screen.getAllByRole("combobox", { name: "workspace.shelves.axisAssignment" });
-    expect(axisPickers()).toHaveLength(1);
-    expect(axisPickers()[0]).toHaveTextContent("workspace.shelves.axis.y4");
-    expect(screen.getAllByLabelText("workspace.shelves.numberedAxisTitle")).toHaveLength(2);
-    expect(screen.getAllByRole("combobox", { name: "workspace.shelves.renderAs" })).toHaveLength(2);
+    const axisPicker = { name: "workspace.shelves.axisAssignment" };
+    const renderAs = { name: "workspace.shelves.renderAs" };
+    expect(screen.queryByRole("combobox", axisPicker)).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", renderAs)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("workspace.shelves.numberedAxisTitle")).not.toBeInTheDocument();
 
     act(() => form.setValue("config.orientation", "v"));
-    expect(axisPickers()).toHaveLength(2);
-    expect(axisPickers()[0]).toHaveTextContent("workspace.shelves.axis.y3");
-    expect(screen.getAllByLabelText("workspace.shelves.numberedAxisTitle")).toHaveLength(3);
+    expect(screen.getByRole("combobox", axisPicker)).toHaveTextContent("workspace.shelves.axis.y3");
+    expect(screen.getByRole("combobox", renderAs)).toBeInTheDocument();
+    expect(screen.getAllByLabelText("workspace.shelves.numberedAxisTitle")).toHaveLength(2);
+
+    act(() => {
+      form.setValue("dataConfig.dataSources.2.traceType", "line");
+      form.setValue("config.orientation", "h");
+    });
+    expect(screen.getByRole("combobox", axisPicker)).toHaveTextContent("workspace.shelves.axis.y3");
+    expect(screen.getByRole("combobox", renderAs)).toBeInTheDocument();
   });
 
   it("hides the y-axis-type select when hideAxisType is true", () => {

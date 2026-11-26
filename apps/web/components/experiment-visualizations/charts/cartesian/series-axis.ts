@@ -4,6 +4,8 @@ import type {
   ExperimentSeriesTraceType,
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
+import type { IndexedDataSource } from "../data/data-sources";
+
 const AXES = zExperimentSeriesAxis.options;
 const FACET_AXES = AXES.slice(0, 2);
 
@@ -13,6 +15,19 @@ export function effectiveSeriesTraceType(
   defaultTraceType: ExperimentSeriesTraceType,
 ): ExperimentSeriesTraceType {
   return seriesOrdinal === 0 ? defaultTraceType : (traceType ?? defaultTraceType);
+}
+
+export function canUseHorizontalBars(
+  ySources: IndexedDataSource[],
+  defaultTraceType: ExperimentSeriesTraceType | undefined,
+): boolean {
+  return (
+    defaultTraceType === "bar" &&
+    ySources.every(
+      ({ source }, index) =>
+        effectiveSeriesTraceType(source.traceType, index, defaultTraceType) === "bar",
+    )
+  );
 }
 
 export function availableSeriesAxes(faceted: boolean): readonly ExperimentSeriesAxis[] {

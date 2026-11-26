@@ -531,15 +531,14 @@ describe("transformCartesianData", () => {
 });
 
 describe("numbered Y axes", () => {
-  it("uses the primary axis for horizontal bars with saved axis assignments in mixed charts", () => {
+  it("uses the primary axis for horizontal bars with saved axis assignments", () => {
     const sources: ExperimentDataSourceConfig[] = [
       ds("x", "label"),
       ds("y", "a"),
       { ...ds("y", "b"), axis: "y3" },
-      { ...ds("y", "c"), axis: "y4", traceType: "line" },
     ];
     const { chartSeries } = transformCartesianData(
-      [{ label: "A", a: 10, b: 100, c: 1000 }],
+      [{ label: "A", a: 10, b: 100 }],
       sources,
       { orientation: "h", y3AxisType: "log" },
       { ...baseOptions, defaultTraceType: "bar" },
@@ -547,7 +546,6 @@ describe("numbered Y axes", () => {
     expect(chartSeries).toMatchObject([
       { traceType: "bar", orientation: "h", axis: "primary" },
       { traceType: "bar", orientation: "h", axis: "primary", x: ["A"], y: [100] },
-      { traceType: "line", axis: "y4" },
     ]);
     expect(sources[2].axis).toBe("y3");
   });
@@ -562,7 +560,7 @@ describe("numbered Y axes", () => {
         ],
         [ds("y", "a"), { ...ds("y", "b"), traceType: "bar", axis }, ds("facet", "panel")],
         { orientation: "h" },
-        baseOptions,
+        { ...baseOptions, defaultTraceType: "bar" },
       );
       expect(subplots?.cells.map((cell) => cell.secondaryYaxisId)).toEqual([undefined, undefined]);
       expect(chartSeries.filter(({ name }) => name === "b")).toMatchObject([

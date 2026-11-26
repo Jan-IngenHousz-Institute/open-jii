@@ -48,7 +48,6 @@ export interface YSeriesItemProps {
   dsIndex: number;
   seriesIndex: number;
   faceted?: boolean;
-  hideAxisAssignment?: boolean;
   seriesColumn: string;
   canRemove: boolean;
   willBeSilentlyDropped: boolean;
@@ -77,7 +76,6 @@ export function YSeriesItem({
   dsIndex,
   seriesIndex,
   faceted = false,
-  hideAxisAssignment = false,
   seriesColumn,
   canRemove,
   willBeSilentlyDropped,
@@ -409,38 +407,36 @@ export function YSeriesItem({
             )}
           />
 
-          {!hideAxisAssignment && (
-            <FormField
-              control={form.control}
-              name={`dataConfig.dataSources.${dsIndex}.axis` as const}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs font-medium">
-                    {t("workspace.shelves.axisAssignment")}
-                  </FormLabel>
-                  <Select
-                    value={effectiveSeriesAxis(field.value, seriesIndex, faceted)}
-                    // Persist `undefined` for the default ("primary") so saved config stays clean.
-                    onValueChange={(value) => field.onChange(handleAxisChange(value))}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {axisOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {t(`workspace.shelves.axis.${option}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
+          <FormField
+            control={form.control}
+            name={`dataConfig.dataSources.${dsIndex}.axis` as const}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.shelves.axisAssignment")}
+                </FormLabel>
+                <Select
+                  value={effectiveSeriesAxis(field.value, seriesIndex, faceted)}
+                  // Persist `undefined` for the default ("primary") so saved config stays clean.
+                  onValueChange={(value) => field.onChange(handleAxisChange(value))}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {axisOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {t(`workspace.shelves.axis.${option}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
       )}
     </InsetPanel>

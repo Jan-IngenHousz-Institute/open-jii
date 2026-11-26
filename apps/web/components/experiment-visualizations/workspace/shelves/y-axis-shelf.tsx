@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { effectiveSeriesAxis, effectiveSeriesTraceType } from "../../charts/cartesian/series-axis";
+import { canUseHorizontalBars, effectiveSeriesAxis } from "../../charts/cartesian/series-axis";
 import { defaultAxisTypeFor } from "../../charts/chart-config";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { getDefaultSeriesColor } from "../../charts/colors/palettes";
@@ -111,13 +111,10 @@ export function YAxisShelf({
   const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0].source.columnName);
   const xColumnName = firstDataSourceByRole(sources, "x")?.source.columnName ?? "";
   const faceted = sources.some((source) => source.role === "facet" && source.columnName);
-  const horizontalBars = ySources.map(({ source }, index) => {
-    const traceType = effectiveSeriesTraceType(source.traceType, index, defaultTraceType ?? "line");
-    return orientation === "h" && traceType === "bar";
-  });
+  const horizontalBars = orientation === "h" && canUseHorizontalBars(ySources, defaultTraceType);
   const usedAxes = new Set(
     ySources.map(({ source }, index) =>
-      effectiveSeriesAxis(source.axis, index, faceted, horizontalBars[index]),
+      effectiveSeriesAxis(source.axis, index, faceted, horizontalBars),
     ),
   );
   const usedOverlayAxes = ([2, 3, 4, 5, 6] as const).filter((axis) =>
@@ -365,7 +362,6 @@ export function YAxisShelf({
               dsIndex={dsIndex}
               seriesIndex={seriesIndex}
               faceted={faceted}
-              hideAxisAssignment={horizontalBars[seriesIndex]}
               seriesColumn={seriesColumn}
               canRemove={ySources.length > 1}
               willBeSilentlyDropped={willBeSilentlyDropped}
@@ -382,7 +378,7 @@ export function YAxisShelf({
               rowWindowConflict={rowWindowConflict}
               groupingColumns={groupingColumns}
               windowColumns={windowColumns}
-              showCartesianControls={showCartesianControls}
+              showCartesianControls={showCartesianControls && !horizontalBars}
               showErrorColumn={showErrorColumn}
               showSeriesColor={showSeriesColor}
               hideAggregate={hideAggregate}

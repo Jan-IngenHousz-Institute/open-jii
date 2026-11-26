@@ -14,7 +14,9 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { canUseHorizontalBars } from "../../charts/cartesian/series-axis";
 import type { ChartFormValues } from "../../charts/chart-config";
+import { dataSourcesByRole } from "../../charts/data/data-sources";
 import { CollapsibleStyleSection } from "./shared/collapsible-style-section";
 import { StyleSubsection } from "./shared/style-subsection";
 
@@ -44,6 +46,13 @@ export function BarStyleSection({
   // hide it instead of showing a control whose value doesn't matter.
   const barmode = useWatch({ control: form.control, name: "config.barmode" }) ?? "group";
   const stackable = barmode === "stack" || barmode === "relative";
+  const sources = useWatch({
+    control: form.control,
+    name: "dataConfig.dataSources",
+    disabled: !showOrientation,
+  });
+  const allowHorizontal =
+    showOrientation && canUseHorizontalBars(dataSourcesByRole(sources, "y"), "bar");
 
   return (
     <CollapsibleStyleSection title={t(titleKey, defaultTitle ?? "Bar options")} flat={flat}>
@@ -56,7 +65,10 @@ export function BarStyleSection({
               <FormLabel className="text-xs font-medium">
                 {t("workspace.style.orientation")}
               </FormLabel>
-              <Select value={String(field.value ?? "v")} onValueChange={field.onChange}>
+              <Select
+                value={allowHorizontal ? (field.value ?? "v") : "v"}
+                onValueChange={field.onChange}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue />
@@ -64,7 +76,9 @@ export function BarStyleSection({
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="v">{t("workspace.orientations.vertical")}</SelectItem>
-                  <SelectItem value="h">{t("workspace.orientations.horizontal")}</SelectItem>
+                  <SelectItem value="h" disabled={!allowHorizontal}>
+                    {t("workspace.orientations.horizontal")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

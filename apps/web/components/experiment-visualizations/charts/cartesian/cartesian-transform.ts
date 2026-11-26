@@ -18,7 +18,7 @@ import { aggregateAliasForSource } from "../data/aggregation";
 import { coerceCell, toBucketKey } from "../data/cell-coercion";
 import type { IndexedDataSource } from "../data/data-sources";
 import { dataSourcesByRole } from "../data/data-sources";
-import { effectiveSeriesAxis, effectiveSeriesTraceType } from "./series-axis";
+import { canUseHorizontalBars, effectiveSeriesAxis, effectiveSeriesTraceType } from "./series-axis";
 
 export interface CartesianTransformOptions {
   defaultTraceType: ExperimentSeriesTraceType;
@@ -65,11 +65,11 @@ export function transformCartesianData(
   const facetColumn = dataSourcesByRole(dataSources, "facet")[0]?.source.columnName;
 
   const { effectiveYEntries, useIndexForX } = resolveSeries(yEntries, xColumn);
-  const axes = effectiveYEntries.map(({ source }, index) => {
-    const traceType = effectiveSeriesTraceType(source.traceType, index, defaultTraceType);
-    const horizontalBar = traceType === "bar" && chartConfig.orientation === "h";
-    return effectiveSeriesAxis(source.axis, index, Boolean(facetColumn), horizontalBar);
-  });
+  const horizontalBars =
+    chartConfig.orientation === "h" && canUseHorizontalBars(effectiveYEntries, defaultTraceType);
+  const axes = effectiveYEntries.map(({ source }, index) =>
+    effectiveSeriesAxis(source.axis, index, Boolean(facetColumn), horizontalBars),
+  );
 
   if (effectiveYEntries.length === 0) {
     return { chartSeries: [], subplots: undefined, useIndexForX };
@@ -205,6 +205,7 @@ export function transformCartesianData(
         source,
         defaultTraceType,
         seriesOrdinal,
+        horizontalBars,
         axis: axes[seriesOrdinal],
         fallbackColor: pickFallbackColor(seriesOrdinal),
         continuousColorValues: colorValues,
@@ -235,6 +236,7 @@ export function transformCartesianData(
         source,
         defaultTraceType,
         seriesOrdinal,
+        horizontalBars,
         axis: axes[seriesOrdinal],
         fallbackColor: pickFallbackColor(seriesOrdinal),
         sizeContext: sizeCtx,
@@ -316,6 +318,7 @@ export function transformCartesianData(
           source,
           defaultTraceType,
           seriesOrdinal,
+          horizontalBars,
           axis: axes[seriesOrdinal],
           fallbackColor: getCategoryColor(
             catIndex + seriesOrdinal * globalCategoryLabels.length,
@@ -499,6 +502,7 @@ interface BuildSeriesArgs {
   errorValues?: number[];
   defaultTraceType: ExperimentSeriesTraceType;
   seriesOrdinal: number;
+  horizontalBars: boolean;
   axis: ExperimentSeriesAxis;
   fallbackColor: string | undefined;
   continuousColorValues?: number[];
@@ -682,6 +686,7 @@ function buildSeries({
   source,
   defaultTraceType,
   seriesOrdinal,
+  horizontalBars,
   axis,
   fallbackColor,
   continuousColorValues,
@@ -703,7 +708,7 @@ function buildSeries({
       }
     : chartConfig.error_y;
   const traceType = effectiveSeriesTraceType(source.traceType, seriesOrdinal, defaultTraceType);
-  const orientation = traceType === "bar" ? (chartConfig.orientation ?? "v") : undefined;
+  const orientation = traceType === "bar" ? (horizontalBars ? "h" : "v") : undefined;
   const isScatter = traceType === "scatter";
   const markerStyle = chartConfig.marker;
   const marker = isScatter
