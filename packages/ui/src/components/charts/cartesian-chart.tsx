@@ -41,7 +41,6 @@ import {
   detectAxisType,
   effectiveLegendPosition,
   extendLayoutForFacets,
-  facetSeriesOffsetGroups,
   getPlotType,
   getRenderer,
   refineAxisType,
@@ -305,16 +304,7 @@ export function CartesianChart({
   const hasSharedColorAxis = sharedColorAxis !== undefined;
   const groupBars = (config.barmode ?? "group") === "group";
   const plotData = useMemo(() => {
-    // Bars on overlay axes share a position axis and need distinct slots within it.
-    const offsetGroups = groupBars
-      ? facetSeriesOffsetGroups(
-          visibleData.map((series) =>
-            series.orientation === "h"
-              ? { yaxisId: series.yaxisId ?? cartesianAxisId(series.axis) }
-              : { xaxisId: series.xaxisId },
-          ),
-        )
-      : [];
+    const offsetGroups = groupBars ? groupedBarOffsets(visibleData) : [];
     return visibleData.map((series, index) =>
       buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale, offsetGroups[index]),
     );
@@ -662,6 +652,25 @@ function applyFacetSecondaryAxes(
   });
 }
 
+function groupedBarOffsets(data: CartesianSeries[]): (string | undefined)[] {
+  const groups = new Map<string, { valueAxes: Set<string>; nextSlot: number }>();
+  const bars = data.map((series) => {
+    if (series.traceType !== "bar") return undefined;
+
+    const x = series.xaxisId ?? "x";
+    const y = series.yaxisId ?? cartesianAxisId(series.axis);
+    const [positionAxis, valueAxis] = series.orientation === "h" ? [y, x] : [x, y];
+    const group = groups.get(positionAxis) ?? { valueAxes: new Set<string>(), nextSlot: 0 };
+    group.valueAxes.add(valueAxis);
+    const slot = group.nextSlot;
+    group.nextSlot += 1;
+    groups.set(positionAxis, group);
+    return { group, slot };
+  });
+
+  return bars.map((bar) => (bar && bar.group.valueAxes.size > 1 ? String(bar.slot) : undefined));
+}
+
 /**
  * Translate one typed series into a Plotly trace. Switching on `traceType`
  * here (rather than parameterising `LineChart`/`BarChart` etc.) lets a
@@ -706,13 +715,18 @@ function buildTrace(
     // Bars don't honour `mode` / `line` / `fill` / `connectgaps`. For
     // horizontal bars Plotly expects `x` as values and `y` as categories.
     const horizontal = series.orientation === "h";
+    // Keep explicit slots from affecting single-axis facets with matched position axes.
+    const grouping =
+      barOffsetGroup === undefined
+        ? {}
+        : { offsetgroup: barOffsetGroup, alignmentgroup: "multi-axis-bars" };
     return {
       ...baseShared,
+      ...grouping,
       x: horizontal ? series.y : series.x,
       y: horizontal ? series.x : series.y,
       type: "bar",
       orientation: series.orientation ?? "v",
-      offsetgroup: barOffsetGroup,
       marker: {
         ...series.marker,
         color: series.marker?.color ?? series.color,

@@ -235,6 +235,30 @@ describe("CartesianChart", () => {
     },
   );
 
+  it("lets Plotly position disjoint categories when the bars share one value axis", () => {
+    const data: CartesianSeries[] = [
+      { traceType: "bar", x: ["Site A"], y: [10], name: "Device A" },
+      { traceType: "bar", x: ["Site B"], y: [20], name: "Device B", axis: "primary" },
+    ];
+    const config = { barmode: "group" } as const;
+    const { rerender } = render(<CartesianChart data={data} config={config} />);
+
+    for (const trace of readData()) {
+      expect(trace).not.toHaveProperty("offsetgroup");
+    }
+
+    rerender(
+      <CartesianChart
+        data={[...data, { traceType: "line", x: ["Site A", "Site B"], y: [1, 2], axis: "y3" }]}
+        config={config}
+      />,
+    );
+    expect(readData()[2]).toHaveProperty("yaxis", "y3");
+    for (const trace of readData()) {
+      expect(trace).not.toHaveProperty("offsetgroup");
+    }
+  });
+
   it.each(["stack", "relative", "overlay"] as const)("omits bar offsets in %s mode", (barmode) => {
     render(<CartesianChart data={barsOnTwoAxes} config={{ barmode }} />);
 
@@ -310,6 +334,36 @@ describe("CartesianChart", () => {
       );
       expect(groups.slice(2)).toEqual(groups.slice(0, 2));
       expect(groups[0]).not.toBe(groups[1]);
+    });
+
+    it("sets offsets only on a facet whose bars share a position axis across value axes", () => {
+      const data: CartesianSeries[] = [
+        { ...barsOnTwoAxes[0], xaxisId: "x", yaxisId: "y" },
+        { ...barsOnTwoAxes[1], xaxisId: "x", yaxisId: "y" },
+        { ...barsOnTwoAxes[0], xaxisId: "x2", yaxisId: "y2" },
+        { ...barsOnTwoAxes[1], xaxisId: "x2", yaxisId: "y3" },
+      ];
+      render(<CartesianChart data={data} subplots={subplots} />);
+
+      const traces = readData();
+      expect(traces[0]).not.toHaveProperty("offsetgroup");
+      expect(traces[1]).not.toHaveProperty("offsetgroup");
+      expect(traces[0]).not.toHaveProperty("alignmentgroup");
+      expect(traces[1]).not.toHaveProperty("alignmentgroup");
+      expect(traces.slice(2)).toMatchObject([
+        {
+          xaxis: "x2",
+          yaxis: "y2",
+          offsetgroup: expect.any(String),
+          alignmentgroup: expect.any(String),
+        },
+        {
+          xaxis: "x2",
+          yaxis: "y3",
+          offsetgroup: expect.any(String),
+          alignmentgroup: expect.any(String),
+        },
+      ]);
     });
 
     it("invokes extendLayoutForFacets with the grid spec when subplots is set", async () => {
