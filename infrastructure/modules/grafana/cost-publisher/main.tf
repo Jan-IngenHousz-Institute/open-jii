@@ -79,7 +79,7 @@ resource "aws_lambda_function" "cost_publisher" {
   function_name    = "${var.environment}-cost-publisher"
   role             = aws_iam_role.cost_publisher.arn
   handler          = "index.handler"
-  runtime          = "nodejs24.x"
+  runtime          = "nodejs26.x"
   timeout          = 60
   memory_size      = 256
 

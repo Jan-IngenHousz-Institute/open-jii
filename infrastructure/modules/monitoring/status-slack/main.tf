@@ -64,7 +64,7 @@ resource "aws_lambda_function" "status_slack" {
   function_name                  = "${var.environment}-status-slack"
   role                           = aws_iam_role.status_slack.arn
   handler                        = "index.handler"
-  runtime                        = "nodejs24.x"
+  runtime                        = "nodejs26.x"
   timeout                        = 30
   memory_size                    = 128
   reserved_concurrent_executions = 1
