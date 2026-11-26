@@ -73,7 +73,9 @@ describe("GetResourceMetricsUseCase", () => {
 
     // The cached rows key on the previous test's resource ids, so the clear
     // has to follow the fixtures rather than precede them.
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+    await testApp.module
+      .get<CachePort>(CACHE_PORT)
+      .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
   });
 
   afterEach(() => {

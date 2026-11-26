@@ -121,7 +121,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
     distinctId = "anonymous",
     personProperties?: Record<string, string>,
   ): Promise<boolean> {
-    const cacheKey = `${flagKey}:${distinctId}:${JSON.stringify(personProperties ?? {})}`;
+    const cacheKey = this.cacheKeyFor(flagKey, distinctId, personProperties);
     const cached = this.flagCache.get(cacheKey);
     if (cached !== undefined && cached.expiresAt > Date.now()) {
       return cached.value;
@@ -142,6 +142,38 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
     );
     this.pendingEvaluations.set(cacheKey, evaluation);
     return evaluation;
+  }
+
+  /**
+   * As `isFeatureFlagEnabled`, except that a lapsed answer is returned at once while a fresh
+   * evaluation runs behind it, so only a key with no answer held waits on PostHog. For a decision
+   * that may follow a flag change one refresh late, never for one that must see it at once.
+   */
+  async isFeatureFlagEnabledOrStale(
+    flagKey: FeatureFlagKey,
+    distinctId = "anonymous",
+    personProperties?: Record<string, string>,
+  ): Promise<boolean> {
+    const held = this.flagCache.get(this.cacheKeyFor(flagKey, distinctId, personProperties));
+    if (held === undefined) {
+      return this.isFeatureFlagEnabled(flagKey, distinctId, personProperties);
+    }
+
+    const isLapsed = held.expiresAt <= Date.now();
+    if (isLapsed) {
+      // Never rejects: a failed evaluation answers with the default and leaves this answer held.
+      void this.isFeatureFlagEnabled(flagKey, distinctId, personProperties);
+    }
+
+    return held.value;
+  }
+
+  private cacheKeyFor(
+    flagKey: FeatureFlagKey,
+    distinctId: string,
+    personProperties: Record<string, string> | undefined,
+  ): string {
+    return `${flagKey}:${distinctId}:${JSON.stringify(personProperties ?? {})}`;
   }
 
   private async evaluate(

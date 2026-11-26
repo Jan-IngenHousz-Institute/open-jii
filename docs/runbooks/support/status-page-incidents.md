@@ -201,7 +201,7 @@ without one. Messages from any environment other than production name it in thei
 2. In the Slack app that holds the repository's webhooks, or a new one, switch on Incoming Webhooks
    and choose Add New Webhook to Workspace. Pick the channel and copy the address that Slack shows.
    Treat it like a password, since anyone who has it can post to the channel.
-3. In a pull request, set `status_slack_enabled = true` in `infrastructure/env/<env>/main.tf`. Once
+3. In a pull request, set `status_slack_enabled = true` in `infrastructure/env/<env>/locals.tf`. Once
    it is applied, the environment has an empty `openjii-status-slack-<env>` secret and the function
    that posts. Setting it back to `false` is how the feed is switched off. Do not reuse
    `SLACK_WEBHOOK_URL`, which belongs to the monitoring channel.

@@ -298,31 +298,72 @@ describe("ExperimentDataTable", () => {
   });
 
   describe("landed rows", () => {
-    const arrived = { id: "3", name: "Row 3", value: 30 };
+    const readAt = "2026-11-19T09:00:00.000Z";
+    const nextReadAt = "2026-11-19T09:00:30.000Z";
+    const thirdReadAt = "2026-11-19T09:01:00.000Z";
+    const arrived = { id: "3", name: "Row 3", value: 30, processed_timestamp: nextReadAt };
+    const movedIn = { id: "0", name: "Row 0", value: 0, processed_timestamp: readAt };
     const secondPage = [
-      { id: "4", name: "Row 4", value: 40 },
-      { id: "5", name: "Row 5", value: 50 },
+      { id: "4", name: "Row 4", value: 40, processed_timestamp: nextReadAt },
+      { id: "5", name: "Row 5", value: 50, processed_timestamp: nextReadAt },
     ];
 
     it("tints the rows a refetch of the open page adds", () => {
       setupHook();
-      const { rerender } = render(<ExperimentDataTable {...defaultProps} />);
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
 
       setupHook({ tableRows: [arrived, ...mockTableRows] });
-      rerender(<ExperimentDataTable {...defaultProps} />);
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={nextReadAt} />);
 
       expect(screen.getByTestId("landed-rows")).toHaveTextContent("3");
     });
 
+    it("tints nothing on an upload table, whatever its file's processed_timestamp column says", () => {
+      setupHook();
+      const { rerender } = render(
+        <ExperimentDataTable {...defaultProps} tableType="upload" latestRowAt={readAt} />,
+      );
+
+      setupHook({ tableRows: [arrived, ...mockTableRows] });
+      rerender(
+        <ExperimentDataTable {...defaultProps} tableType="upload" latestRowAt={nextReadAt} />,
+      );
+
+      expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
+    });
+
+    it("tints nothing when an arrival pushes an older row onto the open page", () => {
+      setupHook();
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
+
+      setupHook({ tableRows: [movedIn, ...mockTableRows] });
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={nextReadAt} />);
+
+      expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
+    });
+
+    it("tints nothing for a row that arrived during a read that left the open page as it was", () => {
+      setupHook({ dataUpdatedAt: 1 });
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
+
+      setupHook({ dataUpdatedAt: 2 });
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={nextReadAt} />);
+
+      setupHook({ tableRows: [arrived, ...mockTableRows], dataUpdatedAt: 3 });
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={thirdReadAt} />);
+
+      expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
+    });
+
     it("tints nothing when the next page replaces the page standing in for it", async () => {
       setupHook();
-      const { rerender } = render(<ExperimentDataTable {...defaultProps} />);
+      const { rerender } = render(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
 
       setupHook({ isRefreshing: true });
       await userEvent.setup().click(screen.getByTitle("dataTable.next"));
 
       setupHook({ tableRows: secondPage });
-      rerender(<ExperimentDataTable {...defaultProps} />);
+      rerender(<ExperimentDataTable {...defaultProps} latestRowAt={readAt} />);
 
       expect(screen.getByTestId("landed-rows")).toBeEmptyDOMElement();
     });

@@ -6,7 +6,7 @@ import { zScopedMetricsResponse } from "@repo/api/domains/metrics/metrics.schema
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
-import { SCOPED_INPUTS_CACHE_KEY } from "../application/use-cases/get-scoped-metrics/get-scoped-metrics";
+import { scopedInputsCacheKey } from "../application/use-cases/get-scoped-metrics/get-scoped-metrics";
 import { CACHE_PORT } from "../core/ports/cache.port";
 import type { CachePort } from "../core/ports/cache.port";
 
@@ -35,7 +35,7 @@ describe("ScopedMetricsController", () => {
     userId = await testApp.createTestUser({});
     organizationId = await testApp.createOrganization();
     await testApp.addOrganizationMember(organizationId, userId, "member");
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(SCOPED_INPUTS_CACHE_KEY);
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(scopedInputsCacheKey("warehouse"));
 
     const adapter = testApp.module.get(DatabricksAdapter);
     vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(success(windows));

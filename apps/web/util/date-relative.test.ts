@@ -6,6 +6,7 @@ import {
   formatRelativeTime,
   formatShortDate,
   formatTimestamp,
+  parseWarehouseTimestamp,
 } from "./date";
 
 const NOW = new Date("2026-07-19T12:00:00.000Z").getTime();
@@ -53,5 +54,25 @@ describe("daysUntil", () => {
     expect(daysUntil(new Date(NOW + 9 * 86_400_000), NOW)).toBe(9);
     expect(daysUntil(new Date(NOW + 0.5 * 86_400_000), NOW)).toBe(1);
     expect(daysUntil(new Date(NOW - 86_400_000), NOW)).toBe(-1);
+  });
+});
+
+describe("parseWarehouseTimestamp", () => {
+  // Expectations are built with Date.UTC rather than by parsing a string, so a
+  // regression to local-time parsing shows up on any machine outside UTC.
+  it("reads a zoneless warehouse timestamp as UTC", () => {
+    expect(parseWarehouseTimestamp("2026-08-14 11:45:00")?.getTime()).toBe(
+      Date.UTC(2026, 7, 14, 11, 45, 0),
+    );
+  });
+
+  it("keeps an explicit zone as given", () => {
+    expect(parseWarehouseTimestamp("2026-08-14T13:45:00+02:00")?.getTime()).toBe(
+      Date.UTC(2026, 7, 14, 11, 45, 0),
+    );
+  });
+
+  it("returns null for unparseable text", () => {
+    expect(parseWarehouseTimestamp("not-a-date")).toBeNull();
   });
 });

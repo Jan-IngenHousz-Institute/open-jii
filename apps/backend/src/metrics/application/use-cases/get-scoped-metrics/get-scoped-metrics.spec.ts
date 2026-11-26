@@ -7,10 +7,14 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ANALYTICS_PORT } from "../../../core/ports/analytics.port";
+import type { AnalyticsPort } from "../../../core/ports/analytics.port";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
+import { METRICS_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
-import { GetScopedMetricsUseCase, SCOPED_INPUTS_CACHE_KEY } from "./get-scoped-metrics";
+import { GetScopedMetricsUseCase, scopedInputsCacheKey } from "./get-scoped-metrics";
 
 // The window slides, so fixtures are anchored to today rather than to dates
 // that would drift out of range.
@@ -58,7 +62,7 @@ describe("GetScopedMetricsUseCase", () => {
     });
     orgExperimentId = experiment.id;
 
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(SCOPED_INPUTS_CACHE_KEY);
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(scopedInputsCacheKey("warehouse"));
 
     vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(success(windows));
     vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(
@@ -243,6 +247,43 @@ describe("GetScopedMetricsUseCase", () => {
 
     assertSuccess(result);
     expect(result.value.scoped?.measurements30d).toBe(1_000);
+  });
+
+  it("aggregates the store's rows alike once its flag is on, without a warehouse round trip or an id", async () => {
+    const fromWarehouse = await useCase.execute("organization", userId, organizationId);
+    const [windowsRows, dailyRows, contributorRows, deviceRows] = await Promise.all([
+      adapter.getActivityWindows(),
+      adapter.getScopedDailyActivity(60),
+      adapter.getContributorPairs(),
+      adapter.getDevicePairs(),
+    ]);
+    vi.restoreAllMocks();
+
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    vi.spyOn(store, "isConfigured").mockReturnValue(true);
+    vi.spyOn(store, "getActivityWindows").mockResolvedValue(windowsRows);
+    vi.spyOn(store, "getScopedDailyActivity").mockResolvedValue(dailyRows);
+    vi.spyOn(store, "getContributorPairs").mockResolvedValue(contributorRows);
+    vi.spyOn(store, "getDevicePairs").mockResolvedValue(deviceRows);
+    vi.spyOn(
+      testApp.module.get<AnalyticsPort>(ANALYTICS_PORT),
+      "isEnvironmentFeatureFlagEnabled",
+    ).mockResolvedValue(true);
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(scopedInputsCacheKey("store"));
+    const warehouseRead = vi
+      .spyOn(adapter, "executeSqlQuery")
+      .mockResolvedValue(failure(AppError.internal("no warehouse here")));
+
+    const fromStore = await useCase.execute("organization", userId, organizationId);
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(warehouseRead).not.toHaveBeenCalled();
+    const response = JSON.stringify(fromStore.value);
+    for (const id of [orgExperimentId, "contributor-1", "logger-1"]) {
+      expect(response).not.toContain(id);
+    }
   });
 
   it("returns an empty mine scope for a user with no experiments", async () => {

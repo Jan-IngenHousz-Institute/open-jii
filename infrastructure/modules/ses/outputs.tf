@@ -5,27 +5,14 @@ output "domain_identity_arn" {
   value       = aws_ses_domain_identity.main.arn
 }
 
-output "smtp_username" {
-  description = "SMTP username (IAM access key ID)"
-  value       = var.create_smtp_user ? aws_iam_access_key.ses_smtp[0].id : null
-  sensitive   = false
-}
-
-output "smtp_password" {
-  description = "SMTP password (IAM secret access key)"
-  value       = var.create_smtp_user ? aws_iam_access_key.ses_smtp[0].ses_smtp_password_v4 : null
-  sensitive   = true
+output "smtp_user_name" {
+  description = "IAM user whose access key signs in to SES SMTP"
+  value       = var.create_smtp_user ? aws_iam_user.ses_smtp[0].name : null
 }
 
 output "smtp_server" {
   description = "SES SMTP server endpoint"
   value       = "email-smtp.${var.region}.amazonaws.com"
-}
-
-output "auth_email_server" {
-  description = "Complete AUTH_EMAIL_SERVER string for Auth.js"
-  value       = var.create_smtp_user ? "smtp://${urlencode(aws_iam_access_key.ses_smtp[0].id)}:${urlencode(aws_iam_access_key.ses_smtp[0].ses_smtp_password_v4)}@email-smtp.${var.region}.amazonaws.com:587" : null
-  sensitive   = true
 }
 
 output "from_domain" {

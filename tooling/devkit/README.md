@@ -434,19 +434,52 @@ is in `docs/runbooks/ingest-forwarding-failures.md`.
 pbpaste | pnpm secrets:set <dev|prod> <secret> --key <KEY>
 ```
 
-OpenTofu creates these Secrets Manager secrets without a value, so the value never reaches a plan or
-the state. The command reads it from stdin, so it stays off the command line and out of shell
-history, merges it into the secret's JSON under the key, and prints only which keys are still unset.
-It uses your `openjii-<env>` AWS profile; `--aws-profile` picks another. A misspelt key is refused,
-since the service reading it would otherwise fail at its next start.
+OpenTofu creates these Secrets Manager secrets and Databricks secret scopes without a value, so the
+value never reaches a plan or the state. The command reads it from stdin, so it stays off the
+command line and out of shell history, merges it into the secret's JSON under the key, and prints
+only which keys are still unset. It uses your `openjii-<env>` AWS profile; `--aws-profile` picks
+another. A misspelt key is refused, since the service reading it would otherwise fail at its next
+start.
 
-| Secret              | Name in Secrets Manager            | Keys                                                                                                                                                      |
-| ------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`              | `openjii-auth-secrets-<env>`       | `AUTH_SECRET`, `NOTIFICATION_UNSUBSCRIBE_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_ORCID_ID`, `AUTH_ORCID_SECRET`                            |
-| `contentful`        | `openjii-contentful-secrets-<env>` | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`, `CONTENTFUL_PREVIEW_ACCESS_TOKEN`, `CONTENTFUL_PREVIEW_SECRET`                                          |
-| `mailchimp`         | `openjii-mailchimp-secrets-<env>`  | `MAILCHIMP_API_KEY`, `MAILCHIMP_SERVER_PREFIX`, `MAILCHIMP_AUDIENCE_ID`, `MAILCHIMP_COMMUNITY_KIND`, `MAILCHIMP_COMMUNITY_ID`, `MAILCHIMP_COMMUNITY_NAME` |
-| `status-contentful` | `openjii-status-contentful-<env>`  | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`                                                                                                          |
-| `status-slack`      | `openjii-status-slack-<env>`       | none: the value is the webhook address, so leave out `--key`                                                                                              |
+| Secret                 | Name in Secrets Manager              | Keys                                                                                                                                                      |
+| ---------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`                 | `openjii-auth-secrets-<env>`         | `AUTH_SECRET`, `NOTIFICATION_UNSUBSCRIBE_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_ORCID_ID`, `AUTH_ORCID_SECRET`                            |
+| `contentful`           | `openjii-contentful-secrets-<env>`   | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`, `CONTENTFUL_PREVIEW_ACCESS_TOKEN`, `CONTENTFUL_PREVIEW_SECRET`                                          |
+| `mailchimp`            | `openjii-mailchimp-secrets-<env>`    | `MAILCHIMP_API_KEY`, `MAILCHIMP_SERVER_PREFIX`, `MAILCHIMP_AUDIENCE_ID`, `MAILCHIMP_COMMUNITY_KIND`, `MAILCHIMP_COMMUNITY_ID`, `MAILCHIMP_COMMUNITY_NAME` |
+| `status-contentful`    | `openjii-status-contentful-<env>`    | `CONTENTFUL_SPACE_ID`, `CONTENTFUL_ACCESS_TOKEN`                                                                                                          |
+| `status-slack`         | `openjii-status-slack-<env>`         | none: the value is the webhook address, so leave out `--key`                                                                                              |
+| `databricks`           | `openjii-databricks-secrets-<env>`   | `DATABRICKS_CLIENT_SECRET`, `DATABRICKS_WEBHOOK_API_KEY_ID`, `DATABRICKS_WEBHOOK_API_KEY`, `DATABRICKS_WEBHOOK_SECRET`                                    |
+| `ses`                  | `openjii-ses-secrets-<env>`          | `AUTH_EMAIL_SERVER`, `BACKEND_EMAIL_SERVER`: set both with `pnpm secrets:ses-smtp`, below                                                                 |
+| `play-review`          | `openjii-play-review-sign-in-<env>`  | `AUTH_PLAY_REVIEW_EMAIL`, `AUTH_PLAY_REVIEW_OTP`                                                                                                          |
+| `serving-store-<role>` | `openjii-serving-store-<env>-<role>` | `username`, `password`, for each of `admin`, `writer`, `reloader` and `reader`                                                                            |
+
+A serving store `password` goes further than the secret. For `writer` and `reloader` the command
+also writes it to the pipelines' `serving-store-<env>` scope, then it runs the store's passwords
+script on the instance through SSM Run Command, which waits until ClickHouse accepts every user's
+password, so the store has taken the new one before the command returns. The command prints the SSM
+command id first, and names it again if it stops waiting after two minutes. It then names the consumer to restart, if any. If a step
+fails, it names what already holds the new password; run it again with the same value, not a new
+one. A `username` must be the role's ClickHouse user, `openjii_<role>`, which OpenTofu names. This
+needs `ssm:SendCommand`, `ssm:ListCommands` and `ssm:ListCommandInvocations` in the account, besides
+the Databricks CLI login.
+
+Two more targets are Databricks secret scopes, which the pipelines read. Each key is its own secret
+there, so nothing is merged. The command writes them through the Databricks CLI, which holds your
+credentials, with the profile named after the environment; `--databricks-profile` picks another.
+
+| Secret                | Databricks scope                  | Keys                                   |
+| --------------------- | --------------------------------- | -------------------------------------- |
+| `webhook-scope`       | `node-webhook-secret-scope-<env>` | `webhook_api_key_id`, `webhook_secret` |
+| `serving-store-scope` | `serving-store-<env>`             | `writer-password`, `reloader-password` |
+
+SES signs SMTP in with a password derived from an IAM access key, so its value is made, not pasted:
+
+```bash
+aws iam create-access-key --user-name <env>-ses-smtp-user --profile openjii-<env> | pnpm secrets:ses-smtp <env>
+```
+
+It derives the SMTP password, stores the full address as both `AUTH_EMAIL_SERVER` and
+`BACKEND_EMAIL_SERVER`, and prints the new key's id, never the password.
 
 A service reads its secrets when it starts, so a new value needs a restart. Rotating one, and what
 to restart for each secret, is in

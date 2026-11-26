@@ -155,6 +155,11 @@ export interface ExperimentQueryParams {
   offset?: number;
   /** Only the store reads by flags; a flagged read is refused before it could reach the warehouse. */
   flagged?: FlaggedRows;
+  /**
+   * A chart's read. In the store it reads the tables, with FINAL, under the reader's row policy,
+   * and its payload fields as JSON values, not the text a page shows.
+   */
+  isChartRead?: boolean;
 }
 
 /**
