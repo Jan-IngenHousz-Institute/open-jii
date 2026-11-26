@@ -45,7 +45,10 @@ export class GetExperimentVisualizationUseCase {
     }
 
     const visualizationResult =
-      await this.experimentVisualizationRepository.findReadableById(visualizationId);
+      await this.experimentVisualizationRepository.findReadableInExperiment(
+        experimentId,
+        visualizationId,
+      );
 
     if (visualizationResult.isFailure()) {
       this.logger.error({
@@ -71,19 +74,6 @@ export class GetExperimentVisualizationUseCase {
         userId,
       });
       return failure(AppError.notFound(`Visualization with ID ${visualizationId} not found`));
-    }
-
-    if (visualization.experimentId !== experimentId) {
-      this.logger.warn({
-        msg: "Visualization does not belong to experiment",
-        operation: "getExperimentVisualization",
-        experimentId,
-        visualizationId,
-        userId,
-      });
-      return failure(
-        AppError.notFound(`Visualization with ID ${visualizationId} not found in this experiment`),
-      );
     }
 
     this.logger.debug({

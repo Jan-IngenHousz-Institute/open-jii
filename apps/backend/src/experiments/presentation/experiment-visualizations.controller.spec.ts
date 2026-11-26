@@ -600,6 +600,34 @@ describe("ExperimentVisualizationsController", () => {
   });
 
   describe("experiment ownership", () => {
+    it("returns the same 404 before and after a chart is saved in another experiment", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment: otherExperiment } = await testApp.createExperiment({
+        name: "Private experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+      const visualizationId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+        id: readableExperimentId,
+        visualizationId,
+      });
+      const get = () => testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+      const missing = await get();
+
+      const chart = createTestVisualizationData();
+      await testApp.database.insert(experimentVisualizations).values({
+        ...chart,
+        config: chart.config ?? {},
+        id: visualizationId,
+        experimentId: otherExperiment.id,
+        createdBy: otherUserId,
+      });
+
+      const foreign = await get();
+      expect(foreign.body).toEqual(missing.body);
+    });
+
     it.each(["update", "delete"] as const)(
       "returns the same 404 for a missing chart and a chart from another experiment on %s",
       async (action) => {

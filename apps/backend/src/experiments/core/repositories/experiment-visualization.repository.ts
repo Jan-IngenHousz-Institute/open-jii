@@ -9,7 +9,7 @@ import {
   profiles,
   getTableColumns,
 } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { AppError, Result, success, tryCatch } from "../../../common/utils/fp-utils";
 import { ftsMatch, ftsRank, searchScore } from "../../../common/utils/fts";
@@ -152,6 +152,12 @@ export class ExperimentVisualizationRepository {
   }
 
   async findById(id: string): Promise<Result<ExperimentVisualizationDto | null>> {
+    return this.findOne(eq(experimentVisualizations.id, id));
+  }
+
+  private async findOne(
+    condition: SQL | undefined,
+  ): Promise<Result<ExperimentVisualizationDto | null>> {
     return tryCatch(async () => {
       const result = await this.database
         .select({
@@ -162,7 +168,7 @@ export class ExperimentVisualizationRepository {
         })
         .from(experimentVisualizations)
         .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
-        .where(eq(experimentVisualizations.id, id))
+        .where(condition)
         .limit(1);
 
       if (result.length === 0) {
@@ -190,8 +196,11 @@ export class ExperimentVisualizationRepository {
     });
   }
 
-  async findReadableById(id: string): Promise<Result<ExperimentVisualizationDto | null>> {
-    const result = await this.findById(id);
+  async findReadableInExperiment(
+    experimentId: string,
+    id: string,
+  ): Promise<Result<ExperimentVisualizationDto | null>> {
+    const result = await this.findOne(visualizationInExperiment(experimentId, id));
     if (result.isFailure()) {
       return result;
     }

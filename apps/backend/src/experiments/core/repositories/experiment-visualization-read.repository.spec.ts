@@ -3,13 +3,7 @@ import { fromPartial } from "@total-typescript/shoehorn";
 
 import type { DatabaseInstance } from "@repo/database";
 
-import {
-  assertFailure,
-  assertSuccess,
-  AppError,
-  failure,
-  success,
-} from "../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, AppError } from "../../../common/utils/fp-utils";
 import { ExperimentVisualizationRepository } from "./experiment-visualization.repository";
 
 const validVisualization = () => ({
@@ -31,11 +25,13 @@ const validVisualization = () => ({
 
 describe("ExperimentVisualizationRepository readable rows", () => {
   const orderBy = vi.fn();
+  const limit = vi.fn();
   const query = {
     from: vi.fn().mockReturnThis(),
     leftJoin: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy,
+    limit,
   };
   const repository = new ExperimentVisualizationRepository(
     fromPartial<DatabaseInstance>({ select: vi.fn().mockReturnValue(query) }),
@@ -159,21 +155,27 @@ describe("ExperimentVisualizationRepository readable rows", () => {
     orderBy.mockRejectedValueOnce(new Error("database unavailable"));
     assertFailure(await repository.listVisualizations(crypto.randomUUID()));
     const error = AppError.internal("database unavailable");
-    vi.spyOn(repository, "findById").mockResolvedValueOnce(failure(error));
-    const result = await repository.findReadableById(crypto.randomUUID());
+    limit.mockRejectedValueOnce(error);
+    const result = await repository.findReadableInExperiment(
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+    );
     assertFailure(result);
     expect(result.error).toBe(error);
   });
 
   it("returns valid or missing single charts", async () => {
     const row = validVisualization();
-    vi.spyOn(repository, "findById").mockResolvedValueOnce(success(row));
-    const found = await repository.findReadableById(row.id);
+    limit.mockResolvedValueOnce([{ experiment_visualizations: row }]);
+    const found = await repository.findReadableInExperiment(row.experimentId, row.id);
     assertSuccess(found);
     expect(found.value).toEqual(row);
 
-    vi.spyOn(repository, "findById").mockResolvedValueOnce(success(null));
-    const missing = await repository.findReadableById(crypto.randomUUID());
+    limit.mockResolvedValueOnce([]);
+    const missing = await repository.findReadableInExperiment(
+      row.experimentId,
+      crypto.randomUUID(),
+    );
     assertSuccess(missing);
     expect(missing.value).toBeNull();
   });
@@ -184,8 +186,8 @@ describe("ExperimentVisualizationRepository readable rows", () => {
       ...validVisualization(),
       dataConfig: { tableName: "raw_data", dataSources: [] },
     };
-    vi.spyOn(repository, "findById").mockResolvedValueOnce(success(broken));
-    const result = await repository.findReadableById(broken.id);
+    limit.mockResolvedValueOnce([{ experiment_visualizations: broken }]);
+    const result = await repository.findReadableInExperiment(broken.experimentId, broken.id);
     assertSuccess(result);
     expect(result.value).toBeNull();
     expect(warn).toHaveBeenCalledWith(
