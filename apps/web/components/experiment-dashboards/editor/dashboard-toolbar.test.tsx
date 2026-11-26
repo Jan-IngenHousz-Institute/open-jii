@@ -318,6 +318,50 @@ describe("DashboardToolbar", () => {
     );
   });
 
+  it("saves the removal of a copy while its attachment PATCH is in flight", async () => {
+    const user = userEvent.setup();
+    const original = createVisualization({ id: "source" });
+    const copy = createVisualization({ id: "copy" });
+    const chart = createVisualizationWidget({
+      config: { visualizationId: original.id, showTitle: true, showDescription: false },
+    });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    server.mount(contract.experiments.getExperimentVisualization, { body: original });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    server.mount(contract.experiments.createExperimentVisualization, { body: copy });
+    const savedDashboard = createExperimentDashboard({ id: "dash-1", name: "Dashboard" });
+    const update = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: ({ body }: SpyCall) => ({ ...savedDashboard, ...(body as DashboardFormValues) }),
+      unblock: promise,
+    });
+
+    render(
+      <Harness initialWidgets={[chart]} save>
+        <ChartSelection sourceWidgetId={chart.id} />
+        <DashboardToolbar visible experimentId="exp-1" />
+      </Harness>,
+    );
+    await user.click(screen.getByRole("button", { name: "select chart" }));
+    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+    try {
+      await waitFor(() => expect(update.callCount).toBe(1));
+      expect(update.body).toMatchObject({
+        widgets: [chart, { type: "visualization", config: { visualizationId: copy.id } }],
+      });
+
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      await user.click(screen.getByRole("menuitem", { name: "editor.inspector.delete" }));
+      expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
+      expect(update.callCount).toBe(1);
+    } finally {
+      act(() => resolve());
+    }
+
+    await waitFor(() => expect(update.callCount).toBe(2), { timeout: 3000 });
+    expect(update.body).toMatchObject({ widgets: [chart] });
+  });
+
   it("offers a link to the saved copy if the source widget disappears before create finishes", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
