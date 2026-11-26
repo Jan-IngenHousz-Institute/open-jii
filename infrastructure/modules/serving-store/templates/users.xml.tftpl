@@ -19,14 +19,16 @@
             <max_execution_time>30</max_execution_time>
             <!-- Its reads together, so a few heavy ones at once leave the server's cap to the feed. -->
             <max_memory_usage_for_user>6442450944</max_memory_usage_for_user>
-            <!-- Fixed too: a read stopped at the limit fails rather than answers part, and rows a
-                 reload deleted stay hidden until a merge drops them. -->
+            <!-- Fixed too: a read stopped at the limit fails rather than answers part, rows a
+                 reload deleted stay hidden until a merge drops them, and a read cannot take the
+                 metrics refreshes' one slot. -->
             <constraints>
                 <max_memory_usage><const/></max_memory_usage>
                 <max_execution_time><const/></max_execution_time>
                 <max_memory_usage_for_user><const/></max_memory_usage_for_user>
                 <timeout_overflow_mode><const/></timeout_overflow_mode>
                 <apply_deleted_mask><const/></apply_deleted_mask>
+                <workload><const/></workload>
             </constraints>
         </reader>
         <!-- The users that insert, under the server's cap alone: an insert the per-query cap refused
@@ -75,6 +77,7 @@
                 <query>GRANT SELECT ON store.*</query>
                 <!-- The reads' timings and outcomes, never their text, which holds their parameters. -->
                 <query>GRANT SELECT(event_time, type, user, query_duration_ms) ON system.query_log</query>
+                <query>GRANT SELECT ON system.view_refreshes</query>
             </grants>
         </openjii_monitor>
     </users>

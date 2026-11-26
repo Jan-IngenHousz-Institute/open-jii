@@ -8,9 +8,9 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 - the feed missed rows: while it was off for longer than its start versions reach, after a
   checkpoint reset, after a gold refresh that changed a key column (`store-feed-stalled`), or for
   refused rows once the feed's code can send them (`store-feed-rejects`);
-- a store migration adds a column the feed fills, such as 0009's payload texts: rows written
-  before it carry none, and the feed never sends them again (see "After a migration the feed
-  fills").
+- a store migration adds a column the feed fills, such as 0009's payload texts or 0010's local
+  hours and sensor readings: rows written before it carry none, and the feed never sends them again
+  (see "After a migration the feed fills").
 
 ## What it does
 
@@ -45,9 +45,10 @@ delivery time near zero.
 After its delete it removes the contributor and client ids that no row names any longer, such as an
 erased contributor's, from the id tables the page sorts use.
 
-It connects as `openjii_reloader`, which may read and insert in `store` and delete from the tables it
-reloads (the three row tables, `payload_schemas` and the two id tables), but cannot update their
-values, delete from `feed_rejects`, or write to the migration ledger. Its right to delete also lets
+It connects as `openjii_reloader`, which may read in `store`, insert into the tables it reloads (the
+three row tables, `payload_schemas` and the two id tables) and into `feed_rejects`, and delete from
+the tables it reloads. It cannot update their values, delete from `feed_rejects`, or write to any
+other table, such as the migration ledger or the metrics views. Its right to delete also lets
 it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has
 no narrower grant for a delete.
 
@@ -109,11 +110,13 @@ in this order, and compare the read paths or widen a store flag only at the end:
    `Macro-Execution-DLT-Pipeline-<ENV>`, which runs the `macro_results` sink, so every store sink
    runs the new code.
 3. Check that the feed has caught up, as "Running it" describes.
-4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`.
+4. Reload the tables the migration touched for `all`; for 0009, `macro_results` and `uploads`;
+   for 0010, `measurements`.
 5. Merge them once, as "After a full or large reload" describes.
+6. Refresh the platform metrics views, as "Refreshing the metrics views" describes.
 
 An environment whose feed is off, as prod's is before its first rollout, needs only its first
-reload of `all`.
+reload of `all`, then the merge and the refresh.
 
 ## After a full or large reload
 
@@ -151,6 +154,64 @@ GROUP BY table, partition HAVING parts > 1;
 Keep this to full and large reloads. ClickHouse advises against running `OPTIMIZE` routinely
 ([best practices](https://clickhouse.com/docs/best-practices/avoid-optimize-final)), and a reload of
 a small experiment only adds small parts, which reads handle.
+
+## Refreshing the metrics views
+
+The platform metrics views (`store.metrics_*`, from migration 0010) recount the store at seven
+minutes past each hour and show that count until the next. After a reload they still show what
+their last refresh read, which may have been an empty or half-loaded store. Before comparing them
+with the warehouse's metrics or widening a store flag, refresh them once the reload, and the merge a
+full or large one needs, has finished.
+
+As the admin, in a `clickhouse-client` started with `--receive_timeout=3600`, note the time with
+`SELECT now()`. Then refresh the views in chain order, waiting for each:
+
+<!-- serving-store-reload-refresh -->
+
+```sql
+SYSTEM REFRESH VIEW store.metrics_platform_totals;
+SYSTEM WAIT VIEW store.metrics_platform_totals;
+SYSTEM REFRESH VIEW store.metrics_daily_activity;
+SYSTEM WAIT VIEW store.metrics_daily_activity;
+SYSTEM REFRESH VIEW store.metrics_client_totals;
+SYSTEM WAIT VIEW store.metrics_client_totals;
+SYSTEM REFRESH VIEW store.metrics_hourly_activity;
+SYSTEM WAIT VIEW store.metrics_hourly_activity;
+SYSTEM REFRESH VIEW store.metrics_activity_windows;
+SYSTEM WAIT VIEW store.metrics_activity_windows;
+SYSTEM REFRESH VIEW store.metrics_daily_activity_by_experiment;
+SYSTEM WAIT VIEW store.metrics_daily_activity_by_experiment;
+SYSTEM REFRESH VIEW store.metrics_daily_activity_by_resource;
+SYSTEM WAIT VIEW store.metrics_daily_activity_by_resource;
+SYSTEM REFRESH VIEW store.metrics_experiment_contributors_window;
+SYSTEM WAIT VIEW store.metrics_experiment_contributors_window;
+SYSTEM REFRESH VIEW store.metrics_experiment_devices_window;
+SYSTEM WAIT VIEW store.metrics_experiment_devices_window;
+SYSTEM REFRESH VIEW store.metrics_pool_facts;
+SYSTEM WAIT VIEW store.metrics_pool_facts;
+SYSTEM REFRESH VIEW store.metrics_parameter_stats;
+SYSTEM WAIT VIEW store.metrics_parameter_stats;
+```
+
+`SYSTEM WAIT VIEW` reports an error when the view's refresh failed. Stop there, follow
+`store-metrics-age`, then start again from the view that failed. Once the last view has refreshed,
+this lists every view without a successful refresh since the time you noted, and must return
+nothing:
+
+<!-- serving-store-reload-refresh-check -->
+
+```sql
+SELECT view, status, last_success_time, exception
+FROM system.view_refreshes
+WHERE database = 'store' AND startsWith(view, 'metrics_')
+  AND (last_success_time IS NULL OR last_success_time < '<the time you noted>' OR exception != '');
+```
+
+Only then compare the metrics or widen a store flag.
+
+`test_serving_store_metrics.py` runs both blocks against the test store and holds the first to the
+views the store module lists. CI runs it only when `apps/data` changes, so run it yourself after
+editing either block.
 
 ## Metadata sheets
 

@@ -360,7 +360,7 @@ class _Admin:
 
 
 @pytest.fixture
-def store(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Iterator[_Admin]:
+def store(store_admin: tuple[str, str, str], store_migrations: list[str], store_module) -> Iterator[_Admin]:
     store = _Admin(*store_admin)
     store.run(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     store.run(f"DROP USER IF EXISTS {_RELOADER}")
@@ -369,21 +369,11 @@ def store(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Ite
         store.run(statement, database=_DATABASE)
     # The migration runner's ledger, in no particular shape.
     store.run(f"CREATE TABLE {_DATABASE}._migrations (version String) ENGINE = MergeTree ORDER BY version")
-    # The reloader's grants in infrastructure/modules/serving-store/main.tf.
     store.run(
         f"CREATE USER {_RELOADER} IDENTIFIED BY 'reload-test' SETTINGS json_type_escape_dots_in_keys = 1"
     )
-    store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_RELOADER}")
-    for table in (
-        "measurements",
-        "macro_results",
-        "uploads",
-        "payload_schemas",
-        "contributor_ids",
-        "client_ids",
-    ):
-        store.run(f"GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON {_DATABASE}.{table} TO {_RELOADER}")
-    store.run(f"REVOKE INSERT ON {_DATABASE}._migrations FROM {_RELOADER}")
+    for grant in store_module.grants("reloader"):
+        store.run(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {_RELOADER}")
 
     yield store
 

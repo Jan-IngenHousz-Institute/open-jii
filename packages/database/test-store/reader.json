@@ -8,7 +8,18 @@
     "experiment_client_ids",
     "experiment_payload_schemas",
     "experiment_metadata_rows",
-    "experiment_metadata_sheets"
+    "experiment_metadata_sheets",
+    "metrics_platform_totals",
+    "metrics_daily_activity",
+    "metrics_client_totals",
+    "metrics_hourly_activity",
+    "metrics_activity_windows",
+    "metrics_daily_activity_by_experiment",
+    "metrics_daily_activity_by_resource",
+    "metrics_experiment_contributors_window",
+    "metrics_experiment_devices_window",
+    "metrics_pool_facts",
+    "metrics_parameter_stats"
   ],
   "tables": ["measurements", "macro_results", "uploads"],
   "rowFilter": "experiment_id = getSetting('SQL_experiment')",
@@ -20,6 +31,7 @@
     "max_execution_time = 30 CONST",
     "max_memory_usage_for_user = 6442450944 CONST",
     "timeout_overflow_mode CONST",
-    "apply_deleted_mask CONST"
+    "apply_deleted_mask CONST",
+    "workload CONST"
   ]
 }

@@ -20,6 +20,7 @@
       "client_app_version": "1.42.0",
       "timestamp": "2026-10-19 10:00:00.000000",
       "timezone": "Europe/Amsterdam",
+      "hour_local": 12,
       "macros": [
         {
           "id": "m1",
@@ -72,6 +73,7 @@
       "client_app_version": "1.42.0",
       "timestamp": "2026-10-19 11:00:00.000000",
       "timezone": "Europe/Amsterdam",
+      "hour_local": 13,
       "macros": [
         {
           "id": "m1",
@@ -112,6 +114,7 @@
       "client_app_version": "1.42.0",
       "timestamp": "2026-10-19 12:00:00.000000",
       "timezone": "Europe/Amsterdam",
+      "hour_local": 14,
       "macros": [
         {
           "id": "m1",

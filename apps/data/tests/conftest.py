@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.serving_store_module import ServingStoreModule
+
 
 @pytest.fixture(scope="session")
 def spark():
@@ -143,3 +145,8 @@ def store_migrations() -> list[str]:
         if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
             statements.append("\n".join(lines))
     return statements
+
+
+@pytest.fixture(scope="session")
+def store_module() -> ServingStoreModule:
+    return ServingStoreModule.read()

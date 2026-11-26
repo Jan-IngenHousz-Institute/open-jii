@@ -2,7 +2,7 @@
 # Each store table's feed, once a minute: rows it took in the last minute and, over the last five,
 # rows it refused and the p95 from gold's commit to the store's insert. Refused rows are counted
 # over five minutes so that a run that fails or comes late cannot leave them unreported. A table
-# nothing reached reports zero rows. The backend's reads follow.
+# nothing reached reports zero rows. The backend's reads and the platform metrics' views follow.
 set -euo pipefail
 
 query="
@@ -74,6 +74,34 @@ if read_stats=$(clickhouse-client --user openjii_monitor --format TSV --query "
   fi
 else
   echo "Read metrics not sent: the query log did not answer" >&2
+fi
+
+# The platform metrics' views, once the migration ledger holds 0010, which makes them: minutes since
+# the stalest one last refreshed, counted from the server's start for one that has not since, and how
+# many are missing, failed their last refresh, or have none since the start and are not about to. A
+# failed view keeps its last figures and holds back every view after it. A ledger the timer cannot
+# read counts as holding 0010, and refresh state it cannot read counts every view as failing, so the
+# alert sees the gap rather than silence.
+refresh_query="
+  WITH [${join(", ", formatlist("'%s'", metrics_views))}] AS expected
+  SELECT max(intDiv(dateDiff('second', ifNull(last_success_time, now() - uptime()), now()), 60)),
+    length(expected) - count() + countIf(exception != ''
+      OR (last_success_time IS NULL AND status NOT IN ('Running', 'WaitingForDependencies')))
+  FROM system.view_refreshes
+  WHERE database = 'store' AND has(expected, view)
+"
+views_made=$(clickhouse-client --user openjii_monitor --format TSV \
+  --query "SELECT count() FROM store._migrations WHERE version = 10" || echo 1)
+if [ "$views_made" != "0" ]; then
+  dimensions="[{\"Name\":\"Environment\",\"Value\":\"${environment}\"}]"
+  if refresh_stats=$(clickhouse-client --user openjii_monitor --format TSV --query "$refresh_query"); then
+    IFS=$'\t' read -r age failing <<<"$refresh_stats"
+    metrics+="{\"MetricName\":\"MetricsRefreshAgeMinutes\",\"Dimensions\":$dimensions,\"Value\":$age,\"Unit\":\"None\"},"
+  else
+    echo "Refresh age not sent: the view refreshes did not answer, so every view counts as failing" >&2
+    failing=${length(metrics_views)}
+  fi
+  metrics+="{\"MetricName\":\"MetricsRefreshFailures\",\"Dimensions\":$dimensions,\"Value\":$failing,\"Unit\":\"Count\"},"
 fi
 
 aws cloudwatch put-metric-data --region "${region}" --namespace "${namespace}" --metric-data "[$${metrics%,}]"

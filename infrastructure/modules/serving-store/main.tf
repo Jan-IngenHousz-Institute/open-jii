@@ -24,9 +24,10 @@ locals {
   # The feed's lag per table, sent once a minute by a timer next to the agent, into the agent's
   # namespace, which the instance's role may already write to.
   feed_metrics_script = templatefile("${path.module}/templates/feed-metrics.sh.tftpl", {
-    environment = var.environment
-    region      = data.aws_region.current.region
-    namespace   = var.metrics_namespace
+    environment   = var.environment
+    region        = data.aws_region.current.region
+    namespace     = var.metrics_namespace
+    metrics_views = local.metrics_views
   })
 
   # The system logs that ship without a TTL. opentelemetry_span_log defines its own engine and stays
@@ -62,37 +63,52 @@ locals {
   reader_tables     = ["measurements", "macro_results", "uploads"]
   reader_row_filter = "experiment_id = getSetting('SQL_experiment')"
 
-  # No grants means the admin, which manages access and applies the schema. The writer only inserts,
-  # and keeps out of the migration ledger, which records what the schema already holds. The reloader
-  # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
-  # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
-  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
+  # The platform metrics' hourly views (packages/database/clickhouse/migrations), in the order they
+  # refresh. The reader reads aggregates and id pairs from them, and only their refreshes write them.
+  metrics_views = [
+    "metrics_platform_totals", "metrics_daily_activity", "metrics_client_totals",
+    "metrics_hourly_activity", "metrics_activity_windows", "metrics_daily_activity_by_experiment",
+    "metrics_daily_activity_by_resource", "metrics_experiment_contributors_window",
+    "metrics_experiment_devices_window", "metrics_pool_facts", "metrics_parameter_stats",
+  ]
+
+  # No grants means the admin, which manages access and applies the schema. The writer and the
+  # reloader insert only into the tables the feed fills, by name: an insert grant on store.* would
+  # reach the migration ledger and the inner tables the metrics views keep their rows in, which a
+  # revoke on a view's name does not cover. The reloader also deletes from the tables it reloads; a
+  # lightweight delete updates their rows' mask column, which a grant can name only table by table.
+  # ALTER DELETE also allows dropping a partition, and there is no narrower grant. The profiles are
+  # in templates/users.xml.tftpl.
   users = {
     admin = { name = "openjii_admin", profile = "default", grants = [], row_filters = {} }
     writer = {
       name    = "openjii_writer"
       profile = "ingest"
-      grants = [
-        "GRANT SELECT, INSERT ON store.*",
-        "REVOKE INSERT ON store._migrations",
-      ]
+      grants = concat(
+        ["GRANT SELECT ON store.*"],
+        [for table in concat(local.reloaded_tables, ["metadata_rows", "metadata_sheets", "feed_rejects"]) : "GRANT INSERT ON store.${table}"],
+      )
       row_filters = {}
     }
     reloader = {
       name    = "openjii_reloader"
       profile = "ingest"
       grants = concat(
-        ["GRANT SELECT, INSERT ON store.*"],
+        ["GRANT SELECT ON store.*"],
+        [for table in concat(local.reloaded_tables, ["feed_rejects"]) : "GRANT INSERT ON store.${table}"],
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
-        ["REVOKE INSERT ON store._migrations"],
       )
       row_filters = {}
     }
     reader = {
       name    = "openjii_reader"
       profile = "reader"
+      # Four metrics views are per experiment, so the reader can list experiment, contributor, client
+      # and resource ids without naming an experiment. That is accepted: the client sets the row
+      # policy's experiment, so the policy never bounded the credential, and the backend aggregates
+      # what it reads before anything leaves it.
       grants = concat(
-        [for view in local.reader_views : "GRANT SELECT ON store.${view}"],
+        [for view in concat(local.reader_views, local.metrics_views) : "GRANT SELECT ON store.${view}"],
         [for table in local.reader_tables : "GRANT SELECT ON store.${table}"],
       )
       row_filters = { for table in local.reader_tables : table => local.reader_row_filter }
