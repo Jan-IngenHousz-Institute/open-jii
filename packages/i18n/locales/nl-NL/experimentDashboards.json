@@ -62,6 +62,10 @@
     },
     "inspector": {
       "duplicate": "Dupliceren",
+      "copySaveFailed": "De grafiek is gekopieerd, maar het dashboard kon de kopie niet opslaan.",
+      "retryCopySave": "Kopie opnieuw opslaan",
+      "copyNotAttached": "De grafiek is gekopieerd, maar kon niet aan het dashboard worden toegevoegd.",
+      "openChartCopy": "Kopie openen",
       "title": "Widget-instellingen",
       "noSelection": "Selecteer een widget om de instellingen te bewerken.",
       "layout": "Lay-out",

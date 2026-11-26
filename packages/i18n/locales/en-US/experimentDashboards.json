@@ -85,7 +85,11 @@
         "pickVisualizationFirst": "Pick a visualization first"
       },
       "moreShelves": "More",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "copySaveFailed": "The chart was copied, but the dashboard could not save it.",
+      "retryCopySave": "Retry saving copy",
+      "copyNotAttached": "The chart was copied, but it could not be added to the dashboard.",
+      "openChartCopy": "Open copy"
     },
     "vizDataStrip": {
       "dataset": "Dataset",
