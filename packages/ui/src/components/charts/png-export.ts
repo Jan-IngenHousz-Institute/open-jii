@@ -95,7 +95,7 @@ export async function downloadBrandedPng(
 
 export function withBrandedPngExport(
   config: Partial<Config>,
-  prepareLayout?: PreparePngLayout,
+  getPrepareLayout?: () => PreparePngLayout | undefined,
 ): Partial<Config> {
   const options = config.toImageButtonOptions;
   const isBranded = (item: ModeBarButtonAny) =>
@@ -132,7 +132,7 @@ export function withBrandedPngExport(
       if (exporting) return;
       exporting = true;
       try {
-        await downloadBrandedPng(graph, options, prepareLayout);
+        await downloadBrandedPng(graph, options, getPrepareLayout?.());
       } catch {
         toast({
           variant: "destructive",

@@ -630,10 +630,15 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatedLayout;
     }, [layout]);
 
-    // Prepare safe config
+    const preparePngLayoutRef = useRef(preparePngLayout);
+    useEffect(() => {
+      preparePngLayoutRef.current = preparePngLayout;
+    }, [preparePngLayout]);
+
+    // Plotly compares modebar handlers as part of the figure configuration.
     const safeConfig = React.useMemo(() => {
-      return withBrandedPngExport(createSafeConfig(config), preparePngLayout);
-    }, [config, preparePngLayout]);
+      return withBrandedPngExport(createSafeConfig(config), () => preparePngLayoutRef.current);
+    }, [config]);
 
     // Handle errors
     const displayError = error || localError;

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toast } from "../../../hooks/use-toast";
 import { downloadBrandedPng, withBrandedPngExport } from "../../charts/png-export";
+import type { PreparePngLayout } from "../../charts/png-export";
 import { createPlotlyConfig } from "../../charts/utils";
 
 const { toImage } = vi.hoisted(() => ({ toImage: vi.fn() }));
@@ -164,6 +165,24 @@ describe("branded PNG export", () => {
     expect(downloaded).toBeUndefined();
     await button.click(graph, new MouseEvent("click"));
     expect(downloaded?.name).toBe("plot.png");
+  });
+
+  it("reads the current layout preparation each time the same button is clicked", async () => {
+    let prepare: PreparePngLayout | undefined;
+    const config = withBrandedPngExport(
+      { toImageButtonOptions: { width: 1200, height: 800 } },
+      () => prepare,
+    );
+    const button = config.modeBarButtonsToAdd?.[0] as ModeBarButton;
+    await button.click(graph, new MouseEvent("click"));
+    expect(toImage).toHaveBeenLastCalledWith(graph, expect.anything());
+
+    prepare = (layout, width) => ({ ...layout, width });
+    await button.click(graph, new MouseEvent("click"));
+    expect(toImage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ layout: expect.objectContaining({ width: 1200 }) }),
+      expect.anything(),
+    );
   });
 
   it("preserves other modebar controls when branding is applied again", () => {
