@@ -318,7 +318,10 @@ describe("DashboardToolbar", () => {
     );
   });
 
-  it("saves the removal of a copy while its attachment PATCH is in flight", async () => {
+  it.each([
+    { leaveDashboard: false, view: "on the dashboard" },
+    { leaveDashboard: true, view: "after leaving the dashboard" },
+  ])("saves copy removal during the attach PATCH $view", async ({ leaveDashboard }) => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source" });
     const copy = createVisualization({ id: "copy" });
@@ -335,7 +338,7 @@ describe("DashboardToolbar", () => {
       unblock: promise,
     });
 
-    render(
+    const { unmount } = render(
       <Harness initialWidgets={[chart]} save>
         <ChartSelection sourceWidgetId={chart.id} />
         <DashboardToolbar visible experimentId="exp-1" />
@@ -353,6 +356,7 @@ describe("DashboardToolbar", () => {
       await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
       await user.click(screen.getByRole("menuitem", { name: "editor.inspector.delete" }));
       expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
+      if (leaveDashboard) unmount();
       expect(update.callCount).toBe(1);
     } finally {
       act(() => resolve());

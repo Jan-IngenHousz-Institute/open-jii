@@ -333,6 +333,43 @@ describe("useAutosave", () => {
     expect(flushResolved).toBe(true);
   });
 
+  it("flushes an undo made during a save before the editor disables autosave", async () => {
+    const edit = Promise.withResolvers<void>();
+    const undo = Promise.withResolvers<void>();
+    const save = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockReturnValueOnce(edit.promise)
+      .mockReturnValueOnce(undo.promise);
+    const { result, rerender } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, enabled, delayMs: 50 }),
+      { initialProps: { value: "original", enabled: true } },
+    );
+
+    rerender({ value: "edited", enabled: true });
+    await act(() => vi.advanceTimersByTimeAsync(50));
+    rerender({ value: "original", enabled: true });
+
+    let closed = false;
+    const closing = result.current.flush().then(() => {
+      rerender({ value: "original", enabled: false });
+      closed = true;
+    });
+    expect(save.mock.calls).toEqual([["edited"]]);
+    await act(async () => {
+      edit.resolve();
+      await edit.promise;
+    });
+
+    expect(save.mock.calls).toEqual([["edited"], ["original"]]);
+    expect(closed).toBe(false);
+    await act(async () => {
+      undo.resolve();
+      await closing;
+    });
+    expect(closed).toBe(true);
+  });
+
   it("fires a pending save on unmount when flushOnUnmount is true (default)", () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const { rerender, unmount } = renderHook(

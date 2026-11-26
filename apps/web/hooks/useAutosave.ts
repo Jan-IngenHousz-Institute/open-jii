@@ -115,11 +115,14 @@ export function useAutosave<T>({
             !isSaved &&
             seq === seqRef.current &&
             timerRef.current === null &&
-            mountedRef.current &&
             enabledRef.current &&
             isValidRef.current?.(valueRef.current) !== false
           ) {
-            scheduleSave(runSave, delayMsRef.current);
+            if (mountedRef.current) {
+              scheduleSave(runSave, delayMsRef.current);
+            } else {
+              pendingFlushRef.current = true;
+            }
           }
         },
         (err: unknown) => {
@@ -186,21 +189,22 @@ export function useAutosave<T>({
 
   const flush = useCallback(
     async (options?: { retryFailed?: boolean }): Promise<void> => {
-      if (options?.retryFailed) {
-        if (!enabledRef.current) return;
-        if (inFlightRef.current) {
-          await inFlightRef.current;
-          return;
-        }
-      }
-      if (timerRef.current || pendingFlushRef.current || options?.retryFailed) {
+      let shouldRetry = options?.retryFailed ?? false;
+      if (shouldRetry && !enabledRef.current) return;
+
+      while (inFlightRef.current || pendingFlushRef.current || shouldRetry) {
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
         }
-        await runSave();
-      } else if (inFlightRef.current) {
-        await inFlightRef.current;
+        const inFlight = inFlightRef.current;
+        shouldRetry = false;
+        if (inFlight) {
+          await inFlight;
+        } else {
+          pendingFlushRef.current = false;
+          await runSave();
+        }
       }
     },
     [runSave],
@@ -210,12 +214,9 @@ export function useAutosave<T>({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (flushOnUnmount && pendingFlushRef.current) {
-        pendingFlushRef.current = false;
-        void runSave();
-      }
+      if (flushOnUnmount) void flush();
     };
-  }, [flushOnUnmount, runSave]);
+  }, [flushOnUnmount, flush]);
 
   return {
     status,
