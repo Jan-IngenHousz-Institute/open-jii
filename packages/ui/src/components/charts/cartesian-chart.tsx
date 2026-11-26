@@ -12,7 +12,9 @@ import {
   colorbarGutter,
   styleCartesianAxes,
   seriesIsVisible,
+  yRangesAfterRelayout,
   type CartesianAxis,
+  type CartesianYRanges,
 } from "./cartesian-axes";
 import {
   chartTextWidth,
@@ -180,6 +182,7 @@ const FACET_HEADING_OFFSET = 4;
 // The shared X title is drawn 50 px below the plot, plus a line of text and padding.
 const FACET_X_TITLE_BAND = 72;
 const DEFAULT_FACET_COLUMN_GAP = 0.2;
+const DEFAULT_CONFIG: PlotlyChartConfig = {};
 
 function estimateFacetedPlotWidth(
   width: number,
@@ -226,7 +229,7 @@ export interface CartesianChartProps extends BaseChartProps {
 export function CartesianChart({
   data,
   colorAxis,
-  config = {},
+  config = DEFAULT_CONFIG,
   className,
   loading,
   error,
@@ -321,11 +324,27 @@ export function CartesianChart({
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
   }, [data]);
 
+  const assignedAxes = useMemo(
+    () => new Set(data.map((series) => cartesianAxisId(series.axis))),
+    [data],
+  );
+  const hasExtraAxes = !subplots && CARTESIAN_AXIS_IDS.slice(2).some((id) => assignedAxes.has(id));
+  const trackYZoom = hasExtraAxes && !config.sparkline;
+  const chartRevision = uirevision ?? (trackYZoom ? legendKey : undefined);
+  const rangeKey = JSON.stringify([
+    chartRevision,
+    config.yAxisType,
+    config.y2AxisType,
+    config.y3AxisType,
+    config.y4AxisType,
+    config.y5AxisType,
+    config.y6AxisType,
+  ]);
+  const [zoom, setZoom] = React.useState<{ key: string; ranges: CartesianYRanges }>();
+  const yRanges = zoom?.key === rangeKey ? zoom.ranges : undefined;
+
   const { layout, boundHorizontalLegend, preparePngLayout } = useMemo(() => {
     const activeData = visibleData.filter(seriesIsVisible);
-    const assignedAxes = new Set(data.map((series) => cartesianAxisId(series.axis)));
-    const hasExtraAxes =
-      !subplots && CARTESIAN_AXIS_IDS.slice(2).some((id) => assignedAxes.has(id));
     const hasFacetOverlays =
       subplots?.cells.some((cell) => Boolean(cell.secondaryYaxisId)) ?? false;
     const hasSecondary = assignedAxes.has("y2") || hasExtraAxes || hasFacetOverlays;
@@ -508,9 +527,10 @@ export function CartesianChart({
             width,
             colorbar,
             chartSizingTiers(width, height),
+            yRanges,
           );
       }
-      applyCartesianAxes(next, visibleData, config, chartWidth, colorbar, sizing);
+      applyCartesianAxes(next, visibleData, config, chartWidth, colorbar, sizing, yRanges);
     }
 
     if (subplots) {
@@ -528,8 +548,8 @@ export function CartesianChart({
     // `layout.shapes` / `layout.annotations` without conflict.
     applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
 
-    if (uirevision !== undefined) {
-      next.uirevision = uirevision;
+    if (chartRevision !== undefined) {
+      next.uirevision = chartRevision;
       next.legend = { ...next.legend, uirevision: legendKey };
     }
 
@@ -545,7 +565,10 @@ export function CartesianChart({
     colorAxis,
     sharedColorAxis,
     subplots,
-    uirevision,
+    assignedAxes,
+    hasExtraAxes,
+    chartRevision,
+    yRanges,
     themeVersion,
   ]);
 
@@ -558,8 +581,17 @@ export function CartesianChart({
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   const handleRelayout = React.useCallback(
-    (event: Readonly<PlotRelayoutEvent>) => onRelayout?.({ ...event }),
-    [onRelayout],
+    (event: Readonly<PlotRelayoutEvent>) => {
+      if (trackYZoom && Object.keys(event).some((key) => key.startsWith("yaxis"))) {
+        setZoom((previous) => {
+          const current = previous?.key === rangeKey ? previous.ranges : undefined;
+          const ranges = yRangesAfterRelayout(current, event);
+          return ranges && ranges !== current ? { key: rangeKey, ranges } : previous;
+        });
+      }
+      onRelayout?.({ ...event });
+    },
+    [onRelayout, trackYZoom, rangeKey],
   );
 
   return (
@@ -570,7 +602,7 @@ export function CartesianChart({
         config={plotConfig}
         loading={loading}
         error={error}
-        onRelayout={onRelayout ? handleRelayout : undefined}
+        onRelayout={onRelayout || trackYZoom ? handleRelayout : undefined}
         {...eventHandlers}
         onRestyle={handleRestyle}
         preparePngLayout={preparePngLayout}

@@ -10,7 +10,7 @@ import type { CartesianSeries } from "../../charts/cartesian-chart";
 import type { PlotlyChartProps } from "../../charts/plotly-chart";
 
 vi.mock("../../charts/plotly-chart", () => ({
-  PlotlyChart: ({ data, layout, onRestyle, preparePngLayout }: PlotlyChartProps) => (
+  PlotlyChart: ({ data, layout, onRelayout, onRestyle, preparePngLayout }: PlotlyChartProps) => (
     <div
       data-testid="chart"
       data-layout={JSON.stringify(layout)}
@@ -26,6 +26,10 @@ vi.mock("../../charts/plotly-chart", () => ({
         ),
       )}
     >
+      <button onClick={() => onRelayout?.({ "yaxis.range[0]": 11.995, "yaxis.range[1]": 12.005 })}>
+        Zoom Y axis
+      </button>
+      <button onClick={() => onRelayout?.({ "yaxis.autorange": true })}>Reset Y axis</button>
       <button onClick={() => onRestyle?.([{ visible: ["legendonly"] }, [data.length - 1]])}>
         Hide last series
       </button>
@@ -81,6 +85,31 @@ const readLayout = (): Partial<Layout> & Record<string, Partial<Layout["yaxis"]>
   JSON.parse(screen.getByTestId("chart").getAttribute("data-layout") ?? "{}");
 
 describe("numbered Y-axis layout", () => {
+  it("widens the gap for decimal ticks after a Y zoom and restores it on autorange", () => {
+    const onRelayout = vi.fn();
+    render(
+      <CartesianChart
+        data={series(6)}
+        config={{ width: 900, height: 500 }}
+        uirevision="chart"
+        onRelayout={onRelayout}
+      />,
+    );
+    const leftAxisGap = () => {
+      const layout = readLayout();
+      return (layout.yaxis?.position ?? 0) - (layout.yaxis3?.position ?? 0);
+    };
+    const initial = leftAxisGap();
+
+    fireEvent.click(screen.getByText("Zoom Y axis"));
+    expect(leftAxisGap()).toBeGreaterThan(initial);
+    expect(readLayout().uirevision).toBe("chart");
+    expect(onRelayout).toHaveBeenCalledWith({ "yaxis.range[0]": 11.995, "yaxis.range[1]": 12.005 });
+
+    fireEvent.click(screen.getByText("Reset Y axis"));
+    expect(leftAxisGap()).toBeCloseTo(initial);
+  });
+
   it.each([
     { position: "inside-top-right", anchor: "right", fraction: 0.98 },
     { position: "inside-bottom-left", anchor: "left", fraction: 0.02 },
@@ -98,7 +127,7 @@ describe("numbered Y-axis layout", () => {
         screen.getByTestId("chart").getAttribute("data-export-layout") ?? "{}",
       );
       for (const layout of [readLayout(), exported]) {
-        const [left = 0, right = 1] = layout.xaxis?.domain ?? [];
+      const [left = 0, right = 1] = layout.xaxis?.domain ?? [];
         expect(left).toBeGreaterThan(0);
         expect(right).toBeLessThan(1);
         expect(layout.legend).toMatchObject({ xanchor: anchor, xref: "paper" });

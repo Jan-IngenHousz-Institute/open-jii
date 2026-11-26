@@ -20,6 +20,46 @@ export function cartesianAxisId(axis: CartesianAxis = "primary"): string {
 
 export const CARTESIAN_AXIS_IDS = ["y", "y2", "y3", "y4", "y5", "y6"] as const;
 
+type AxisId = (typeof CARTESIAN_AXIS_IDS)[number];
+export type CartesianYRanges = Partial<Record<AxisId, readonly [number, number]>>;
+
+export function yRangesAfterRelayout(
+  current: CartesianYRanges | undefined,
+  event: Readonly<Record<string, unknown>>,
+): CartesianYRanges | undefined {
+  let next = current;
+  for (const id of CARTESIAN_AXIS_IDS) {
+    const key = `yaxis${id.slice(1)}`;
+    const previous = current?.[id];
+    const autorange = event[`${key}.autorange`];
+    if (autorange === true || typeof autorange === "string") {
+      if (previous) {
+        if (!next || next === current) next = { ...current };
+        delete next[id];
+      }
+      continue;
+    }
+
+    const range: unknown = event[`${key}.range`];
+    const from: unknown =
+      event[`${key}.range[0]`] ?? (Array.isArray(range) ? range[0] : previous?.[0]);
+    const to: unknown =
+      event[`${key}.range[1]`] ?? (Array.isArray(range) ? range[1] : previous?.[1]);
+    if (
+      typeof from === "number" &&
+      Number.isFinite(from) &&
+      typeof to === "number" &&
+      Number.isFinite(to) &&
+      from !== to &&
+      (from !== previous?.[0] || to !== previous?.[1])
+    ) {
+      if (!next || next === current) next = { ...current };
+      next[id] = [from, to];
+    }
+  }
+  return next;
+}
+
 export function seriesIsVisible(series: CartesianSeries): boolean {
   return series.visible !== false && series.visible !== "legendonly";
 }
@@ -110,7 +150,7 @@ export function styleCartesianAxes(
 
 type AxisValues = (number | string | Date | null)[];
 type AxisPlacement = {
-  id: string;
+  id: AxisId;
   index: number;
   axis: Partial<LayoutAxis>;
   values: AxisValues;
@@ -118,7 +158,12 @@ type AxisPlacement = {
 
 const AXIS_GAP = 5;
 
-function tickLabelWidth(axis: Partial<LayoutAxis>, values: AxisValues, font: number): number {
+function tickLabelWidth(
+  axis: Partial<LayoutAxis>,
+  values: AxisValues,
+  font: number,
+  range?: CartesianYRanges[AxisId],
+): number {
   const width = (label: string) => chartTextWidth(label, font);
   if (axis.ticktext?.length) {
     return axis.ticktext.reduce((widest, label) => Math.max(widest, width(label)), 0);
@@ -133,7 +178,8 @@ function tickLabelWidth(axis: Partial<LayoutAxis>, values: AxisValues, font: num
 
   let min = Infinity;
   let max = -Infinity;
-  for (const value of values) {
+  const ends = range && (axis.type === "log" ? range.map((edge) => 10 ** edge) : range);
+  for (const value of ends ?? values) {
     if (value === null || value === "") continue;
     const n = Number(value);
     if (!Number.isFinite(n) || (axis.type === "log" && n <= 0)) continue;
@@ -167,13 +213,14 @@ function fitStackedAxes(
   width: number,
   sizing: ChartTierOptions,
   colorbar?: CartesianColorAxis["colorbar"],
+  ranges?: CartesianYRanges,
 ) {
   const fonts = tierAxisFontSizes(sizing);
   const titleStandoff = sizing.compact || sizing.veryCompact ? 4 : 8;
   const tickSpace = new Map(
     visible.map(({ id, axis, values }) => [
       id,
-      tickLabelWidth(axis, values, fonts.tick) + (axis.ticklen ?? 4) + 5,
+      tickLabelWidth(axis, values, fonts.tick, ranges?.[id]) + (axis.ticklen ?? 4) + 5,
     ]),
   );
   const base = layout.margin ?? {};
@@ -282,6 +329,7 @@ export function applyCartesianAxes(
   width: number,
   colorbar?: CartesianColorAxis["colorbar"],
   sizing: ChartTierOptions = {},
+  ranges?: CartesianYRanges,
 ): void {
   const record = layout as AxisLayout;
   const primary = layout.yaxis ?? {};
@@ -321,7 +369,7 @@ export function applyCartesianAxes(
       // Only configure a label array if this axis is categorical.
       Object.assign(entry.axis, truncateCategoryTicks(entry.axis, entry.values, sizing));
     });
-    fitStackedAxes(layout, visible, width, sizing, colorbar);
+    fitStackedAxes(layout, visible, width, sizing, colorbar, ranges);
   } else {
     layout.xaxis = { ...layout.xaxis, domain: [0, 1] };
   }
@@ -341,6 +389,7 @@ export function prepareStackedAxesForExport(
   width: number,
   colorbar: CartesianColorAxis["colorbar"],
   sizing: ChartTierOptions,
+  ranges?: CartesianYRanges,
 ): Partial<Layout> {
   const exported: Partial<Layout> = {
     ...current,
@@ -348,7 +397,7 @@ export function prepareStackedAxesForExport(
     yaxis: { ...base.yaxis },
     margin: { ...current.margin, l: base.margin?.l, r: base.margin?.r },
   };
-  applyCartesianAxes(exported, data, config, width, colorbar, sizing);
+  applyCartesianAxes(exported, data, config, width, colorbar, sizing, ranges);
 
   const exportAxes = exported as AxisLayout;
   const liveAxes = current as AxisLayout;
