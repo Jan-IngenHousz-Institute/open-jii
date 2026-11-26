@@ -11,5 +11,6 @@ export default registerAs("github", () => ({
     ambyte: process.env.FIRMWARE_REPO_AMBYTE,
     ambit: process.env.FIRMWARE_REPO_AMBIT,
     minipar: process.env.FIRMWARE_REPO_MINIPAR,
+    co2dot: process.env.FIRMWARE_REPO_CO2DOT,
   },
 }));

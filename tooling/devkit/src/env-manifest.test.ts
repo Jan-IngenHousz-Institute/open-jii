@@ -118,11 +118,11 @@ describe("environment manifest", () => {
   it("leaves optional firmware repositories unset locally", () => {
     const backendExample = renderEnvExample("backend");
 
-    expect(backendExample).not.toMatch(/^FIRMWARE_REPO_(AMBYTE|AMBIT|MINIPAR)=/m);
+    expect(backendExample).not.toMatch(/^FIRMWARE_REPO_(AMBYTE|AMBIT|MINIPAR|CO2DOT)=/m);
   });
 
   it("contains every in-scope application environment read", async () => {
-    expect(envManifest).toHaveLength(97);
+    expect(envManifest).toHaveLength(98);
     expect(envByKey.size).toBe(envManifest.length);
     expect(
       envReads("const url = `https://host/${process.env.URL_KEY}`; // process.env.NOPE"),

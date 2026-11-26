@@ -101,6 +101,7 @@ export const envManifest: readonly EnvVar[] = [
   env("FIRMWARE_REPO_AMBYTE", unset, undefined, backend),
   env("FIRMWARE_REPO_AMBIT", unset, undefined, backend),
   env("FIRMWARE_REPO_MINIPAR", unset, undefined, backend),
+  env("FIRMWARE_REPO_CO2DOT", unset, undefined, backend),
 
   // Without a store, experiment data reads from the warehouse whatever the flags say.
   env("SERVING_STORE_URL", unset, undefined, backend),

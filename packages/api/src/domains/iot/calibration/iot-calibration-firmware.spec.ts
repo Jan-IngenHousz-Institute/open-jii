@@ -18,6 +18,13 @@ describe("compareFirmwareVersions", () => {
     expect(compareFirmwareVersions("1.1.10", "1.1.9")).toBeGreaterThan(0);
   });
 
+  // MiniPAR firmware uses two-part versions with a zero-padded minor: 1.06, 1.07, then 1.10.
+  it("orders two-part MiniPAR versions by their minor number", () => {
+    expect(compareFirmwareVersions("1.07", "1.06")).toBeGreaterThan(0);
+    expect(compareFirmwareVersions("1.10", "1.07")).toBeGreaterThan(0);
+    expect(compareFirmwareVersions("1.07", "1.7.0")).toBe(0);
+  });
+
   // A release's prerelease suffix is not device-visible: the firmware reports
   // only the numeric core, so 1.1.3-rc1 satisfies a 1.1.3 requirement.
   it("ignores a prerelease suffix", () => {
