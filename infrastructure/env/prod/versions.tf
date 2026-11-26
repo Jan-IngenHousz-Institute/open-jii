@@ -39,11 +39,6 @@ provider "aws" {
   region = var.dr_region
 }
 
-locals {
-  # Under databricks-cli the CLI's own login signs in, as the person running the plan.
-  databricks_client_id = var.databricks_auth_type == "databricks-cli" ? null : var.databricks_client_id
-}
-
 provider "databricks" {
   alias         = "mws"
   host          = "https://accounts.cloud.databricks.com"

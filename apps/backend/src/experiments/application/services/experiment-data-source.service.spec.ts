@@ -6,6 +6,8 @@ import type { AnalyticsPort } from "../../core/ports/analytics.port";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
 import { ExperimentDataSourceService } from "./experiment-data-source.service";
+import { ExperimentStoreReadsService } from "./experiment-store-reads.service";
+import { ExperimentWarehouseReadsService } from "./experiment-warehouse-reads.service";
 
 describe("ExperimentDataSourceService", () => {
   const testApp = TestHarness.App;
@@ -56,5 +58,10 @@ describe("ExperimentDataSourceService", () => {
 
     expect(await service.sourceFor(user)).toBe("warehouse");
     expect(flag).not.toHaveBeenCalled();
+  });
+
+  it("reads each source through its own reads", () => {
+    expect(service.readsFor("store")).toBe(testApp.module.get(ExperimentStoreReadsService));
+    expect(service.readsFor("warehouse")).toBe(testApp.module.get(ExperimentWarehouseReadsService));
   });
 });

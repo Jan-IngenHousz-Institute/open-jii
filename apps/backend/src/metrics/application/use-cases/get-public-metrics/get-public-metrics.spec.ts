@@ -1,10 +1,14 @@
 import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ANALYTICS_PORT } from "../../../core/ports/analytics.port";
+import type { AnalyticsPort } from "../../../core/ports/analytics.port";
 import { CACHE_PORT } from "../../../core/ports/cache.port";
 import type { CachePort } from "../../../core/ports/cache.port";
+import { METRICS_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
-import { GetPublicMetricsUseCase, PUBLIC_METRICS_CACHE_KEY } from "./get-public-metrics";
+import { GetPublicMetricsUseCase, publicMetricsCacheKey } from "./get-public-metrics";
 
 const totals = {
   totalMeasurements: 1_000_000,
@@ -54,6 +58,8 @@ const poolFacts = {
   timezonesPeakDay: 9,
 };
 
+const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
+
 describe("GetPublicMetricsUseCase", () => {
   const testApp = TestHarness.App;
   let adapter: DatabricksAdapter;
@@ -69,8 +75,10 @@ describe("GetPublicMetricsUseCase", () => {
     vi.useFakeTimers({ now: new Date("2026-08-28T12:00:00Z"), toFake: ["Date"] });
     await testApp.beforeEach();
 
-    // The snapshot key is shared, so each test starts from a cold cache.
-    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(PUBLIC_METRICS_CACHE_KEY);
+    // The snapshot keys are shared, so each test starts from a cold cache.
+    const cache = testApp.module.get<CachePort>(CACHE_PORT);
+    await cache.invalidate(publicMetricsCacheKey("warehouse"));
+    await cache.invalidate(publicMetricsCacheKey("store"));
 
     adapter = testApp.module.get(DatabricksAdapter);
     useCase = testApp.module.get(GetPublicMetricsUseCase);
@@ -201,6 +209,102 @@ describe("GetPublicMetricsUseCase", () => {
     expect(kinds).not.toContain("streak");
   });
 
+  /** The store holding the same figures but a total of 2,000,000, flagged by `isOn`. */
+  function storeHolds(isOn: boolean) {
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    vi.spyOn(store, "isConfigured").mockReturnValue(true);
+    const reads = [
+      vi
+        .spyOn(store, "getPublicPlatformTotals")
+        .mockResolvedValue(success({ ...totals, totalMeasurements: 2_000_000 })),
+      vi.spyOn(store, "getPublicDailyActivity").mockResolvedValue(success(daily)),
+      vi
+        .spyOn(store, "getClientTotals")
+        .mockResolvedValue(success([{ clientId: null, measurements: 900 }])),
+      vi.spyOn(store, "getActivityWindows").mockResolvedValue(success(windows)),
+      vi.spyOn(store, "getHourlyActivity").mockResolvedValue(success([])),
+      vi.spyOn(store, "getTopParameter").mockResolvedValue(success(null)),
+      vi.spyOn(store, "getPoolFacts").mockResolvedValue(success(poolFacts)),
+      vi.spyOn(store, "getContributorPairs").mockResolvedValue(success([])),
+    ];
+    const flag = vi
+      .spyOn(testApp.module.get<AnalyticsPort>(ANALYTICS_PORT), "isEnvironmentFeatureFlagEnabled")
+      .mockResolvedValue(isOn);
+    return { reads, flag };
+  }
+
+  it("reads the snapshot from the store without a warehouse round trip once its flag is on", async () => {
+    storeHolds(true);
+    const warehouseRead = vi.spyOn(adapter, "executeSqlQuery");
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(result.value.hero?.totalMeasurements).toBe(2_000_000);
+    expect(result.value.families).toEqual([{ family: "unattributed", measurements: 900 }]);
+    expect(totalsSpy).not.toHaveBeenCalled();
+    expect(warehouseRead).not.toHaveBeenCalled();
+  });
+
+  it("names no contributor, experiment or client in the snapshot it reads from the store", async () => {
+    storeHolds(true);
+    const contributorId = await testApp.createTestUser({
+      email: "metrics-contributor@example.com",
+    });
+    const thingName = "public-metrics-logger";
+    await testApp.createIotDevice({ createdBy: contributorId, thingName, deviceType: "ambyte" });
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    vi.spyOn(store, "getClientTotals").mockResolvedValue(
+      success([{ clientId: thingName, measurements: 900 }]),
+    );
+    vi.spyOn(store, "getContributorPairs").mockResolvedValue(
+      success([{ experimentId, userId: contributorId }]),
+    );
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    // Both were read: the pair counts an institution and the client a family.
+    expect(result.value.community?.institutions30d).toBe(1);
+    expect(result.value.families).toEqual([{ family: "ambyte", measurements: 900 }]);
+    const response = JSON.stringify(result.value);
+    for (const id of [contributorId, experimentId, thingName]) {
+      expect(response).not.toContain(id);
+    }
+  });
+
+  it("chooses the source once per load, so every read of it comes from one source", async () => {
+    const { reads, flag } = storeHolds(false);
+    flag.mockResolvedValueOnce(true);
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(flag).toHaveBeenCalledTimes(1);
+    for (const read of reads) {
+      expect(read).toHaveBeenCalled();
+    }
+    expect(totalsSpy).not.toHaveBeenCalled();
+  });
+
+  it("serves the flipped source on the next read and the warehouse again after a rollback", async () => {
+    const { flag } = storeHolds(false);
+
+    const before = await useCase.execute();
+    flag.mockResolvedValue(true);
+    const flipped = await useCase.execute();
+    flag.mockResolvedValue(false);
+    const rolledBack = await useCase.execute();
+
+    assertSuccess(before);
+    assertSuccess(flipped);
+    assertSuccess(rolledBack);
+    expect(before.value.hero?.totalMeasurements).toBe(1_000_000);
+    expect(flipped.value.hero?.totalMeasurements).toBe(2_000_000);
+    expect(rolledBack.value.hero?.totalMeasurements).toBe(1_000_000);
+    expect(totalsSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("serves the cached snapshot without refetching", async () => {
     await useCase.execute();
     const result = await useCase.execute();
@@ -239,6 +343,142 @@ describe("GetPublicMetricsUseCase", () => {
     // The empty snapshot was not cached: the second request retried.
     assertSuccess(second);
     expect(totalsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves an empty snapshot without caching it before the store's first refresh", async () => {
+    storeHolds(true);
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    const storeTotals = vi.spyOn(store, "getPublicPlatformTotals").mockResolvedValue(success(null));
+    vi.spyOn(store, "getActivityWindows").mockResolvedValue(success(null));
+    vi.spyOn(store, "getPublicDailyActivity").mockResolvedValue(success([]));
+
+    const first = await useCase.execute();
+    const second = await useCase.execute();
+
+    assertSuccess(first);
+    expect(first.value.hero).toBeNull();
+    expect(first.value.liveness).toBeNull();
+    expect(first.value.activity).toEqual([]);
+
+    // No figures yet is not a snapshot: the second request asked the store again.
+    assertSuccess(second);
+    expect(storeTotals).toHaveBeenCalledTimes(2);
+  });
+
+  it("caches the zeros a refreshed store holds for an empty platform", async () => {
+    storeHolds(true);
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    const storeTotals = vi
+      .spyOn(store, "getPublicPlatformTotals")
+      .mockResolvedValue(success({ ...totals, totalMeasurements: 0, totalVolumeBytes: 0 }));
+    vi.spyOn(store, "getActivityWindows").mockResolvedValue(
+      success({ ...windows, measurements24h: 0, lastMeasurementAt: null }),
+    );
+    vi.spyOn(store, "getPublicDailyActivity").mockResolvedValue(success([]));
+
+    const first = await useCase.execute();
+    const second = await useCase.execute();
+
+    assertSuccess(first);
+    expect(first.value.hero?.totalMeasurements).toBe(0);
+    expect(first.value.liveness).toEqual({ lastMeasurementAt: null, measurements24h: 0 });
+    assertSuccess(second);
+    expect(storeTotals).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps serving a complete snapshot when a refresh loses one read", async () => {
+    // Settled at once, so the refresh behind a reply finishes within a few milliseconds.
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "getExperimentOrganizations").mockResolvedValue(success([]));
+    vi.spyOn(repository, "countPublicExperiments").mockResolvedValue(success(0));
+    vi.spyOn(repository, "countSharedExperiments").mockResolvedValue(success(0));
+    await useCase.execute();
+
+    // Past the hour a snapshot is fresh, so the next request refreshes it behind its reply.
+    vi.setSystemTime(new Date("2026-08-28T13:30:00Z"));
+    vi.spyOn(adapter, "getPoolFacts").mockResolvedValue(failure(AppError.internal("down")));
+    await useCase.execute();
+    await settle();
+
+    const result = await useCase.execute();
+    await settle();
+
+    assertSuccess(result);
+    expect(result.value.hero?.timezonesSpanned).toBe(14);
+  });
+
+  it("keeps a complete snapshot when a refresh's institution lookup fails", async () => {
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "getExperimentOrganizations")
+      .mockResolvedValueOnce(success([{ experimentId, organizationId: "org-1" }]))
+      .mockResolvedValue(failure(AppError.internal("database down")));
+    vi.spyOn(repository, "countPublicExperiments").mockResolvedValue(success(1));
+    const lastLookup = vi.spyOn(repository, "countSharedExperiments").mockResolvedValue(success(1));
+    await useCase.execute();
+
+    // Past the hour a snapshot is fresh, so the next request refreshes it behind its reply.
+    vi.setSystemTime(new Date("2026-08-28T13:30:00Z"));
+    await useCase.execute();
+    await vi.waitFor(() => expect(lastLookup).toHaveBeenCalledTimes(2));
+    await settle();
+
+    const result = await useCase.execute();
+
+    assertSuccess(result);
+    expect(result.value.community?.institutions30d).toBe(1);
+  });
+
+  it("does not hold a cold fill whose institution lookup failed as complete", async () => {
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "getExperimentOrganizations")
+      .mockResolvedValueOnce(failure(AppError.internal("database down")))
+      .mockResolvedValue(success([{ experimentId, organizationId: "org-1" }]));
+    vi.spyOn(repository, "countPublicExperiments").mockResolvedValue(success(1));
+    const lastLookup = vi.spyOn(repository, "countSharedExperiments").mockResolvedValue(success(1));
+    const cold = await useCase.execute();
+
+    // Well within the hour a complete snapshot stays fresh, but a partial one has lapsed.
+    vi.setSystemTime(new Date("2026-08-28T12:10:00Z"));
+    await useCase.execute();
+    await vi.waitFor(() => expect(lastLookup).toHaveBeenCalledTimes(2));
+    await settle();
+
+    const result = await useCase.execute();
+
+    assertSuccess(cold);
+    expect(cold.value.community).toBeNull();
+    assertSuccess(result);
+    expect(result.value.community?.institutions30d).toBe(1);
+  });
+
+  it("does not hold a cold fill as complete before every view has refreshed", async () => {
+    storeHolds(true);
+    const store = testApp.module.get<ServingStorePort>(METRICS_SERVING_STORE_PORT);
+    // The totals view refreshes first, the windows and pool facts after it.
+    vi.spyOn(store, "getActivityWindows")
+      .mockResolvedValueOnce(success(null))
+      .mockResolvedValue(success(windows));
+    vi.spyOn(store, "getPoolFacts")
+      .mockResolvedValueOnce(success(null))
+      .mockResolvedValue(success(poolFacts));
+    const repository = testApp.module.get(MetricsRepository);
+    vi.spyOn(repository, "countPublicExperiments").mockResolvedValue(success(1));
+    const lastLookup = vi.spyOn(repository, "countSharedExperiments").mockResolvedValue(success(1));
+    const cold = await useCase.execute();
+
+    vi.setSystemTime(new Date("2026-08-28T12:10:00Z"));
+    await useCase.execute();
+    await vi.waitFor(() => expect(lastLookup).toHaveBeenCalledTimes(2));
+    await settle();
+
+    const result = await useCase.execute();
+
+    assertSuccess(cold);
+    expect(cold.value.hero).toBeNull();
+    expect(cold.value.liveness).toBeNull();
+    assertSuccess(result);
+    expect(result.value.hero?.totalMeasurements).toBe(2_000_000);
+    expect(result.value.liveness).not.toBeNull();
   });
 
   it("hides the hero instead of inventing zeros when an input is missing", async () => {

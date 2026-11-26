@@ -15,6 +15,11 @@ export interface CacheNamespace {
    */
   staleMs?: number;
   /**
+   * How long a value `isComplete` rejects is served without asking the source
+   * again. Unset means `ttlMs`.
+   */
+  incompleteTtlMs?: number;
+  /**
    * How long a caller with nothing to serve waits for a load before taking
    * `null`. The load keeps running and lands in the cache for the next one.
    * Unset means the caller waits for the load to finish.
@@ -62,7 +67,11 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     private readonly namespace: CacheNamespace,
   ) {}
 
-  async tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
+  async tryCache<T>(
+    key: string,
+    fetchFn: () => Promise<T | null>,
+    isComplete?: (value: T) => boolean,
+  ): Promise<T | null> {
     const cacheKey = `${this.namespace.prefix}${key}`;
 
     const entry = await this.read<T>(cacheKey);
@@ -70,7 +79,7 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
       return entry.value;
     }
 
-    const load = this.startLoad(cacheKey, fetchFn);
+    const load = this.startLoad(cacheKey, fetchFn, isComplete);
 
     // A stale value is served at once; the load refreshes it behind the reply.
     // Waiting here is what turned a slow source into an empty page.
@@ -86,14 +95,18 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
    * behind a short TTL is otherwise repeated by every caller that arrives
    * while the first one runs, and abandoned when that caller stops waiting.
    */
-  private startLoad<T>(cacheKey: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
+  private startLoad<T>(
+    cacheKey: string,
+    fetchFn: () => Promise<T | null>,
+    isComplete: ((value: T) => boolean) | undefined,
+  ): Promise<T | null> {
     const running = this.inFlight.get(cacheKey);
     if (running !== undefined) {
       return sharedLoad<T>(running);
     }
 
     const generation = this.generations.get(cacheKey) ?? 0;
-    const load = this.fetchAndStore(cacheKey, fetchFn, generation).finally(() => {
+    const load = this.fetchAndStore(cacheKey, fetchFn, generation, isComplete).finally(() => {
       // An invalidation may have replaced this entry with a newer load.
       if (this.inFlight.get(cacheKey) === load) {
         this.inFlight.delete(cacheKey);
@@ -152,16 +165,21 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     cacheKey: string,
     fetchFn: () => Promise<T | null>,
     generation: number,
+    isComplete: ((value: T) => boolean) | undefined,
   ): Promise<T | null> {
     const value = await fetchFn();
 
+    const mayStore =
+      value !== null && value !== undefined && (await this.mayReplace(cacheKey, value, isComplete));
+
     // Invalidated while loading: the caller still gets the source's answer,
-    // but the cache does not, or the invalidation would be undone.
+    // but the cache does not, or the invalidation would be undone. Read after
+    // the last await, since an invalidation can land during any of them.
     const invalidated = (this.generations.get(cacheKey) ?? 0) !== generation;
 
-    if (value !== null && value !== undefined && !invalidated) {
+    if (mayStore && !invalidated) {
       try {
-        await this.store(cacheKey, value);
+        await this.store(cacheKey, value, isComplete);
       } catch (error) {
         this.logger.warn({ msg: "Cache write failed", cacheKey, error });
       }
@@ -170,15 +188,38 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     return value;
   }
 
-  private async store<T>(cacheKey: string, value: T): Promise<void> {
-    const { ttlMs, staleMs } = this.namespace;
+  /**
+   * An incomplete value never displaces a complete one, which stays servable
+   * until it expires while later reads load again.
+   */
+  private async mayReplace<T>(
+    cacheKey: string,
+    value: T,
+    isComplete: ((value: T) => boolean) | undefined,
+  ): Promise<boolean> {
+    if (isComplete === undefined || isComplete(value)) {
+      return true;
+    }
+
+    const held = await this.read<T>(cacheKey);
+    return held === null || !isComplete(held.value);
+  }
+
+  private async store<T>(
+    cacheKey: string,
+    value: T,
+    isComplete: ((value: T) => boolean) | undefined,
+  ): Promise<void> {
+    const { ttlMs, staleMs, incompleteTtlMs } = this.namespace;
+    const isIncomplete = isComplete !== undefined && !isComplete(value);
+    const freshMs = isIncomplete ? (incompleteTtlMs ?? ttlMs) : ttlMs;
 
     if (staleMs === undefined) {
-      await this.cache.set(cacheKey, value, ttlMs);
+      await this.cache.set(cacheKey, value, freshMs);
       return;
     }
 
-    const envelope: Envelope<T> = { value, freshUntil: Date.now() + ttlMs };
+    const envelope: Envelope<T> = { value, freshUntil: Date.now() + freshMs };
     await this.cache.set(cacheKey, envelope, ttlMs + staleMs);
   }
 

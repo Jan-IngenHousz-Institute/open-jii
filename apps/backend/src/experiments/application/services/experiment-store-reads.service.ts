@@ -1,8 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { z } from "zod";
 
+import { aggregateKind } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import { hasAggregationContent } from "../../../common/modules/databricks/services/query-builder/expressions/aggregation";
 import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { success } from "../../../common/utils/fp-utils";
@@ -10,6 +12,7 @@ import type { Result } from "../../../common/utils/fp-utils";
 import { UserRepository } from "../../../users/core/repositories/user.repository";
 import type {
   ExperimentQueryParams,
+  ExperimentQuerySource,
   ExperimentTableMetadata,
   ExperimentTableType,
   FlaggedRows,
@@ -98,13 +101,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   async buildQuery(params: ExperimentQueryParams): Promise<Result<TableQuery>> {
-    const columnsResult = this.store.getExperimentTableColumns(params.tableType, params.tableName);
+    const columnsResult = this.idColumnsOf(params);
     if (columnsResult.isFailure()) {
       return columnsResult;
     }
-    const idColumns: IdColumns = new Map(
-      columnsResult.value.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
-    );
+    const idColumns = columnsResult.value;
 
     const devicesResult = this.readsLabels(params, idColumns)
       ? await this.devicesOf(params.experimentId)
@@ -114,7 +115,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     }
     const devices = devicesResult.value;
 
-    const sortsByRegistry = devices !== undefined && this.sortsWholeDevice(params, idColumns);
+    const sortsByRegistry =
+      devices !== undefined &&
+      (this.sortsWholeDevice(params, idColumns) || this.sumsByDevice(params, idColumns));
     const orderResult = sortsByRegistry
       ? success(this.registryOrder(devices))
       : await this.contributorOrder(params, idColumns);
@@ -138,7 +141,7 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       ...params,
       limit: isDistinctDevice ? undefined : params.limit,
       orderByIds: orderResult.value,
-      deviceSerials: devices === undefined ? undefined : this.serialsShown(devices),
+      deviceSerials: devices === undefined ? undefined : this.registeredDevices(devices),
       metadataSheets: sheetsResult.value,
     });
     if (built.isFailure()) {
@@ -173,8 +176,9 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
   }
 
   /**
-   * The rows in the warehouse's cells, marked truncated, as the warehouse marks a result it cuts,
-   * when those cells pass the limit one read may return, so the same pages are refused.
+   * The rows in the warehouse's cells that fit the limit one read may return, marked truncated
+   * when some did not, as the warehouse cuts a result: a page so cut is refused, and a chart shows
+   * what fits.
    */
   async runQuery(query: TableQuery): Promise<Result<SchemaData>> {
     const result = await this.store.executeQuery(query);
@@ -262,7 +266,40 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
     return groups.map(({ ids }) => ids);
   }
 
-  /** Whether the read filters, sorts or lists by a device's label, which needs its serial. */
+  /** The read's contributor and device columns, a second table's under the names it joins as. */
+  private idColumnsOf({ tableType, tableName, join }: ExperimentQueryParams): Result<IdColumns> {
+    const columns = this.store.getExperimentTableColumns(tableType, tableName);
+    if (columns.isFailure()) {
+      return columns;
+    }
+    const idColumns: IdColumns = new Map(
+      columns.value.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
+    );
+    if (join === undefined) {
+      return success(idColumns);
+    }
+
+    const secondary = this.store.getExperimentTableColumns(
+      join.secondary.tableType,
+      join.secondary.tableName,
+    );
+    if (secondary.isFailure()) {
+      return secondary;
+    }
+    const secondaryIds = new Map(secondary.value.map(({ name, idOf }) => [name, idOf]));
+    for (const { name, alias } of join.secondaryColumns) {
+      const idOf = secondaryIds.get(name);
+      if (idOf !== undefined) {
+        idColumns.set(alias, idOf);
+      }
+    }
+    return success(idColumns);
+  }
+
+  /**
+   * Whether the read filters, sorts or lists by a device's label, which needs its serial, or
+   * aggregates over devices, which the warehouse tells apart by their registry rows.
+   */
   private readsLabels(params: ExperimentQueryParams, idColumns: IdColumns): boolean {
     const columns = [
       ...(params.filters ?? []).map(({ column }) => column),
@@ -273,48 +310,117 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       const [name, field] = this.structPath(column);
       return idColumns.get(name) === "device" && field === "serial_number";
     });
-    return namesLabel || this.sortsWholeDevice(params, idColumns);
+    return (
+      namesLabel ||
+      this.aggregatesDevices(params, idColumns) ||
+      this.sortsWholeDevice(params, idColumns)
+    );
+  }
+
+  /** An aggregation that names a device column, or keeps every row and so every row's device. */
+  private aggregatesDevices({ aggregation }: ExperimentQueryParams, idColumns: IdColumns): boolean {
+    if (aggregation === undefined || !hasAggregationContent(aggregation)) {
+      return false;
+    }
+
+    const groups = aggregation.groupBy ?? [];
+    const functions = aggregation.functions ?? [];
+    const keepsRows =
+      groups.length === 0 &&
+      functions.every(({ function: fn }) => fn === "cumsum" || aggregateKind(fn) === "rowWindow");
+
+    const named = [
+      ...groups.map(({ column }) => column),
+      ...functions.flatMap((item) => [
+        item.column,
+        item.secondColumn,
+        item.partitionColumn,
+        item.orderColumn,
+      ]),
+    ];
+    const namesDevice = named.some(
+      (name) => name !== undefined && idColumns.get(this.structPath(name)[0]) === "device",
+    );
+    const hasDevices = [...idColumns.values()].includes("device");
+
+    return hasDevices && (keepsRows || namesDevice);
   }
 
   /**
-   * Whether the read shows, filters or sorts by a custom metadata field, the only reads that join
-   * the sheets. A sheet's fields reach a read only through the custom metadata schema the listing
-   * gave it, and a read that names no columns shows them all.
+   * Whether the read shows, filters, sorts, groups, aggregates, partitions or matches a second
+   * table by a custom metadata field, its own or that table's, the only reads that join the sheets.
+   * A read that names no columns shows them all.
    */
   private readsSheets(params: ExperimentQueryParams): boolean {
-    if (!this.store.takesCustomMetadata(params.tableType, params.tableName)) {
-      return false;
-    }
-    const sources = (params.variants ?? []).map(({ columnName, schema, suffix }) => ({
-      column: columnName,
-      schema,
-      suffix: suffix ?? columnName,
-    }));
-    const reserved = [...this.store.reservedNames(), ...(params.reservedColumns ?? [])];
-    const fields = new Set(
-      FlattenedFields.resolve(reserved, sources)
-        .filter(({ column }) => column === "custom_metadata")
-        .map(({ key }) => key),
-    );
+    const fields = this.metadataFields(params);
     const isEveryColumnShown = (params.columns ?? []).length === 0;
+    const { aggregation, join } = params;
     const named = [
       ...(params.filters ?? []).map(({ column }) => column),
       ...(params.columns ?? []),
       params.ordering?.column ?? "",
+      ...(aggregation?.groupBy ?? []).map(({ column }) => column),
+      ...(aggregation?.functions ?? []).flatMap((item) => [
+        item.column,
+        item.secondColumn ?? "",
+        item.partitionColumn ?? "",
+        item.orderColumn ?? "",
+        item.tieBreaker ?? "",
+      ]),
+      join?.matchColumn ?? "",
+      join?.primaryTimeColumn ?? "",
     ];
-    return (isEveryColumnShown && fields.size > 0) || named.some((name) => fields.has(name));
+    const readsOwnSheets =
+      (isEveryColumnShown && fields.size > 0) || named.some((name) => fields.has(name));
+    if (readsOwnSheets || join === undefined) {
+      return readsOwnSheets;
+    }
+
+    const matchedFields = this.metadataFields(join.secondary);
+    const matchedNames = [
+      join.matchColumn,
+      join.secondaryTimeColumn,
+      ...join.secondaryColumns.map(({ name }) => name),
+    ];
+    return matchedNames.some((name) => matchedFields.has(name));
   }
 
-  /** Only a serial a label shows enters the query; any other device reads none from the list. */
-  private serialsShown(devices: Map<string, DeviceCell>): [string, string][] {
-    return [...devices.entries()].flatMap(([clientId, { serial_number }]) =>
-      this.showsSerial(serial_number) ? [[clientId, serial_number]] : [],
+  /** A table's custom metadata fields by the names a read gives them, which reach it only through
+   *  the custom metadata schema the listing gave the table. */
+  private metadataFields(source: ExperimentQuerySource): Set<string> {
+    if (!this.store.takesCustomMetadata(source.tableType, source.tableName)) {
+      return new Set();
+    }
+    const sources = (source.variants ?? []).map(({ columnName, schema, suffix }) => ({
+      column: columnName,
+      schema,
+      suffix: suffix ?? columnName,
+    }));
+    const reserved = [...this.store.reservedNames(), ...(source.reservedColumns ?? [])];
+    return new Set(
+      FlattenedFields.resolve(reserved, sources)
+        .filter(({ column }) => column === "custom_metadata")
+        .map(({ key }) => key),
+    );
+  }
+
+  /** Every registered device, with only a serial a label shows; any other device reads none. */
+  private registeredDevices(devices: Map<string, DeviceCell>): [string, string | null][] {
+    return [...devices.entries()].flatMap(([clientId, { id, serial_number }]) =>
+      id === null ? [] : [[clientId, this.showsSerial(serial_number) ? serial_number : null]],
     );
   }
 
   /** The label's own rule, which Spark trims by spaces only: a serial of spaces shows the label. */
   private showsSerial(serial: string | null): serial is string {
     return serial !== null && /[^ ]/.test(serial);
+  }
+
+  /** A running sum grouped first by a whole device accumulates in the registry's order. */
+  private sumsByDevice({ aggregation }: ExperimentQueryParams, idColumns: IdColumns): boolean {
+    const first = aggregation?.groupBy?.at(0);
+    const hasRunningSum = (aggregation?.functions ?? []).some((item) => item.function === "cumsum");
+    return hasRunningSum && first !== undefined && idColumns.get(first.column) === "device";
   }
 
   private sortsWholeDevice({ ordering }: ExperimentQueryParams, idColumns: IdColumns): boolean {
@@ -392,13 +498,17 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
       return success(data);
     }
 
+    // A matched table's device is null where no row matched.
     const pairs = data.rows.map((row) =>
-      deviceIndexes.map((index) => zDevicePair.parse(JSON.parse(String(row[index])))),
+      deviceIndexes.map((index) => {
+        const cell = row[index];
+        return cell === null ? null : zDevicePair.parse(JSON.parse(cell));
+      }),
     );
     const contributorIds = new Set(
       data.rows.flatMap((row) => contributorIndexes.flatMap((index) => row[index] ?? [])),
     );
-    const clientIds = new Set(pairs.flat().flatMap(([clientId]) => clientId ?? []));
+    const clientIds = new Set(pairs.flat().flatMap((pair) => pair?.[0] ?? []));
     const [contributors, devices] = await Promise.all([
       this.contributors([...contributorIds]),
       this.devices([...clientIds]),
@@ -412,7 +522,11 @@ export class ExperimentStoreReadsService implements ExperimentTableReads {
 
     const contributorCell = (id: string | null) =>
       id === null ? null : JSON.stringify(contributors.value.get(id));
-    const deviceCell = ([clientId, label]: [string | null, string | null]) => {
+    const deviceCell = (pair: [string | null, string | null] | null) => {
+      if (pair === null) {
+        return null;
+      }
+      const [clientId, label] = pair;
       const known = clientId === null ? undefined : devices.value.get(clientId);
       const registered = known ?? UNKNOWN_DEVICE;
       const serial = registered.serial_number;

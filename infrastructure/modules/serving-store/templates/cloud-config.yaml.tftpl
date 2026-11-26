@@ -26,13 +26,21 @@ write_files:
     content: |
       ${data_device} /var/lib/clickhouse ext4 defaults,noatime,nofail,x-systemd.makefs,x-systemd.device-timeout=10min 0 2
 
+  # The passwords script runs before every start, as root. A failed secret read keeps the last good
+  # passwords file; on a new instance, which has none, it fails the start, and the restart reads
+  # again, so the store comes up once Secrets Manager answers.
   - path: /etc/systemd/system/clickhouse-server.service.d/openjii.conf
     content: |
       [Unit]
       RequiresMountsFor=/var/lib/clickhouse
+      Wants=network-online.target
+      After=network-online.target
 
       [Service]
       ExecStartPre=+/usr/bin/chown clickhouse:clickhouse /var/lib/clickhouse
+      ExecStartPre=+/usr/local/bin/openjii-clickhouse-passwords
+      Restart=always
+      RestartSec=30
 
   - path: /etc/clickhouse-server/config.d/openjii.xml
     defer: true
@@ -43,6 +51,10 @@ write_files:
     owner: root:clickhouse
     permissions: "0640"
     content: ${jsonencode(users_xml)}
+
+  - path: /usr/local/bin/openjii-clickhouse-passwords
+    permissions: "0755"
+    content: ${jsonencode(passwords_script)}
 
   - path: ${prometheus_config_path}
     defer: true

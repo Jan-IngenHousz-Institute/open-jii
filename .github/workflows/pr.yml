@@ -24,6 +24,7 @@ jobs:
     outputs:
       affected_apps: ${{ steps.detect.outputs.affected_apps }}
       has_affected_apps: ${{ steps.detect.outputs.has_affected_apps }}
+      has_test_apps: ${{ steps.store.outputs.has_test_apps }}
       checks_matrix: ${{ steps.plan.outputs.checks_matrix }}
       has_infrastructure_changes: ${{ steps.infra.outputs.has_infrastructure_changes }}
       has_foundation_changes: ${{ steps.infra.outputs.has_foundation_changes }}
@@ -41,13 +42,44 @@ jobs:
         id: detect
         uses: ./.github/actions/detect-affected-packages
 
+      # Both apps' tests build their store from these files and read the data app's fixtures, and
+      # Turbo ties none of them to both apps. Widened here, not in the shared action, which also
+      # decides what deploys.
+      - name: Detect Serving Store Changes
+        id: store
+        shell: bash
+        env:
+          AFFECTED_APPS: ${{ steps.detect.outputs.affected_apps }}
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+          TEST_APPS=$(echo "$AFFECTED_APPS" | jq -c .)
+          if git diff --name-only "$BASE_SHA" HEAD -- \
+              packages/database/clickhouse/ \
+              infrastructure/modules/serving-store/ \
+              packages/database/docker-compose.yml \
+              packages/database/package.json \
+              packages/database/.env.test \
+              packages/database/scripts/reset-store.ts \
+              packages/database/test-store/ \
+              packages/database/src/clickhouse/migrate.ts \
+              apps/data/tests/fixtures/ | grep -q .; then
+            TEST_APPS=$(echo "$TEST_APPS" | jq -c '. + ["backend", "data"] | unique')
+            echo "Serving store changes detected, so the backend and data are tested"
+          fi
+          echo "test_apps=$TEST_APPS" >> $GITHUB_OUTPUT
+          if [ "$(echo "$TEST_APPS" | jq 'length')" -gt 0 ]; then
+            echo "has_test_apps=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_test_apps=false" >> $GITHUB_OUTPUT
+          fi
+
       # One job per check. The slowest test suites get jobs of their own, web and
       # backend split in two, and every other package's tests share one job.
       - name: Plan Checks
         id: plan
         shell: bash
         env:
-          AFFECTED_APPS: ${{ steps.detect.outputs.affected_apps }}
+          AFFECTED_APPS: ${{ steps.store.outputs.test_apps }}
         run: |
           MATRIX=$(jq -c '
             def affected($pkg): any(.[]; . == $pkg);
@@ -358,7 +390,7 @@ jobs:
     name: ${{ matrix.label }}
     needs: detect
     runs-on: ubuntu-latest
-    if: needs.detect.outputs.has_affected_apps == 'true'
+    if: needs.detect.outputs.has_test_apps == 'true'
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.detect.outputs.checks_matrix) }}
@@ -649,11 +681,11 @@ jobs:
       TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
       TF_VAR_databricks_auth_type: github-oidc
       TF_VAR_databricks_host: ${{ secrets.DATABRICKS_HOST }}
-      TF_VAR_backend_webhook_api_key_id: ${{ secrets.BACKEND_WEBHOOK_API_KEY_ID }}
-      TF_VAR_backend_webhook_api_key: ${{ secrets.BACKEND_WEBHOOK_API_KEY }}
-      TF_VAR_backend_webhook_secret: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
       TF_VAR_backend_databricks_warehouse_id: ${{ secrets.BACKEND_DATABRICKS_WAREHOUSE_ID }}
       TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_slack_webhook_url_databricks: ${{ secrets.SLACK_WEBHOOK_URL_DATABRICKS }}
+      TF_VAR_slack_webhook_url_grafana: ${{ secrets.SLACK_WEBHOOK_URL_GRAFANA }}
+      TF_VAR_slack_webhook_url_posthog: ${{ secrets.SLACK_WEBHOOK_URL_POSTHOG }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}

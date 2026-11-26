@@ -54,7 +54,7 @@ pnpm validate:prod     # databricks bundle validate -t prod
 You can run the underlying tools directly too:
 
 ```bash
-uv run pytest -m "not spark"        # skip Spark-fixture tests for fast feedback
+uv run pytest -m "not spark and not clickhouse"   # skip the Spark and store tests for fast feedback
 uv run pytest tests/lib/test_compression.py -v
 uv run ruff check --fix .
 uv build --all-packages
@@ -65,6 +65,8 @@ uv build --all-packages
 The test suite covers the pure-logic surface of each library: compression, HMAC signing, batching and chunked-error paths in the backend client, question-label sanitization and Spark-side column expansion, the repair-manifest registry (severity + predicate filtering), the RIDES re-interleave algorithm, and the upload-directory parser.
 
 Tests that require a SparkSession are scoped to a single session-level fixture in `tests/conftest.py` and gated behind the `spark` marker. There is also a `fake_dlt` fixture that injects a stub `dlt` module so DLT pipeline files can be imported in tests without crashing.
+
+Tests marked `clickhouse` read and write the test store that `pnpm test` starts on port 8125 and removes when the run ends. `uv run pytest -m "not spark"` picks them up too, and they fail without that store. To run without Docker, select `-m "not spark and not clickhouse"`.
 
 ## Catalog configuration
 
