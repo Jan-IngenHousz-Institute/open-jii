@@ -44,8 +44,9 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
-  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
-  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
+  # The reader reads experiment data through the views, which name one experiment per read
+  # (packages/database/clickhouse/migrations), and from the base tables below, under its row
+  # policy. A reload replaces rows of the reloaded tables or removes ids from them.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
@@ -53,13 +54,21 @@ locals {
   ]
   reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
 
+  # The tables under the experiment views, which a chart reads to name only the payload paths it
+  # plots; through a view the store reads every payload whole. The reader's row policy on each keeps
+  # a read to the experiment it sends as a setting, and fails a read that sends none. SQL_ is the
+  # prefix the packaged server config allows custom settings under. Users without a row policy
+  # still read every row, as the packaged config's users_without_row_policies_can_read_rows says.
+  reader_tables     = ["measurements", "macro_results", "uploads"]
+  reader_row_filter = "experiment_id = getSetting('SQL_experiment')"
+
   # No grants means the admin, which manages access and applies the schema. The writer only inserts,
   # and keeps out of the migration ledger, which records what the schema already holds. The reloader
   # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
   # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
   # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
   users = {
-    admin = { name = "openjii_admin", profile = "default", grants = [] }
+    admin = { name = "openjii_admin", profile = "default", grants = [], row_filters = {} }
     writer = {
       name    = "openjii_writer"
       profile = "ingest"
@@ -67,6 +76,7 @@ locals {
         "GRANT SELECT, INSERT ON store.*",
         "REVOKE INSERT ON store._migrations",
       ]
+      row_filters = {}
     }
     reloader = {
       name    = "openjii_reloader"
@@ -76,20 +86,26 @@ locals {
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
         ["REVOKE INSERT ON store._migrations"],
       )
+      row_filters = {}
     }
     reader = {
       name    = "openjii_reader"
       profile = "reader"
-      grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
+      grants = concat(
+        [for view in local.reader_views : "GRANT SELECT ON store.${view}"],
+        [for table in local.reader_tables : "GRANT SELECT ON store.${table}"],
+      )
+      row_filters = { for table in local.reader_tables : table => local.reader_row_filter }
     }
   }
 
   users_xml = templatefile("${path.module}/templates/users.xml.tftpl", {
     users = [
       for role, user in local.users : {
-        name    = user.name
-        profile = user.profile
-        grants  = user.grants
+        name        = user.name
+        profile     = user.profile
+        grants      = user.grants
+        row_filters = user.row_filters
       }
     ]
   })

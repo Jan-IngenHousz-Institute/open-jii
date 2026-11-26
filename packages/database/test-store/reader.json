@@ -10,8 +10,8 @@
     "experiment_metadata_rows",
     "experiment_metadata_sheets"
   ],
-  "tables": [],
-  "rowFilter": null,
+  "tables": ["measurements", "macro_results", "uploads"],
+  "rowFilter": "experiment_id = getSetting('SQL_experiment')",
   "settings": [
     "json_type_escape_dots_in_keys = 1",
     "input_format_try_infer_dates = 0",

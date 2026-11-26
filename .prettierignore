@@ -10,6 +10,9 @@ apps/docs/.source/
 # Auto-generated from packages/api during the docs build; drift-checked verbatim in CI.
 apps/docs/openapi.json
 
+# Written by the Spark chart test under WRITE_CHART_RESULTS=1; reformatting churns on every regen.
+apps/data/tests/fixtures/chart-results.json
+
 # Compiled @repo/monitoring output copied into the lambda bundles at build time.
 infrastructure/modules/monitoring/*/lambda/lib/
 

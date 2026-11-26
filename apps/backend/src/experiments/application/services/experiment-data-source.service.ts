@@ -6,14 +6,19 @@ import type { FlagUser } from "@repo/analytics";
 import type { ExperimentDataSource } from "../../core/models/experiment-data.model";
 import { ANALYTICS_PORT } from "../../core/ports/analytics.port";
 import type { AnalyticsPort } from "../../core/ports/analytics.port";
+import type { ExperimentTableReads } from "../../core/ports/experiment-table-reads.port";
 import { SERVING_STORE_PORT } from "../../core/ports/serving-store.port";
 import type { ServingStorePort } from "../../core/ports/serving-store.port";
+import { ExperimentStoreReadsService } from "./experiment-store-reads.service";
+import { ExperimentWarehouseReadsService } from "./experiment-warehouse-reads.service";
 
 @Injectable()
 export class ExperimentDataSourceService {
   constructor(
     @Inject(ANALYTICS_PORT) private readonly analyticsPort: AnalyticsPort,
     @Inject(SERVING_STORE_PORT) private readonly servingStore: ServingStorePort,
+    private readonly warehouseReads: ExperimentWarehouseReadsService,
+    private readonly storeReads: ExperimentStoreReadsService,
   ) {}
 
   /** The store once its flag is on, except where there is no store, such as DR. */
@@ -26,5 +31,9 @@ export class ExperimentDataSourceService {
       user,
     );
     return isStoreRead ? "store" : "warehouse";
+  }
+
+  readsFor(source: ExperimentDataSource): ExperimentTableReads {
+    return source === "store" ? this.storeReads : this.warehouseReads;
   }
 }

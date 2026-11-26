@@ -15,8 +15,7 @@ export function buildCumsumExpression(
   opts: { orderBy: string; grouped: boolean },
   builder: BaseQueryBuilder,
 ): { sql: string; alias: string } {
-  const aliasBase = agg.column === "*" ? "count" : agg.column;
-  const alias = agg.alias ?? `${aliasBase}_${agg.function}`;
+  const alias = builder.aggregateAlias(agg);
   const innerExpr = (() => {
     if (agg.column === "*") {
       return opts.grouped ? "COUNT(*)" : "1";

@@ -1,7 +1,9 @@
-"""The serving store's reads for the backend: views that name one experiment, which are all its reader
-may read, and the contributor and client ids kept beside the rows.
+"""The serving store's reads for the backend: views that name one experiment, the tables under them,
+which its reader reads only for the experiment a read names in a setting, and the contributor and
+client ids kept beside the rows.
 
-The tests run against the test store ``pnpm test`` starts.
+The tests run against the test store ``pnpm test`` starts. The packaged server config allows custom
+settings under SQL_, as the store's does.
 """
 
 from __future__ import annotations
@@ -21,14 +23,22 @@ pytestmark = pytest.mark.clickhouse
 _DATABASE = "views_test"
 _READER = "views_test_reader"
 _READER_PROFILE = "views_test_reader_profile"
+_READER_POLICY = "views_test_reader_policy"
+_EXPERIMENT_SETTING = "SQL_experiment"
 
-_USERS_XML = Path(__file__).parents[4] / "infrastructure/modules/serving-store/templates/users.xml.tftpl"
+_MODULE = Path(__file__).parents[4] / "infrastructure/modules/serving-store"
+_USERS_XML = _MODULE / "templates/users.xml.tftpl"
+
 
 _TEST_READER = Path(__file__).parents[4] / "packages/database/test-store/reader.json"
 _STORE_MODULE = ServingStoreModule.read()
 _READER_VIEWS = tuple(_STORE_MODULE.local_list("reader_views"))
+_READER_TABLES = tuple(_STORE_MODULE.local_list("reader_tables"))
+_READER_ROW_FILTER = _STORE_MODULE.local("reader_row_filter")
 
 _COMMIT = "_commit_version, _commit_timestamp"
+# The rows the admin fixture writes for e1, by table.
+_E1_IDS = {"measurements": [1, 2], "macro_results": [11], "uploads": [21]}
 
 
 def _reader_profile() -> str:
@@ -57,6 +67,23 @@ def _reader_profile() -> str:
     return f"CREATE SETTINGS PROFILE {_READER_PROFILE} SETTINGS {', '.join(settings)}"
 
 
+def _rendered_databases(row_filters: dict[str, str]) -> ElementTree.Element:
+    """A user's ``<databases>`` as users.xml.tftpl renders it for these row filters. Its one
+    directive, the loop over the filters, is unrolled as OpenTofu unrolls it, without escaping;
+    the rest of the block is markup."""
+    template = _USERS_XML.read_text()
+    block = template[template.index("<databases>") : template.index("</databases>") + len("</databases>")]
+    head, rest = block.split("%{ for table, filter in user.row_filters ~}")
+    body, tail = rest.split("%{ endfor ~}")
+    tables = "".join(
+        body.replace("${table}", table).replace("${filter}", row_filter)
+        for table, row_filter in row_filters.items()
+    )
+    rendered = head + tables + tail
+    assert "${" not in rendered and "%{" not in rendered, rendered
+    return ElementTree.fromstring(rendered)
+
+
 class _User:
     """One user's view of a real store."""
 
@@ -64,24 +91,39 @@ class _User:
         self.url = url
         self.headers = {"X-ClickHouse-User": user, "X-ClickHouse-Key": password}
 
-    def run(self, sql: str, database: str | None = None, **parameters: str) -> requests.Response:
+    def run(
+        self,
+        sql: str,
+        database: str | None = None,
+        settings: dict[str, str] | None = None,
+        **parameters: str,
+    ) -> requests.Response:
         params = {"database": database} if database else {}
+        params.update(settings or {})
         params.update({f"param_{name}": value for name, value in parameters.items()})
         return requests.post(self.url, params=params, data=sql.encode(), headers=self.headers, timeout=60)
 
-    def ok(self, sql: str, database: str | None = None, **parameters: str) -> str:
-        response = self.run(sql, database, **parameters)
+    def ok(
+        self,
+        sql: str,
+        database: str | None = None,
+        settings: dict[str, str] | None = None,
+        **parameters: str,
+    ) -> str:
+        response = self.run(sql, database, settings, **parameters)
         assert response.ok, response.text
         return response.text
 
-    def rows(self, sql: str, **parameters: str) -> list[dict]:
-        text = self.ok(f"{sql} FORMAT JSONEachRow", **parameters)
+    def rows(self, sql: str, settings: dict[str, str] | None = None, **parameters: str) -> list[dict]:
+        text = self.ok(f"{sql} FORMAT JSONEachRow", settings=settings, **parameters)
         return [json.loads(line) for line in text.splitlines()]
 
 
 @pytest.fixture
 def admin(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Iterator[_User]:
     admin = _User(*store_admin)
+    policy_tables = ", ".join(f"{_DATABASE}.{table}" for table in _READER_TABLES)
+    admin.ok(f"DROP ROW POLICY IF EXISTS {_READER_POLICY} ON {policy_tables}")
     admin.ok(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     admin.ok(f"DROP USER IF EXISTS {_READER}")
     admin.ok(f"DROP SETTINGS PROFILE IF EXISTS {_READER_PROFILE}")
@@ -90,8 +132,9 @@ def admin(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Ite
         admin.ok(statement, database=_DATABASE)
     admin.ok(_reader_profile())
     admin.ok(f"CREATE USER {_READER} IDENTIFIED BY 'views-test' SETTINGS PROFILE '{_READER_PROFILE}'")
-    for view in _READER_VIEWS:
-        admin.ok(f"GRANT SELECT ON {_DATABASE}.{view} TO {_READER}")
+    for granted in (*_READER_VIEWS, *_READER_TABLES):
+        admin.ok(f"GRANT SELECT ON {_DATABASE}.{granted} TO {_READER}")
+    admin.ok(f"CREATE ROW POLICY {_READER_POLICY} ON {policy_tables} USING {_READER_ROW_FILTER} TO {_READER}")
 
     admin.ok(
         f"INSERT INTO {_DATABASE}.measurements (experiment_id, id, timestamp, user_id, client_id, {_COMMIT}) VALUES "
@@ -101,15 +144,18 @@ def admin(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Ite
     )
     admin.ok(
         f"INSERT INTO {_DATABASE}.macro_results (experiment_id, id, raw_id, timestamp, user_id, client_id, {_COMMIT}) "
-        "VALUES ('e1', 11, 1, '2026-10-19 10:00:00', 'u4', 'c4', 4, '2026-10-19 10:00:05')"
+        "VALUES ('e1', 11, 1, '2026-10-19 10:00:00', 'u4', 'c4', 4, '2026-10-19 10:00:05'), "
+        "('e2', 13, 3, '2026-10-19 12:00:00', 'u3', 'c3', 4, '2026-10-19 12:00:05')"
     )
     admin.ok(
         f"INSERT INTO {_DATABASE}.uploads (experiment_id, id, uploaded_at, created_by, {_COMMIT}) "
-        "VALUES ('e1', 21, '2026-10-19 09:00:00', 'u5', 5, '2026-10-19 09:00:01')"
+        "VALUES ('e1', 21, '2026-10-19 09:00:00', 'u5', 5, '2026-10-19 09:00:01'), "
+        "('e2', 23, '2026-10-19 12:00:00', 'u3', 5, '2026-10-19 12:00:01')"
     )
 
     yield admin
 
+    admin.ok(f"DROP ROW POLICY {_READER_POLICY} ON {policy_tables}")
     admin.ok(f"DROP USER {_READER}")
     admin.ok(f"DROP SETTINGS PROFILE {_READER_PROFILE}")
     admin.ok(f"DROP DATABASE {_DATABASE} SYNC")
@@ -133,7 +179,22 @@ def test_the_test_stores_reader_has_the_access_the_module_gives_the_reader() -> 
     assert sorted(test_reader["settings"]) == sorted(profile)
 
 
-def test_the_reader_reads_one_experiments_rows_through_each_view(reader: _User) -> None:
+def test_the_shipped_users_xml_keeps_each_reader_table_to_the_row_filter() -> None:
+    template = _USERS_XML.read_text()
+    row_filters = _STORE_MODULE.local("users")["reader"]["row_filters"]
+
+    [store] = list(_rendered_databases(row_filters))
+
+    # The block is each user's own, inside the loop that writes the users.
+    user = template.index("<${user.name}>")
+    assert user < template.index("<databases>") < template.index("</${user.name}>")
+    assert store.tag == "store"
+    assert {table.tag: table.findtext("filter") for table in store} == dict.fromkeys(
+        _READER_TABLES, _READER_ROW_FILTER
+    )
+
+
+def test_the_reader_reads_one_experiments_rows_through_each_view_without_the_setting(reader: _User) -> None:
     measurements = reader.rows(
         f"SELECT id FROM {_DATABASE}.experiment_measurements(experiment = {{experiment:String}}) ORDER BY id",
         experiment="e1",
@@ -146,16 +207,32 @@ def test_the_reader_reads_one_experiments_rows_through_each_view(reader: _User) 
     assert [int(row["id"]) for row in uploads] == [21]
 
 
-@pytest.mark.parametrize(
-    "statement",
-    [
-        f"SELECT count() FROM {_DATABASE}.measurements",
-        f"SELECT count() FROM {_DATABASE}.contributor_ids",
-        f"SELECT count() FROM {_DATABASE}.payload_schemas",
-    ],
-)
-def test_the_reader_cannot_read_a_table_without_naming_an_experiment(reader: _User, statement: str) -> None:
-    response = reader.run(statement)
+@pytest.mark.parametrize("table", _READER_TABLES)
+def test_the_reader_cannot_read_a_table_without_naming_an_experiment(reader: _User, table: str) -> None:
+    response = reader.run(f"SELECT count() FROM {_DATABASE}.{table}")
+
+    # UNKNOWN_SETTING: the row policy reads the setting, which the read never set.
+    assert response.headers.get("X-ClickHouse-Exception-Code") == "115"
+
+
+@pytest.mark.parametrize("table", _READER_TABLES)
+def test_the_reader_reads_a_table_only_for_the_experiment_its_setting_names(
+    reader: _User, table: str
+) -> None:
+    setting = {_EXPERIMENT_SETTING: "e1"}
+
+    named = reader.rows(f"SELECT id FROM {_DATABASE}.{table} FINAL ORDER BY id", settings=setting)
+    other = reader.rows(
+        f"SELECT id FROM {_DATABASE}.{table} FINAL WHERE experiment_id = 'e2'", settings=setting
+    )
+
+    assert [int(row["id"]) for row in named] == _E1_IDS[table]
+    assert other == []
+
+
+@pytest.mark.parametrize("table", ["contributor_ids", "client_ids", "payload_schemas"])
+def test_the_reader_cannot_read_a_table_the_module_does_not_grant(reader: _User, table: str) -> None:
+    response = reader.run(f"SELECT count() FROM {_DATABASE}.{table}", settings={_EXPERIMENT_SETTING: "e1"})
 
     assert response.headers.get("X-ClickHouse-Exception-Code") == "497"
 

@@ -1,6 +1,11 @@
+import {
+  aggregateKind,
+  requiresGroupBy,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import { buildAggregateExpression } from "./expressions/aggregation";
+import type { NamedOutput } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
 import { buildFilterCondition } from "./expressions/filter";
 import {
@@ -11,11 +16,14 @@ import {
 import type { NumericStringKeys } from "./expressions/numeric-string-order";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
 import { buildWidthBucketExpression } from "./expressions/width-bucket";
+import { buildRowWindowExpression } from "./expressions/window";
 import type {
   AggregateExpression,
+  AsOfJoin,
   FilterCondition,
   FilterValue,
   QueryOrdering,
+  QueryParams,
   TimeBucketUnit,
   WidthBucket,
 } from "./query-builder.types";
@@ -198,11 +206,90 @@ export abstract class BaseQueryBuilder {
     return buildAggregateExpression(agg, this);
   }
 
+  /** The SQL a read groups a plain column by. */
+  groupKey(column: string): string {
+    return this.escapeIdentifier(column);
+  }
+
+  /** An aggregated statement sorted and paged by `clauses`, its ORDER BY and LIMIT. */
+  sortedAggregate(statement: string, clauses: string): string {
+    return `${statement}${clauses}`;
+  }
+
+  /** `orderColumn` is the column `orderBy` reads, for a dialect that orders some columns apart. */
   buildCumsumExpression(
     agg: AggregateExpression,
-    opts: { orderBy: string; grouped: boolean },
+    opts: { orderBy: string; orderColumn?: string; grouped: boolean },
   ): { sql: string; alias: string } {
     return buildCumsumExpression(agg, opts, this);
+  }
+
+  buildRowWindowExpression(item: AggregateExpression): { sql: string; alias: string } {
+    return buildRowWindowExpression(item, this);
+  }
+
+  /**
+   * The second table's columns an as-of read names, by a column, a filter, its sort or its
+   * aggregation; a read that names no column and groups nothing shows them all.
+   */
+  secondaryColumnsRead(
+    read: Pick<QueryParams, "columns" | "filters" | "ordering" | "aggregation">,
+    join: Pick<AsOfJoin, "primaryColumns" | "secondaryColumns">,
+  ): AsOfJoin["secondaryColumns"] {
+    const { columns, filters, ordering, aggregation } = read;
+    const rowAggregation =
+      (aggregation?.groupBy?.length ?? 0) > 0 ||
+      aggregation?.functions?.some((fn) => requiresGroupBy(fn.function));
+    const allNames = new Set([
+      ...join.primaryColumns,
+      ...join.secondaryColumns.map((column) => column.alias),
+    ]);
+    const references = [
+      ...(columns ?? []),
+      ...(filters?.map((filter) => filter.column) ?? []),
+      ...(ordering ? [ordering.column] : []),
+      ...(aggregation?.groupBy?.map((group) => group.column) ?? []),
+      ...(aggregation?.functions?.flatMap((fn) => [
+        fn.column,
+        ...(fn.secondColumn ? [fn.secondColumn] : []),
+        ...(fn.partitionColumn ? [fn.partitionColumn] : []),
+        ...(fn.orderColumn ? [fn.orderColumn] : []),
+      ]) ?? []),
+      ...(aggregation?.explode ? [aggregation.explode.column] : []),
+    ];
+    return !columns?.length && !rowAggregation
+      ? join.secondaryColumns
+      : join.secondaryColumns.filter((column) =>
+          references.some(
+            (reference) =>
+              reference === column.alias ||
+              (!allNames.has(reference) && reference.startsWith(`${column.alias}.`)),
+          ),
+        );
+  }
+
+  /**
+   * The sort of an aggregated read by `target`, the SQL its ordering's column reads as, which is
+   * `_output` when the read sorts by one of its outputs.
+   */
+  aggregateOrdering(
+    target: string,
+    { direction = "ASC" }: QueryOrdering,
+    _output?: NamedOutput,
+  ): string {
+    return `${target} ${direction}`;
+  }
+
+  /** The name an aggregate's output takes when the read gives it none. */
+  aggregateAlias(agg: AggregateExpression): string {
+    if (agg.alias !== undefined) {
+      return agg.alias;
+    }
+    if (agg.function === "corr") {
+      return `${agg.column}_${agg.function}_${agg.secondColumn ?? ""}`;
+    }
+    const isRowCount = agg.column === "*" && aggregateKind(agg.function) !== "rowWindow";
+    return `${isRowCount ? "count" : agg.column}_${agg.function}`;
   }
 
   /** AND-joined `column = value` equality conditions from [column, value] tuples. */

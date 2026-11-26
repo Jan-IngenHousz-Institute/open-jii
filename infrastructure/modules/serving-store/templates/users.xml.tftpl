@@ -54,6 +54,15 @@
 %{ endfor ~}
             </grants>
 %{ endif ~}
+%{ if length(user.row_filters) > 0 ~}
+            <databases>
+                <store>
+%{ for table, filter in user.row_filters ~}
+                    <${table}><filter>${filter}</filter></${table}>
+%{ endfor ~}
+                </store>
+            </databases>
+%{ endif ~}
         </${user.name}>
 %{ endfor ~}
         <!-- The feed lag timer's user: no password, so it only answers on the instance itself. -->
