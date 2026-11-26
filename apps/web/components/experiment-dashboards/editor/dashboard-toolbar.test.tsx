@@ -497,6 +497,90 @@ describe("DashboardToolbar", () => {
     );
   });
 
+  it.each(["attach a chart copy", "remove a widget"])(
+    "persists the latest widget list when an older PATCH is held and you %s",
+    async (edit) => {
+      const user = userEvent.setup();
+      const original = createVisualization({ id: "source" });
+      const created = createVisualization({ id: "copy" });
+      const chart = createVisualizationWidget({
+        config: { visualizationId: original.id, showTitle: true, showDescription: false },
+      });
+      const attaching = edit === "attach a chart copy";
+      const initialWidgets = attaching ? [chart] : [chart, first];
+      let storedDashboard = createExperimentDashboard({ id: "dash-1", widgets: initialWidgets });
+      const writes: ExperimentDashboardWidget[][] = [];
+      const persist = ({ body }: SpyCall) => {
+        storedDashboard = { ...storedDashboard, ...(body as DashboardFormValues) };
+        writes.push(storedDashboard.widgets);
+        return storedDashboard;
+      };
+
+      const creation = Promise.withResolvers<void>();
+      const firstSave = Promise.withResolvers<void>();
+      server.mount(contract.experiments.getExperimentVisualization, { body: original });
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+      const create = server.mount(contract.experiments.createExperimentVisualization, {
+        body: created,
+        unblock: creation.promise,
+      });
+      const rename = server.mount(contract.experiments.updateExperimentDashboard, {
+        body: persist,
+        unblock: firstSave.promise,
+      });
+      function RemoveWidget() {
+        const form = useFormContext<DashboardFormValues>();
+        return <button onClick={() => form.setValue("widgets", [chart])}>Remove widget</button>;
+      }
+      render(
+        <Harness initialWidgets={initialWidgets} save>
+          <ChartSelection sourceWidgetId={chart.id} />
+          <RenameDashboard />
+          <RemoveWidget />
+          <DashboardToolbar visible experimentId="exp-1" />
+        </Harness>,
+      );
+
+      try {
+        if (attaching) {
+          await user.click(screen.getByRole("button", { name: "select chart" }));
+          await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+          await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+          await waitFor(() => expect(create.callCount).toBe(1));
+        }
+        await user.click(screen.getByRole("button", { name: "Rename dashboard" }));
+        await waitFor(() => expect(rename.callCount).toBe(1));
+        expect(rename.body).toMatchObject({ name: "Renamed", widgets: initialWidgets });
+
+        server.mount(contract.experiments.updateExperimentDashboard, { body: persist });
+        if (attaching) {
+          act(() => creation.resolve());
+          await waitFor(() =>
+            expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy"),
+          );
+        } else {
+          await user.click(screen.getByRole("button", { name: "Remove widget" }));
+        }
+        // Let the debounce expire while the rename is still blocked.
+        await act(() => new Promise((resolve) => setTimeout(resolve, 1200)));
+      } finally {
+        creation.resolve();
+        act(() => firstSave.resolve());
+      }
+
+      await waitFor(() => expect(writes).toHaveLength(2));
+      if (attaching) {
+        expect(storedDashboard.widgets).toMatchObject([
+          chart,
+          { type: "visualization", config: { visualizationId: created.id } },
+        ]);
+      } else {
+        expect(storedDashboard.widgets).toEqual([chart]);
+      }
+      expect(writes[0]).toEqual(initialWidgets);
+    },
+  );
+
   it("offers a link to the saved copy if the source widget disappears before create finishes", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });

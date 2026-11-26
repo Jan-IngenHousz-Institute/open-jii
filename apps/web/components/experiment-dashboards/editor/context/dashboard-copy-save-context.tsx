@@ -175,7 +175,7 @@ export function DashboardAutosaveBoundary({
     const removedCopies = new Map<string, CreatedChart>();
     for (const widget of current) {
       const copy = copies.get(widget.id);
-      if (copy && !inFlightWidgetIds.some((ids) => ids.has(widget.id))) {
+      if (copy && !inFlightWidgetIds?.has(widget.id)) {
         removedCopies.set(widget.id, copy.chart);
       }
     }

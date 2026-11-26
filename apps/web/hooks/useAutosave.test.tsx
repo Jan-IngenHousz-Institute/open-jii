@@ -150,53 +150,52 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
-  it("ignores a stale save's resolution when a newer save already won", async () => {
-    let resolveFirst: (() => void) | null = null;
-    let resolveSecond: (() => void) | null = null;
-    const save = vi
-      .fn<(v: string) => Promise<void>>()
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((r) => {
-            resolveFirst = r;
-          }),
-      )
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((r) => {
-            resolveSecond = r;
-          }),
-      );
+  it("serializes writes and flushes the latest queued snapshot", async () => {
+    const first = Promise.withResolvers<void>();
+    const second = Promise.withResolvers<void>();
+    let persisted = "original";
+    let active = 0;
+    let maxActive = 0;
+    const save = vi.fn(async (value: string) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await (value === "older" ? first.promise : second.promise);
+      persisted = value;
+      active--;
+    });
     const { result, rerender } = renderHook(
       ({ value }: { value: string }) => useAutosave({ value, toKey: (v) => v, save, delayMs: 20 }),
-      { initialProps: { value: "v0" } },
+      { initialProps: { value: "original" } },
     );
 
-    rerender({ value: "v1" });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(30);
-    });
-    expect(result.current.isSaving).toBe(true);
+    rerender({ value: "older" });
+    await act(() => vi.advanceTimersByTimeAsync(20));
+    rerender({ value: "superseded" });
+    await act(() => vi.advanceTimersByTimeAsync(20));
+    rerender({ value: "latest" });
+    await act(() => vi.advanceTimersByTimeAsync(20));
 
-    rerender({ value: "v2" });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(30);
-    });
-
-    // Newer save resolves first.
-    await act(async () => {
-      resolveSecond?.();
-      await Promise.resolve();
+    const writesWhileBlocked = save.mock.calls.map(([value]) => value);
+    let flushed = false;
+    const flush = result.current.flush().then(() => {
+      flushed = true;
     });
     await flushMicrotasks();
-    expect(result.current.status).toBe("idle");
+    expect(flushed).toBe(false);
 
-    // Older save resolves late — must NOT flip the state.
     await act(async () => {
-      resolveFirst?.();
-      await Promise.resolve();
+      second.resolve();
+      await second.promise;
     });
-    await flushMicrotasks();
+    await act(async () => {
+      first.resolve();
+      await flush;
+    });
+
+    expect(persisted).toBe("latest");
+    expect(maxActive).toBe(1);
+    expect(writesWhileBlocked).toEqual(["older"]);
+    expect(save.mock.calls).toEqual([["older"], ["latest"]]);
     expect(result.current.status).toBe("idle");
   });
 
