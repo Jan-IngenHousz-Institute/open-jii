@@ -1,5 +1,5 @@
 # Base image with Node
-ARG NODE_VERSION=24
+ARG NODE_VERSION=26
 
 # Alpine image
 FROM node:${NODE_VERSION}-alpine AS alpine
@@ -13,9 +13,9 @@ ENV TURBO_TELEMETRY_DISABLED=1
 FROM alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-# pnpm 11 prompts before purging a stale modules dir; CI=true keeps builds non-interactive
+# pnpm prompts before purging a stale modules dir; CI=true keeps builds non-interactive
 ENV CI=true
-RUN corepack enable
+RUN npm install --global corepack@0.36.0 && corepack enable
 # The repository's own turbo, so `turbo prune` behaves as it does outside Docker.
 COPY package.json /tmp/package.json
 RUN npm install --global "turbo@$(node -p "require('/tmp/package.json').devDependencies.turbo")"

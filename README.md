@@ -88,8 +88,8 @@ Infrastructure lives in `infrastructure/` (AWS, managed with [OpenTofu](https://
 
 ### Prerequisites
 
-- Node.js v24+ (see `.nvmrc`)
-- pnpm 11 (via corepack)
+- Node.js v26+ (see `.nvmrc`)
+- pnpm 12 (via corepack)
 - Docker (local Postgres and backend containers)
 - [uv](https://docs.astral.sh/uv/) (only for the `apps/data` Databricks workspace)
 
@@ -99,6 +99,7 @@ Infrastructure lives in `infrastructure/` (AWS, managed with [OpenTofu](https://
 git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
 cd open-jii
 nvm use
+npm install --global corepack
 corepack enable
 pnpm install
 ```

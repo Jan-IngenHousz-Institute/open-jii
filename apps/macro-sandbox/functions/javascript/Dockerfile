@@ -1,6 +1,6 @@
 # JavaScript macro sandbox Lambda
 
-FROM public.ecr.aws/lambda/nodejs:24
+FROM public.ecr.aws/lambda/nodejs:26
 
 # Takes AL2023 security fixes the base image lacks. The repos are locked to the
 # base image's release, so only --releasever=latest reaches them:

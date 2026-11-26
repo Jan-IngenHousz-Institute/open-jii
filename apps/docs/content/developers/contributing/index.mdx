@@ -17,12 +17,13 @@ Security vulnerabilities must be reported through the [security policy](https://
 
 ## Local setup
 
-Prerequisites are Node.js 24 (`.nvmrc`), Corepack/pnpm 11, and Docker for services used by the selected app. Work in `apps/data` additionally requires [uv](https://docs.astral.sh/uv/).
+Prerequisites are Node.js 26 (`.nvmrc`), Corepack/pnpm 12, and Docker for services used by the selected app. Work in `apps/data` additionally requires [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
 cd open-jii
 nvm use
+npm install --global corepack
 corepack enable
 pnpm install
 ```

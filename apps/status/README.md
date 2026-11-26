@@ -24,7 +24,7 @@ A day's card and the list of problem days name the incidents and maintenance win
 
 ## Run it locally
 
-Node 24 is required. The page reads `@repo/monitoring`, `@repo/ui` and `@repo/i18n` from their source, so there is no package to build first:
+Node 26 is required. The page reads `@repo/monitoring`, `@repo/ui` and `@repo/i18n` from their source, so there is no package to build first:
 
 ```sh
 pnpm install

@@ -40,7 +40,7 @@ For an issue comment the corresponding operation is
 an invented project health/status merely to satisfy a guessed schema.
 
 After posting is explicitly selected and the concrete destination and copy are reviewed, an agent
-can submit the staged file with a small local Node script. Node 24 is required by this repo:
+can submit the staged file with a small local Node script. Node 26 is required by this repo:
 
 ```js
 // Save as .release-prep/<release-id>/post-linear.mjs. Do not execute for a mock or draft-only choice.

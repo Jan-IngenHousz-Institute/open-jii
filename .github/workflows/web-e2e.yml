@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Install Chromium
         run: pnpm --filter @repo/e2e exec playwright install --with-deps chromium

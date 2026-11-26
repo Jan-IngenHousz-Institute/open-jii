@@ -18,12 +18,13 @@ Thank you for your interest in contributing! This document covers how to report 
 
 ## Development setup
 
-Prerequisites: Node.js v24+ (`.nvmrc`), pnpm 11 via corepack, Docker, and [uv](https://docs.astral.sh/uv/) if you work on `apps/data`.
+Prerequisites: Node.js v26+ (`.nvmrc`), pnpm 12 via corepack, Docker, and [uv](https://docs.astral.sh/uv/) if you work on `apps/data`.
 
 ```bash
 git clone https://github.com/Jan-IngenHousz-Institute/open-jii.git
 cd open-jii
 nvm use
+npm install --global corepack
 corepack enable
 pnpm install
 

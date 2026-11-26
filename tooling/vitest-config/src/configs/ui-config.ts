@@ -17,6 +17,8 @@ export const uiConfig = mergeConfig(
     test: {
       globals: true,
       environment: "jsdom",
+      // Let Vitest install jsdom storage globals instead of inheriting Node's.
+      execArgv: ["--no-experimental-webstorage"],
       setupFiles: [setupFilePath],
     },
   }),
