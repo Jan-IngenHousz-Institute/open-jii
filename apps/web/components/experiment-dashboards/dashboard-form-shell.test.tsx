@@ -1,7 +1,9 @@
+import { experimentAccessQuery } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import {
   experimentDashboardQuery,
   useExperimentDashboard,
 } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
+import { orpc } from "@/lib/orpc";
 import {
   createExperimentAccess,
   createExperimentDashboard,
@@ -648,6 +650,55 @@ describe("DashboardFormShell reopen while saving", () => {
       expect(await screen.findByTestId("probe-widgets")).toHaveTextContent("2");
       expect(oldPatch.callCount).toBe(1);
     } finally {
+      closeSave.resolve();
+    }
+  });
+
+  it("reports the copied chart without linking it after losing experiment read access", async () => {
+    const editor = setupDashboardReopen();
+    const closeSave = Promise.withResolvers<void>();
+    const patch = server.mount(contract.experiments.updateExperimentDashboard, {
+      status: 500,
+      unblock: closeSave.promise,
+    });
+
+    try {
+      await screen.findByRole("textbox", { name: "Dashboard name" });
+      await editor.duplicateChart();
+      await waitFor(() => expect(screen.getByTestId("probe-widgets")).toHaveTextContent("3"));
+      editor.leave();
+      await waitFor(() => expect(patch.callCount).toBe(1));
+      const denied = server.mount(contract.experiments.getExperimentAccess, { status: 403 });
+      const accessQuery = experimentAccessQuery(
+        orpc,
+        dashboardSession.user.id,
+        editor.experimentId,
+      );
+      await expect(
+        editor.queryClient.fetchQuery({ ...accessQuery, gcTime: Infinity }),
+      ).rejects.toMatchObject({ status: 403 });
+
+      vi.useFakeTimers();
+      editor.reopen();
+      await act(() => vi.advanceTimersByTimeAsync(10_000));
+      expect(screen.getByRole("status")).toHaveTextContent("ui.messages.saveStillInProgress");
+      expect
+        .soft(screen.queryByRole("link", { name: "editor.inspector.openChartCopy" }))
+        .toBeNull();
+      vi.useRealTimers();
+
+      act(() => closeSave.resolve());
+      await waitFor(() => expect(denied.callCount).toBeGreaterThan(1));
+      const recovery = await waitFor(() => {
+        const call = vi
+          .mocked(toast)
+          .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached");
+        assertExists(call);
+        return call[0];
+      });
+      expect(recovery.action).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
       closeSave.resolve();
     }
   });

@@ -4,13 +4,18 @@ import { usePrincipalSession } from "@/components/auth/principal-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { PageLoading } from "@/components/shared/page-loading";
 import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
+import {
+  experimentAccessQuery,
+  isExperimentReadDenied,
+} from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import {
   experimentDashboardQuery,
   reloadExperimentDashboard,
 } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import { useLocale } from "@/hooks/useLocale";
-import { useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -96,6 +101,10 @@ function DashboardFormAfterCloseSave({
   const sameSession = closeSave.userId === userId && closeSave.sessionId === sessionId;
   const [result, setResult] = useState<{ dashboard?: ExperimentDashboard; error?: unknown }>();
   const [showStatus, setShowStatus] = useState(false);
+  const { data: copyAccess, error: copyAccessError } = useQuery({
+    ...experimentAccessQuery(orpc, userId, experimentId),
+    enabled: false,
+  });
   useEffect(() => {
     let active = true;
     const timeout = setTimeout(() => setShowStatus(true), CLOSE_SAVE_STATUS_DELAY_MS);
@@ -124,7 +133,11 @@ function DashboardFormAfterCloseSave({
   }, [closeSave, dashboardId, experimentId, queryClient, sameSession, userId]);
 
   if (!result && showStatus) {
-    const links = sameSession ? (closeSave.getCopyLinks?.(locale) ?? []) : [];
+    const pendingLinks = sameSession ? (closeSave.getCopyLinks?.(locale) ?? []) : [];
+    const links =
+      copyAccess?.hasAccess === false || isExperimentReadDenied(copyAccessError)
+        ? []
+        : pendingLinks;
     return (
       <div className="space-y-3 p-8 text-center">
         <p role="status">{t("ui.messages.saveStillInProgress")}</p>
