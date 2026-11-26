@@ -85,6 +85,19 @@ const readLayout = (): Partial<Layout> & Record<string, Partial<Layout["yaxis"]>
   JSON.parse(screen.getByTestId("chart").getAttribute("data-layout") ?? "{}");
 
 describe("numbered Y-axis layout", () => {
+  it("uses the full plot for a sparkline with traces on three axes", () => {
+    render(
+      <CartesianChart data={series(3)} config={{ width: 900, height: 500, sparkline: true }} />,
+    );
+
+    const layout = readLayout();
+    expect(layout.xaxis?.domain).toEqual([0, 1]);
+    expect(layout.margin).toEqual({ l: 0, r: 0, t: 2, b: 2, pad: 0 });
+    expect(layout.yaxis?.visible).toBe(false);
+    expect(layout.yaxis2?.visible).toBe(false);
+    expect(layout.yaxis3?.visible).toBe(false);
+  });
+
   it("uses explicit Y-axis IDs for both routing and layout on a single canvas", () => {
     const data: CartesianSeries[] = [
       { traceType: "line", x: [1, 2], y: ["Low", "High"], axis: "secondary", yaxisId: "y" },

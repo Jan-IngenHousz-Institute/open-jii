@@ -364,7 +364,7 @@ export function applyCartesianAxes(
   }
   const left = visible.filter(({ index }) => index % 2 === 0).length;
   const right = visible.length - left;
-  if (left > 1 || right > 1) {
+  if (!config.sparkline && (left > 1 || right > 1)) {
     visible.forEach((entry) => {
       // Only configure a label array if this axis is categorical.
       Object.assign(entry.axis, truncateCategoryTicks(entry.axis, entry.values, sizing));
