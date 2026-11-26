@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 
 import type {
+  ExperimentAsOfJoin,
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../experiments/core/models/experiment-data.model";
@@ -13,15 +14,40 @@ import type {
   StoreQueryColumn,
   StoreQueryParams,
 } from "../../../experiments/core/ports/serving-store.port";
+import { STORE_QUERY_TOO_LARGE } from "../../../experiments/core/ports/serving-store.port";
+import { MetricsTable } from "../../../metrics/core/models/metrics-table.model";
+import type {
+  ActivityWindowsRow,
+  ContributorPairRow,
+  DailyActivityRow,
+  DevicePairRow,
+  HourlyActivityRow,
+  ParameterCategory,
+  ParameterStatsRow,
+  PlatformTotalsRow,
+  PoolFactsRow,
+  ResourceDailyRow,
+  ScopedDailyRow,
+} from "../../../metrics/core/ports/metrics-reads.port";
+import type {
+  ClientTotalsRow,
+  ServingStorePort as MetricsServingStorePort,
+} from "../../../metrics/core/ports/serving-store.port";
 import { AppError, failure, success } from "../../utils/fp-utils";
 import type { Result } from "../../utils/fp-utils";
+import { hasAggregationContent } from "../databricks/services/query-builder/expressions/aggregation";
 import { QueryBuilderInputError } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
 import { CellValues } from "./services/client/cell-values";
 import { ServingStoreClientService } from "./services/client/client.service";
+import { StoreAggregation } from "./services/query-builder/store-aggregation";
 import { StoreQueryBuilder } from "./services/query-builder/store-query-builder";
+import type { StoreAsOfSecondary } from "./services/query-builder/store-query-builder";
 import { StoreTables } from "./services/query-builder/store-tables";
+
+/** The setting the reader's row policy on each table reads (infrastructure/modules/serving-store). */
+export const EXPERIMENT_SETTING = "SQL_experiment";
 
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
   static: "static",
@@ -30,7 +56,7 @@ const TABLE_TYPES: Record<string, ExperimentTableType> = {
 };
 
 @Injectable()
-export class ServingStoreAdapter implements ServingStorePort {
+export class ServingStoreAdapter implements ServingStorePort, MetricsServingStorePort {
   private readonly logger = new Logger(ServingStoreAdapter.name);
 
   constructor(private readonly client: ServingStoreClientService) {}
@@ -147,9 +173,18 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     const identifier = params.tableType === "static" ? undefined : params.tableName;
-    const builder = new StoreQueryBuilder()
-      .read(table, params.experimentId, identifier)
-      .select(params.columns)
+    const { aggregation } = params;
+    const isAggregated = aggregation !== undefined && hasAggregationContent(aggregation);
+    const builder = new StoreQueryBuilder();
+    if (params.isChartRead) {
+      builder.readForChart(table, params.experimentId, identifier);
+    } else {
+      builder.read(table, params.experimentId, identifier);
+    }
+    builder
+      // An aggregation's windows and groups read columns its chart may not show, so it reads whole
+      // rows and keeps the chart's columns itself.
+      .select(isAggregated ? undefined : params.columns)
       .reserve(params.reservedColumns ?? [])
       .serialNumbers(params.deviceSerials ?? [])
       .metadataSheets(params.metadataSheets ?? []);
@@ -169,8 +204,32 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
 
     try {
+      if (params.join !== undefined) {
+        const secondary = this.asOfSecondary(params, params.join);
+        if (secondary.isFailure()) {
+          return secondary;
+        }
+        builder.joinAsOf(secondary.value, {
+          column: params.join.matchColumn,
+          time: params.join.primaryTimeColumn,
+          toleranceMinutes: params.join.toleranceMinutes,
+        });
+      }
       for (const filter of params.filters ?? []) {
         builder.filter(filter);
+      }
+      if (isAggregated) {
+        const aggregated = new StoreAggregation(builder, aggregation).build({
+          ordering: params.ordering,
+          limit: params.limit,
+          offset: params.offset,
+          idOrder: params.orderByIds,
+          columns: params.columns,
+        });
+        return this.withinQuerySize(params, {
+          ...aggregated,
+          experiment: this.policyExperiment(builder, params),
+        });
       }
       if (params.ordering) {
         builder.orderBy(params.ordering, params.orderByIds);
@@ -181,21 +240,11 @@ export class ServingStoreAdapter implements ServingStorePort {
       if (params.offset !== undefined) {
         builder.offset(params.offset);
       }
-      const query = { sql: builder.build(), columns: builder.outputColumns() };
-
-      // The flagged ids are written into the statement, and a flagged page also sends its count,
-      // which wraps it.
-      const isFlaggedReadTooLarge =
-        params.flagged !== undefined && !this.client.fitsQuerySize(this.countQuery(query).sql);
-      if (isFlaggedReadTooLarge) {
-        return failure(
-          AppError.badRequest(
-            "Too many of the table's rows are flagged to filter a read by flags",
-            "FLAGGED_READ_TOO_LARGE",
-          ),
-        );
-      }
-      return success(query);
+      return this.withinQuerySize(params, {
+        sql: builder.build(),
+        columns: builder.outputColumns(),
+        experiment: this.policyExperiment(builder, params),
+      });
     } catch (error) {
       if (error instanceof QueryBuilderInputError) {
         return failure(AppError.badRequest(error.message, "INVALID_QUERY_INPUT"));
@@ -204,10 +253,83 @@ export class ServingStoreAdapter implements ServingStorePort {
     }
   }
 
+  /**
+   * A statement writes the ids it reads by, such as flagged rows or every registered device, and a
+   * flagged read or a chart also sends its count, which wraps it, so both must fit the store's limit
+   * on a statement's text. Only the store reads by flags, so a flagged read past it is refused; a
+   * chart past it fails with a code its reader answers from the warehouse.
+   */
+  private withinQuerySize(params: StoreQueryParams, query: StoreQuery): Result<StoreQuery> {
+    const isMeasured = params.flagged !== undefined || params.isChartRead === true;
+    const isTooLarge = isMeasured && !this.client.fitsQuerySize(this.countQuery(query).sql);
+    if (!isTooLarge) {
+      return success(query);
+    }
+    if (params.flagged !== undefined) {
+      return failure(
+        AppError.badRequest(
+          "Too many of the table's rows are flagged to filter a read by flags",
+          "FLAGGED_READ_TOO_LARGE",
+        ),
+      );
+    }
+    return failure(
+      AppError.internal(
+        "The chart's statement passes the store's limit on a query's size",
+        STORE_QUERY_TOO_LARGE,
+      ),
+    );
+  }
+
+  /**
+   * A statement that reads a table, a chart's or a joined read's second table, names its
+   * experiment to the reader's row policy; one that reads only views sends none, so a store whose
+   * config lags the backend still serves pages.
+   */
+  private policyExperiment(
+    builder: StoreQueryBuilder,
+    params: StoreQueryParams,
+  ): string | undefined {
+    return builder.readsTables() ? params.experimentId : undefined;
+  }
+
+  /** The second table of an as-of read, from the same experiment and its devices. */
+  private asOfSecondary(
+    params: StoreQueryParams,
+    join: ExperimentAsOfJoin,
+  ): Result<StoreAsOfSecondary> {
+    const { secondary } = join;
+    const table = StoreTables.of(secondary.tableType, secondary.tableName);
+    if (table === null) {
+      return failure(AppError.notFound(`The store holds no table '${secondary.tableName}'`));
+    }
+
+    const identifier = secondary.tableType === "static" ? undefined : secondary.tableName;
+    const builder = new StoreQueryBuilder()
+      .readForChart(table, params.experimentId, identifier)
+      .reserve(secondary.reservedColumns ?? [])
+      .serialNumbers(params.deviceSerials ?? [])
+      .metadataSheets(params.metadataSheets ?? []);
+    for (const { columnName, schema, suffix } of secondary.variants ?? []) {
+      builder.parseVariant(columnName, schema, suffix);
+    }
+    if (secondary.exceptColumns && secondary.exceptColumns.length > 0) {
+      builder.except(secondary.exceptColumns);
+    }
+    return success(
+      builder.buildAsOfSecondary({
+        column: join.matchColumn,
+        time: join.secondaryTimeColumn,
+        columns: builder.secondaryColumnsRead(params, join),
+      }),
+    );
+  }
+
   countQuery(query: StoreQuery): StoreQuery {
     return {
       sql: `SELECT toString(count()) AS total FROM (${query.sql}) AS sub`,
       columns: [{ name: "total", type: "BIGINT" }],
+      experiment: query.experiment,
     };
   }
 
@@ -224,6 +346,7 @@ export class ServingStoreAdapter implements ServingStorePort {
         `OFFSET ${offset}`,
       ].join("\n"),
       columns: [{ name: "serial_number", type: "STRING" }],
+      experiment: query.experiment,
     };
   }
 
@@ -237,7 +360,7 @@ export class ServingStoreAdapter implements ServingStorePort {
   async executeQuery(query: StoreQuery): Promise<Result<SchemaData>> {
     const rows: (string | null)[][] = [];
     const size = new PageBytes();
-    const read = await this.client.stream(query.sql, (row) => {
+    const read = await this.client.stream(query.sql, this.settingsOf(query), (row) => {
       const cells = this.cells(query.columns, row);
       size.add(cells.map((cell, index) => (query.columns[index].idOf === "device" ? null : cell)));
       if (size.exceedsLimit) {
@@ -259,15 +382,20 @@ export class ServingStoreAdapter implements ServingStorePort {
     return success({ columns, rows, totalRows: rows.length, truncated: !read.value.complete });
   }
 
+  private settingsOf({ experiment }: StoreQuery): Record<string, string> {
+    return experiment === undefined ? {} : { [EXPERIMENT_SETTING]: experiment };
+  }
+
   private cells(columns: StoreQueryColumn[], row: unknown[]): (string | null)[] {
     const payloads = this.payloads(columns, row);
-    return columns.map(({ type, idOf, text }, index) => {
+    return columns.map(({ type, idOf, text, isPairText }, index) => {
       const value = row[index];
       if (text !== undefined) {
         return CellValues.payloadCell(payloads.get(text.column), text.key, type);
       }
       if (idOf === "device") {
-        return JSON.stringify(value);
+        const isPairTextCell = isPairText === true && (typeof value === "string" || value === null);
+        return isPairTextCell ? value : JSON.stringify(value);
       }
       if (idOf === "contributor") {
         return typeof value === "string" ? value : null;
@@ -302,6 +430,235 @@ export class ServingStoreAdapter implements ServingStorePort {
       return result;
     }
     return success(result.value.rows.flatMap(([id]) => (typeof id === "string" ? [id] : [])));
+  }
+
+  async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
+    const columns = [
+      "total_measurements",
+      "total_volume_bytes",
+      "total_uploaded_rows",
+      "total_macro_executions",
+      "devices_all_time",
+      "experiments_with_data",
+      "first_measurement_at",
+      "last_measurement_at",
+      "computed_at",
+    ];
+    const result = await this.readMetricsView("metrics_platform_totals", columns, "LIMIT 1");
+    return result.isFailure() ? result : success(result.value.platformTotals());
+  }
+
+  async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
+    const columns = ["date", "measurements", "cumulative_measurements", "volume_bytes"];
+    const result = await this.readMetricsView(
+      "metrics_daily_activity",
+      columns,
+      `ORDER BY date DESC LIMIT ${days}`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.dailyActivity();
+    this.warnDroppedMetricsRows("metrics_daily_activity", result.value.rows.length - mapped.length);
+    return success(mapped.reverse());
+  }
+
+  async getClientTotals(): Promise<Result<ClientTotalsRow[]>> {
+    const result = await this.readMetricsView("metrics_client_totals", [
+      "client_id",
+      "total_measurements",
+    ]);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.clientTotals();
+    this.warnDroppedMetricsRows("metrics_client_totals", result.value.rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {
+    const columns = [
+      "measurements_24h",
+      "measurements_30d",
+      "experiments_30d",
+      "contributors_30d",
+      "devices_30d",
+      "last_measurement_at",
+      "computed_at",
+    ];
+    const result = await this.readMetricsView("metrics_activity_windows", columns, "LIMIT 1");
+    return result.isFailure() ? result : success(result.value.activityWindows());
+  }
+
+  async getHourlyActivity(): Promise<Result<HourlyActivityRow[]>> {
+    const result = await this.readMetricsView(
+      "metrics_hourly_activity",
+      ["hour_local", "measurements"],
+      "ORDER BY hour_local ASC",
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.hourlyActivity();
+    this.warnDroppedMetricsRows(
+      "metrics_hourly_activity",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
+    const result = await this.readMetricsView(
+      "metrics_parameter_stats",
+      ["parameter", "label", "observations", "median_value"],
+      `WHERE category = ${new StoreQueryBuilder().escapeValue(category)}`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    // Every refresh writes each category a row without a parameter, so a category with no row at
+    // all has not refreshed yet, and reads as a failure, as a warehouse table not yet written does.
+    const hasRefreshed = result.value.rows.length > 0;
+    if (!hasRefreshed) {
+      return failure(AppError.notFound("metrics_parameter_stats has not refreshed yet"));
+    }
+
+    return success(result.value.topParameter());
+  }
+
+  async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
+    const columns = [
+      "session_median_measurements",
+      "mean_arrival_gap_seconds",
+      "current_streak_days",
+      "device_endurance_days",
+      "simultaneity_peak_devices",
+      "timezones_all_time",
+      "timezones_peak_day",
+    ];
+    const result = await this.readMetricsView("metrics_pool_facts", columns, "LIMIT 1");
+    return result.isFailure() ? result : success(result.value.poolFacts());
+  }
+
+  async getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>> {
+    const result = await this.readMetricsView(
+      "metrics_daily_activity_by_experiment",
+      ["date", "experiment_id", "measurements"],
+      `WHERE ${this.lastDays(days)} ORDER BY date ASC`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.scopedDaily();
+    this.warnDroppedMetricsRows(
+      "metrics_daily_activity_by_experiment",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getResourceDailyActivity(
+    resourceType: string,
+    days: number,
+  ): Promise<Result<ResourceDailyRow[]>> {
+    const type = new StoreQueryBuilder().escapeValue(resourceType);
+    const result = await this.readMetricsView(
+      "metrics_daily_activity_by_resource",
+      ["date", "resource_type", "resource_id", "measurements"],
+      `WHERE resource_type = ${type} AND ${this.lastDays(days)} ORDER BY date ASC`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.resourceDaily();
+    this.warnDroppedMetricsRows(
+      "metrics_daily_activity_by_resource",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getContributorPairs(): Promise<Result<ContributorPairRow[]>> {
+    const result = await this.readMetricsView("metrics_experiment_contributors_window", [
+      "experiment_id",
+      "user_id",
+    ]);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.contributorPairs();
+    this.warnDroppedMetricsRows(
+      "metrics_experiment_contributors_window",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getDevicePairs(): Promise<Result<DevicePairRow[]>> {
+    const result = await this.readMetricsView("metrics_experiment_devices_window", [
+      "experiment_id",
+      "client_id",
+    ]);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.devicePairs();
+    this.warnDroppedMetricsRows(
+      "metrics_experiment_devices_window",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  /**
+   * A metrics view's columns, each cell as the warehouse's text: the views hold only numbers, text,
+   * dates and times, and the store quotes a NaN double, which reads as no number either way.
+   */
+  private async readMetricsView(
+    view: string,
+    columns: string[],
+    clauses = "",
+  ): Promise<Result<MetricsTable>> {
+    const result = await this.client.query(`SELECT ${columns.join(", ")} FROM ${view} ${clauses}`);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const rows = result.value.rows.map((row) =>
+      row.map((value) =>
+        typeof value === "string" || typeof value === "number" ? String(value) : null,
+      ),
+    );
+    const index = Object.fromEntries(columns.map((column, position) => [column, position]));
+    return success(new MetricsTable(rows, index));
+  }
+
+  /** Today and the `days - 1` dates before it, as the warehouse's metrics reads bound them. */
+  private lastDays(days: number): string {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+    const asDate = (value: Date) =>
+      new StoreQueryBuilder().escapeValue(value.toISOString().slice(0, 10));
+    return `date BETWEEN ${asDate(from)} AND ${asDate(to)}`;
+  }
+
+  private warnDroppedMetricsRows(view: string, dropped: number): void {
+    if (dropped > 0) {
+      this.logger.warn({
+        msg: "Skipped malformed metrics rows",
+        operation: "readMetricsView",
+        view,
+        dropped,
+      });
+    }
   }
 
   private experimentArgument(experimentId: string): string {

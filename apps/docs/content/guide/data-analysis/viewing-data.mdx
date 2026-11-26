@@ -74,9 +74,10 @@ You do not need to reload the page to see new measurements. While the browser
 tab is visible, the Data page checks for new rows every 30 seconds and refreshes
 the table when the dataset in front of you changes. After ten minutes without
 mouse, keyboard or scroll input it stops checking and the line says **Paused**;
-the next input catches up at once. A row that arrives this way is
-tinted for a moment so you can spot it. Your sort, filters, page and selected rows
-stay where they were.
+the next input catches up at once. A row from a measurement received since the
+last check is tinted for a moment so you can spot it. A row that only moved onto
+your page, such as one pushed down from the page before, is not, and neither are
+uploaded rows. Your sort, filters, page and selected rows stay where they were.
 
 The line under the page description says **Live** and when the newest data in
 the dataset was received. For a macro dataset, that is when the measurement the

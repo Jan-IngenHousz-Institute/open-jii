@@ -33,6 +33,13 @@ variable "prod_ses_smtp_server" {
   default     = "email-smtp.eu-central-1.amazonaws.com"
 }
 
+variable "dr_ses_smtp_server" {
+  description = "SMTP URL for the DR SES identity, used when enable_ses_cutover=true. The SES module creates the SMTP user but no access key: after the cutover apply, create one for that user and derive its SMTP password as `pnpm secrets:ses-smtp` does, then apply again with the URL here."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "enable_dns_cutover" {
   description = "Set to true ONLY when performing the actual DR failover. When true, the CloudFront alias A-records and www CNAME are created/updated so that openjii.org resolves to DR resources. Default false lets you deploy and validate the entire stack without touching live traffic."
   type        = bool

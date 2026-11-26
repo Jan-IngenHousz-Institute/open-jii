@@ -14,8 +14,7 @@ would be refused again on every retry.
 ## Find what holds the memory
 
 Connect from a session on the instance (`aws ssm start-session --target <instance-id>`) with
-`clickhouse-client --user openjii_admin --password`. The instance cannot read secrets, so take the
-password from your own machine:
+`clickhouse-client --user openjii_admin --password`, and take the password from your own machine:
 
 ```bash
 aws secretsmanager get-secret-value --secret-id openjii-serving-store-<env>-admin \

@@ -59,7 +59,8 @@ answer the driver's check, in the driver's:
   the part counts and `SELECT table, elapsed, progress FROM system.merges` what is merging. A refresh
   catch-up spreads inserts over many months; it settles once the catch-up ends.
 - Code 516 in the driver's check is a wrong writer password: the Databricks secret scope and the
-  store disagree, which a deploy fixes.
+  store disagree. A deploy no longer writes the password, so pass the writer's stored password to
+  the scope and the store again, as `store-feed-stalled` describes.
 - A timeout or connection error with `store-answers` firing means the store is down; work that
   runbook.
 

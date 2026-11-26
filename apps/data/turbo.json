@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/packages/database/package.json",
+        "$TURBO_ROOT$/packages/database/.env.test",
+        "$TURBO_ROOT$/packages/database/docker-compose.yml",
+        "$TURBO_ROOT$/packages/database/clickhouse/**",
+        "$TURBO_ROOT$/packages/database/test-store/**",
+        "$TURBO_ROOT$/infrastructure/modules/serving-store/**"
+      ]
+    },
+    "test:coverage": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/packages/database/package.json",
+        "$TURBO_ROOT$/packages/database/.env.test",
+        "$TURBO_ROOT$/packages/database/docker-compose.yml",
+        "$TURBO_ROOT$/packages/database/clickhouse/**",
+        "$TURBO_ROOT$/packages/database/test-store/**",
+        "$TURBO_ROOT$/infrastructure/modules/serving-store/**"
+      ]
+    }
+  }
+}

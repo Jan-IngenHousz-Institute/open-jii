@@ -1,7 +1,7 @@
 import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type {
@@ -123,6 +123,39 @@ describe("useExperimentData", () => {
     );
     expect(result.current.tableRows).toEqual(mockExperimentData.rows);
     expect(result.current.error).toBeNull();
+  });
+
+  describe("telling reads apart", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("moves dataUpdatedAt on a refetch that returns the same rows", async () => {
+      const readAt = new Date("2026-11-19T09:00:00.000Z");
+      const nextReadAt = new Date("2026-11-19T09:00:30.000Z");
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(readAt);
+      mountData();
+      const client = createTestQueryClient();
+      const { result } = renderHook(
+        () =>
+          useExperimentData({
+            experimentId: "experiment-123",
+            page: 1,
+            pageSize: 20,
+            tableName: "test_table",
+          }),
+        { queryClient: client },
+      );
+      await waitFor(() => expect(result.current.dataUpdatedAt).toBe(readAt.getTime()));
+      const rows = result.current.tableRows;
+
+      vi.setSystemTime(nextReadAt);
+      await client.invalidateQueries();
+
+      await waitFor(() => expect(result.current.dataUpdatedAt).toBe(nextReadAt.getTime()));
+      expect(result.current.tableRows).toBe(rows);
+    });
   });
 
   it("keeps a renamed field's own name and source in the columns the table and pickers read", async () => {

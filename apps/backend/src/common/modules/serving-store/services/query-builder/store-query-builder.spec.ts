@@ -130,6 +130,18 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toContain("ORDER BY if(dynamicType(macro_output.`vH+`) != 'None'");
   });
 
+  it("reads a chart's payload fields as values from the JSON column, never the payload's text", () => {
+    const builder = new StoreQueryBuilder()
+      .readForChart(MACRO_RESULTS_TABLE, "e1", "m1")
+      .parseVariant("macro_output", "OBJECT<PAR: DOUBLE>", "output")
+      .select(["id", "PAR"]);
+    const sql = builder.build();
+
+    expect(builder.outputColumns().map(({ text }) => text)).toEqual([undefined, undefined]);
+    expect(sql).toContain("accurateCastOrNull(macro_output.`PAR`, 'Float64') AS `PAR`");
+    expect(sql).not.toContain("macro_output_text");
+  });
+
   it("escapes backslashes in a quoted name, which the store reads as escapes", () => {
     const sql = new StoreQueryBuilder()
       .read(UPLOADS_TABLE, "e1", "t1")
@@ -200,7 +212,8 @@ describe("StoreQueryBuilder", () => {
     const sql = builder.build();
 
     const label = deviceLabel({
-      serialNumber: "arrayElement(__device_serials, indexOf(__device_client_ids, client_id))",
+      serialNumber:
+        "transform(client_id, __device_client_ids, __device_serials, CAST(NULL AS Nullable(String)))",
       deviceName: "device_name",
       deviceId: "device_id",
       clientId: "client_id",
@@ -404,7 +417,7 @@ describe("StoreQueryBuilder", () => {
       [
         "SELECT toString(id) AS `id`",
         "FROM experiment_macro_results(experiment = 'e1')",
-        `WHERE (${key}) IN (SELECT ${key}`,
+        `WHERE macro_id = 'm1' AND (${key}) IN (SELECT ${key}`,
         "FROM experiment_macro_results(experiment = 'e1')",
         "WHERE macro_id = 'm1' AND device_id = 'd1'",
         `ORDER BY timestamp DESC NULLS LAST, ${key}`,
@@ -678,6 +691,121 @@ describe("StoreQueryBuilder", () => {
     expect(sql).toBe(
       "SELECT toString(id) AS `id`\nFROM experiment_measurements(experiment = 'e1')\nLIMIT 5",
     );
+  });
+
+  /** A chart's read of m1 matched to m2 by device and time, reading the second table's `columns`. */
+  const joined = (columns: { name: string; alias: string }[]) =>
+    new StoreQueryBuilder()
+      .readForChart(MACRO_RESULTS_TABLE, "e1", "m1")
+      .serialNumbers([["reg-1", "SN1"]])
+      .joinAsOf(
+        new StoreQueryBuilder()
+          .readForChart(MACRO_RESULTS_TABLE, "e1", "m2")
+          .serialNumbers([["reg-1", "SN1"]])
+          .buildAsOfSecondary({ column: "device_id", time: "timestamp", columns }),
+        { column: "device_id", time: "timestamp", toleranceMinutes: 60 },
+      );
+
+  it("reads a second table's contributor as the id it holds, never as JSON text", () => {
+    const sql = joined([{ name: "contributor", alias: "second__contributor" }])
+      .select(["second__contributor"])
+      .build();
+
+    expect(sql).toContain("user_id AS `second__contributor`");
+    expect(sql).not.toContain("toJSONString(user_id)");
+  });
+
+  it("filters by a second table's device label from that table's label column", () => {
+    const sql = joined([{ name: "device", alias: "second__device" }])
+      .select(["id"])
+      .filter({ column: "second__device.serial_number", operator: "equals", value: "SN1" })
+      .build();
+
+    const where = sql.slice(sql.lastIndexOf("WHERE"));
+    expect(where).toContain("__asof_secondary.`__asof_label_second__device`");
+  });
+
+  describe("custom metadata on a chart", () => {
+    const schema = "OBJECT<soil: STRING>";
+    const sheets = [{ id: "s1", matchOn: "plot", schema, version: "1" }];
+    const sheetJoin =
+      "LEFT JOIN (SELECT identifier, fields FROM experiment_metadata_rows(experiment = 'e1') WHERE sheet_id = 's1') AS sheet_0";
+    const withMetadata = (macroId: string) =>
+      new StoreQueryBuilder()
+        .readForChart(MACRO_RESULTS_TABLE, "e1", macroId)
+        .parseVariant("custom_metadata", schema, "metadata")
+        .metadataSheets(sheets);
+    const matched = (builder: StoreQueryBuilder, name: string) =>
+      builder.buildAsOfSecondary({
+        column: "device_id",
+        time: "timestamp",
+        columns: [{ name, alias: `second__${name}` }],
+      });
+    const match = { column: "device_id", time: "timestamp", toleranceMinutes: 60 };
+
+    it("reads a field from the sheets it joins to the table's own rows", () => {
+      const sql = withMetadata("m1").select(["soil"]).buildValues();
+
+      expect(sql).toContain(sheetJoin);
+      expect(sql).toContain(
+        "FROM (SELECT * FROM macro_results FINAL\nWHERE macro_id = 'm1' AND experiment_id = 'e1') AS base",
+      );
+    });
+
+    it("joins the sheets inside the first table of an as-of read, before the second", () => {
+      const secondary = matched(
+        new StoreQueryBuilder().readForChart(MACRO_RESULTS_TABLE, "e1", "m2"),
+        "id",
+      );
+      const sql = withMetadata("m1")
+        .joinAsOf(secondary, match)
+        .select(["soil", "second__id"])
+        .buildValues();
+
+      const primary = sql.indexOf(") AS __asof_primary ASOF LEFT JOIN (");
+      expect(sql.indexOf(sheetJoin)).toBeGreaterThan(-1);
+      expect(sql.indexOf(sheetJoin)).toBeLessThan(primary);
+    });
+
+    it("reads a second table's field from the sheets joined to that table's rows", () => {
+      const secondary = matched(withMetadata("m2"), "soil");
+      const sql = new StoreQueryBuilder()
+        .readForChart(MACRO_RESULTS_TABLE, "e1", "m1")
+        .joinAsOf(secondary, match)
+        .select(["id", "second__soil"])
+        .buildValues();
+
+      expect(secondary.sql).toContain(sheetJoin);
+      expect(sql).toContain("macro_results AS __asof_primary FINAL ASOF LEFT JOIN (");
+    });
+
+    it("joins the sheets in every pass of a read that matches the second table on a sheet's field", () => {
+      const bySoil = { column: "soil", time: "timestamp", toleranceMinutes: 60 };
+      const secondary = withMetadata("m2").buildAsOfSecondary({
+        column: "soil",
+        time: "timestamp",
+        columns: [{ name: "id", alias: "second__id" }],
+      });
+      const page = withMetadata("m1")
+        .joinAsOf(secondary, bySoil)
+        .select(["id", "second__id"])
+        .orderBy({ column: "id", direction: "ASC" })
+        .limit(10)
+        .build();
+      const firstRows = withMetadata("m1")
+        .joinAsOf(secondary, bySoil)
+        .select(["id", "second__id"])
+        .keepFirst({ order: ["id"], withTies: false }, 10)
+        .buildValues();
+
+      // The key-picking pass and the pass that reads the rows each join the second table.
+      for (const sql of [page, firstRows]) {
+        const primaries = sql.split(" AS __asof_primary ").length - 1;
+        const withSheets = sql.split("base.questions_data['plot']) AS __asof_primary ").length - 1;
+        expect(primaries).toBe(2);
+        expect(withSheets).toBe(primaries);
+      }
+    });
   });
 
   it("refuses a column the table does not have, and a struct field it cannot read", () => {
