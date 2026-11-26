@@ -22,6 +22,7 @@ interface UseAutosaveReturn {
   hasError: boolean;
   error: unknown;
   flush: (options?: { retryFailed?: boolean }) => Promise<void>;
+  flushIfPending: () => Promise<void> | undefined;
   /**
    * `toKey` of the last value persisted. Compare against the current key to test
    * for unsaved work without the commit lag `status` has.
@@ -195,6 +196,10 @@ export function useAutosave<T>({
     [runSave],
   );
 
+  const flushIfPending = useCallback(() => {
+    if (inFlightRef.current || pendingFlushRef.current) return flush();
+  }, [flush]);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -210,6 +215,7 @@ export function useAutosave<T>({
     hasError: status === "error",
     error,
     flush,
+    flushIfPending,
     savedKey: lastSavedKeyRef.current,
     rebase,
   };

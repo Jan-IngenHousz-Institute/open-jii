@@ -1,3 +1,4 @@
+import { useExperimentDashboard } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import {
   createExperimentAccess,
   createExperimentDashboard,
@@ -5,12 +6,22 @@ import {
   createVisualization,
   createVisualizationWidget,
 } from "@/test/factories";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { act, assertExists, render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { useFormContext } from "react-hook-form";
+import {
+  act,
+  assertExists,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from "@/test/test-utils";
+import { useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { zUpdateExperimentDashboardBody } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DashboardFormShell } from "./dashboard-form-shell";
@@ -33,13 +44,13 @@ vi.mock("./dashboard-layout-content", () => ({
 
 function FormProbe() {
   const form = useFormContext<DashboardFormValues>();
-  const values = form.getValues();
+  const values = useWatch({ control: form.control });
   const { mode } = useDashboardMode();
   return (
     <div>
       <span data-testid="probe-name">{values.name}</span>
       <span data-testid="probe-desc">{values.description ?? ""}</span>
-      <span data-testid="probe-widgets">{values.widgets.length}</span>
+      <span data-testid="probe-widgets">{values.widgets?.length}</span>
       <span data-testid="probe-mode">{mode}</span>
     </div>
   );
@@ -248,5 +259,231 @@ describe("DashboardFormShell", () => {
       </DashboardFormShell>,
     );
     expect(screen.getByTestId("child")).toBeInTheDocument();
+  });
+});
+
+function setupDashboardReopen() {
+  const user = userEvent.setup();
+  const experimentId = crypto.randomUUID();
+  const original = createVisualization({ id: crypto.randomUUID(), experimentId });
+  const copy = createVisualization({ id: crypto.randomUUID(), experimentId });
+  const source = createVisualizationWidget({
+    config: { visualizationId: original.id, showTitle: true, showDescription: false },
+  });
+  const notes = createRichTextWidget({ layout: { col: 0, row: 4, colSpan: 6, rowSpan: 2 } });
+  const dashboard = createExperimentDashboard({ experimentId, widgets: [source, notes] });
+  let stored = dashboard;
+
+  server.mount(contract.experiments.getExperimentDashboard, { body: () => stored });
+  server.mount(contract.experiments.getExperimentAccess, {
+    body: createExperimentAccess({
+      experiment: { id: experimentId, status: "active" },
+      isAdmin: true,
+    }),
+  });
+  server.mount(contract.experiments.getExperimentVisualization, { body: original });
+  server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+  server.mount(contract.experiments.createExperimentVisualization, { body: copy });
+
+  function persist(call: SpyCall) {
+    const { name = stored.name, widgets = stored.widgets } = zUpdateExperimentDashboardBody.parse(
+      call.body,
+    );
+    stored = { ...stored, name, widgets };
+    return stored;
+  }
+
+  function EditActions() {
+    const form = useFormContext<DashboardFormValues>();
+    const { selectWidget } = useDashboardEditor();
+    const recovery = useDashboardCopySave();
+    return (
+      <>
+        <input aria-label="Dashboard name" {...form.register("name")} />
+        <button onClick={() => selectWidget(source.id)}>Select chart</button>
+        <button
+          disabled={!recovery?.enabled || recovery.duplicateDisabled}
+          onClick={() => void recovery?.duplicateSelectedChart()}
+        >
+          Duplicate
+        </button>
+        <button
+          disabled={!recovery?.enabled}
+          onClick={() => {
+            form.setValue(
+              "widgets",
+              form.getValues("widgets").filter(({ id }) => id !== notes.id),
+            );
+          }}
+        >
+          Delete notes
+        </button>
+      </>
+    );
+  }
+
+  function DashboardRoute() {
+    const { data } = useExperimentDashboard(dashboard.id, experimentId);
+    return data ? (
+      <DashboardFormShell
+        experimentId={experimentId}
+        dashboardId={dashboard.id}
+        dashboard={data}
+        initialMode="edit"
+      >
+        <EditActions />
+      </DashboardFormShell>
+    ) : null;
+  }
+
+  const { rerender } = render(<DashboardRoute />);
+  async function duplicateChart() {
+    await user.click(screen.getByRole("button", { name: "Select chart" }));
+    const duplicate = screen.getByRole("button", { name: "Duplicate" });
+    await waitFor(() => expect(duplicate).toBeEnabled());
+    await user.click(duplicate);
+  }
+
+  return {
+    copy,
+    notes,
+    source,
+    experimentId,
+    persist,
+    leave: () => rerender(<></>),
+    reopen: () => rerender(<DashboardRoute />),
+    getStored: () => stored,
+    duplicateChart,
+    deleteNotes: async () => {
+      const remove = screen.getByRole("button", { name: "Delete notes" });
+      await waitFor(() => expect(remove).toBeEnabled());
+      await user.click(remove);
+    },
+  };
+}
+
+describe("DashboardFormShell reopen while saving", () => {
+  it.each([
+    { action: "Duplicate", count: 3, run: "duplicateChart" },
+    { action: "Delete notes", count: 1, run: "deleteNotes" },
+  ] as const)(
+    "preserves edits made after reopening the dashboard ($action)",
+    async ({ action, count, run }) => {
+      const editor = setupDashboardReopen();
+      const closeSave = Promise.withResolvers<void>();
+      const closeSaved = Promise.withResolvers<void>();
+      const oldPatch = server.mount(contract.experiments.updateExperimentDashboard, {
+        unblock: closeSave.promise,
+        body: (call: SpyCall) => {
+          const saved = editor.persist(call);
+          closeSaved.resolve();
+          return saved;
+        },
+      });
+
+      try {
+        await waitFor(() => expect(screen.getByTestId("probe-mode")).toHaveTextContent("edit"));
+        fireEvent.change(screen.getByRole("textbox", { name: "Dashboard name" }), {
+          target: { value: "Renamed on close" },
+        });
+        editor.leave();
+        await waitFor(() => expect(oldPatch.callCount).toBe(1), { timeout: 1200 });
+        expect(oldPatch.body).toMatchObject({
+          name: "Renamed on close",
+          widgets: [
+            expect.objectContaining({ id: editor.source.id }),
+            expect.objectContaining({ id: editor.notes.id }),
+          ],
+        });
+
+        const newPatch = server.mount(contract.experiments.updateExperimentDashboard, {
+          body: editor.persist,
+        });
+        editor.reopen();
+
+        // If the form opens early, let the new edit reach the server ahead of the old PATCH.
+        const reopened = await screen.findByText(/^(common.loading|edit)$/);
+        const openedEarly = reopened.textContent === "edit";
+        if (openedEarly) {
+          await editor[run]();
+          await waitFor(() => expect(editor.getStored().widgets).toHaveLength(count), {
+            timeout: 2000,
+          });
+        } else {
+          expect(screen.queryByRole("button", { name: action })).toBeNull();
+          expect(screen.queryByRole("textbox", { name: "Dashboard name" })).toBeNull();
+        }
+
+        await act(async () => {
+          closeSave.resolve();
+          await closeSaved.promise;
+        });
+        if (!openedEarly) {
+          expect(await screen.findByRole("textbox", { name: "Dashboard name" })).toHaveValue(
+            "Renamed on close",
+          );
+          await editor[run]();
+        }
+
+        await waitFor(() => expect(editor.getStored().widgets).toHaveLength(count), {
+          timeout: 2000,
+        });
+        expect(newPatch.callCount).toBe(1);
+        expect(editor.getStored().name).toBe("Renamed on close");
+        if (run === "duplicateChart") {
+          const chartIds = editor
+            .getStored()
+            .widgets.filter((widget) => widget.type === "visualization")
+            .map((widget) => widget.config.visualizationId);
+          expect(chartIds).toContain(editor.copy.id);
+        } else {
+          expect(editor.getStored().widgets[0]?.id).toBe(editor.source.id);
+        }
+      } finally {
+        closeSave.resolve();
+      }
+    },
+  );
+
+  it("offers the chart copy after its save fails on close and the dashboard reopens", async () => {
+    const editor = setupDashboardReopen();
+    const closeSave = Promise.withResolvers<void>();
+    const oldPatch = server.mount(contract.experiments.updateExperimentDashboard, {
+      status: 500,
+      body: { defined: false, code: "INTERNAL_SERVER_ERROR", status: 500, message: "Save failed" },
+      unblock: closeSave.promise,
+    });
+
+    try {
+      await screen.findByRole("textbox", { name: "Dashboard name" });
+      await editor.duplicateChart();
+      await waitFor(() => expect(screen.getByTestId("probe-widgets")).toHaveTextContent("3"));
+      editor.leave();
+      await waitFor(() => expect(oldPatch.callCount).toBe(1), { timeout: 1200 });
+      editor.reopen();
+      await screen.findByText("common.loading", {}, { timeout: 1000 });
+      expect(screen.queryByRole("button", { name: "Duplicate" })).toBeNull();
+
+      act(() => closeSave.resolve());
+      await waitFor(() => {
+        const action = vi
+          .mocked(toast)
+          .mock.calls.find(
+            ([value]) => value.title === "editor.inspector.copyNotAttached",
+          )?.[0].action;
+        assertExists(action);
+        expect(action.props).toMatchObject({
+          children: {
+            props: {
+              href: `/en-US/platform/experiments/${editor.experimentId}/analysis/visualizations/${editor.copy.id}`,
+            },
+          },
+        });
+      });
+      expect(await screen.findByTestId("probe-widgets")).toHaveTextContent("2");
+      expect(oldPatch.callCount).toBe(1);
+    } finally {
+      closeSave.resolve();
+    }
   });
 });
