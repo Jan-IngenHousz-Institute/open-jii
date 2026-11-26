@@ -102,6 +102,21 @@ try {
     );
   }
 
+  function assertMatchingBetaBounds(groups) {
+    const beta = groups.filter(({ name }) => name.endsWith("Beta"));
+    assert.equal(beta.length, 4, JSON.stringify(groups));
+    for (const [first, second] of [
+      [beta[0], beta[2]],
+      [beta[1], beta[3]],
+    ]) {
+      const a = first.bars[0];
+      const b = second.bars[0];
+      assert.ok(a.width > 0 && b.width > 0, JSON.stringify(groups));
+      assert.ok(Math.abs(a.left - b.left) <= 1, JSON.stringify(groups));
+      assert.ok(Math.abs(a.right - b.right) <= 1, JSON.stringify(groups));
+    }
+  }
+
   const cases = {
     unequal: async () => {
       const groups = await render(
@@ -261,6 +276,24 @@ try {
         assert.ok(Math.abs(bars[0].top - bars[1].bottom) <= 1, JSON.stringify(groups));
       }
       assert.ok(beta.bars[0].right <= alpha.bars[1].left + 1, JSON.stringify(groups));
+    },
+    repeatedSparseFacet: async () => {
+      const sparse = colorRows({ Beta: [0, 0, 2] });
+      const dense = colorRows({ Alpha: [0, 2], Beta: [0, 2] });
+      for (const [left, right] of [
+        [sparse, dense],
+        [dense, sparse],
+      ]) {
+        const { chartSeries, subplots } = facets(left, right);
+        const groups = await render(chartSeries, [-2, 8], subplots);
+        const repeatAxis = left === sparse ? "x" : "x2";
+        const repeated = groups.filter(({ xaxis }) => xaxis === repeatAxis);
+        assert.equal(repeated.length, 2, JSON.stringify(groups));
+        for (const { bars } of repeated) {
+          assert.ok(Math.abs(bars[0].top - bars[1].bottom) <= 1, JSON.stringify(groups));
+        }
+        assertMatchingBetaBounds(groups);
+      }
     },
     independentFacets: async () => {
       const left = Object.fromEntries(

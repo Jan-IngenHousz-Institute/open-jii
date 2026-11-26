@@ -794,16 +794,14 @@ function groupedBars(
   for (const [positionGroup, cells] of positionGroups) {
     const matched = positionGroup === "shared-x";
     const placements = cells.map((bars) => {
-      const drawnBars: (GroupedBar & { slot: number })[] = [];
-      let populatedSlots = 0;
+      const populatedBars: (GroupedBar & { slot: number })[] = [];
       for (const [index, bar] of bars.entries()) {
         if (bar.series.x.length === 0 || bar.series.y.length === 0) continue;
-        const slot = matched ? index : populatedSlots;
-        populatedSlots++;
-        if (seriesIsVisible(bar.series)) drawnBars.push({ ...bar, slot });
+        populatedBars.push({ ...bar, slot: matched ? index : populatedBars.length });
       }
-      const slotCount = matched ? bars.length : populatedSlots;
-      return { drawnBars, slotCount, ...measureGroupedBars(drawnBars) };
+      const drawnBars = populatedBars.filter(({ series }) => seriesIsVisible(series));
+      const slotCount = matched ? bars.length : populatedBars.length;
+      return { populatedBars, drawnBars, slotCount, ...measureGroupedBars(drawnBars) };
     });
     // Only positions drawn in the same panel can constrain each other's widths.
     const spacing = placements.reduce(
@@ -812,14 +810,33 @@ function groupedBars(
     );
     if (!Number.isFinite(spacing)) continue;
 
+    const nativeSlots = new Map<string, number>();
+    if (
+      placements.length > 1 &&
+      placements.some(({ hasRepeatedPosition }) => hasRepeatedPosition)
+    ) {
+      // Plotly registers each offset group on its first non-empty trace, in input order.
+      const populatedBars = placements.flatMap((cell) => cell.populatedBars);
+      populatedBars.sort((a, b) => a.index - b.index);
+      for (const {
+        grouping: { offsetgroup },
+        series,
+      } of populatedBars) {
+        if (series.visible !== false && !nativeSlots.has(offsetgroup)) {
+          nativeSlots.set(offsetgroup, nativeSlots.size);
+        }
+      }
+    }
+
     // Plotly computes widths per value axis. A shared slot width keeps bars on
     // distinct X grids from overlapping when their value axes differ.
-    const slotCount = Math.max(...placements.map((cell) => cell.slotCount));
+    const slotCount = nativeSlots.size || Math.max(...placements.map((cell) => cell.slotCount));
     const slotWidth = (spacing * (1 - bargap)) / slotCount;
     const width = slotWidth * (1 - bargroupgap);
     for (const { drawnBars, hasRepeatedPosition } of placements) {
       if (hasRepeatedPosition) continue;
-      for (const { grouping, slot } of drawnBars) {
+      for (const { grouping, slot: explicitSlot } of drawnBars) {
+        const slot = nativeSlots.get(grouping.offsetgroup) ?? explicitSlot;
         grouping.width = width;
         grouping.offset = (slot - (slotCount - 1) / 2) * slotWidth - width / 2;
       }

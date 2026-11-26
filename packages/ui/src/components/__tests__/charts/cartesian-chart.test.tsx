@@ -430,6 +430,31 @@ describe("CartesianChart", () => {
       ]);
     });
 
+    it("aligns explicit slots with the populated groups Plotly registers first", () => {
+      const data = [
+        bar([], left),
+        bar([0, 0, 2], left),
+        bar([], leftOverlay),
+        bar([0, 0, 2], leftOverlay),
+        bar([0, 2], right),
+        bar([0, 2], right),
+        bar([0, 2], rightOverlay),
+        bar([0, 2], rightOverlay),
+      ];
+      render(<CartesianChart data={data} config={groupBars} subplots={groupedSubplots} />);
+
+      expect(readBarPlacements()).toEqual([
+        nativeBarPlacement,
+        nativeBarPlacement,
+        nativeBarPlacement,
+        nativeBarPlacement,
+        [0.5, 0],
+        [0.5, -1],
+        [0.5, 0.5],
+        [0.5, -0.5],
+      ]);
+    });
+
     it("counts only populated series in independent facets, including hidden series", () => {
       const data = [
         ...[left, left, left, leftOverlay, leftOverlay, leftOverlay].map((axes) =>
