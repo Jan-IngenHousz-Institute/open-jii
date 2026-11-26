@@ -8,7 +8,7 @@ import type { AnyContractProcedure } from "@orpc/contract";
 import { config } from "dotenv";
 import nock from "nock";
 import { resolve } from "path";
-import request from "supertest";
+import type request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
@@ -60,6 +60,7 @@ import { ExperimentDataOutboxWorker } from "../experiments/application/services/
 import { ExportRunReconcilerService } from "../experiments/application/services/export-run-reconciler.service";
 import { UploadRunReconcilerService } from "../experiments/application/services/upload-run-reconciler.service";
 import { NotificationOutboxWorker } from "../notifications/application/services/notification-outbox.worker";
+import { requestsTo } from "./local-requests";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
 import { QuietExperimentDataOutboxWorker } from "./quiet-experiment-data-outbox.worker";
 import { QuietExportRunReconcilerService } from "./quiet-export-run-reconciler";
@@ -117,8 +118,8 @@ export class TestHarness {
     if (!this.app) {
       // Configure nock to prevent any real HTTP requests during tests
       nock.disableNetConnect();
-      // But allow localhost connections for the test server
-      nock.enableNetConnect("127.0.0.1");
+      // But allow this machine, by either name: the test app, the test store and local fakes
+      nock.enableNetConnect(/^(localhost|127\.0\.0\.1):\d+$/);
 
       const moduleBuilder = Test.createTestingModule({
         imports: this._imports,
@@ -153,8 +154,7 @@ export class TestHarness {
         logger: false,
       });
 
-      await this.app.init();
-      this._request = request(this.app.getHttpServer());
+      this._request = await requestsTo(this.app);
     }
   }
 
