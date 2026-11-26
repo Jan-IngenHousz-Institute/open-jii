@@ -791,7 +791,7 @@ function groupedBars(
 }
 
 function groupedBarSpacing(bars: GroupedBar[]): number | undefined {
-  const positions = new Set<number>();
+  const positions: number[] = [];
   for (const {
     series: { x, y },
   } of bars) {
@@ -801,19 +801,34 @@ function groupedBarSpacing(bars: GroupedBar[]): number | undefined {
       const value = x[point];
       const position = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
       if (typeof position !== "number" || !Number.isFinite(position)) continue;
-      // Explicit offsets disable Plotly's stacking of repeated X values within a trace.
+      // Explicit offsets disable Plotly's stacking of identical X values within a trace.
       if (seen.has(position)) return undefined;
       seen.add(position);
-      positions.add(position);
+      positions.push(position);
     }
   }
-  let spacing = Infinity;
-  let previous: number | undefined;
-  for (const position of [...positions].sort((a, b) => a - b)) {
-    if (previous !== undefined) spacing = Math.min(spacing, position - previous);
+  const { count, spacing } = distinctBarSpacing(positions);
+  return count > 1 && Number.isFinite(spacing) ? spacing : undefined;
+}
+
+function distinctBarSpacing(positions: number[]) {
+  positions.sort((a, b) => a - b);
+  const first = positions[0];
+  if (first === undefined) return { count: 0, spacing: 1 };
+
+  let spacing = (positions.at(-1) ?? first) - first || 1;
+  // Match Plotly's distinctVals tolerance for deciding when positions differ by rounding.
+  const tolerance = spacing / Math.max(1, positions.length - 1) / 10_000;
+  let previous = first;
+  let count = 1;
+  for (const position of positions) {
+    const difference = position - previous;
+    if (difference <= tolerance) continue;
+    spacing = Math.min(spacing, difference);
     previous = position;
+    count++;
   }
-  return Number.isFinite(spacing) ? spacing : undefined;
+  return { count, spacing };
 }
 
 /**
