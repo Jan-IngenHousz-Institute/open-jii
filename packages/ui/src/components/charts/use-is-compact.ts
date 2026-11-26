@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 
 const OFFSCREEN_MARGIN = "200px";
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 // Four stacked breakpoints (`snug` includes `compact` includes
 // `veryCompact` includes `ultraCompact`); consumers check most-aggressive
@@ -32,9 +33,11 @@ const CELL_VERY_COMPACT_BREAKPOINT = { width: 160, height: 110 };
 const CELL_ULTRA_COMPACT_BREAKPOINT = { width: 120, height: 80 };
 
 export interface ChartSizing {
-  /** Conservative container dimensions in 16px steps for charts that opt in. */
+  /** Conservative container dimensions for charts that opt in. */
   width?: number;
   height?: number;
+  /** Whole-pixel width for geometry. Use width for the coarser layout tier. */
+  viewportWidth?: number;
 
   // OUTER tiers, measured against the chart container. Drive chart-level
   // chrome: legend position, modebar, chart title, top-level margins.
@@ -102,8 +105,8 @@ function tierFlags(
 }
 
 interface UseChartSizingOptions {
-  trackWidth?: boolean;
-  trackHeight?: boolean;
+  trackWidth?: boolean | "pixel";
+  trackHeight?: boolean | "pixel";
 
   /**
    * Divide the measured container size by this grid before comparing to
@@ -149,14 +152,13 @@ export function useChartSizing<T extends HTMLElement>(
   // when the caller re-creates the options object on every render.
   const gridRows = options.grid?.rows ?? 1;
   const gridCols = options.grid?.columns ?? 1;
-  const trackWidth = options.trackWidth === true;
-  const trackHeight = options.trackHeight === true;
+  const trackViewportWidth = options.trackWidth === "pixel";
+  const trackWidth = options.trackWidth === true || trackViewportWidth;
+  const heightStep = options.trackHeight === "pixel" ? 1 : options.trackHeight ? 16 : 0;
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const update = (width: number, height: number) => {
+  const update = useCallback(
+    (width: number, height: number) => {
+      if (trackViewportWidth && (width <= 0 || height <= 0)) return;
       // Outer-container tier (legend / modebar / chart title / margins).
       const outer = tierFlags(width, height, OUTER_BREAKPOINTS);
       // Cell tier (axis chrome / per-cell titles). `Math.max(1, ...)`
@@ -172,10 +174,12 @@ export function useChartSizing<T extends HTMLElement>(
         isFaceted ? CELL_BREAKPOINTS : OUTER_BREAKPOINTS,
       );
       const textWidth = Math.floor(width / 16) * 16;
-      const textHeight = Math.floor(height / 16) * 16;
+      const viewportWidth = Math.floor(width);
+      const textHeight = heightStep ? Math.floor(height / heightStep) * heightStep : 0;
       setSizing((prev) =>
         (!trackWidth || prev.width === textWidth) &&
-        (!trackHeight || prev.height === textHeight) &&
+        (!trackViewportWidth || prev.viewportWidth === viewportWidth) &&
+        (!heightStep || prev.height === textHeight) &&
         prev.snug === outer.snug &&
         prev.compact === outer.compact &&
         prev.veryCompact === outer.veryCompact &&
@@ -187,7 +191,8 @@ export function useChartSizing<T extends HTMLElement>(
           ? prev
           : {
               ...(trackWidth ? { width: textWidth } : {}),
-              ...(trackHeight ? { height: textHeight } : {}),
+              ...(trackViewportWidth ? { viewportWidth } : {}),
+              ...(heightStep ? { height: textHeight } : {}),
               snug: outer.snug,
               compact: outer.compact,
               veryCompact: outer.veryCompact,
@@ -198,10 +203,24 @@ export function useChartSizing<T extends HTMLElement>(
               cellUltraCompact: cell.ultraCompact,
             },
       );
-    };
+    },
+    [gridRows, gridCols, trackWidth, trackViewportWidth, heightStep],
+  );
 
-    const rect = el.getBoundingClientRect();
-    update(rect.width, rect.height);
+  useIsomorphicLayoutEffect(() => {
+    if (!trackViewportWidth || !ref.current) return;
+    const { width, height } = ref.current.getBoundingClientRect();
+    update(width, height);
+  }, [trackViewportWidth, update]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (!trackViewportWidth) {
+      const { width, height } = el.getBoundingClientRect();
+      update(width, height);
+    }
 
     // A tier flip restyles the chart, and Plotly restyles by redrawing every
     // trace, so an unseen chart holds the last size it saw until it returns.
@@ -240,7 +259,7 @@ export function useChartSizing<T extends HTMLElement>(
       observer.disconnect();
       screenObserver?.disconnect();
     };
-  }, [gridRows, gridCols, trackWidth, trackHeight]);
+  }, [trackViewportWidth, update]);
 
   return [ref, sizing] as const;
 }

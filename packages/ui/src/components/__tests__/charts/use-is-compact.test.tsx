@@ -58,8 +58,8 @@ function SizingProbe({
   trackHeight,
 }: {
   grid?: { rows: number; columns: number };
-  trackWidth?: boolean;
-  trackHeight?: boolean;
+  trackWidth?: boolean | "pixel";
+  trackHeight?: boolean | "pixel";
 }) {
   const [ref, sizing] = useChartSizing<HTMLDivElement>({ grid, trackWidth, trackHeight });
   return (
@@ -89,6 +89,17 @@ describe("useChartSizing", () => {
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBe(416);
   });
 
+  it("waits for a measurable plot and tracks its pixel width separately from wrapping", () => {
+    const { getByTestId } = render(<SizingProbe trackWidth="pixel" trackHeight="pixel" />);
+    const read = () => JSON.parse(getByTestId("probe").textContent ?? "{}");
+    act(() => observers[0]?.fire(380, 0));
+    expect(read().viewportWidth).toBeUndefined();
+    act(() => observers[0]?.fire(380, 239));
+    expect(read()).toMatchObject({ viewportWidth: 380, width: 368, height: 239 });
+    act(() => observers[0]?.fire(381, 239));
+    expect(read()).toMatchObject({ viewportWidth: 381, width: 368, height: 239 });
+  });
+
   it("tracks height changes within a tier when captions need the available height", () => {
     const { getByTestId } = render(<SizingProbe trackHeight />);
     act(() => observers[0]?.fire(380, 560));
@@ -98,6 +109,14 @@ describe("useChartSizing", () => {
     act(() => observers[0]?.fire(380, 585));
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}")).toMatchObject({ height: 576 });
     expect(JSON.parse(getByTestId("probe").textContent ?? "{}").width).toBeUndefined();
+  });
+
+  it("tracks single-pixel height changes when the chart budgets legend space", () => {
+    const { getByTestId } = render(<SizingProbe trackHeight="pixel" />);
+    for (const height of [239, 240, 241, 240, 239]) {
+      act(() => observers[0]?.fire(380, height));
+      expect(JSON.parse(getByTestId("probe").textContent ?? "{}").height).toBe(height);
+    }
   });
 
   it("settles outer tiers when the observer fires a wide container", () => {

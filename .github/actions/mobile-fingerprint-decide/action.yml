@@ -63,7 +63,10 @@ runs:
           echo "::error::eas build:list failed (exit $EXIT) — refusing to default to full rebuild"
           exit "$EXIT"
         fi
-        LAST=$(printf '%s' "$JSON" | jq -r '.[0].fingerprintHash // .[0].runtimeVersion // empty')
+        LAST=$(printf '%s' "$JSON" | jq -r '.[0].runtime.version // .[0].fingerprint.hash // empty')
+        if [ -z "$LAST" ] && [ "$(printf '%s' "$JSON" | jq 'length')" -gt 0 ]; then
+          echo "::warning::The last ${{ inputs.profile }} build has no runtime version or fingerprint in eas build:list output; treating it as no prior build"
+        fi
         echo "hash=$LAST" >> "$GITHUB_OUTPUT"
         echo "Last ${{ inputs.profile }} fingerprint: ${LAST:-<none>}"
 

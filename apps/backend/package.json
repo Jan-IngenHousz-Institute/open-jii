@@ -12,7 +12,7 @@
     "start:prod": "node dist/src/main",
     "lint": "eslint \"{src,apps,libs,test,scripts}/**/*.ts\" --fix",
     "pretest": "cd ../../packages/database && pnpm run db:test:setup",
-    "test": "pnpm run pretest && vitest run && pnpm run posttest",
+    "test": "pnpm run pretest && vitest run ${VITEST_SHARD:+--shard=$VITEST_SHARD} && pnpm run posttest",
     "test:watch": "pnpm run pretest && vitest --watch",
     "posttest": "cd ../../packages/database && pnpm run db:test:teardown",
     "docker:build": "cd ../.. && docker build -t openjii-backend -f apps/backend/Dockerfile .",
