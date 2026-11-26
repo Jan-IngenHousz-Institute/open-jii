@@ -336,6 +336,54 @@ describe("transformCartesianData", () => {
     expect(b?.y).toEqual([100]);
   });
 
+  it.each([
+    { stackMode: "stacked", expected: [10, 40, 4, 20, 30, 40, 3, 6] },
+    { stackMode: "percent", expected: [25, 100, 20, 100, 75, 100, 50, 100] },
+  ] as const)(
+    "uses separate $stackMode area stacks per facet and Y axis",
+    ({ stackMode, expected }) => {
+      const sources: ExperimentDataSourceConfig[] = [
+        ds("x", "x"),
+        ds("y", "a"),
+        ds("y", "b"),
+        { ...ds("y", "c"), axis: "y3" },
+        { ...ds("y", "d"), axis: "y4" },
+        ds("facet", "panel"),
+      ];
+      const { chartSeries } = transformCartesianData(
+        [
+          { x: "Sample", a: 10, b: 30, c: 4, d: 16, panel: "A" },
+          { x: "Sample", a: 30, b: 10, c: 3, d: 3, panel: "B" },
+        ],
+        sources,
+        { stackMode },
+        { ...baseOptions, defaultTraceType: "area" },
+      );
+
+      expect(chartSeries.map(({ yaxisId }) => yaxisId)).toEqual([
+        "y",
+        "y",
+        "y3",
+        "y3",
+        "y2",
+        "y2",
+        "y4",
+        "y4",
+      ]);
+      expect(chartSeries.map(({ y }) => y)).toEqual(expected.map((value) => [value]));
+      expect(chartSeries.map(({ fill }) => fill)).toEqual([
+        "tozeroy",
+        "tonexty",
+        "tozeroy",
+        "tonexty",
+        "tozeroy",
+        "tonexty",
+        "tozeroy",
+        "tonexty",
+      ]);
+    },
+  );
+
   it("groups each series across panels so one legend entry toggles all its traces", () => {
     const sources = [
       ds("x", "x"),
