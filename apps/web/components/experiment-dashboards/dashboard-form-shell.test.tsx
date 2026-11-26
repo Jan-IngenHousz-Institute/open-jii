@@ -654,12 +654,20 @@ describe("DashboardFormShell reopen while saving", () => {
     }
   });
 
-  it("reports the copied chart without linking it after losing experiment read access", async () => {
+  it("drops pending copy recovery when the same account signs in to a new session", async () => {
     const editor = setupDashboardReopen();
     const closeSave = Promise.withResolvers<void>();
+    const detailReload = Promise.withResolvers<void>();
     const patch = server.mount(contract.experiments.updateExperimentDashboard, {
       status: 500,
       unblock: closeSave.promise,
+    });
+    const getSession = vi.mocked(authClient.getSession);
+    const listCharts = server.mount(contract.experiments.listExperimentVisualizations, {
+      body: [],
+    });
+    const unrelatedRead = orpc.experiments.listExperimentVisualizations.queryOptions({
+      input: { id: "other-experiment" },
     });
 
     try {
@@ -668,42 +676,116 @@ describe("DashboardFormShell reopen while saving", () => {
       await waitFor(() => expect(screen.getByTestId("probe-widgets")).toHaveTextContent("3"));
       editor.leave();
       await waitFor(() => expect(patch.callCount).toBe(1));
-      const denied = server.mount(contract.experiments.getExperimentAccess, { status: 403 });
-      const accessQuery = experimentAccessQuery(
-        orpc,
-        dashboardSession.user.id,
-        editor.experimentId,
-      );
-      await expect(
-        editor.queryClient.fetchQuery({ ...accessQuery, gcTime: Infinity }),
-      ).rejects.toMatchObject({ status: 403 });
-
-      vi.useFakeTimers();
-      editor.reopen();
-      await act(() => vi.advanceTimersByTimeAsync(10_000));
-      expect(screen.getByRole("status")).toHaveTextContent("ui.messages.saveStillInProgress");
-      expect
-        .soft(screen.queryByRole("link", { name: "editor.inspector.openChartCopy" }))
-        .toBeNull();
-      vi.useRealTimers();
-
-      act(() => closeSave.resolve());
-      await waitFor(() => expect(denied.callCount).toBeGreaterThan(1));
-      const recovery = await waitFor(() => {
-        const call = vi
-          .mocked(toast)
-          .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached");
-        assertExists(call);
-        return call[0];
+      server.mount(contract.experiments.getExperimentDashboard, {
+        body: editor.getStored,
+        unblock: detailReload.promise,
       });
-      expect(recovery.action).toBeUndefined();
+      getSession.mockResolvedValue({
+        data: createSession({ session: { id: "session-2" } }),
+        error: null,
+      });
+      act(() => closeSave.resolve());
+      await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
+      const priorReads = listCharts.callCount;
+
+      for (let i = 0; i < 3; i++) {
+        await editor.queryClient.fetchQuery(unrelatedRead);
+      }
+      expect(listCharts.callCount - priorReads).toBe(3);
+      expect(getSession).toHaveBeenCalledTimes(1);
+      expect(toast).not.toHaveBeenCalled();
     } finally {
-      vi.useRealTimers();
+      getSession.mockResolvedValue({ data: null, error: null });
+      detailReload.resolve();
+      await waitFor(() => expect(editor.queryClient.isFetching()).toBe(0));
       closeSave.resolve();
     }
   });
 
-  it("offers an unattached chart after the originating session reconnects", async () => {
+  it.each([
+    { responses: "403", failAgain: false },
+    { responses: "403 followed by 503", failAgain: true },
+  ])(
+    "hides copy links after access returns $responses until a successful read",
+    async ({ failAgain }) => {
+      const editor = setupDashboardReopen();
+      const closeSave = Promise.withResolvers<void>();
+      const detailReload = Promise.withResolvers<void>();
+      const patch = server.mount(contract.experiments.updateExperimentDashboard, {
+        status: 500,
+        unblock: closeSave.promise,
+      });
+
+      try {
+        await screen.findByRole("textbox", { name: "Dashboard name" });
+        await editor.duplicateChart();
+        await waitFor(() => expect(screen.getByTestId("probe-widgets")).toHaveTextContent("3"));
+        editor.leave();
+        await waitFor(() => expect(patch.callCount).toBe(1));
+        server.mount(contract.experiments.getExperimentDashboard, {
+          body: editor.getStored,
+          unblock: detailReload.promise,
+        });
+        server.mount(contract.experiments.getExperimentAccess, { status: 403 });
+        const accessQuery = {
+          ...experimentAccessQuery(orpc, dashboardSession.user.id, editor.experimentId),
+          gcTime: Infinity,
+          retry: false,
+        };
+        await expect(editor.queryClient.fetchQuery(accessQuery)).rejects.toMatchObject({
+          status: 403,
+        });
+        if (failAgain) {
+          server.mount(contract.experiments.getExperimentAccess, { status: 503 });
+          await expect(editor.queryClient.fetchQuery(accessQuery)).rejects.toMatchObject({
+            status: 503,
+          });
+        }
+
+        vi.useFakeTimers();
+        editor.reopen();
+        await act(() => vi.advanceTimersByTimeAsync(10_000));
+        expect(screen.getByRole("status")).toHaveTextContent("ui.messages.saveStillInProgress");
+        expect
+          .soft(screen.queryByRole("link", { name: "editor.inspector.openChartCopy" }))
+          .toBeNull();
+        vi.useRealTimers();
+
+        act(() => closeSave.resolve());
+        const recovery = await waitFor(() => {
+          const call = vi
+            .mocked(toast)
+            .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached");
+          assertExists(call);
+          return call[0];
+        });
+        expect.soft(recovery.action).toBeUndefined();
+
+        server.mount(contract.experiments.getExperimentAccess, {
+          body: createExperimentAccess({
+            experiment: { id: editor.experimentId, status: "active" },
+          }),
+        });
+        await act(async () => {
+          await editor.queryClient.fetchQuery(accessQuery);
+        });
+        expect(
+          await screen.findByRole("link", { name: "editor.inspector.openChartCopy" }),
+        ).toHaveAttribute(
+          "href",
+          `/en-US/platform/experiments/${editor.experimentId}/analysis/visualizations/${editor.copy.id}`,
+        );
+        act(() => detailReload.resolve());
+        await screen.findByRole("textbox", { name: "Dashboard name" });
+      } finally {
+        vi.useRealTimers();
+        closeSave.resolve();
+        detailReload.resolve();
+      }
+    },
+  );
+
+  it("offers an unattached chart after the originating session reconnects with a refreshed token", async () => {
     const editor = setupDashboardReopen();
     const closeSave = Promise.withResolvers<void>();
     const patch = server.mount(contract.experiments.updateExperimentDashboard, {
@@ -727,6 +809,10 @@ describe("DashboardFormShell reopen while saving", () => {
       await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
       expect(toast).not.toHaveBeenCalled();
 
+      getSession.mockResolvedValue({
+        data: createSession({ session: { token: "refreshed-token" } }),
+        error: null,
+      });
       act(() => onlineManager.setOnline(true));
       await waitFor(
         () => {

@@ -39,8 +39,8 @@ export async function waitForCurrentSession(
     });
     try {
       const session = await getVerifiedSession();
-      if (session === null || (session && session.user.id !== userId)) return false;
-      if (session?.session.id === sessionId) return true;
+      if (session === null) return false;
+      if (session) return session.user.id === userId && session.session.id === sessionId;
       await retry.promise;
     } finally {
       unsubscribeOnline();
