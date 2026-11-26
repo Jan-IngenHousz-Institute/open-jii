@@ -1,0 +1,1710 @@
+{
+  "schema": "OBJECT<n: BIGINT, v: DOUBLE>",
+  "rows": [
+    {
+      "id": 1,
+      "timestamp": "2026-09-06 23:30:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.5}"
+    },
+    {
+      "id": 2,
+      "timestamp": "2026-09-07 00:30:00.000",
+      "device_name": "A",
+      "latitude": 2.0,
+      "output": "{\"n\":2,\"v\":2.5}"
+    },
+    {
+      "id": 3,
+      "timestamp": "2026-09-07 00:30:00.000",
+      "device_name": "A",
+      "latitude": 3.0,
+      "output": "{\"n\":2,\"v\":null}"
+    },
+    {
+      "id": 4,
+      "timestamp": "2026-09-08 10:15:30.250",
+      "device_name": "B",
+      "latitude": 4.5,
+      "output": "{\"v\":4.0}"
+    },
+    {
+      "id": 5,
+      "timestamp": "2026-10-01 12:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"n\":5,\"v\":8.0}"
+    },
+    {
+      "id": 6,
+      "timestamp": "2026-12-31 23:59:59.000",
+      "device_name": null,
+      "latitude": null,
+      "output": "{\"n\":3,\"v\":-0.5}"
+    },
+    {
+      "id": 7,
+      "timestamp": "2027-01-01 00:00:00.000",
+      "device_name": "D",
+      "latitude": 2.0,
+      "output": "{\"n\":7}"
+    },
+    {
+      "id": 8,
+      "timestamp": "2026-09-08 10:15:00.000",
+      "device_name": "B",
+      "latitude": 5.5,
+      "output": "{\"n\":4,\"v\":6.0}"
+    },
+    {
+      "id": 21,
+      "timestamp": "2026-11-02 08:00:00.000",
+      "device_name": "E",
+      "latitude": 52.10003,
+      "output": "{\"n\":10,\"v\":52.1}"
+    },
+    {
+      "id": 22,
+      "timestamp": "2026-11-03 08:00:00.000",
+      "device_name": "E",
+      "latitude": 52.10001,
+      "output": "{\"n\":10,\"v\":52.10001}"
+    },
+    {
+      "id": 23,
+      "timestamp": "2026-11-04 08:00:00.000",
+      "device_name": "E",
+      "latitude": 52.10004,
+      "output": "{\"n\":10,\"v\":52.10002}"
+    },
+    {
+      "id": 24,
+      "timestamp": "2026-11-05 08:00:00.000",
+      "device_name": "E",
+      "latitude": 52.10001,
+      "output": "{\"n\":10,\"v\":52.10003}"
+    },
+    {
+      "id": 25,
+      "timestamp": "2026-11-06 08:00:00.000",
+      "device_name": "E",
+      "latitude": 52.10005,
+      "output": "{\"n\":10,\"v\":52.10004}"
+    },
+    {
+      "experiment": "ties",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":2,\"v\":2.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":3,\"v\":3.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":4,\"v\":4.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":5,\"v\":5.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":6,\"v\":6.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 6,
+      "timestamp": "2026-09-09 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":60,\"v\":60.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 7,
+      "timestamp": "2026-09-07 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":7,\"v\":7.0}"
+    },
+    {
+      "experiment": "ties",
+      "id": 8,
+      "timestamp": "2026-09-08 08:00:00.000",
+      "device_name": "T",
+      "latitude": 1.0,
+      "output": "{\"n\":8,\"v\":8.0}"
+    },
+    {
+      "experiment": "edges",
+      "id": 1,
+      "timestamp": "2026-09-01 00:00:00.000",
+      "device_name": "Z",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "edges",
+      "id": 2,
+      "timestamp": "2026-11-29 17:10:43.078",
+      "device_name": "Z",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "edges",
+      "id": 3,
+      "timestamp": "2026-11-29 17:10:43.079",
+      "device_name": "Z",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":1.0}"
+    },
+    {
+      "experiment": "nans",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"Infinity\"}"
+    },
+    {
+      "experiment": "nans",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"-Infinity\"}"
+    },
+    {
+      "experiment": "nans",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":1.0}"
+    },
+    {
+      "experiment": "nans",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":2.0}"
+    },
+    {
+      "experiment": "nans",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "D",
+      "latitude": 1.0,
+      "output": "{\"v\":null}"
+    },
+    {
+      "experiment": "nans",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "cut",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":4,\"v\":10.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "Q",
+      "latitude": 1.0,
+      "output": "{\"v\":20.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":1,\"v\":30.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "Q",
+      "latitude": 1.0,
+      "output": "{\"n\":3,\"v\":40.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":2,\"v\":50.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "Q",
+      "latitude": 1.0,
+      "output": "{\"n\":6,\"v\":60.0}"
+    },
+    {
+      "experiment": "cut",
+      "id": 7,
+      "timestamp": "2026-09-07 08:00:00.000",
+      "device_name": "P",
+      "latitude": 1.0,
+      "output": "{\"n\":5,\"v\":70.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 1,
+      "timestamp": "2026-09-01 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 2,
+      "timestamp": "2026-09-02 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":1.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 3,
+      "timestamp": "2026-09-03 08:00:00.000",
+      "device_name": "A",
+      "latitude": 1.0,
+      "output": "{\"v\":2.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 4,
+      "timestamp": "2026-09-04 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":3.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 5,
+      "timestamp": "2026-09-05 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 6,
+      "timestamp": "2026-09-06 08:00:00.000",
+      "device_name": "B",
+      "latitude": 1.0,
+      "output": "{\"v\":4.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 7,
+      "timestamp": "2026-09-07 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":5.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 8,
+      "timestamp": "2026-09-08 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":6.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 9,
+      "timestamp": "2026-09-09 08:00:00.000",
+      "device_name": "C",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 10,
+      "timestamp": "2026-09-10 08:00:00.000",
+      "device_name": "D",
+      "latitude": 1.0,
+      "output": "{\"v\":7.0}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 11,
+      "timestamp": "2026-09-11 08:00:00.000",
+      "device_name": "D",
+      "latitude": 1.0,
+      "output": "{\"v\":null}"
+    },
+    {
+      "experiment": "nanOrders",
+      "id": 12,
+      "timestamp": "2026-09-12 08:00:00.000",
+      "device_name": "E",
+      "latitude": 1.0,
+      "output": "{\"v\":\"NaN\"}"
+    }
+  ],
+  "matchSchema": "OBJECT<w: DOUBLE>",
+  "matches": [
+    {
+      "id": 11,
+      "timestamp": "2026-09-07 00:00:00.000",
+      "device_name": "A",
+      "latitude": null,
+      "output": "{\"w\":10.0}"
+    },
+    {
+      "id": 12,
+      "timestamp": "2026-09-07 00:00:00.000",
+      "device_name": "A",
+      "latitude": null,
+      "output": "{\"w\":20.0}"
+    },
+    {
+      "id": 13,
+      "timestamp": "2026-09-08 08:00:00.000",
+      "device_name": "B",
+      "latitude": null,
+      "output": "{\"w\":30.0}"
+    },
+    {
+      "id": 14,
+      "timestamp": "2026-09-08 10:15:00.000",
+      "device_name": "B",
+      "latitude": null,
+      "output": "{\"w\":40.0}"
+    },
+    {
+      "id": 15,
+      "timestamp": "2026-10-01 11:30:00.000",
+      "device_name": "C",
+      "latitude": null,
+      "output": "{\"w\":null}"
+    },
+    {
+      "id": 16,
+      "timestamp": "2026-12-31 23:00:00.000",
+      "device_name": null,
+      "latitude": null,
+      "output": "{\"w\":50.0}"
+    }
+  ],
+  "rawData": {
+    "questionsSchema": "OBJECT<plot: STRING, reading: DOUBLE>",
+    "metadataSchema": "OBJECT<area: DECIMAL(10,2), soil: STRING>",
+    "sheet": [
+      {
+        "identifier": "A1",
+        "fields": "{\"area\":12.50,\"soil\":\"clay\"}"
+      },
+      {
+        "identifier": "B2",
+        "fields": "{\"area\":7.25,\"soil\":\"sand\"}"
+      },
+      {
+        "identifier": "C3",
+        "fields": "{\"area\":0.10,\"soil\":\"loam\"}"
+      },
+      {
+        "identifier": "E5",
+        "fields": "{\"area\":0.30,\"soil\":\"silt\"}"
+      }
+    ],
+    "rows": [
+      {
+        "id": 1,
+        "timestamp": "2026-09-07 08:00:00.000",
+        "device_name": "A",
+        "latitude": 1.0,
+        "answers": {
+          "plot": "A1",
+          "reading": "1.5"
+        }
+      },
+      {
+        "id": 2,
+        "timestamp": "2026-09-07 09:00:00.000",
+        "device_name": "A",
+        "latitude": 2.0,
+        "answers": {
+          "plot": "B2",
+          "reading": "2.25"
+        }
+      },
+      {
+        "id": 3,
+        "timestamp": "2026-09-07 10:00:00.000",
+        "device_name": "B",
+        "latitude": 3.0,
+        "answers": {
+          "plot": "A1",
+          "reading": "3"
+        }
+      },
+      {
+        "id": 4,
+        "timestamp": "2026-09-07 11:00:00.000",
+        "device_name": "B",
+        "latitude": null,
+        "answers": {
+          "plot": "C3",
+          "reading": "not a number"
+        }
+      },
+      {
+        "id": 5,
+        "timestamp": "2026-09-07 12:00:00.000",
+        "device_name": "C",
+        "latitude": 5.0,
+        "answers": {
+          "plot": "D4",
+          "reading": "4.75"
+        }
+      },
+      {
+        "id": 6,
+        "timestamp": "2026-09-07 13:00:00.000",
+        "device_name": null,
+        "latitude": 6.0,
+        "answers": {
+          "plot": "B2"
+        }
+      },
+      {
+        "id": 7,
+        "timestamp": "2026-09-07 14:00:00.000",
+        "device_name": "B",
+        "latitude": 7.0,
+        "answers": {
+          "plot": "E5",
+          "reading": "0.25"
+        }
+      }
+    ]
+  },
+  "uploads": {
+    "schema": "OBJECT<ph: DOUBLE, plot: STRING>",
+    "rows": [
+      {
+        "id": 1,
+        "uploaded_at": "2026-09-08 08:00:00.000",
+        "output": "{\"ph\":6.5,\"plot\":\"A1\"}"
+      },
+      {
+        "id": 2,
+        "uploaded_at": "2026-09-08 09:00:00.000",
+        "output": "{\"ph\":7.25,\"plot\":\"A1\"}"
+      },
+      {
+        "id": 3,
+        "uploaded_at": "2026-09-08 10:00:00.000",
+        "output": "{\"ph\":5,\"plot\":\"B2\"}"
+      },
+      {
+        "id": 4,
+        "uploaded_at": "2026-09-08 11:00:00.000",
+        "output": "{\"plot\":\"B2\"}"
+      }
+    ]
+  },
+  "cases": {
+    "groupedStats": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "sum"
+          },
+          {
+            "column": "n",
+            "function": "sum"
+          },
+          {
+            "column": "v",
+            "function": "avg"
+          },
+          {
+            "column": "n",
+            "function": "avg"
+          },
+          {
+            "column": "*",
+            "function": "count"
+          },
+          {
+            "column": "v",
+            "function": "count"
+          },
+          {
+            "column": "n",
+            "function": "count_distinct"
+          },
+          {
+            "column": "v",
+            "function": "min"
+          },
+          {
+            "column": "n",
+            "function": "max"
+          },
+          {
+            "column": "v",
+            "function": "std"
+          },
+          {
+            "column": "v",
+            "function": "var"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "nullKeysLast": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "DESC"
+      }
+    },
+    "weeks": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "week"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          },
+          {
+            "column": "v",
+            "function": "avg"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_week",
+        "direction": "ASC"
+      }
+    },
+    "minutes": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "minute"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_minute",
+        "direction": "ASC"
+      }
+    },
+    "hours": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "hour"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_hour",
+        "direction": "ASC"
+      }
+    },
+    "days": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "day"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "max"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_day",
+        "direction": "ASC"
+      }
+    },
+    "months": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "month"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_month",
+        "direction": "ASC"
+      }
+    },
+    "quarters": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "quarter"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_quarter",
+        "direction": "ASC"
+      }
+    },
+    "years": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "year"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_year",
+        "direction": "ASC"
+      }
+    },
+    "dateDays": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "date",
+            "timeBucket": "day"
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "date_day",
+        "direction": "ASC"
+      }
+    },
+    "timeWidth": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "alias": "day_index",
+            "widthBucket": {
+              "origin": 1788652800000,
+              "width": 86400000,
+              "scale": "time"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          },
+          {
+            "column": "v",
+            "function": "sum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "day_index",
+        "direction": "ASC"
+      }
+    },
+    "numberWidth": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "latitude",
+            "widthBucket": {
+              "origin": 0.5,
+              "width": 2,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          },
+          {
+            "column": "v",
+            "function": "avg"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "latitude_bucket",
+        "direction": "ASC"
+      }
+    },
+    "correlation": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "corr",
+            "secondColumn": "latitude"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "latestAndEarliest": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "latest",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "v",
+            "function": "earliest",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "id",
+            "function": "latest",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "groupedCumsum": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "timeBucket": "day"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "cumsum"
+          },
+          {
+            "column": "*",
+            "function": "cumsum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "timestamp_day",
+        "direction": "DESC"
+      }
+    },
+    "rowCumsum": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "cumsum"
+          },
+          {
+            "column": "n",
+            "function": "cumsum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v", "v_cumsum", "n_cumsum"]
+    },
+    "rowWindows": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "v",
+            "function": "change_from_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "DOUBLE"
+          },
+          {
+            "column": "timestamp",
+            "function": "change_from_previous",
+            "alias": "seconds_since_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "TIMESTAMP"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v_previous", "v_change_from_previous", "seconds_since_previous", "row"]
+    },
+    "emptySelection": {
+      "filters": [
+        {
+          "column": "id",
+          "operator": "greater_than",
+          "value": 100
+        }
+      ],
+      "aggregation": {
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          },
+          {
+            "column": "v",
+            "function": "sum"
+          },
+          {
+            "column": "v",
+            "function": "avg"
+          },
+          {
+            "column": "v",
+            "function": "min"
+          },
+          {
+            "column": "v",
+            "function": "std"
+          },
+          {
+            "column": "v",
+            "function": "corr",
+            "secondColumn": "latitude"
+          }
+        ]
+      }
+    },
+    "timeMatchedRows": {
+      "columns": ["id", "w", "matched_id"],
+      "join": {
+        "matchColumn": "device_name",
+        "toleranceMinutes": 60
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      }
+    },
+    "timeMatchedAverages": {
+      "join": {
+        "matchColumn": "device_name",
+        "toleranceMinutes": 60
+      },
+      "filters": [
+        {
+          "column": "w",
+          "operator": "greater_than",
+          "value": 15
+        }
+      ],
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "w",
+            "function": "avg"
+          },
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "filteredByPayload": {
+      "filters": [
+        {
+          "column": "v",
+          "operator": "greater_than_or_equal",
+          "value": 2
+        }
+      ],
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "sum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "timeMatchedTight": {
+      "columns": ["id", "w", "matched_id"],
+      "join": {
+        "matchColumn": "device_name",
+        "toleranceMinutes": 20
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      }
+    },
+    "fractionalTimeWidth": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "alias": "zoom_bucket",
+            "widthBucket": {
+              "origin": 1788652800000,
+              "width": 12345678.9,
+              "scale": "time"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "zoom_bucket",
+        "direction": "ASC"
+      }
+    },
+    "fractionalNumberWidth": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "n",
+            "widthBucket": {
+              "origin": 0.5,
+              "width": 2,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "n_bucket",
+        "direction": "ASC"
+      }
+    },
+    "rowWindowsByNullableOrder": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v_previous", "row"]
+    },
+    "latestByNullableOrder": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "latest",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "v",
+            "function": "earliest",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "rowCumsumCapped": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "cumsum"
+          },
+          {
+            "column": "n",
+            "function": "cumsum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v", "v_cumsum", "n_cumsum"],
+      "limit": 6
+    },
+    "rowWindowsCapped": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "v",
+            "function": "change_from_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "DOUBLE"
+          },
+          {
+            "column": "timestamp",
+            "function": "change_from_previous",
+            "alias": "seconds_since_previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id",
+            "valueType": "TIMESTAMP"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "timestamp",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v_previous", "v_change_from_previous", "seconds_since_previous", "row"],
+      "limit": 6
+    },
+    "rowWindowsByNullableOrderCapped": {
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v_previous", "row"],
+      "limit": 6
+    },
+    "rowCumsumTiedAtCap": {
+      "experiment": "ties",
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "cumsum"
+          },
+          {
+            "column": "n",
+            "function": "cumsum"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "id",
+        "direction": "ASC"
+      },
+      "compare": ["id", "v_cumsum", "n_cumsum"],
+      "limit": 6
+    },
+    "rowWindowsCappedAlongTheirOrder": {
+      "experiment": "cut",
+      "aggregation": {
+        "functions": [
+          {
+            "column": "v",
+            "function": "previous",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "*",
+            "function": "row_number",
+            "alias": "row",
+            "partitionColumn": "device_name",
+            "orderColumn": "n",
+            "tieBreaker": "id"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "n",
+        "direction": "ASC"
+      },
+      "compare": ["id", "n", "v_previous", "row"],
+      "limit": 4
+    },
+    "fractionalTimeWidthEdge": {
+      "experiment": "edges",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "timestamp",
+            "alias": "zoom_bucket",
+            "widthBucket": {
+              "origin": 1788220800000,
+              "width": 38757215.395,
+              "scale": "time"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "zoom_bucket",
+        "direction": "ASC"
+      }
+    },
+    "averageNaNUp": {
+      "experiment": "nans",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "avg"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "v_avg",
+        "direction": "ASC"
+      }
+    },
+    "averageNaNDown": {
+      "experiment": "nans",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "avg"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "v_avg",
+        "direction": "DESC"
+      }
+    },
+    "fractionalNumberWidthZoom": {
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "n",
+            "widthBucket": {
+              "origin": 12.345678901234567,
+              "width": 0.020017160549382716,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "n_bucket",
+        "direction": "ASC"
+      }
+    },
+    "seriesNaNUp": {
+      "experiment": "nans",
+      "columns": ["id", "v"],
+      "filters": [
+        {
+          "column": "id",
+          "operator": "greater_than",
+          "value": 2
+        }
+      ],
+      "ordering": {
+        "column": "v",
+        "direction": "ASC"
+      },
+      "limit": 3
+    },
+    "seriesNaNDown": {
+      "experiment": "nans",
+      "columns": ["id", "v"],
+      "filters": [
+        {
+          "column": "id",
+          "operator": "greater_than",
+          "value": 2
+        }
+      ],
+      "ordering": {
+        "column": "v",
+        "direction": "DESC"
+      },
+      "limit": 3
+    },
+    "numberWidthNaN": {
+      "experiment": "nans",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "v",
+            "widthBucket": {
+              "origin": 0,
+              "width": 1,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "v_bucket",
+        "direction": "ASC"
+      }
+    },
+    "extremesNaN": {
+      "experiment": "nanOrders",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "v",
+            "function": "min"
+          },
+          {
+            "column": "v",
+            "function": "max"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "latestAndEarliestByNaN": {
+      "experiment": "nanOrders",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "device_name"
+          }
+        ],
+        "functions": [
+          {
+            "column": "id",
+            "function": "latest",
+            "orderColumn": "v",
+            "tieBreaker": "id"
+          },
+          {
+            "column": "id",
+            "function": "earliest",
+            "orderColumn": "v"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "device_name",
+        "direction": "ASC"
+      }
+    },
+    "rawSeriesByAnswer": {
+      "table": "raw_data",
+      "columns": ["id", "plot", "reading", "area", "soil"],
+      "ordering": {
+        "column": "reading",
+        "direction": "DESC"
+      },
+      "limit": 4
+    },
+    "rawAnswerStats": {
+      "table": "raw_data",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "plot"
+          }
+        ],
+        "functions": [
+          {
+            "column": "reading",
+            "function": "avg"
+          },
+          {
+            "column": "reading",
+            "function": "sum"
+          },
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "plot",
+        "direction": "ASC"
+      }
+    },
+    "metadataDecimalBuckets": {
+      "table": "raw_data",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "area",
+            "alias": "area_bucket",
+            "widthBucket": {
+              "origin": 0,
+              "width": 5,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "area",
+            "function": "sum"
+          },
+          {
+            "column": "area",
+            "function": "avg"
+          },
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "area_bucket",
+        "direction": "ASC"
+      }
+    },
+    "metadataDecimalEdgeBuckets": {
+      "table": "raw_data",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "area",
+            "alias": "area_bucket",
+            "widthBucket": {
+              "origin": 0,
+              "width": 0.1,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "area_bucket",
+        "direction": "ASC"
+      }
+    },
+    "metadataDecimalFractionalBuckets": {
+      "table": "raw_data",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "area",
+            "alias": "area_bucket",
+            "widthBucket": {
+              "origin": 0.5,
+              "width": 2.5,
+              "scale": "number"
+            }
+          }
+        ],
+        "functions": [
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "area_bucket",
+        "direction": "ASC"
+      }
+    },
+    "uploadSeries": {
+      "table": "upload",
+      "columns": ["id", "ph", "plot"],
+      "ordering": {
+        "column": "uploaded_at",
+        "direction": "ASC"
+      }
+    },
+    "uploadAverages": {
+      "table": "upload",
+      "aggregation": {
+        "groupBy": [
+          {
+            "column": "plot"
+          }
+        ],
+        "functions": [
+          {
+            "column": "ph",
+            "function": "avg"
+          },
+          {
+            "column": "*",
+            "function": "count"
+          }
+        ]
+      },
+      "ordering": {
+        "column": "plot",
+        "direction": "ASC"
+      }
+    }
+  }
+}

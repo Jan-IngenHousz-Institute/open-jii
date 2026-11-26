@@ -9,5 +9,5 @@ module "posthog" {
   source = "../../modules/posthog"
 
   # Issue events carry no environment, so every error alert, prod's included, posts here.
-  slack_webhook_url = var.slack_webhook_url
+  slack_webhook_url = local.slack_webhooks.posthog
 }

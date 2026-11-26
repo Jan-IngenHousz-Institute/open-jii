@@ -271,7 +271,8 @@ resource "aws_route53_record" "mx" {
   records = var.mx_records != null ? var.mx_records : ["10 inbound-smtp.${local.region}.amazonaws.com"]
 }
 
-# IAM User for SES SMTP authentication
+# The user's access key, and the SMTP password derived from it, are made outside OpenTofu with
+# `pnpm secrets:ses-smtp`, so neither reaches a plan or the state.
 resource "aws_iam_user" "ses_smtp" {
   count = var.create_smtp_user ? 1 : 0
   name  = "${var.environment}-ses-smtp-user"
@@ -285,12 +286,6 @@ resource "aws_iam_user" "ses_smtp" {
     },
     var.tags
   )
-}
-
-# IAM Access Key for SMTP user
-resource "aws_iam_access_key" "ses_smtp" {
-  count = var.create_smtp_user ? 1 : 0
-  user  = aws_iam_user.ses_smtp[0].name
 }
 
 # IAM Policy for SES sending permissions

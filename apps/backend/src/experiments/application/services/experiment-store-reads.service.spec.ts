@@ -238,7 +238,7 @@ describe("ExperimentStoreReadsService", () => {
     expect(ids).not.toHaveBeenCalled();
   });
 
-  it("hands the store only the serial numbers a label shows, for a filter on one", async () => {
+  it("hands the store only the serial numbers a label shows, for a filter on one, a blank one as none", async () => {
     const owner = await testApp.createTestUser({});
     await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-7", thingName: "thing-7" });
     await testApp.createIotDevice({ createdBy: owner, serialNumber: "  ", thingName: "thing-8" });
@@ -252,7 +252,12 @@ describe("ExperimentStoreReadsService", () => {
 
     assertSuccess(query);
     expect(build).toHaveBeenCalledWith(
-      expect.objectContaining({ deviceSerials: [["thing-7", "SN-7"]] }),
+      expect.objectContaining({
+        deviceSerials: [
+          ["thing-7", "SN-7"],
+          ["thing-8", null],
+        ],
+      }),
     );
   });
 
@@ -382,6 +387,115 @@ describe("ExperimentStoreReadsService", () => {
     expect(result.value.rows).toEqual([["a"], ["b"], [half]]);
     expect(result.value.totalRows).toBe(3);
     expect(result.value.truncated).toBe(true);
+  });
+
+  it("keeps a chart's rows that fit once filled in and marks the rest cut, as the warehouse cuts it", async () => {
+    const name = { name: "device_name", type_name: "STRING", type_text: "STRING", position: 0 };
+    const query = await reads.buildQuery({ ...page, columns: ["device_name"], isChartRead: true });
+    assertSuccess(query);
+    storeRows([name], [["a"], ["x".repeat(PAGE_BYTE_LIMIT)], ["c"]]);
+
+    const result = await reads.runQuery(query.value);
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([["a"]]);
+    expect(result.value).toMatchObject({ totalRows: 1, truncated: true });
+  });
+
+  it("gives an aggregation over devices every registered device, a blank serial as none", async () => {
+    const owner = await testApp.createTestUser({});
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-1", thingName: "thing-1" });
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: " ", thingName: "thing-2" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(
+      success(["thing-1", "thing-2", "phone-a"]),
+    );
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    await reads.buildQuery({
+      ...page,
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "count" }],
+      },
+    });
+
+    expect(build.mock.calls[0][0].deviceSerials).toEqual([
+      ["thing-1", "SN-1"],
+      ["thing-2", null],
+    ]);
+  });
+
+  it("hands a running sum grouped first by device the registry's order", async () => {
+    const owner = await testApp.createTestUser({});
+    const first = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-c" });
+    const second = await testApp.createIotDevice({ createdBy: owner, thingName: "thing-b" });
+    vi.spyOn(store, "getExperimentIds").mockResolvedValue(success(["thing-c", "thing-b"]));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+
+    await reads.buildQuery({
+      ...page,
+      aggregation: {
+        groupBy: [{ column: "device" }],
+        functions: [{ column: "*", function: "cumsum" }],
+      },
+    });
+
+    const byId = [
+      { thing: "thing-c", id: first.id },
+      { thing: "thing-b", id: second.id },
+    ].sort((a, b) => (a.id < b.id ? -1 : 1));
+    expect(build.mock.calls[0][0].orderByIds).toEqual(byId.map(({ thing }) => [thing]));
+  });
+
+  it("looks the devices up only for an aggregation that names one or keeps every row", async () => {
+    const ids = vi.spyOn(store, "getExperimentIds").mockResolvedValue(success([]));
+    const read = (aggregation: ExperimentQueryParams["aggregation"]) =>
+      reads.buildQuery({ ...page, aggregation });
+
+    await read({
+      groupBy: [{ column: "timestamp", timeBucket: "day" }],
+      functions: [{ column: "latitude", function: "avg" }],
+    });
+    expect(ids).not.toHaveBeenCalled();
+
+    await read({
+      groupBy: [{ column: "device" }],
+      functions: [{ column: "*", function: "count" }],
+    });
+    await read({
+      functions: [{ column: "*", function: "row_number", orderColumn: "timestamp" }],
+    });
+    expect(ids).toHaveBeenCalledTimes(2);
+  });
+
+  it("fills a matched table's device, and leaves it null where no row matched", async () => {
+    const owner = await testApp.createTestUser({});
+    await testApp.createIotDevice({ createdBy: owner, serialNumber: "SN-1", thingName: "thing-1" });
+    vi.spyOn(store, "executeQuery").mockResolvedValue(
+      success({
+        columns: [
+          {
+            name: "device_m2",
+            type_name: "STRUCT",
+            type_text: WellKnownColumnTypes.DEVICE,
+            position: 0,
+          },
+        ],
+        rows: [['["thing-1","thing-1 (d1)"]'], [null]],
+        totalRows: 2,
+        truncated: false,
+      }),
+    );
+
+    const result = await reads.runQuery({
+      sql: "SELECT …",
+      columns: [{ name: "device_m2", type: WellKnownColumnTypes.DEVICE, idOf: "device" }],
+      distinct: false,
+    });
+
+    assertSuccess(result);
+    expect(JSON.parse(String(result.value.rows[0][0]))).toMatchObject({ serial_number: "SN-1" });
+    expect(result.value.rows[1][0]).toBeNull();
   });
 
   it("measures a read's contributors filled in, as the warehouse sends them", async () => {
@@ -516,6 +630,110 @@ describe("ExperimentStoreReadsService", () => {
     expect(build).toHaveBeenNthCalledWith(1, expect.objectContaining({ metadataSheets: sheets }));
     expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ metadataSheets: sheets }));
     expect(build).toHaveBeenNthCalledWith(3, expect.objectContaining({ metadataSheets: [] }));
+    expect(build).toHaveBeenNthCalledWith(4, expect.objectContaining({ metadataSheets: [] }));
+  });
+
+  it("hands the store the sheets for a joined read that shows a field of its second table's, and reads none for any other", async () => {
+    const sheets = [{ id: "s1", matchOn: "plot", schema: "OBJECT<soil: STRING>", version: "4" }];
+    const read = vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const metadata = { columnName: "custom_metadata", schema: "OBJECT<soil: STRING>", suffix: "m" };
+    const joined = (secondaryColumn: string): ExperimentQueryParams => ({
+      ...page,
+      columns: ["id", "second_column"],
+      join: {
+        secondary: { tableName: "mac1", tableType: "macro", variants: [metadata] },
+        primaryColumns: ["id", "timestamp", "device_id"],
+        secondaryColumns: [{ name: secondaryColumn, alias: "second_column" }],
+        matchColumn: "device_id",
+        primaryTimeColumn: "timestamp",
+        primaryTimeType: "TIMESTAMP",
+        secondaryTimeColumn: "timestamp",
+        secondaryTimeType: "TIMESTAMP",
+        toleranceMinutes: 60,
+      },
+    });
+
+    assertSuccess(await reads.buildQuery(joined("soil")));
+    assertSuccess(await reads.buildQuery(joined("id")));
+
+    expect(read).toHaveBeenCalledOnce();
+    expect(build).toHaveBeenNthCalledWith(1, expect.objectContaining({ metadataSheets: sheets }));
+    expect(build).toHaveBeenNthCalledWith(2, expect.objectContaining({ metadataSheets: [] }));
+  });
+
+  it("hands the store the sheets for a chart that groups, partitions or matches by a metadata field it does not show", async () => {
+    const schema = "OBJECT<plot_id: STRING>";
+    const sheets = [{ id: "s1", matchOn: "plot", schema, version: "4" }];
+    vi.spyOn(store, "getMetadataSheets").mockResolvedValue(success(sheets));
+    const build = vi.spyOn(store, "buildExperimentQuery");
+    const ids = {
+      ...page,
+      variants: [{ columnName: "custom_metadata", schema, suffix: "m" }],
+      columns: ["id"],
+    };
+
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        aggregation: {
+          groupBy: [{ column: "plot_id" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+      }),
+    );
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        aggregation: {
+          functions: [
+            {
+              column: "id",
+              function: "previous",
+              partitionColumn: "plot_id",
+              orderColumn: "timestamp",
+            },
+          ],
+        },
+      }),
+    );
+    // The second table holds the field in its payload, not its metadata.
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        join: {
+          secondary: {
+            tableName: "mac1",
+            tableType: "macro",
+            variants: [{ columnName: "macro_output", schema, suffix: "output" }],
+          },
+          primaryColumns: ["id", "timestamp"],
+          secondaryColumns: [{ name: "id", alias: "second_id" }],
+          matchColumn: "plot_id",
+          primaryTimeColumn: "timestamp",
+          primaryTimeType: "TIMESTAMP",
+          secondaryTimeColumn: "timestamp",
+          secondaryTimeType: "TIMESTAMP",
+          toleranceMinutes: 60,
+        },
+      }),
+    );
+    assertSuccess(
+      await reads.buildQuery({
+        ...ids,
+        aggregation: {
+          functions: [{ column: "id", function: "previous", orderColumn: "timestamp" }],
+        },
+      }),
+    );
+
+    expect(build).toHaveBeenCalledTimes(4);
+    for (const call of [1, 2, 3]) {
+      expect(build).toHaveBeenNthCalledWith(
+        call,
+        expect.objectContaining({ metadataSheets: sheets }),
+      );
+    }
     expect(build).toHaveBeenNthCalledWith(4, expect.objectContaining({ metadataSheets: [] }));
   });
 

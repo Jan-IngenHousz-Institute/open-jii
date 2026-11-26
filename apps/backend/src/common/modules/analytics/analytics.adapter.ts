@@ -6,6 +6,7 @@ import { flagPersonProperties } from "@repo/analytics";
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import type { AnalyticsPort } from "../../../protocols/core/ports/analytics.port";
 import { ErrorCodes } from "../../utils/error-codes";
+import { AnalyticsConfigService } from "./services/config/config.service";
 import { ErrorReporterService } from "./services/errors/error-reporter.service";
 import { FlagsService } from "./services/flags/flags.service";
 
@@ -16,6 +17,9 @@ import { FlagsService } from "./services/flags/flags.service";
 @Injectable()
 export class AnalyticsAdapter implements AnalyticsPort {
   private readonly logger = new Logger(AnalyticsAdapter.name);
+
+  // Neither an email nor a user id, so no person's evaluation can be mistaken for it.
+  private static readonly ENVIRONMENT_DISTINCT_ID = "openjii-backend";
 
   // Every flag check needs the memberships before FlagsService's own cache can answer, and they
   // change rarely, so they are kept as long as a flag result is.
@@ -30,6 +34,7 @@ export class AnalyticsAdapter implements AnalyticsPort {
     private readonly flagsService: FlagsService,
     private readonly authorizationService: AuthorizationService,
     private readonly errorReporter: ErrorReporterService,
+    private readonly configService: AnalyticsConfigService,
   ) {}
 
   /**
@@ -60,6 +65,22 @@ export class AnalyticsAdapter implements AnalyticsPort {
       flagKey,
       distinctId,
       flagPersonProperties({ email: user.email, organizationIds }),
+    );
+  }
+
+  /**
+   * Whether a flag is on for reads no user makes. Every environment shares one PostHog project and
+   * evaluates under the same id, so only a condition on the `environment` property sent here tells
+   * them apart; a rollout without one is on or off in all of them at once. Once answered, a read
+   * takes the last answer while a lapsed one refreshes, rather than waiting on PostHog.
+   */
+  isEnvironmentFeatureFlagEnabled(flagKey: FeatureFlagKey): Promise<boolean> {
+    return this.flagsService.isFeatureFlagEnabledOrStale(
+      flagKey,
+      AnalyticsAdapter.ENVIRONMENT_DISTINCT_ID,
+      {
+        environment: this.configService.environment,
+      },
     );
   }
 

@@ -8,20 +8,13 @@ output "url" {
   value       = "http://${aws_instance.store.private_ip}:${var.http_port}"
 }
 
-output "writer_credentials" {
-  description = "Username and password the pipelines' feed inserts with"
-  value       = { username = local.users.writer.name, password = random_password.user["writer"].result }
-  sensitive   = true
-}
-
-output "reloader_credentials" {
-  description = "Username and password the reload job inserts and deletes with"
-  value       = { username = local.users.reloader.name, password = random_password.user["reloader"].result }
-  sensitive   = true
+output "usernames" {
+  description = "ClickHouse user name per role (admin, writer, reloader, reader)"
+  value       = { for role, user in local.users : role => user.name }
 }
 
 output "credentials_secret_arns" {
-  description = "Secrets Manager secret per role (admin, writer, reloader, reader), each holding username and password"
+  description = "Secrets Manager secret per role (admin, writer, reloader, reader), each holding username and password, set with `pnpm secrets:set`"
   value       = { for role, credentials in module.credentials : role => credentials.secret_arn }
   sensitive   = true
 }

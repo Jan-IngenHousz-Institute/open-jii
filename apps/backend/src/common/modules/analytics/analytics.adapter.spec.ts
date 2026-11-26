@@ -4,6 +4,7 @@ import { organizationMembers, organizations } from "@repo/database";
 import { AuthorizationService } from "../../../authorization/authorization.service";
 import { TestHarness } from "../../../test/test-harness";
 import { AnalyticsAdapter } from "./analytics.adapter";
+import { AnalyticsConfigService } from "./services/config/config.service";
 import { FlagsService } from "./services/flags/flags.service";
 
 describe("AnalyticsAdapter", () => {
@@ -162,6 +163,32 @@ describe("AnalyticsAdapter", () => {
       ).rejects.toThrow("Service error");
 
       expect(flagsServiceSpy).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("isEnvironmentFeatureFlagEnabled", () => {
+    it("evaluates every read under one id, with the environment as its only property", async () => {
+      const environment = testApp.module.get(AnalyticsConfigService).environment;
+      // The stale-tolerant read, so a lapsed answer never holds a read up on PostHog.
+      const flagsServiceSpy = vi
+        .spyOn(flagsService, "isFeatureFlagEnabledOrStale")
+        .mockResolvedValue(true);
+
+      const first = await adapter.isEnvironmentFeatureFlagEnabled(
+        FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+      );
+      const second = await adapter.isEnvironmentFeatureFlagEnabled(
+        FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+      );
+
+      expect([first, second]).toEqual([true, true]);
+      expect(flagsServiceSpy).toHaveBeenNthCalledWith(
+        1,
+        FEATURE_FLAGS.STORE_EXPERIMENT_READS,
+        "openjii-backend",
+        { environment },
+      );
+      expect(flagsServiceSpy.mock.calls[1]).toEqual(flagsServiceSpy.mock.calls[0]);
     });
   });
 });

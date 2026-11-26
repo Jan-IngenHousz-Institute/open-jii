@@ -84,7 +84,7 @@
     "expo-updates": "~57.0.8",
     "expo-web-browser": "~57.0.1",
     "htmlparser2": "^10.1.0",
-    "i18next": "^25.10.10",
+    "i18next": "^26.3.4",
     "lucide-react-native": "^0.513.0",
     "luxon": "^3.7.2",
     "nativewind": "^5.0.0-preview.4",

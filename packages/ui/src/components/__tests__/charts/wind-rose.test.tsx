@@ -17,6 +17,13 @@ vi.mock("../../charts/plotly-chart", () => ({
   ),
 }));
 
+vi.mock("../../charts/use-is-compact", () => ({
+  useChartSizing: () => [
+    { current: null },
+    { height: 425, viewportWidth: 566, width: 560, snug: true, compact: false },
+  ],
+}));
+
 vi.mock("../../charts/utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
@@ -68,6 +75,78 @@ describe("WindRose", () => {
     expect(plotData).toHaveLength(2);
     expect(plotData[0].type).toBe("barpolar");
     expect(plotData[1].type).toBe("barpolar");
+  });
+
+  it("keeps all compass ticks while thinning crowded degree labels", () => {
+    const ticks = Array.from({ length: 32 }, (_, i) => i * 11.25);
+    render(
+      <WindRose
+        data={sampleData}
+        directionLabels={[]}
+        directionTicks={ticks}
+        config={{ height: 215, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const layout = getLayout();
+    expect(layout.legend.maxheight).toBeLessThan(64);
+    expect(layout.polar.angularaxis.tickvals).toEqual(ticks);
+    const labels = layout.polar.angularaxis.ticktext;
+    expect(labels.filter(Boolean).length).toBeLessThan(labels.length);
+    expect(labels[0]).toBe("0°");
+  });
+
+  it("keeps the regular compass labels in a four-row wind rose with a prevailing direction", () => {
+    const directionTicks = Array.from({ length: 16 }, (_, index) => index * 22.5);
+    const directionLabels = [
+      "N",
+      "NNE",
+      "NE",
+      "ENE",
+      "E",
+      "ESE",
+      "SE",
+      "SSE",
+      "S",
+      "SSW",
+      "SW",
+      "WSW",
+      "W",
+      "WNW",
+      "NW",
+      "NNW",
+    ];
+    render(
+      <WindRose
+        data={[{ name: "0–2 m/s", theta: directionTicks, r: [103, ...Array<number>(15).fill(0)] }]}
+        directionTicks={directionTicks}
+        directionLabels={directionLabels}
+        config={{ width: 566, height: 325, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const layout = getLayout();
+    expect(layout.legend.maxheight).toBe(64);
+    expect(layout.polar.angularaxis.ticktext).toEqual(directionLabels);
+    expect(layout.polar.radialaxis.nticks).toBe(5);
+  });
+
+  it("gives part of the horizontal legend band back when the chart body gets shorter", () => {
+    const { rerender } = render(
+      <WindRose
+        data={sampleData}
+        config={{ height: 229, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const original = getLayout().legend.maxheight;
+    rerender(
+      <WindRose
+        data={sampleData}
+        config={{ height: 195, title: "Wind", legendPosition: "bottom" }}
+      />,
+    );
+    const { legend, annotations } = getLayout();
+    expect(legend.maxheight).toBeLessThan(original);
+    expect(legend.maxheight).toBeGreaterThanOrEqual(30);
+    expect(annotations).toContainEqual(expect.objectContaining({ text: "Frequency" }));
   });
 
   it("forwards r, theta, and width onto each trace", () => {

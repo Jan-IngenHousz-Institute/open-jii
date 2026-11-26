@@ -357,12 +357,7 @@ describe("GetExperimentDataUseCase", () => {
       userId: testUserId,
     });
 
-    const result = await useCase.execute(
-      experiment.id,
-      testUserId,
-      {} as { tableName: string },
-      "warehouse",
-    );
+    const result = await useCase.execute(experiment.id, testUserId, { tableName: "" }, "warehouse");
 
     expect(result.isFailure()).toBe(true);
     assertFailure(result);

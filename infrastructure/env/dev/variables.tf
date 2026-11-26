@@ -54,6 +54,27 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
+variable "slack_webhook_url_databricks" {
+  description = "A Slack incoming webhook for Databricks job events and pipeline event hooks alone, so revoking it stops nothing else. Empty uses slack_webhook_url"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "slack_webhook_url_grafana" {
+  description = "A Slack incoming webhook for Grafana alerts alone, so revoking it stops nothing else. Empty uses slack_webhook_url"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "slack_webhook_url_posthog" {
+  description = "A Slack incoming webhook for PostHog's error alerts, for every environment alone, so revoking it stops nothing else. Empty uses slack_webhook_url"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "slack_channel" {
   description = "Slack channel for monitoring notifications"
   type        = string
@@ -79,24 +100,6 @@ variable "backend_container_port" {
 
 # Authentication secrets
 # Backend x Databricks webhook secrets
-variable "backend_webhook_api_key_id" {
-  description = "Databricks webhook API key ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "backend_webhook_api_key" {
-  description = "Databricks webhook API key"
-  type        = string
-  sensitive   = true
-}
-
-variable "backend_webhook_secret" {
-  description = "Databricks webhook secret (HMAC)"
-  type        = string
-  sensitive   = true
-}
-
 variable "backend_status_update_webhook_path" {
   description = "Path for status update webhooks on the backend service"
   type        = string

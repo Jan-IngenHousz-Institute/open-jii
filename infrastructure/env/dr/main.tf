@@ -444,9 +444,9 @@ module "ses_secrets" {
   description = "SES SMTP credentials for transactional email sending"
 
   secret_string = jsonencode({
-    AUTH_EMAIL_SERVER    = var.enable_ses_cutover ? module.ses[0].auth_email_server : var.prod_ses_smtp_server
+    AUTH_EMAIL_SERVER    = var.enable_ses_cutover ? var.dr_ses_smtp_server : var.prod_ses_smtp_server
     AUTH_EMAIL_FROM      = "auth@mail.${var.domain_name}"
-    BACKEND_EMAIL_SERVER = var.enable_ses_cutover ? module.ses[0].auth_email_server : var.prod_ses_smtp_server
+    BACKEND_EMAIL_SERVER = var.enable_ses_cutover ? var.dr_ses_smtp_server : var.prod_ses_smtp_server
     BACKEND_EMAIL_FROM   = "notifications@mail.${var.domain_name}"
   })
 

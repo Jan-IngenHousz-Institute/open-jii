@@ -1,25 +1,26 @@
 """What the feed sends for each gold table: the rows gold holds now, in the shapes the store reads.
 
-The tests marked ``clickhouse`` also send them through the writer into the migrations' tables on a
-real store of the version the store runs, and skip without one:
-
-    docker run -d --name feed-test-clickhouse -p 127.0.0.1:18123:8123 \\
-      -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \\
-      clickhouse/clickhouse-server:25.8.33.6
-    CLICKHOUSE_TEST_URL=http://127.0.0.1:18123/ CLICKHOUSE_TEST_USER=admin CLICKHOUSE_TEST_PASSWORD=local \\
-      uv run pytest -m clickhouse
+The tests marked ``clickhouse`` also send them through the writer into the migrations' tables on the
+test store ``pnpm test`` starts, of the version the store runs.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 import requests
-from openjii.serving_store.tables import MACRO_RESULTS, MEASUREMENTS, METADATA_ROWS, UPLOADS, StoreTable
-from openjii.serving_store.writer import StoreWriter, Written
+from openjii.serving_store.tables import (
+    MACRO_RESULTS,
+    MEASUREMENTS,
+    METADATA_ROWS,
+    SENSOR_READINGS,
+    UPLOADS,
+    StoreTable,
+)
+from openjii.serving_store.writer import StoreWriter, Written, exact_doubles, storable
 from pyspark.sql import DataFrame, SparkSession
 
 pytestmark = pytest.mark.spark
@@ -108,7 +109,9 @@ def test_a_line_starts_with_its_float64_columns_for_the_writer_to_rewrite(spark:
 
     assert measurement is not None and upload is not None
     assert measurement.line.startswith(
-        '{"latitude":52.1,"longitude":5.1,"device_battery":87.5,"experiment_id":'
+        '{"latitude":52.1,"longitude":5.1,"device_battery":87.5,'
+        '"par_readings":[120.0],"temperature_readings":[19.5,20.0],"humidity_readings":[],'
+        '"pressure_readings":[],"light_intensity_readings":[],"thickness_readings":[],"experiment_id":'
     )
     assert upload.line.startswith('{"experiment_id":')
 
@@ -130,6 +133,71 @@ def test_a_measurement_carries_its_columns(spark: SparkSession) -> None:
     assert row["_commit_version"] == 7
     assert row["_commit_timestamp"] == "2026-10-19 10:00:04.000000"
     assert "date" not in row
+
+
+def test_a_measurement_carries_every_sensor_reading_of_both_payload_shapes(spark: SparkSession) -> None:
+    changes = _RAW_DATA_CHANGES.replace(
+        """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
+        """parse_json('[{"data": {"par": 120, "thickness": "0.42"}, "set": [{"par": 80}, {"par": "dim"}]}, '
+        '{"data": {"humidity": null}, "set": [{"pressure": 1013.25}]}]')""",
+    )
+
+    row = _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+    assert {column: row[column] for column in SENSOR_READINGS} == {
+        "par_readings": [120.0, 80.0],
+        "temperature_readings": [],
+        "humidity_readings": [],
+        "pressure_readings": [1013.25],
+        "light_intensity_readings": [],
+        "thickness_readings": [0.42],
+    }
+
+
+@pytest.mark.parametrize(
+    ("zone", "hour"),
+    [("'Europe/Amsterdam'", 12), ("'+02:00'", 12), ("'PST'", 3), ("'UTC+2'", 12), ("'Z'", 10)],
+)
+def test_a_measurement_carries_its_local_hour_in_every_zone_spark_knows(
+    spark: SparkSession, zone: str, hour: int
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'Europe/Amsterdam' AS timezone", f"{zone} AS timezone")
+
+    row = _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+    assert row["hour_local"] == hour
+
+
+def test_a_measurement_without_a_zone_has_no_local_hour(spark: SparkSession) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'Europe/Amsterdam' AS timezone", "CAST(NULL AS STRING) AS timezone")
+
+    assert "hour_local" not in _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+
+@pytest.mark.parametrize("zone", ["AMT", "Mars/Olympus"])
+def test_a_row_gold_kept_with_a_zone_spark_rejects_loses_only_its_local_hour(
+    spark: SparkSession, zone: str
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'Europe/Amsterdam' AS timezone", f"'{zone}' AS timezone")
+
+    # Gold's rows reach the probe as data. Over inline rows Spark evaluates it while planning, where
+    # a zone it rejects throws instead of giving null, so the rows are shuffled first.
+    rows = _rows(MEASUREMENTS.lines(spark.sql(changes).repartition(1)))
+
+    assert set(rows) == {1, 2, 3}
+    assert rows[1]["timezone"] == zone
+    assert "hour_local" not in rows[1]
+
+
+def test_a_payload_that_is_not_a_list_of_samples_has_no_readings(spark: SparkSession) -> None:
+    changes = _RAW_DATA_CHANGES.replace(
+        """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
+        """parse_json('{"data": {"par": 120}}')""",
+    )
+
+    row = _rows(MEASUREMENTS.lines(spark.sql(changes)))[1]
+
+    assert not any(column in row for column in SENSOR_READINGS)
 
 
 def test_only_rows_gold_holds_now_are_sent(spark: SparkSession) -> None:
@@ -376,6 +444,68 @@ def test_each_line_carries_the_time_its_store_table_is_partitioned_by(
     assert sent == {row.id: row[column] for row in gold.collect()}
 
 
+_FEED_FIXTURE = Path(__file__).parents[1] / "fixtures" / "serving_store_feed.json"
+
+# One experiment's measurements and custom metadata as gold holds them, whose lines the backend's
+# test store is seeded with, so its data page reads the rows the feed writes.
+_FEED_RAW_DATA = """
+    SELECT
+      'e1' AS experiment_id, id, 'd1' AS device_id, 'c1' AS client_id, 'MultispeQ' AS device_name,
+      'multispeq' AS device_family, '2' AS device_version, '2.345' AS device_firmware,
+      87.5D AS device_battery, 'AA:BB:CC:DD:EE:FF' AS device_address, 'Pixel 8' AS client_model,
+      'Google' AS client_manufacturer, 'android' AS client_os, '15' AS client_os_version,
+      '1.42.0' AS client_app_version, ts AS timestamp, 'Europe/Amsterdam' AS timezone,
+      array(named_struct('id', 'm1', 'name', 'Phi2', 'filename', 'phi2.js')) AS macros,
+      parse_json(questions) AS questions_data,
+      filter(array(named_struct(
+        'id', 'a1', 'rowId', CAST(id AS STRING), 'type', 'comment',
+        'content', named_struct('text', 'leaf torn', 'flagType', CAST(NULL AS STRING)),
+        'createdBy', user_id, 'createdByName', 'Ada',
+        'createdAt', TIMESTAMP'2026-10-19 10:05:00', 'updatedAt', CAST(NULL AS TIMESTAMP)
+      )), annotation -> id = 1) AS annotations,
+      user_id, 'p1' AS protocol_id, CAST(NULL AS STRING) AS workbook_run_id,
+      CAST(NULL AS STRING) AS workbook_version_id, CAST(NULL AS STRING) AS macro_context,
+      52.1D AS latitude, 5.1D AS longitude, parse_json('{"par": 120}') AS data,
+      parse_json('{"phi2": 0.7}') AS output_data, CAST(ts AS DATE) AS date,
+      ts + INTERVAL 3 SECONDS AS processed_timestamp, CAST(NULL AS TIMESTAMP) AS arrival_timestamp,
+      CAST(NULL AS BOOLEAN) AS skip_macro_processing,
+      'insert' AS _change_type, 1L AS _commit_version, TIMESTAMP'2026-10-19 13:00:00' AS _commit_timestamp
+    FROM VALUES
+      (1L, TIMESTAMP'2026-10-19 10:00:00', 'u1', '{"plot": "A1", "height": "12"}'),
+      (2L, TIMESTAMP'2026-10-19 11:00:00', 'u2', '{"plot": "B2", "height": "9"}'),
+      (3L, TIMESTAMP'2026-10-19 12:00:00', 'u1', '{"plot": "A1", "height": "15"}')
+    AS t(id, ts, user_id, questions)
+"""
+
+_FEED_SHEETS = """
+    SELECT 'e1' AS experiment_id, 's1' AS metadata_id, parse_json(
+        '{"identifierColumnId": "plot", "experimentQuestionId": "plot", "rows": ['
+        '{"_id": "r1", "plot": "A1", "soil": "clay"}, {"_id": "r2", "plot": "B2", "soil": "sand"}]}'
+      ) AS metadata, 'u1' AS created_by, TIMESTAMP'2026-10-18 08:00:00' AS created_at,
+      TIMESTAMP'2026-10-18 08:00:00' AS updated_at, 'insert' AS _change_type, 1L AS _commit_version,
+      TIMESTAMP'2026-10-18 08:00:01' AS _commit_timestamp
+"""
+
+
+def _sent(lines: DataFrame, *keys: str) -> list[dict]:
+    """The bodies the writer sends for ``lines``, in a fixed order."""
+    sent = [json.loads(exact_doubles(storable(row.line))) for row in lines.collect()]
+    return sorted(sent, key=lambda line: [str(line[key]) for key in keys])
+
+
+def test_the_feed_sends_the_lines_the_backends_test_store_is_seeded_with(spark: SparkSession) -> None:
+    rows, sheets = spark.sql(_FEED_RAW_DATA), spark.sql(_FEED_SHEETS)
+
+    sent = {
+        "measurements": _sent(MEASUREMENTS.lines(rows), "id"),
+        "payload_schemas": _sent(MEASUREMENTS.schema_lines(rows), "identifier", "payload"),
+        "metadata_sheets": _sent(METADATA_ROWS.schema_lines(sheets), "sheet_id"),
+        "metadata_rows": _sent(METADATA_ROWS.lines(sheets), "sheet_id", "identifier"),
+    }
+
+    assert sent == json.loads(_FEED_FIXTURE.read_text())
+
+
 class _Store:
     """The test's view of a real store, as its admin."""
 
@@ -395,11 +525,8 @@ class _Store:
 
 
 @pytest.fixture(scope="module")
-def store(store_migrations: list[str]) -> Iterator[_Store]:
-    url = os.environ.get("CLICKHOUSE_TEST_URL")
-    if not url:
-        pytest.skip("CLICKHOUSE_TEST_URL is not set")
-    store = _Store(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
+def store(store_admin: tuple[str, str, str], store_migrations: list[str], store_module) -> Iterator[_Store]:
+    store = _Store(*store_admin)
     store.run(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     store.run(f"DROP USER IF EXISTS {_WRITER}")
     store.run(f"CREATE DATABASE {_DATABASE}")
@@ -410,7 +537,8 @@ def store(store_migrations: list[str]) -> Iterator[_Store]:
         f"CREATE USER {_WRITER} IDENTIFIED BY 'feed-test' SETTINGS json_type_escape_dots_in_keys = 1, "
         "input_format_try_infer_dates = 0, input_format_try_infer_datetimes = 0"
     )
-    store.run(f"GRANT SELECT, INSERT ON {_DATABASE}.* TO {_WRITER}")
+    for grant in store_module.grants("writer"):
+        store.run(f"{grant.replace(' ON store.', f' ON {_DATABASE}.')} TO {_WRITER}")
 
     yield store
 
@@ -548,3 +676,40 @@ def test_coordinates_land_as_the_very_doubles_gold_holds(
         "WHERE experiment_id = 'exact'"
     )
     assert rows == [{"latitude": 51.986383, "longitude": 5.6631109, "device_battery": 87.5}] * 3
+
+
+@pytest.mark.clickhouse
+def test_sensor_readings_land_as_the_very_doubles_gold_holds(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'readings' AS experiment_id").replace(
+        """parse_json('[{"set": [{"temperature": 19.5}, {"temperature": 20}]}, {"data": {"par": 120}}]')""",
+        """parse_json('[{"set": [{"par": 51.986383}, {"par": 5.6631109}, {"par": 1e-7}]}]')""",
+    )
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    rows = store.rows(
+        f"SELECT par_readings, temperature_readings FROM {_DATABASE}.measurements FINAL "
+        "WHERE experiment_id = 'readings'"
+    )
+    assert rows == [{"par_readings": [51.986383, 5.6631109, 1e-7], "temperature_readings": []}] * 3
+
+
+@pytest.mark.clickhouse
+def test_a_measurement_keeps_its_payloads_size_out_of_its_columns(
+    spark: SparkSession, store: _Store, writer: StoreWriter
+) -> None:
+    changes = _RAW_DATA_CHANGES.replace("'e1' AS experiment_id", "'sizes' AS experiment_id")
+
+    assert writer.write(MEASUREMENTS.lines(spark.sql(changes)), MEASUREMENTS.name) == Written(inserted=3)
+
+    [row] = store.rows(
+        f"SELECT DISTINCT data_bytes, length(data) AS length FROM {_DATABASE}.measurements FINAL "
+        "WHERE experiment_id = 'sizes'"
+    )
+    [stored] = store.rows(
+        f"SELECT * FROM {_DATABASE}.measurements FINAL WHERE experiment_id = 'sizes' LIMIT 1"
+    )
+    assert row["data_bytes"] == row["length"] > 0
+    assert "data_bytes" not in stored

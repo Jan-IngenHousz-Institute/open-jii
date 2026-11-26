@@ -1,5 +1,4 @@
-import { resolve } from "node:path";
-
+import { dataFixture } from "../../../../../test/data-fixtures";
 import { assertSuccess } from "../../../../utils/fp-utils";
 import { SqlQueryBuilder, VariantQueryBuilder } from "./query-builder.base";
 import { QueryBuilderService } from "./query-builder.service";
@@ -112,10 +111,7 @@ describe("QueryBuilder Base", () => {
       };
 
       await expect(JSON.stringify(queries, null, 2) + "\n").toMatchFileSnapshot(
-        resolve(
-          __dirname,
-          "../../../../../../../data/tests/fixtures/contributor-pseudonym-queries.json",
-        ),
+        dataFixture("contributor-pseudonym-queries.json"),
       );
     });
 

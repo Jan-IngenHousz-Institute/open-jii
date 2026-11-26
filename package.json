@@ -54,6 +54,7 @@
     "round:read": "pnpm --filter @repo/devkit round:read --",
     "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --",
     "status:incident": "pnpm --filter @repo/devkit status:incident --",
+    "secrets:ses-smtp": "pnpm --filter @repo/devkit secrets:ses-smtp --",
     "secrets:set": "pnpm --filter @repo/devkit secrets:set --"
   },
   "devDependencies": {

@@ -104,6 +104,14 @@ same answer. A rollout between 1% and 99% can show an action in the browser that
 refuses, or hide one it would allow, and so can a condition on `email` until the user accepts
 cookies.
 
+## Targeting an environment
+
+Every environment shares one PostHog project. A backend read that no user makes, such as the
+platform metrics, evaluates its flag under one fixed id with the backend's `environment`
+(`ENVIRONMENT_PREFIX`: `dev`, `prod`, `dr`, or `local`) as its only person property. A group with a
+condition on `environment` turns such a flag on in one environment; a plain rollout turns it on in
+all of them at once.
+
 ## Available Feature Flags
 
 - `MULTI_LANGUAGE`: Enable multi-language support
