@@ -54,8 +54,6 @@ export function useAutosave<T>({
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const mountedRef = useRef(false);
-  const delayMsRef = useRef(delayMs);
-  delayMsRef.current = delayMs;
 
   const valueRef = useRef(value);
   const keyRef = useRef(key);
@@ -71,10 +69,7 @@ export function useAutosave<T>({
   // effect can fire independently of cleanup ordering.
   const pendingFlushRef = useRef(false);
 
-  // Guards against a slow save's late resolve clobbering newer state.
-  const seqRef = useRef(0);
-  const latestAppliedSeqRef = useRef(0);
-
+  const baselineRevisionRef = useRef(0);
   const inFlightRef = useRef<Promise<void> | null>(null);
 
   const scheduleSave = useCallback((run: () => Promise<void>, delay: number) => {
@@ -86,72 +81,77 @@ export function useAutosave<T>({
     }, delay);
   }, []);
 
-  const runSave = useCallback(
-    async function runSave() {
-      if (!enabledRef.current) return;
-      const v = valueRef.current;
-      const k = keyRef.current;
+  const runSave = useCallback(async function runSave() {
+    if (inFlightRef.current) return inFlightRef.current;
 
-      if (isValidRef.current && !isValidRef.current(v)) return;
-      if (k === lastSavedKeyRef.current) {
-        pendingFlushRef.current = false;
-        setStatus("idle");
+    pendingFlushRef.current = false;
+    if (!enabledRef.current) return;
+    const v = valueRef.current;
+    const k = keyRef.current;
+
+    if (isValidRef.current?.(v) === false) return;
+    if (k === lastSavedKeyRef.current) {
+      setStatus("idle");
+      return;
+    }
+
+    const revision = baselineRevisionRef.current;
+    setStatus("saving");
+    setError(null);
+
+    const persist = async () => {
+      try {
+        await saveRef.current(v);
+      } catch (err) {
+        if (revision !== baselineRevisionRef.current) return;
+        setError(err);
+        setStatus("error");
+        if (keyRef.current === k) {
+          pendingFlushRef.current = false;
+          if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+          }
+        }
         return;
       }
 
-      pendingFlushRef.current = false;
-      const seq = ++seqRef.current;
-      setStatus("saving");
-      setError(null);
+      if (revision !== baselineRevisionRef.current) return;
+      lastSavedKeyRef.current = k;
+      const isSaved = keyRef.current === k;
+      setStatus(isSaved ? "idle" : "dirty");
+      // An undo to the previous saved value may have canceled its timer.
+      pendingFlushRef.current =
+        !isSaved && enabledRef.current && isValidRef.current?.(valueRef.current) !== false;
+    };
 
-      const promise = saveRef.current(v).then(
-        () => {
-          if (seq < latestAppliedSeqRef.current) return;
-          latestAppliedSeqRef.current = seq;
-          lastSavedKeyRef.current = k;
-          const isSaved = keyRef.current === k;
-          setStatus(isSaved ? "idle" : "dirty");
-          if (
-            !isSaved &&
-            seq === seqRef.current &&
-            timerRef.current === null &&
-            enabledRef.current &&
-            isValidRef.current?.(valueRef.current) !== false
-          ) {
-            if (mountedRef.current) {
-              scheduleSave(runSave, delayMsRef.current);
-            } else {
-              pendingFlushRef.current = true;
-            }
-          }
-        },
-        (err: unknown) => {
-          if (seq < latestAppliedSeqRef.current) return;
-          latestAppliedSeqRef.current = seq;
-          setError(err);
-          setStatus("error");
-        },
-      );
-
-      inFlightRef.current = promise;
-      try {
-        await promise;
-      } finally {
-        if (inFlightRef.current === promise) inFlightRef.current = null;
+    const promise = persist().finally(() => {
+      inFlightRef.current = null;
+      if (mountedRef.current && pendingFlushRef.current && timerRef.current === null) {
+        void runSave();
       }
-    },
-    [scheduleSave],
-  );
+    });
+    inFlightRef.current = promise;
+    await promise;
+  }, []);
+
+  // Call after the adopting `setState`; `keyRef` is assigned during render.
+  const rebase = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingFlushRef.current = false;
+    baselineRevisionRef.current++;
+    lastSavedKeyRef.current = keyRef.current;
+    setStatus("idle");
+    setError(null);
+  }, []);
 
   useEffect(() => {
-    if (enabled && !wasEnabledRef.current) {
-      lastSavedKeyRef.current = keyRef.current;
-      pendingFlushRef.current = false;
-      setStatus("idle");
-      setError(null);
-    }
+    if (enabled && !wasEnabledRef.current) rebase();
     wasEnabledRef.current = enabled;
-  }, [enabled]);
+  }, [enabled, rebase]);
 
   useEffect(() => {
     if (enabled && isValidRef.current?.(valueRef.current) !== false) {
@@ -171,21 +171,6 @@ export function useAutosave<T>({
       }
     };
   }, [key, enabled, delayMs, runSave, scheduleSave]);
-
-  // Call after the adopting `setState`; `keyRef` is assigned during render.
-  // Supersedes any in-flight save, whose late resolve would otherwise restore
-  // the pre-adoption baseline and leave the adopted value unsaved with no timer.
-  const rebase = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    pendingFlushRef.current = false;
-    latestAppliedSeqRef.current = ++seqRef.current;
-    lastSavedKeyRef.current = keyRef.current;
-    setStatus("idle");
-    setError(null);
-  }, []);
 
   const flush = useCallback(
     async (options?: { retryFailed?: boolean }): Promise<void> => {

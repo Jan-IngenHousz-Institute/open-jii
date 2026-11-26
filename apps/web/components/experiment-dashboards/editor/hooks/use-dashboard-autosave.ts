@@ -34,8 +34,7 @@ export function useDashboardAutosave({
 }: UseDashboardAutosaveOptions) {
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
-  const [inFlightWidgetIds, setInFlightWidgetIds] = useState<ReadonlySet<string>[]>([]);
-  const activeSaves = useRef(new Map<Promise<unknown>, ReadonlySet<string>>());
+  const [inFlightWidgetIds, setInFlightWidgetIds] = useState<ReadonlySet<string> | null>(null);
   const onUnmountFlushedRef = useRef(onUnmountFlushed);
   onUnmountFlushedRef.current = onUnmountFlushed;
 
@@ -47,16 +46,12 @@ export function useDashboardAutosave({
         layout: snapshot.layout,
         widgets: snapshot.widgets,
       };
-      const widgetIds = new Set(snapshot.widgets.map((widget) => widget.id));
-      const request = mutateAsync({ id: experimentId, dashboardId, ...body });
-      activeSaves.current.set(request, widgetIds);
-      setInFlightWidgetIds([...activeSaves.current.values()]);
+      setInFlightWidgetIds(new Set(snapshot.widgets.map((widget) => widget.id)));
       try {
-        await request;
+        await mutateAsync({ id: experimentId, dashboardId, ...body });
         onSaved?.(snapshot);
       } finally {
-        activeSaves.current.delete(request);
-        setInFlightWidgetIds([...activeSaves.current.values()]);
+        setInFlightWidgetIds(null);
       }
     },
     [mutateAsync, experimentId, dashboardId, onSaved],
@@ -71,12 +66,8 @@ export function useDashboardAutosave({
   });
   const { flush } = autosave;
   useEffect(() => {
-    const saves = activeSaves.current;
     return () => {
-      void flush().then(async () => {
-        await Promise.allSettled(saves.keys());
-        onUnmountFlushedRef.current?.();
-      });
+      void flush().then(() => onUnmountFlushedRef.current?.());
     };
   }, [flush]);
   useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
