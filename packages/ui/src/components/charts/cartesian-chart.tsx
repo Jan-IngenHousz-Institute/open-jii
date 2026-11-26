@@ -794,29 +794,37 @@ function groupedBars(
   }
 
   for (const cells of positionGroups.values()) {
-    const drawnBars = cells
-      .flat()
-      .filter(
+    const placements = cells.map((bars) => {
+      const drawnBars = bars.filter(
         ({ series }) => seriesIsVisible(series) && series.x.length > 0 && series.y.length > 0,
       );
+      return { drawnBars, ...measureGroupedBars(drawnBars) };
+    });
+    if (placements.some(({ hasRepeatedPosition }) => hasRepeatedPosition)) continue;
 
-    const spacing = groupedBarSpacing(drawnBars);
-    if (spacing === undefined) continue;
+    // Only positions drawn in the same panel can constrain each other's widths.
+    const spacing = placements.reduce(
+      (closest, cell) => Math.min(closest, cell.spacing ?? Infinity),
+      Infinity,
+    );
+    if (!Number.isFinite(spacing)) continue;
 
     // Plotly computes widths per value axis. A shared slot width keeps bars on
     // distinct X grids from overlapping when their value axes differ.
     const slotCount = Math.max(...cells.map((bars) => bars.length));
     const slotWidth = (spacing * (1 - bargap)) / slotCount;
     const width = slotWidth * (1 - bargroupgap);
-    drawnBars.forEach(({ grouping, slot }) => {
-      grouping.width = width;
-      grouping.offset = (slot - (slotCount - 1) / 2) * slotWidth - width / 2;
-    });
+    for (const { drawnBars } of placements) {
+      for (const { grouping, slot } of drawnBars) {
+        grouping.width = width;
+        grouping.offset = (slot - (slotCount - 1) / 2) * slotWidth - width / 2;
+      }
+    }
   }
   return grouping;
 }
 
-function groupedBarSpacing(bars: GroupedBar[]): number | undefined {
+function measureGroupedBars(bars: GroupedBar[]): { spacing?: number; hasRepeatedPosition?: true } {
   const positions: number[] = [];
   for (const {
     series: { x, y },
@@ -828,13 +836,13 @@ function groupedBarSpacing(bars: GroupedBar[]): number | undefined {
       const position = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
       if (typeof position !== "number" || !Number.isFinite(position)) continue;
       // Explicit offsets disable Plotly's stacking of identical X values within a trace.
-      if (seen.has(position)) return undefined;
+      if (seen.has(position)) return { hasRepeatedPosition: true };
       seen.add(position);
       positions.push(position);
     }
   }
   const { count, spacing } = distinctBarSpacing(positions);
-  return count > 1 && Number.isFinite(spacing) ? spacing : undefined;
+  return { spacing: count > 1 && Number.isFinite(spacing) ? spacing : undefined };
 }
 
 function distinctBarSpacing(positions: number[]) {
