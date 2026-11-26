@@ -800,8 +800,6 @@ function groupedBars(
       );
       return { drawnBars, ...measureGroupedBars(drawnBars) };
     });
-    if (placements.some(({ hasRepeatedPosition }) => hasRepeatedPosition)) continue;
-
     // Only positions drawn in the same panel can constrain each other's widths.
     const spacing = placements.reduce(
       (closest, cell) => Math.min(closest, cell.spacing ?? Infinity),
@@ -814,7 +812,8 @@ function groupedBars(
     const slotCount = Math.max(...cells.map((bars) => bars.length));
     const slotWidth = (spacing * (1 - bargap)) / slotCount;
     const width = slotWidth * (1 - bargroupgap);
-    for (const { drawnBars } of placements) {
+    for (const { drawnBars, hasRepeatedPosition } of placements) {
+      if (hasRepeatedPosition) continue;
       for (const { grouping, slot } of drawnBars) {
         grouping.width = width;
         grouping.offset = (slot - (slotCount - 1) / 2) * slotWidth - width / 2;
