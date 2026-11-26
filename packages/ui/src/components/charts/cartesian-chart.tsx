@@ -343,8 +343,17 @@ export function CartesianChart({
         traceColorScale,
         config,
         applyAxisType({ type: config.xAxisType }, axisScan.xType).type ?? "linear",
+        subplots,
       ),
-    [visibleData, scatterPlotType, hasSharedColorAxis, traceColorScale, config, axisScan.xType],
+    [
+      visibleData,
+      scatterPlotType,
+      hasSharedColorAxis,
+      traceColorScale,
+      config,
+      axisScan.xType,
+      subplots,
+    ],
   );
 
   const assignedAxes = useMemo(() => new Set(data.map(cartesianYAxisId)), [data]);
@@ -720,9 +729,10 @@ export function buildCartesianTraces(
   traceColorScale: CartesianColorAxis | undefined,
   config: Pick<PlotlyChartConfig, "barmode" | "bargap" | "bargroupgap">,
   xAxisType: string,
+  subplots?: FacetGridConfig,
 ): PlotData[] {
   const groups =
-    (config.barmode ?? "group") === "group" ? groupedBars(data, config, xAxisType) : [];
+    (config.barmode ?? "group") === "group" ? groupedBars(data, config, xAxisType, subplots) : [];
   return data.map((series, index) =>
     buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale, groups[index]),
   );
@@ -737,6 +747,7 @@ interface BarGrouping {
 
 interface GroupedBar {
   index: number;
+  slot: number;
   series: CartesianSeries;
   valueAxis: string;
   grouping: BarGrouping;
@@ -746,6 +757,7 @@ function groupedBars(
   data: CartesianSeries[],
   { bargap = 0.2, bargroupgap = 0 }: Pick<PlotlyChartConfig, "bargap" | "bargroupgap">,
   xAxisType: string,
+  subplots?: FacetGridConfig,
 ): (BarGrouping | undefined)[] {
   const groups = new Map<string, GroupedBar[]>();
   data.forEach((series, index) => {
@@ -757,6 +769,7 @@ function groupedBars(
     const group = groups.get(positionAxis) ?? [];
     group.push({
       index,
+      slot: group.length,
       series,
       valueAxis,
       grouping: { offsetgroup: String(group.length), alignmentgroup: "multi-axis-bars" },
@@ -765,26 +778,42 @@ function groupedBars(
   });
 
   const grouping: (BarGrouping | undefined)[] = [];
+  const matchedXAxes = new Set(
+    subplots?.sharedX === false ? [] : subplots?.cells.map(({ xaxisId }) => xaxisId),
+  );
+  const positionGroups = new Map<string, GroupedBar[][]>();
   for (const [positionAxis, bars] of groups) {
     if (new Set(bars.map(({ valueAxis }) => valueAxis)).size < 2) continue;
     for (const bar of bars) grouping[bar.index] = bar.grouping;
     if (xAxisType !== "linear" || !positionAxis.startsWith("x")) continue;
 
-    const slots = bars.filter(
-      ({ series }) => series.visible !== false && series.x.length > 0 && series.y.length > 0,
-    );
-    if (new Set(slots.map(({ valueAxis }) => valueAxis)).size < 2) continue;
+    const positionGroup = matchedXAxes.has(positionAxis) ? "shared-x" : positionAxis;
+    const cells = positionGroups.get(positionGroup) ?? [];
+    cells.push(bars);
+    positionGroups.set(positionGroup, cells);
+  }
+
+  for (const [positionGroup, cells] of positionGroups) {
+    const matched = positionGroup === "shared-x";
+    const slots = cells
+      .flat()
+      .filter(
+        ({ series }) => series.visible !== false && series.x.length > 0 && series.y.length > 0,
+      );
+    if (!matched && new Set(slots.map(({ valueAxis }) => valueAxis)).size < 2) continue;
 
     const spacing = groupedBarSpacing(slots);
     if (spacing === undefined) continue;
 
     // Plotly computes widths per value axis. A shared slot width keeps bars on
     // distinct X grids from overlapping when their value axes differ.
-    const slotWidth = (spacing * (1 - bargap)) / slots.length;
+    const slotCount = matched ? Math.max(...cells.map((bars) => bars.length)) : slots.length;
+    const slotWidth = (spacing * (1 - bargap)) / slotCount;
     const width = slotWidth * (1 - bargroupgap);
-    slots.forEach(({ grouping }, slot) => {
+    slots.forEach(({ grouping, slot }, index) => {
+      const position = matched ? slot : index;
       grouping.width = width;
-      grouping.offset = (slot - (slots.length - 1) / 2) * slotWidth - width / 2;
+      grouping.offset = (position - (slotCount - 1) / 2) * slotWidth - width / 2;
     });
   }
   return grouping;

@@ -31,7 +31,15 @@ try {
     } else {
       layout.yaxis3 = { overlaying: "y", side: "left" };
     }
-    const data = buildCartesianTraces(series, "scatter", false, undefined, config, "linear");
+    const data = buildCartesianTraces(
+      series,
+      "scatter",
+      false,
+      undefined,
+      config,
+      "linear",
+      subplots,
+    );
     return page.evaluate(
       async ({ layout, data }) => {
         const chart = document.getElementById("chart");
@@ -140,6 +148,30 @@ try {
         separate.every(({ bars }) => bars.every(({ width }) => width > 50)),
         JSON.stringify(separate),
       );
+    },
+    facets: async () => {
+      for (const rightMax of [2, 4]) {
+        const rows = [
+          ...[0, 2].flatMap((x) => ["Alpha", "Beta"].map((color) => ({ x, color, panel: "Left" }))),
+          ...[0, rightMax].map((x) => ({ x, color: "Beta", panel: "Right" })),
+        ].map((row) => ({ ...row, first: 2, third: 3 }));
+        const { chartSeries, subplots } = transform(
+          rows,
+          { role: "color", columnName: "color" },
+          { role: "facet", columnName: "panel" },
+        );
+        const groups = await render(chartSeries, [-2, 6], subplots);
+        const left = groups.filter(({ xaxis, name }) => xaxis === "x" && name.endsWith("Beta"));
+        const right = groups.filter(({ xaxis }) => xaxis === "x2");
+        assert.equal(groups.length, 6, JSON.stringify(groups));
+        assert.equal(left.length, 2, JSON.stringify(groups));
+        assert.equal(right.length, 2, JSON.stringify(groups));
+        for (const [index, { bars }] of left.entries()) {
+          const corresponding = right[index].bars;
+          assert.ok(Math.abs(bars[0].width - corresponding[0].width) <= 1, JSON.stringify(groups));
+          assert.ok(Math.abs(bars[0].left - corresponding[0].left) <= 1, JSON.stringify(groups));
+        }
+      }
     },
   };
   for (const [name, check] of Object.entries(cases)) {
