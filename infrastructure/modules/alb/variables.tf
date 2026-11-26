@@ -89,12 +89,6 @@ variable "health_check_matcher" {
   default     = "200"
 }
 
-variable "deregistration_delay" {
-  description = "Seconds a deregistering target keeps its in-flight requests before it is removed. A deploy waits this long for each old task."
-  type        = number
-  default     = 300
-}
-
 variable "enable_access_logs" {
   description = "Whether to enable access logs for the ALB"
   type        = bool

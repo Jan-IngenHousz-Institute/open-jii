@@ -69,7 +69,6 @@ An internet-facing ALB takes public subnets and sets `cloudfront_header_value` i
 | `enable_access_logs`      | Enable ALB access logging                                     | `false`             |
 | `access_logs_bucket`      | S3 bucket for access logs                                     | `""`                |
 | `health_check_*`          | Health check path, interval, thresholds, timeout              | see variables.tf    |
-| `deregistration_delay`    | Seconds a draining target keeps its requests; deploys wait it | `300`               |
 
 ## Outputs
 

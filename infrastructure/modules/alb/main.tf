@@ -56,8 +56,6 @@ resource "aws_lb_target_group" "app_tg" {
   target_type = "ip" # Required for ECS Fargate tasks
   vpc_id      = var.vpc_id
 
-  deregistration_delay = var.deregistration_delay
-
   # Health check configuration determines when targets are ready to receive traffic
   # These settings should align with your application's startup time and health endpoint
   health_check {

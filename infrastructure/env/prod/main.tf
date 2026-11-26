@@ -2760,17 +2760,14 @@ module "backend_alb_private" {
   security_groups = [module.vpc.alb_security_group_id]
   environment     = var.environment
 
-  # Every 10 s, three passes to take traffic and three misses to leave, so a new task is in within
-  # about 30 s of answering and a slow /health does not flap.
+  # Every 10 s. A new task takes traffic after its first passing check; three misses take a task out
+  # and three passes bring it back, so a slow /health does not flap.
   health_check_path                = "/health"
   health_check_timeout             = 5
   health_check_interval            = 10
   health_check_healthy_threshold   = 3
   health_check_unhealthy_threshold = 3
   health_check_matcher             = "200-299"
-  # The API origin in CloudFront waits 60 s for a response, so a draining task keeps its requests
-  # that long and no longer; the default 300 s held every deploy for five minutes.
-  deregistration_delay = 60
 
   certificate_arn = module.route53.regional_services_certificate_arn
 
