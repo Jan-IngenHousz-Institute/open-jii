@@ -323,13 +323,6 @@ export function CartesianChart({
   const traceColorScale = data.length === 1 ? colorAxis : undefined;
   const sharedColorAxis = traceColorScale ? undefined : colorAxis;
   const hasSharedColorAxis = sharedColorAxis !== undefined;
-  const groupBars = (config.barmode ?? "group") === "group";
-  const plotData = useMemo(() => {
-    const offsetGroups = groupBars ? groupedBarOffsets(visibleData) : [];
-    return visibleData.map((series, index) =>
-      buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale, offsetGroups[index]),
-    );
-  }, [visibleData, scatterPlotType, hasSharedColorAxis, traceColorScale, groupBars]);
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
   // a theme change, neither of which can alter an axis kind. Horizontal bars
@@ -341,6 +334,18 @@ export function CartesianChart({
       .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
   }, [data, subplots]);
+  const plotData = useMemo(
+    () =>
+      buildCartesianTraces(
+        visibleData,
+        scatterPlotType,
+        hasSharedColorAxis,
+        traceColorScale,
+        config,
+        applyAxisType({ type: config.xAxisType }, axisScan.xType).type ?? "linear",
+      ),
+    [visibleData, scatterPlotType, hasSharedColorAxis, traceColorScale, config, axisScan.xType],
+  );
 
   const assignedAxes = useMemo(() => new Set(data.map(cartesianYAxisId)), [data]);
   const hasExtraAxes = !subplots && CARTESIAN_AXIS_IDS.slice(2).some((id) => assignedAxes.has(id));
@@ -708,23 +713,107 @@ function applyFacetSecondaryAxes(
   });
 }
 
-function groupedBarOffsets(data: CartesianSeries[]): (string | undefined)[] {
-  const groups = new Map<string, { valueAxes: Set<string>; nextSlot: number }>();
-  const bars = data.map((series) => {
-    if (series.traceType !== "bar") return undefined;
+export function buildCartesianTraces(
+  data: CartesianSeries[],
+  scatterPlotType: string,
+  hasSharedColorAxis: boolean,
+  traceColorScale: CartesianColorAxis | undefined,
+  config: Pick<PlotlyChartConfig, "barmode" | "bargap" | "bargroupgap">,
+  xAxisType: string,
+): PlotData[] {
+  const groups =
+    (config.barmode ?? "group") === "group" ? groupedBars(data, config, xAxisType) : [];
+  return data.map((series, index) =>
+    buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale, groups[index]),
+  );
+}
+
+interface BarGrouping {
+  offsetgroup: string;
+  alignmentgroup: string;
+  width?: number;
+  offset?: number;
+}
+
+interface GroupedBar {
+  index: number;
+  series: CartesianSeries;
+  valueAxis: string;
+  grouping: BarGrouping;
+}
+
+function groupedBars(
+  data: CartesianSeries[],
+  { bargap = 0.2, bargroupgap = 0 }: Pick<PlotlyChartConfig, "bargap" | "bargroupgap">,
+  xAxisType: string,
+): (BarGrouping | undefined)[] {
+  const groups = new Map<string, GroupedBar[]>();
+  data.forEach((series, index) => {
+    if (series.traceType !== "bar") return;
 
     const x = series.xaxisId ?? "x";
     const y = cartesianYAxisId(series);
     const [positionAxis, valueAxis] = series.orientation === "h" ? [y, x] : [x, y];
-    const group = groups.get(positionAxis) ?? { valueAxes: new Set<string>(), nextSlot: 0 };
-    group.valueAxes.add(valueAxis);
-    const slot = group.nextSlot;
-    group.nextSlot += 1;
+    const group = groups.get(positionAxis) ?? [];
+    group.push({
+      index,
+      series,
+      valueAxis,
+      grouping: { offsetgroup: String(group.length), alignmentgroup: "multi-axis-bars" },
+    });
     groups.set(positionAxis, group);
-    return { group, slot };
   });
 
-  return bars.map((bar) => (bar && bar.group.valueAxes.size > 1 ? String(bar.slot) : undefined));
+  const grouping: (BarGrouping | undefined)[] = [];
+  for (const [positionAxis, bars] of groups) {
+    if (new Set(bars.map(({ valueAxis }) => valueAxis)).size < 2) continue;
+    for (const bar of bars) grouping[bar.index] = bar.grouping;
+    if (xAxisType !== "linear" || !positionAxis.startsWith("x")) continue;
+
+    const slots = bars.filter(
+      ({ series }) => series.visible !== false && series.x.length > 0 && series.y.length > 0,
+    );
+    if (new Set(slots.map(({ valueAxis }) => valueAxis)).size < 2) continue;
+
+    const spacing = groupedBarSpacing(slots);
+    if (spacing === undefined) continue;
+
+    // Plotly computes widths per value axis. A shared slot width keeps bars on
+    // distinct X grids from overlapping when their value axes differ.
+    const slotWidth = (spacing * (1 - bargap)) / slots.length;
+    const width = slotWidth * (1 - bargroupgap);
+    slots.forEach(({ grouping }, slot) => {
+      grouping.width = width;
+      grouping.offset = (slot - (slots.length - 1) / 2) * slotWidth - width / 2;
+    });
+  }
+  return grouping;
+}
+
+function groupedBarSpacing(bars: GroupedBar[]): number | undefined {
+  const positions = new Set<number>();
+  for (const {
+    series: { x, y },
+  } of bars) {
+    const seen = new Set<number>();
+    const length = Math.min(x.length, y.length);
+    for (let point = 0; point < length; point++) {
+      const value = x[point];
+      const position = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+      if (typeof position !== "number" || !Number.isFinite(position)) continue;
+      // Explicit offsets disable Plotly's stacking of repeated X values within a trace.
+      if (seen.has(position)) return undefined;
+      seen.add(position);
+      positions.add(position);
+    }
+  }
+  let spacing = Infinity;
+  let previous: number | undefined;
+  for (const position of [...positions].sort((a, b) => a - b)) {
+    if (previous !== undefined) spacing = Math.min(spacing, position - previous);
+    previous = position;
+  }
+  return Number.isFinite(spacing) ? spacing : undefined;
 }
 
 /**
@@ -737,7 +826,7 @@ function buildTrace(
   scatterPlotType: string,
   hasSharedColorAxis: boolean,
   traceColorScale?: CartesianColorAxis,
-  barOffsetGroup?: string,
+  barGrouping?: BarGrouping,
 ): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
   // charts pin each trace to its cell) wins over the single-chart assignment.
@@ -767,14 +856,9 @@ function buildTrace(
     // Bars don't honour `mode` / `line` / `fill` / `connectgaps`. For
     // horizontal bars Plotly expects `x` as values and `y` as categories.
     const horizontal = series.orientation === "h";
-    // Keep explicit slots from affecting single-axis facets with matched position axes.
-    const grouping =
-      barOffsetGroup === undefined
-        ? {}
-        : { offsetgroup: barOffsetGroup, alignmentgroup: "multi-axis-bars" };
     return {
       ...baseShared,
-      ...grouping,
+      ...barGrouping,
       x: horizontal ? series.y : series.x,
       y: horizontal ? series.x : series.y,
       type: "bar",

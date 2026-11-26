@@ -259,6 +259,19 @@ describe("CartesianChart", () => {
     }
   });
 
+  it("lets Plotly stack repeated X values within a grouped bar trace", () => {
+    const data: CartesianSeries[] = [
+      { traceType: "bar", x: [0, 0, 2], y: [10, 20, 30] },
+      { traceType: "bar", x: [0, 8], y: [100, 200], axis: "y3" },
+    ];
+    render(<CartesianChart data={data} config={{ barmode: "group" }} />);
+
+    for (const trace of readData()) {
+      expect(trace).toHaveProperty("offsetgroup");
+      expect(trace).not.toHaveProperty("offset");
+    }
+  });
+
   it.each(["stack", "relative", "overlay"] as const)("omits bar offsets in %s mode", (barmode) => {
     render(<CartesianChart data={barsOnTwoAxes} config={{ barmode }} />);
 
