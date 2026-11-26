@@ -1,9 +1,8 @@
 "use client";
 
-import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
-import { Copy, Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
+import { Copy, Database, MoreHorizontal, Palette, RotateCw, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -22,6 +21,7 @@ import { cn } from "@repo/ui/lib/utils";
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { widgetMetaFor } from "../widgets/widget-meta";
 import { compactWidgets } from "./canvas/dashboard-grid-helpers";
+import { useDashboardCopySave } from "./context/dashboard-copy-save-context";
 import { useDashboardEditor } from "./context/dashboard-editor-context";
 import { ComingSoonStrip } from "./inspector-toolbar/strips/coming-soon-strip";
 import { FilterDataStrip } from "./inspector-toolbar/strips/filter-data-strip";
@@ -75,25 +75,12 @@ const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSec
 export default function DashboardToolbar({ visible, experimentId }: DashboardToolbarProps) {
   const { t } = useTranslation("experimentDashboards");
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
+  const copySave = useDashboardCopySave();
   const form = useFormContext<DashboardFormValues>();
   const widgets = useWatch({ control: form.control, name: "widgets" });
 
   const widgetIndex = selectedWidgetId ? widgets.findIndex((w) => w.id === selectedWidgetId) : -1;
   const widget = widgetIndex >= 0 ? widgets[widgetIndex] : null;
-  const sourceChartId =
-    widget?.type === "visualization" ? widget.config.visualizationId : undefined;
-  const { duplicate, disabled: duplicateDisabled } = useExperimentVisualizationDuplicate(
-    experimentId,
-    sourceChartId,
-  );
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
   const sections = widget ? SECTIONS_BY_WIDGET[widget.type] : [];
   const hasSections = sections.length > 1;
   const [activeSection, setActiveSection] = useState<InspectorSectionKey>("widget");
@@ -120,35 +107,6 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
     form.setValue("widgets", compactWidgets(remaining, layout.columns), {
       shouldDirty: true,
     });
-  };
-
-  const handleDuplicate = async () => {
-    if (widget?.type !== "visualization" || !sourceChartId) return;
-    const sourceWidgetId = widget.id;
-    const created = await duplicate();
-    if (!created || !mounted.current) return;
-    const current = form.getValues("widgets");
-    const source = current.find((candidate) => candidate.id === sourceWidgetId);
-    if (source?.type !== "visualization" || source.config.visualizationId !== sourceChartId) return;
-    const copy = {
-      ...source,
-      id: crypto.randomUUID(),
-      config: { ...source.config, visualizationId: created.id },
-      layout: { ...source.layout, row: source.layout.row + source.layout.rowSpan },
-    };
-    const insertionRow = copy.layout.row;
-    const shifted = current.map((candidate) =>
-      candidate.layout.row >= insertionRow
-        ? {
-            ...candidate,
-            layout: { ...candidate.layout, row: candidate.layout.row + copy.layout.rowSpan },
-          }
-        : candidate,
-    );
-    form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
-      shouldDirty: true,
-    });
-    selectWidget(copy.id);
   };
 
   const meta = widget ? widgetMetaFor(widget.type) : null;
@@ -208,14 +166,22 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
-                {widget.type === "visualization" && (
-                  <DropdownMenuItem
-                    disabled={duplicateDisabled || !sourceChartId}
-                    onSelect={() => void handleDuplicate()}
-                  >
-                    <Copy className="size-4" />
-                    {t("editor.inspector.duplicate")}
+                {copySave?.retryAvailable ? (
+                  <DropdownMenuItem onSelect={copySave.retry}>
+                    <RotateCw className="size-4" />
+                    {t("editor.inspector.retryCopySave")}
                   </DropdownMenuItem>
+                ) : (
+                  widget.type === "visualization" &&
+                  copySave?.enabled && (
+                    <DropdownMenuItem
+                      disabled={copySave.duplicateDisabled}
+                      onSelect={() => void copySave.duplicateSelectedChart()}
+                    >
+                      <Copy className="size-4" />
+                      {t("editor.inspector.duplicate")}
+                    </DropdownMenuItem>
+                  )
                 )}
                 <DropdownMenuItem variant="destructive" onClick={handleRemove}>
                   <Trash2 className="size-4" />

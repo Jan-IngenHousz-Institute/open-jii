@@ -84,7 +84,11 @@
         "pickVisualizationFirst": "Zuerst eine Visualisierung auswählen"
       },
       "moreShelves": "Mehr",
-      "duplicate": "Duplizieren"
+      "duplicate": "Duplizieren",
+      "copySaveFailed": "Das Diagramm wurde kopiert, aber das Dashboard konnte die Kopie nicht speichern.",
+      "retryCopySave": "Kopie erneut speichern",
+      "copyNotAttached": "Das Diagramm wurde kopiert, konnte aber nicht zum Dashboard hinzugefügt werden.",
+      "openChartCopy": "Kopie öffnen"
     },
     "vizDataStrip": {
       "dataset": "Datensatz",
