@@ -1,7 +1,10 @@
-import { orpc } from "@/lib/orpc";
+import { usePrincipal } from "@/components/auth/principal-context";
+import { getOrpcError, orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+
+import { experimentAccessQueryKey } from "../useExperimentAccess/experiment-access-query";
 
 interface ExperimentDashboardUpdateProps {
   experimentId: string;
@@ -10,6 +13,7 @@ interface ExperimentDashboardUpdateProps {
 
 export const useExperimentDashboardUpdate = (props: ExperimentDashboardUpdateProps) => {
   const queryClient = useQueryClient();
+  const { userId } = usePrincipal();
 
   return useMutation(
     orpc.experiments.updateExperimentDashboard.mutationOptions({
@@ -21,6 +25,13 @@ export const useExperimentDashboardUpdate = (props: ExperimentDashboardUpdatePro
           data,
         );
         props.onSuccess?.(data);
+      },
+      onError: async (error) => {
+        if (getOrpcError(error)?.status !== 403) return;
+        await queryClient.invalidateQueries({
+          queryKey: experimentAccessQueryKey(userId, props.experimentId),
+          exact: true,
+        });
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({

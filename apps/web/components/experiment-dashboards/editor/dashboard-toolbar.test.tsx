@@ -149,7 +149,10 @@ function expectOpenCopyLink(chartId: string, basePath = "experiments") {
 describe("DashboardToolbar", () => {
   beforeEach(() => {
     server.mount(contract.experiments.getExperimentAccess, {
-      body: createExperimentAccess({ experiment: { id: "exp-1", status: "active" } }),
+      body: createExperimentAccess({
+        experiment: { id: "exp-1", status: "active" },
+        isAdmin: true,
+      }),
     });
   });
 
@@ -766,7 +769,7 @@ describe("DashboardToolbar", () => {
       if (archived) {
         queryClient.setQueryData(
           experimentAccessQueryKey(undefined, "exp-1"),
-          createExperimentAccess({ experiment: { id: "exp-1", status: "active" } }),
+          createExperimentAccess({ experiment: { id: "exp-1", status: "active" }, isAdmin: true }),
         );
       }
       const { rerender } = render(dashboard(true), { queryClient });
