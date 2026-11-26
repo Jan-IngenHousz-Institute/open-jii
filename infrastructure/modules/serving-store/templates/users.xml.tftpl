@@ -38,9 +38,10 @@
     </profiles>
     <users>
         <default remove="remove"/>
+        <!-- Each password's hash comes from its Secrets Manager secret at boot, into
+             users.d/openjii-passwords.xml (templates/passwords.sh.tftpl). -->
 %{ for user in users ~}
         <${user.name}>
-            <password_sha256_hex>${user.password_sha256}</password_sha256_hex>
             <networks><ip>::/0</ip></networks>
             <profile>${user.profile}</profile>
             <quota>default</quota>

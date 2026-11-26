@@ -1,43 +1,16 @@
-resource "random_password" "email_local_part" {
-  length  = 16
-  upper   = false
-  special = false
-
-  keepers = {
-    generation = var.email_generation
-  }
-}
-
-# Six digits is all the app's code boxes accept.
-resource "random_password" "otp" {
-  length  = 6
-  lower   = false
-  upper   = false
-  special = false
-
-  keepers = {
-    generation = var.otp_generation
-  }
-}
-
 locals {
   secret_names = ["AUTH_PLAY_REVIEW_EMAIL", "AUTH_PLAY_REVIEW_OTP"]
 }
 
-# The values live in the random resources, so deleting the secret at once loses nothing and lets
-# it be turned on again without waiting out a recovery window.
+# OpenTofu creates the secret without a value. The address and the code are set with
+# `pnpm secrets:set <env> play-review`, so neither reaches a plan or the state. They live only in
+# this secret, so deleting it keeps the usual recovery window.
 module "secret" {
-  source = "../secrets-manager"
+  source = "../secrets-manager/container"
   count  = var.enabled ? 1 : 0
 
-  name                    = "openjii-play-review-sign-in-${var.environment}"
-  description             = "Address and fixed sign-in code for Google Play's reviewers"
-  recovery_window_in_days = 0
-
-  secret_string = jsonencode({
-    AUTH_PLAY_REVIEW_EMAIL = "${random_password.email_local_part.result}@${var.domain_name}"
-    AUTH_PLAY_REVIEW_OTP   = random_password.otp.result
-  })
+  name        = "openjii-play-review-sign-in-${var.environment}"
+  description = "Address and fixed sign-in code for Google Play's reviewers"
 
   tags = var.tags
 }
