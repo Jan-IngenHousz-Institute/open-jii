@@ -426,6 +426,7 @@ describe("transformCartesianData", () => {
     expect(chartSeries[0].legendgroup).not.toBe(chartSeries[1].legendgroup);
     expect(chartSeries[2].legendgroup).toBe(chartSeries[0].legendgroup);
     expect(chartSeries[3].legendgroup).toBe(chartSeries[1].legendgroup);
+    expect(chartSeries.slice(0, 2).every((series) => series.showlegend !== false)).toBe(true);
     expect(chartSeries.slice(2).map((series) => series.showlegend)).toEqual([false, false]);
   });
 
