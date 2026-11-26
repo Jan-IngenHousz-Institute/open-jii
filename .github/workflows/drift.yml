@@ -26,47 +26,87 @@ concurrency:
   group: infrastructure-drift
   cancel-in-progress: false
 
+# bash -eo pipefail, so a failing command inside a pipeline fails the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   # Drift is the difference between the live resources and the code that put them there. Dev
-  # deploys every merge to main; prod runs what its last successful release deployed, and planning
-  # main against prod would report every merged but unreleased change as drift.
+  # deploys every merge to main. Prod is compared, root by root, with the newest release whose apply
+  # of that root succeeded, whatever the rest of the release did: main would report every merged
+  # but unreleased change as drift, and a dry run or an app-only release applied nothing.
   deployed:
     name: Find the deployed commits
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       actions: read
     outputs:
-      prod_sha: ${{ steps.prod.outputs.sha }}
+      prod_env_sha: ${{ steps.prod.outputs.env_sha }}
+      prod_foundation_sha: ${{ steps.prod.outputs.foundation_sha }}
     steps:
-      - name: Find the last prod release
+      - name: Run only from main
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run the drift check from main; dev is compared with main."
+            exit 1
+          fi
+
+      # A failed lookup leaves the commits empty, which fails only prod's checks, so dev still runs.
+      - name: Find the last applied prod release of each root
         id: prod
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
-          read -r SHA BRANCH < <(gh run list --repo "$REPO" --workflow production-release.yml \
-            --status success --limit 1 --json headSha,headBranch --jq '.[0] | "\(.headSha) \(.headBranch)"')
-          # An empty answer fails only prod's checks, in their first step, so dev is still checked.
-          if [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Prod is compared with ${SHA:0:7} from $BRANCH"
-            echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          if ! runs=$(gh run list --repo "$REPO" --workflow production-release.yml --limit 30 \
+            --json databaseId,headSha,headBranch \
+            --jq '[.[] | select(.headBranch | test("^release/[0-9]{8}$"))]'); then
+            echo "::warning::Could not list the prod releases."
+            exit 0
           fi
+          env_sha="" foundation_sha=""
+          while read -r id sha branch; do
+            jobs=$(gh run view "$id" --repo "$REPO" --json jobs --jq '[.jobs[] | {name, conclusion}]') || continue
+            if [[ -z "$env_sha" ]] && jq -e 'any(.[]; (.name | endswith("Deploy Infrastructure / OpenTofu Apply")) and .conclusion == "success")' <<<"$jobs" >/dev/null; then
+              env_sha=$sha
+              echo "Prod's environment root is compared with ${sha:0:7} from $branch"
+            fi
+            # A foundation apply is skipped when its plan found nothing to change.
+            if [[ -z "$foundation_sha" ]] && jq -e '
+                any(.[]; (.name | endswith("Deploy Foundation / Foundation Plan")) and .conclusion == "success")
+                and any(.[]; (.name | endswith("Deploy Foundation / Foundation Apply")) and (.conclusion == "success" or .conclusion == "skipped"))' <<<"$jobs" >/dev/null; then
+              foundation_sha=$sha
+              echo "Prod's foundation is compared with ${sha:0:7} from $branch"
+            fi
+            if [[ -n "$env_sha" && -n "$foundation_sha" ]]; then
+              break
+            fi
+          done < <(jq -r '.[] | "\(.databaseId) \(.headSha) \(.headBranch)"' <<<"$runs")
+          echo "env_sha=$env_sha" >> "$GITHUB_OUTPUT"
+          echo "foundation_sha=$foundation_sha" >> "$GITHUB_OUTPUT"
 
   drift:
     name: Drift (${{ matrix.environment }} ${{ matrix.root }})
     needs: deployed
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         environment: ${{ fromJSON(inputs.environment == 'dev' && '["dev"]' || inputs.environment == 'prod' && '["prod"]' || '["dev", "prod"]') }}
         root: [env, foundation]
     # A refresh reads every resource, which the read-only plan roles cannot, so this uses the
-    # deploy identities. It has no apply step.
-    environment: ${{ matrix.environment }}
+    # deploy identities. It has no apply step, and it records no deployment on the environment.
+    environment:
+      name: ${{ matrix.environment }}
+      deployment: false
     permissions:
       id-token: write
       contents: read
+    # The inputs the deploy passes (tofu.yml). A prod release older than a change to these may need
+    # one this no longer passes; its check then fails and says so until the next release.
     env:
       environment: ${{ matrix.environment }}
       TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
@@ -84,24 +124,34 @@ jobs:
       ROOT_DIR: infrastructure/${{ matrix.root }}/${{ matrix.environment }}
       LABEL: ${{ matrix.environment }} ${{ matrix.root == 'env' && 'environment root' || 'foundation' }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      DEPLOYED_SHA: ${{ matrix.environment == 'prod' && (matrix.root == 'env' && needs.deployed.outputs.prod_env_sha || needs.deployed.outputs.prod_foundation_sha) || '' }}
     steps:
       - name: Check the prod commit was found
-        if: matrix.environment == 'prod' && needs.deployed.outputs.prod_sha == ''
+        if: matrix.environment == 'prod' && env.DEPLOYED_SHA == ''
         run: |
-          echo "::error::Found no successful prod release to compare prod with."
+          echo "::error::Found no prod release that applied the $LABEL."
           exit 1
 
-      - name: Checkout the deployed commit
+      # The workflow, its actions and its tools always come from main. Only prod's configuration
+      # comes from the release, which went through review and the release process.
+      - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ matrix.environment == 'prod' && needs.deployed.outputs.prod_sha || github.sha }}
           persist-credentials: false
+
+      - name: Use the deployed prod configuration
+        if: matrix.environment == 'prod'
+        run: |
+          git fetch --quiet --no-tags --depth 1 origin "$DEPLOYED_SHA"
+          rm -rf infrastructure
+          git checkout "$DEPLOYED_SHA" -- infrastructure
 
       - name: Setup OpenTofu and AWS Credentials
         uses: ./.github/actions/tofu/tofu-setup
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ secrets.AWS_REGION }}
+          wrapper: "false"
 
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
@@ -116,8 +166,9 @@ jobs:
           workspace_id: ${{ matrix.environment == 'prod' && secrets.GRAFANA_WORKSPACE_ID_PROD || secrets.GRAFANA_WORKSPACE_ID_DEV }}
           service_account_id: ${{ matrix.environment == 'prod' && vars.GRAFANA_SERVICE_ACCOUNT_ID_PROD || vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
 
-      # Exit code 0 is no difference, 2 is a difference, and 1 is a failed check. The saved plan holds
-      # the configuration's secret values, so it stays on the runner and only addresses are reported.
+      # Exit code 0 is no difference, 2 is a difference, and 1 is a failed check. The plan's output
+      # names values changed outside OpenTofu, which nobody reviewed, and the Actions logs are
+      # public, so the output goes to a file and only errors reach the log.
       - name: Plan against the live resources
         id: plan
         working-directory: ${{ env.ROOT_DIR }}
@@ -125,13 +176,20 @@ jobs:
           TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token }}
         run: |
           set +e
-          tofu plan -input=false -lock=false -detailed-exitcode -out="$RUNNER_TEMP/drift.tfplan" 2>&1
+          tofu plan -input=false -no-color -lock=false -detailed-exitcode \
+            -out="$RUNNER_TEMP/drift.tfplan" > "$RUNNER_TEMP/drift-plan.txt" 2> "$RUNNER_TEMP/drift-errors.txt"
           code=$?
           set -e
+          cat "$RUNNER_TEMP/drift-errors.txt" >&2
           case "$code" in
             0) echo "drift=false" >> "$GITHUB_OUTPUT" ;;
             2) echo "drift=true" >> "$GITHUB_OUTPUT" ;;
-            *) exit "$code" ;;
+            *)
+              if grep -q "No value for required variable" "$RUNNER_TEMP/drift-errors.txt"; then
+                echo "The deployed release needs an input this workflow no longer passes; the check works again after the next prod release." > "$RUNNER_TEMP/drift-reason.txt"
+              fi
+              exit "$code"
+              ;;
           esac
 
       - name: List the drifted resources
@@ -139,26 +197,35 @@ jobs:
         if: steps.plan.outputs.drift == 'true'
         working-directory: ${{ env.ROOT_DIR }}
         run: |
-          tofu show -json "$RUNNER_TEMP/drift.tfplan" | jq -r '
+          tofu show -json "$RUNNER_TEMP/drift.tfplan" > "$RUNNER_TEMP/drift.json"
+          jq -r '
             [.resource_changes[]?
               | select(.change.actions != ["no-op"] and .change.actions != ["read"])
               | "\(.address) (\(.change.actions | join(", ")))"]
             | if length == 0 then ["only outputs differ"] else . end
-            | .[]' > "$RUNNER_TEMP/drift.txt"
+            | .[]' "$RUNNER_TEMP/drift.json" > "$RUNNER_TEMP/drift.txt"
+          count=$(wc -l < "$RUNNER_TEMP/drift.txt")
           {
-            echo "### Drift in the $LABEL"
+            echo "### Drift in the $LABEL: $count"
             echo '```'
             cat "$RUNNER_TEMP/drift.txt"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::warning::Drift in the $LABEL: $(wc -l < "$RUNNER_TEMP/drift.txt") resources"
+          echo "::warning::Drift in the $LABEL: $count"
 
+      # Slack cuts a long message and its link with it, so a long list ends at 40 lines; the job
+      # summary keeps the whole list.
       - name: Report the drift to Slack
         if: steps.plan.outputs.drift == 'true'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          jq -n --arg label "$LABEL" --rawfile list "$RUNNER_TEMP/drift.txt" --arg run "$RUN_URL" \
+          total=$(wc -l < "$RUNNER_TEMP/drift.txt")
+          head -n 40 "$RUNNER_TEMP/drift.txt" > "$RUNNER_TEMP/drift-short.txt"
+          if (( total > 40 )); then
+            echo "… and $((total - 40)) more, listed in the run's summary" >> "$RUNNER_TEMP/drift-short.txt"
+          fi
+          jq -n --arg label "$LABEL" --rawfile list "$RUNNER_TEMP/drift-short.txt" --arg run "$RUN_URL" \
             '{text: ":warning: Infrastructure drift in the \($label). These resources differ from the code:\n```\n\($list)```\n<\($run)|Nightly drift run>"}' \
             | curl -sSf -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL" > /dev/null
 
@@ -167,13 +234,14 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          jq -n --arg label "$LABEL" --arg run "$RUN_URL" \
-            '{text: ":x: The nightly drift check for the \($label) failed, so its drift is unknown. <\($run)|See the run>"}' \
+          reason=$(cat "$RUNNER_TEMP/drift-reason.txt" 2>/dev/null || true)
+          jq -n --arg label "$LABEL" --arg reason "$reason" --arg run "$RUN_URL" \
+            '{text: ":x: The nightly drift check for the \($label) failed, so its drift is unknown. \($reason) <\($run)|See the run>"}' \
             | curl -sSf -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL" > /dev/null
 
       - name: Delete the plan
         if: always()
-        run: rm -f "$RUNNER_TEMP/drift.tfplan"
+        run: rm -f "$RUNNER_TEMP"/drift.tfplan "$RUNNER_TEMP"/drift-plan.txt "$RUNNER_TEMP"/drift.json "$RUNNER_TEMP"/drift-errors.txt
 
       - name: Delete the Grafana token
         if: always() && steps.grafana.outputs.token_id != ''

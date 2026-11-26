@@ -7,6 +7,10 @@ inputs:
   aws_region:
     description: "AWS Region"
     required: true
+  wrapper:
+    description: "Install setup-opentofu's wrapper, which turns plan's exit code 2 into 0 and copies stdout into step outputs"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -23,6 +27,7 @@ runs:
       uses: opentofu/setup-opentofu@fc711fa910b93cba0f3fbecaafc9f42fd0c411cb # v2.0.0
       with:
         tofu_version: ${{ steps.version.outputs.tofu }}
+        tofu_wrapper: ${{ inputs.wrapper }}
 
     - name: Cache OpenTofu Plugins
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
