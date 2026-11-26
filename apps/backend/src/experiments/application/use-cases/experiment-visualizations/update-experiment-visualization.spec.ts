@@ -70,8 +70,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
@@ -101,7 +101,12 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        visualizationId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -117,7 +122,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
     it("should fail when visualization does not exist", async () => {
       // Arrange
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
         failure({
           message: "Visualization not found",
           code: "NOT_FOUND",
@@ -127,7 +132,12 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        faker.string.uuid(),
+        visualizationId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -142,22 +152,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       });
 
       // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Original Visualization",
-        description: "Original Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId, // User is the owner
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
@@ -181,7 +177,12 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, mockUpdateRequest, testUserId);
+      const result = await useCase.execute(
+        experiment.id,
+        visualizationId,
+        mockUpdateRequest,
+        testUserId,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -211,8 +212,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
@@ -232,6 +233,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
 
       // Act
       const result = await useCase.execute(
+        experiment.id,
         visualizationId,
         emptyUpdate as UpdateExperimentVisualizationDto,
         testUserId,
@@ -250,20 +252,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       const fakeExperimentId = faker.string.uuid();
 
       // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: fakeExperimentId,
-        name: "Test Visualization",
-        description: "Test Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       const updateData: UpdateExperimentVisualizationDto = {
         name: "Updated Visualization",
         chartFamily: "basic",
@@ -272,8 +260,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         dataConfig: { tableName: "test_table", dataSources: [] },
       };
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       // Mock experiment access to return null experiment (experiment doesn't exist)
@@ -289,7 +277,12 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, updateData, testUserId);
+      const result = await useCase.execute(
+        fakeExperimentId,
+        visualizationId,
+        updateData,
+        testUserId,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -333,8 +326,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       // Mock experiment access with admin privileges
@@ -354,7 +347,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, updateData, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, updateData, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -373,20 +366,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       });
 
       // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: "Test Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       const updateData: UpdateExperimentVisualizationDto = {
         name: "Updated Visualization",
         chartFamily: "basic",
@@ -395,8 +374,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         dataConfig: { tableName: "test_table", dataSources: [] },
       };
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentRepository, "checkAccess").mockResolvedValue(
@@ -414,7 +393,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       vi.spyOn(experimentVisualizationRepository, "update").mockResolvedValue(success([]));
 
       // Act
-      const result = await useCase.execute(visualizationId, updateData, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, updateData, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -422,9 +401,10 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       expect(result.error.message).toBe("Failed to update visualization");
     });
 
-    it("should fail when visualization findById returns success with null", async () => {
-      // Arrange - Mock findById to return success with null (instead of failure)
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
+    it("should return not found when no chart matches the experiment", async () => {
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(false),
+      );
 
       const updateData: UpdateExperimentVisualizationDto = {
         name: "Updated Name",
@@ -434,7 +414,12 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       };
 
       // Act
-      const result = await useCase.execute(visualizationId, updateData, testUserId);
+      const result = await useCase.execute(
+        faker.string.uuid(),
+        visualizationId,
+        updateData,
+        testUserId,
+      );
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -449,20 +434,6 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         userId: testUserId,
       });
 
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: "Test Description",
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       const updateData: UpdateExperimentVisualizationDto = {
         name: "Attempted Update on Archived",
         chartFamily: "basic",
@@ -471,8 +442,8 @@ describe("UpdateExperimentVisualizationUseCase", () => {
         dataConfig: { tableName: "test_table", dataSources: [] },
       };
 
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentRepository, "findOne").mockResolvedValue(
@@ -480,7 +451,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, updateData, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, updateData, testUserId);
 
       // Assert
       expect(result.isFailure()).toBe(true);

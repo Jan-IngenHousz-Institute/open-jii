@@ -2,7 +2,6 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -16,22 +15,29 @@ export class DeleteExperimentVisualizationUseCase {
     private readonly experimentVisualizationRepository: ExperimentVisualizationRepository,
   ) {}
 
-  async execute(visualizationId: string, userId: string): Promise<Result<void>> {
+  async execute(
+    experimentId: string,
+    visualizationId: string,
+    userId: string,
+  ): Promise<Result<void>> {
     this.logger.log({
       msg: "Deleting visualization",
       operation: "deleteExperimentVisualization",
+      experimentId,
       visualizationId,
       userId,
     });
 
-    // Find the visualization first
-    const visualizationResult =
-      await this.experimentVisualizationRepository.findById(visualizationId);
+    const existsResult = await this.experimentVisualizationRepository.existsInExperiment(
+      experimentId,
+      visualizationId,
+    );
 
-    return visualizationResult.chain(async (visualization: ExperimentVisualizationDto | null) => {
-      if (!visualization) {
+    return existsResult.chain(async (exists) => {
+      if (!exists) {
         this.logger.warn({
-          msg: "Attempt to delete non-existent visualization",
+          msg: "Attempt to delete missing visualization in experiment",
+          experimentId,
           operation: "deleteExperimentVisualization",
           visualizationId,
           userId,
@@ -41,27 +47,25 @@ export class DeleteExperimentVisualizationUseCase {
 
       // Authorization is enforced declaratively by @CanAccess on the route.
       // The experiment is still loaded to enforce the archived-state domain rule.
-      const experimentResult = await this.experimentRepository.findOne(visualization.experimentId);
+      const experimentResult = await this.experimentRepository.findOne(experimentId);
 
       return experimentResult.chain(async (experiment: ExperimentDto | null) => {
         if (!experiment) {
           this.logger.warn({
             msg: "Visualization belongs to non-existent experiment",
             operation: "deleteExperimentVisualization",
-            experimentId: visualization.experimentId,
+            experimentId,
             visualizationId,
             userId,
           });
-          return failure(
-            AppError.notFound(`Experiment with ID ${visualization.experimentId} not found`),
-          );
+          return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
         }
 
         if (experiment.status === "archived") {
           this.logger.warn({
             msg: "Attempt to delete visualization in an archived experiment",
             operation: "deleteExperimentVisualization",
-            experimentId: visualization.experimentId,
+            experimentId,
             visualizationId,
             userId,
           });
@@ -71,19 +75,22 @@ export class DeleteExperimentVisualizationUseCase {
         this.logger.debug({
           msg: "Deleting visualization from repository",
           operation: "deleteExperimentVisualization",
-          experimentId: visualization.experimentId,
+          experimentId,
           visualizationId,
           userId,
         });
         // Delete the visualization
-        const deleteResult = await this.experimentVisualizationRepository.delete(visualizationId);
+        const deleteResult = await this.experimentVisualizationRepository.delete(
+          experimentId,
+          visualizationId,
+        );
 
         if (deleteResult.isFailure()) {
           this.logger.error({
             msg: "Failed to delete visualization",
             errorCode: ErrorCodes.EXPERIMENT_VISUALIZATIONS_DELETE_FAILED,
             operation: "deleteExperimentVisualization",
-            experimentId: visualization.experimentId,
+            experimentId,
             visualizationId,
             userId,
             error: deleteResult.error.message,
@@ -94,7 +101,7 @@ export class DeleteExperimentVisualizationUseCase {
         this.logger.log({
           msg: "Successfully deleted visualization",
           operation: "deleteExperimentVisualization",
-          experimentId: visualization.experimentId,
+          experimentId,
           visualizationId,
           userId,
           status: "success",
