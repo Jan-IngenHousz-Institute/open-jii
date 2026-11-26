@@ -28,6 +28,13 @@ import { searchableExperimentCondition } from "./experiment-search-scope";
 const { searchVector: _searchVector, ...visualizationColumns } =
   getTableColumns(experimentVisualizations);
 
+function visualizationInExperiment(experimentId: string, id: string) {
+  return and(
+    eq(experimentVisualizations.experimentId, experimentId),
+    eq(experimentVisualizations.id, id),
+  );
+}
+
 @Injectable()
 export class ExperimentVisualizationRepository {
   constructor(
@@ -166,15 +173,26 @@ export class ExperimentVisualizationRepository {
     });
   }
 
+  async existsInExperiment(experimentId: string, id: string): Promise<Result<boolean>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ id: experimentVisualizations.id })
+        .from(experimentVisualizations)
+        .where(visualizationInExperiment(experimentId, id))
+        .limit(1);
+
+      return rows.length > 0;
+    });
+  }
+
   async update(
+    experimentId: string,
     id: string,
     dto: UpdateExperimentVisualizationDto,
   ): Promise<Result<ExperimentVisualizationDto[]>> {
     return tryCatch(async () => {
-      await this.database
-        .update(experimentVisualizations)
-        .set(dto)
-        .where(eq(experimentVisualizations.id, id));
+      const condition = visualizationInExperiment(experimentId, id);
+      await this.database.update(experimentVisualizations).set(dto).where(condition);
 
       // Fetch the updated record with profile information
       const results = await this.database
@@ -186,7 +204,7 @@ export class ExperimentVisualizationRepository {
         })
         .from(experimentVisualizations)
         .leftJoin(profiles, eq(experimentVisualizations.createdBy, profiles.userId))
-        .where(eq(experimentVisualizations.id, id));
+        .where(condition);
 
       return results.map((result) => {
         const augmentedResult = result.experiment_visualizations as ExperimentVisualizationDto;
@@ -199,11 +217,11 @@ export class ExperimentVisualizationRepository {
     });
   }
 
-  async delete(id: string): Promise<Result<void>> {
+  async delete(experimentId: string, id: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database
         .delete(experimentVisualizations)
-        .where(eq(experimentVisualizations.id, id));
+        .where(visualizationInExperiment(experimentId, id));
     });
   }
 }

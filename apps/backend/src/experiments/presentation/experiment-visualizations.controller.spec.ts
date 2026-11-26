@@ -4,17 +4,23 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { success, failure, AppError } from "../../common/utils/fp-utils";
+import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CreateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/create-experiment-visualization";
 import { DeleteExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/delete-experiment-visualization";
 import { GetExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/get-experiment-visualization";
 import { ListExperimentVisualizationsUseCase } from "../application/use-cases/experiment-visualizations/list-experiment-visualizations";
 import { UpdateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/update-experiment-visualization";
-import type { ExperimentVisualizationDto } from "../core/models/experiment-visualizations.model";
+import type {
+  CreateExperimentVisualizationDto,
+  ExperimentVisualizationDto,
+} from "../core/models/experiment-visualizations.model";
+import { ExperimentVisualizationRepository } from "../core/repositories/experiment-visualization.repository";
 
 // Helper function to create test visualization data
-const createTestVisualizationData = (overrides: Partial<any> = {}) => ({
+const createTestVisualizationData = (
+  overrides: Partial<CreateExperimentVisualizationDto> = {},
+): CreateExperimentVisualizationDto => ({
   name: "Test Visualization",
   description: "Test Description",
   chartFamily: "basic" as const,
@@ -451,6 +457,115 @@ describe("ExperimentVisualizationsController", () => {
         .expect((response) => {
           expect(response.body).toHaveProperty("message", errorMessage);
         });
+    });
+  });
+
+  describe("experiment ownership", () => {
+    it.each(["update", "delete"] as const)(
+      "returns the same 404 for a missing chart and a chart from another experiment on %s",
+      async (action) => {
+        const otherUserId = await testApp.createTestUser({});
+        const { experiment: otherExperiment } = await testApp.createExperiment({
+          name: "Private experiment",
+          userId: otherUserId,
+          visibility: "private",
+        });
+        const authorization = testApp.module.get(AuthorizationService);
+        expect(
+          await authorization.can(testUserId, {
+            resourceType: "experiment",
+            resourceId: readableExperimentId,
+            action: "manage",
+          }),
+        ).toMatchObject({ allow: true });
+        expect(
+          await authorization.can(testUserId, {
+            resourceType: "experiment",
+            resourceId: otherExperiment.id,
+            action: "read",
+          }),
+        ).toMatchObject({ allow: false });
+
+        const repository = testApp.module.get(ExperimentVisualizationRepository);
+        const created = await repository.create(
+          otherExperiment.id,
+          createTestVisualizationData(),
+          otherUserId,
+        );
+        assertSuccess(created);
+        const visualization = created.value[0];
+        const writeSpy = vi.spyOn(repository, action);
+        const sendRequest = (visualizationId: string) => {
+          const params = { id: readableExperimentId, visualizationId };
+          return action === "update"
+            ? testApp
+                .patch(
+                  testApp.resolveOrpcPath(
+                    contract.experiments.updateExperimentVisualization,
+                    params,
+                  ),
+                )
+                .withAuth(testUserId)
+                .send(createTestVisualizationData({ name: "Changed name" }))
+            : testApp
+                .delete(
+                  testApp.resolveOrpcPath(
+                    contract.experiments.deleteExperimentVisualization,
+                    params,
+                  ),
+                )
+                .withAuth(testUserId);
+        };
+
+        const mismatchResponse = await sendRequest(visualization.id).expect(StatusCodes.NOT_FOUND);
+        const missingId = faker.string.uuid();
+        const missingResponse = await sendRequest(missingId).expect(StatusCodes.NOT_FOUND);
+
+        expect(missingResponse.body).toHaveProperty(
+          "message",
+          `Visualization with ID ${missingId} not found`,
+        );
+        expect(mismatchResponse.body).toEqual({
+          ...missingResponse.body,
+          message: `Visualization with ID ${visualization.id} not found`,
+        });
+        expect(writeSpy).not.toHaveBeenCalled();
+        const unchanged = await repository.findById(visualization.id);
+        assertSuccess(unchanged);
+        expect(unchanged.value).toEqual(visualization);
+      },
+    );
+
+    it("lets an experiment admin update and delete another user's chart using an uppercase experiment ID", async () => {
+      const adminId = await testApp.createTestUser({});
+      await testApp.addExperimentAdmin(readableExperimentId, adminId);
+      const repository = testApp.module.get(ExperimentVisualizationRepository);
+      const created = await repository.create(
+        readableExperimentId,
+        createTestVisualizationData(),
+        testUserId,
+      );
+      assertSuccess(created);
+      const visualization = created.value[0];
+      const params = { id: readableExperimentId.toUpperCase(), visualizationId: visualization.id };
+
+      const response = await testApp
+        .patch(testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, params))
+        .withAuth(adminId)
+        .send(createTestVisualizationData({ name: "Updated name" }))
+        .expect(StatusCodes.OK);
+      expect(response.body).toMatchObject({ id: visualization.id, name: "Updated name" });
+      const updated = await repository.findById(visualization.id);
+      assertSuccess(updated);
+      expect(updated.value).toMatchObject({ name: "Updated name" });
+
+      await testApp
+        .delete(testApp.resolveOrpcPath(contract.experiments.deleteExperimentVisualization, params))
+        .withAuth(adminId)
+        .expect(StatusCodes.NO_CONTENT);
+      const deleted = await repository.findById(visualization.id);
+      assertSuccess(deleted);
+      expect(deleted.value).toBeNull();
     });
   });
 
