@@ -2,7 +2,7 @@
 
 import { useExperimentDashboardUpdate } from "@/hooks/experiment/useExperimentDashboardUpdate/useExperimentDashboardUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
@@ -21,6 +21,10 @@ interface UseDashboardAutosaveOptions {
   /** The backend's `manage` gate; without it nothing saves and no status is reported. */
   enabled?: boolean;
   onSaved?: (snapshot: DashboardFormValues) => void;
+  onSaveFailed?: (
+    failedWidgetIds: ReadonlySet<string>,
+    inFlightWidgetIds: readonly ReadonlySet<string>[],
+  ) => void;
 }
 
 export function useDashboardAutosave({
@@ -29,10 +33,12 @@ export function useDashboardAutosave({
   dashboardId,
   enabled = true,
   onSaved,
+  onSaveFailed,
 }: UseDashboardAutosaveOptions) {
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
   const [inFlightWidgetIds, setInFlightWidgetIds] = useState<ReadonlySet<string>[]>([]);
+  const activeSaves = useRef(new Set<ReadonlySet<string>>());
 
   const save = useCallback(
     async (snapshot: DashboardFormValues) => {
@@ -43,15 +49,21 @@ export function useDashboardAutosave({
         widgets: snapshot.widgets,
       };
       const widgetIds = new Set(snapshot.widgets.map((widget) => widget.id));
-      setInFlightWidgetIds((previous) => [...previous, widgetIds]);
+      activeSaves.current.add(widgetIds);
+      setInFlightWidgetIds([...activeSaves.current]);
+      let saved = false;
       try {
         await mutateAsync({ id: experimentId, dashboardId, ...body });
-        onSaved?.(snapshot);
+        saved = true;
       } finally {
-        setInFlightWidgetIds((previous) => previous.filter((ids) => ids !== widgetIds));
+        activeSaves.current.delete(widgetIds);
+        const remaining = [...activeSaves.current];
+        if (saved) onSaved?.(snapshot);
+        else onSaveFailed?.(widgetIds, remaining);
+        setInFlightWidgetIds(remaining);
       }
     },
-    [mutateAsync, experimentId, dashboardId, onSaved],
+    [mutateAsync, experimentId, dashboardId, onSaved, onSaveFailed],
   );
 
   const autosave = useAutosave<DashboardFormValues>({

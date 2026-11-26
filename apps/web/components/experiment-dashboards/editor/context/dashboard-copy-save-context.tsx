@@ -70,6 +70,12 @@ export function DashboardAutosaveBoundary({
   }, []);
 
   const [copies, setCopies] = useState(new Map<string, PendingCopy>());
+  const copiesRef = useRef(copies);
+  copiesRef.current = copies;
+  const updateCopies = useCallback((next: Map<string, PendingCopy>) => {
+    copiesRef.current = next;
+    if (mounted.current) setCopies(next);
+  }, []);
   const unattachedCharts = useRef(new Map<string, CreatedChart>());
   const widgets = useWatch({ control: form.control, name: "widgets" });
   const selectedWidget = widgets.find((widget) => widget.id === selectedWidgetId);
@@ -82,39 +88,6 @@ export function DashboardAutosaveBoundary({
       selectedWidgetId === copyId || selectedWidgetId === sourceWidgetId,
   );
   if (pending.length < copies.size) setCopies(new Map(pending));
-  const onSaved = useCallback(({ widgets: savedWidgets }: DashboardFormValues) => {
-    setCopies((previous) => {
-      const remaining = new Map(previous);
-      for (const widget of savedWidgets) remaining.delete(widget.id);
-      return remaining.size === previous.size ? previous : remaining;
-    });
-  }, []);
-  const { hasError, error, flush, inFlightWidgetIds } = useDashboardAutosave({
-    form,
-    experimentId,
-    dashboardId,
-    enabled,
-    onSaved,
-  });
-  const retry = useCallback(() => {
-    if (mounted.current) void flush({ retryFailed: true });
-  }, [flush]);
-  const showFailure = enabled && hasError && pending.length > 0;
-  const retryLabel = t("editor.inspector.retryCopySave");
-  const failureTitle = t("editor.inspector.copySaveFailed");
-  useEffect(() => {
-    if (!showFailure) return;
-    const notification = toast({
-      title: failureTitle,
-      variant: "destructive",
-      action: (
-        <ToastAction altText={retryLabel} onClick={retry}>
-          {retryLabel}
-        </ToastAction>
-      ),
-    });
-    return notification.dismiss;
-  }, [showFailure, error, retry, retryLabel, failureTitle]);
 
   const showUnattachedCopies = useCallback(
     (charts: CreatedChart[]) => {
@@ -139,6 +112,55 @@ export function DashboardAutosaveBoundary({
     },
     [experimentId, locale, t],
   );
+
+  const onSaved = useCallback(
+    ({ widgets: savedWidgets }: DashboardFormValues) => {
+      const remaining = new Map(copiesRef.current);
+      for (const widget of savedWidgets) remaining.delete(widget.id);
+      if (remaining.size !== copiesRef.current.size) updateCopies(remaining);
+    },
+    [updateCopies],
+  );
+  const onSaveFailed = useCallback(
+    (failedWidgetIds: ReadonlySet<string>, inFlightWidgetIds: readonly ReadonlySet<string>[]) => {
+      if (mounted.current) return;
+      const charts = form.getValues("widgets").flatMap(({ id }) => {
+        const copy = copiesRef.current.get(id);
+        return copy && failedWidgetIds.has(id) && !inFlightWidgetIds.some((ids) => ids.has(id))
+          ? [copy.chart]
+          : [];
+      });
+      if (charts.length > 0) showUnattachedCopies(charts);
+    },
+    [form, showUnattachedCopies],
+  );
+  const { hasError, error, flush, inFlightWidgetIds } = useDashboardAutosave({
+    form,
+    experimentId,
+    dashboardId,
+    enabled,
+    onSaved,
+    onSaveFailed,
+  });
+  const retry = useCallback(() => {
+    if (mounted.current) void flush({ retryFailed: true });
+  }, [flush]);
+  const showFailure = enabled && hasError && pending.length > 0;
+  const retryLabel = t("editor.inspector.retryCopySave");
+  const failureTitle = t("editor.inspector.copySaveFailed");
+  useEffect(() => {
+    if (!showFailure) return;
+    const notification = toast({
+      title: failureTitle,
+      variant: "destructive",
+      action: (
+        <ToastAction altText={retryLabel} onClick={retry}>
+          {retryLabel}
+        </ToastAction>
+      ),
+    });
+    return notification.dismiss;
+  }, [showFailure, error, retry, retryLabel, failureTitle]);
 
   useEffect(() => {
     if (enabled || copies.size === 0) return;
@@ -203,8 +225,8 @@ export function DashboardAutosaveBoundary({
     form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
       shouldDirty: true,
     });
-    setCopies((previous) =>
-      new Map(previous).set(copy.id, { sourceWidgetId: source.id, chart: created }),
+    updateCopies(
+      new Map(copiesRef.current).set(copy.id, { sourceWidgetId: source.id, chart: created }),
     );
     selectWidget(copy.id);
   };

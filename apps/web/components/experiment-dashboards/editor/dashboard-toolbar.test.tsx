@@ -366,6 +366,43 @@ describe("DashboardToolbar", () => {
     expect(update.body).toMatchObject({ widgets: [chart] });
   });
 
+  it("offers Open copy when the attachment fails after leaving the dashboard", async () => {
+    const user = userEvent.setup();
+    const original = createVisualization({ id: "source" });
+    const created = createVisualization({ id: "copy" });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    server.mount(contract.experiments.getExperimentVisualization, { body: original });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    server.mount(contract.experiments.createExperimentVisualization, { body: created });
+    const attach = server.mount(contract.experiments.updateExperimentDashboard, {
+      status: 500,
+      unblock: promise,
+    });
+    const chart = createVisualizationWidget({
+      config: { visualizationId: original.id, showTitle: true, showDescription: false },
+    });
+    const { unmount } = render(
+      <Harness initialWidgets={[chart]} save>
+        <ChartSelection sourceWidgetId={chart.id} />
+        <DashboardToolbar visible experimentId="exp-1" />
+      </Harness>,
+    );
+
+    try {
+      await user.click(screen.getByRole("button", { name: "select chart" }));
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+      await waitFor(() => expect(attach.callCount).toBe(1));
+      expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
+      unmount();
+    } finally {
+      act(() => resolve());
+    }
+
+    await waitFor(() => expectOpenCopyLink(created.id), { timeout: 2000 });
+    expect(attach.callCount).toBe(1);
+  });
+
   it("offers a link to the saved copy if the source widget disappears before create finishes", async () => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
