@@ -16,6 +16,7 @@ import {
   zDeviceExperiment,
   zMonitoringRangeQuery,
   zEnsureMobileDeviceBody,
+  zEnsureMultispeqDeviceBody,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -552,6 +553,30 @@ describe("Iot Schema", () => {
 
     it("rejects an empty install id", () => {
       expect(zEnsureMobileDeviceBody.safeParse({ installId: "" }).success).toBe(false);
+    });
+  });
+
+  describe("zEnsureMultispeqDeviceBody", () => {
+    it("canonicalizes the reported identity before it reaches the registry", () => {
+      const parsed = zEnsureMultispeqDeviceBody.parse({
+        serialNumber: "AB:CD:EF:01",
+        firmwareVersion: "2.345",
+      });
+
+      expect(parsed).toEqual({ serialNumber: "ab:cd:ef:01", firmwareVersion: "2.345" });
+    });
+
+    it.each(["mock-1", "00:11:22:33:44:55", "00:00:00:00"])("rejects %s", (serialNumber) => {
+      expect(zEnsureMultispeqDeviceBody.safeParse({ serialNumber }).success).toBe(false);
+    });
+
+    it("rejects a firmware string AWS could not store as a thing attribute", () => {
+      const parsed = zEnsureMultispeqDeviceBody.safeParse({
+        serialNumber: "03:25:05:25",
+        firmwareVersion: "v 2 beta!",
+      });
+
+      expect(parsed.success).toBe(false);
     });
   });
 });

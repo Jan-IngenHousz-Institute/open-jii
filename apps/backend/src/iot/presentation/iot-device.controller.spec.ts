@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type {
   BulkRegisterIotDevicesResult,
+  EnsureMultispeqDeviceResult,
   IotDevice,
   IotDeviceDetail,
   IotDeviceList,
@@ -295,6 +296,67 @@ describe("IotDeviceController", () => {
         .withAuth(otherUser)
         .send(ensureBody)
         .expect(StatusCodes.CONFLICT);
+    });
+  });
+
+  describe("ensureMultispeqDevice", () => {
+    const path = () => testApp.resolveOrpcPath(contract.iot.ensureMultispeqDevice);
+
+    it("registers a connected MultispeQ under its canonical identity, then reuses it (200)", async () => {
+      const first: SuperTestResponse<EnsureMultispeqDeviceResult> = await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ serialNumber: "AB:CD:EF:01", firmwareVersion: "2.345" })
+        .expect(StatusCodes.OK);
+
+      expect(first.body.outcome).toBe("created");
+      expect(first.body.device?.serialNumber).toBe("ab:cd:ef:01");
+      expect(first.body.device?.deviceType).toBe("multispeq");
+
+      const second: SuperTestResponse<EnsureMultispeqDeviceResult> = await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ serialNumber: "ab:cd:ef:01" })
+        .expect(StatusCodes.OK);
+
+      expect(second.body.outcome).toBe("existing");
+      expect(second.body.device?.id).toBe(first.body.device?.id);
+    });
+
+    it("reuses a colleague's unit without returning it (200)", async () => {
+      const otherUser = await testApp.createTestUser({ name: "Other" });
+      await testApp
+        .post(path())
+        .withAuth(otherUser)
+        .send({ serialNumber: "03:25:05:25" })
+        .expect(StatusCodes.OK);
+
+      const response: SuperTestResponse<EnsureMultispeqDeviceResult> = await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ serialNumber: "03:25:05:25" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual({ outcome: "existing", device: null });
+    });
+
+    it.each(["mock-1", "00:11:22:33:44:55", "00:00:00:00"])(
+      "rejects %s as a MultispeQ identity (400)",
+      async (serialNumber) => {
+        await testApp
+          .post(path())
+          .withAuth(userId)
+          .send({ serialNumber })
+          .expect(StatusCodes.BAD_REQUEST);
+      },
+    );
+
+    it("requires a signed-in person (401)", async () => {
+      await testApp
+        .post(path())
+        .withoutAuth()
+        .send({ serialNumber: "03:25:05:25" })
+        .expect(StatusCodes.UNAUTHORIZED);
     });
   });
 

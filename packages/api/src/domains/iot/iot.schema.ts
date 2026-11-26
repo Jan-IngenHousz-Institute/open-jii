@@ -4,6 +4,7 @@ import { zListFilter, zListSort, zPaginated, zPaginationQuery } from "../../shar
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
 import { zProtocolFamily, zSensorFamily } from "../protocol/protocol.schema";
+import { canonicalMultispeqSerial } from "./multispeq-identity";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -195,6 +196,40 @@ export const zEnsureMobileDeviceBody = z.object({
     "Stable per-device identifier reported by the phone; doubles as the serial",
   ),
   name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
+});
+
+export const zMultispeqSerial = z.string().transform((raw, ctx) => {
+  const serial = canonicalMultispeqSerial(raw);
+  if (serial === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "A MultispeQ identity is four Bluetooth MAC bytes, e.g. 03:25:05:25",
+    });
+    return z.NEVER;
+  }
+  return serial;
+});
+
+// Automatic registration when the mobile app connects a MultispeQ: an idempotent
+// ensure keyed on the physical identity, never on the phone or the transport.
+export const zEnsureMultispeqDeviceBody = z.object({
+  serialNumber: zMultispeqSerial.describe("device_info.device_id as the firmware reported it"),
+  firmwareVersion: z
+    .string()
+    .max(64)
+    .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/)
+    .optional()
+    .describe("Firmware that reported the identity, kept as registration provenance"),
+  name: z.string().min(1).max(255).optional().describe("device_info.device_name"),
+});
+
+/**
+ * `created` registered the unit now; `existing` reused the unit already on record. The row is
+ * returned only to the person who registered it, so a shared instrument never reveals its owner.
+ */
+export const zEnsureMultispeqDeviceResult = z.object({
+  outcome: z.enum(["created", "existing"]),
+  device: zIotDevice.nullable(),
 });
 
 // --- Device registry webhook (Databricks lineage: thing_name -> registry) ---
@@ -572,5 +607,7 @@ export type BulkRegisterIotDevicesBody = z.infer<typeof zBulkRegisterIotDevicesB
 export type BulkRegisteredIotDevice = z.infer<typeof zBulkRegisteredIotDevice>;
 export type BulkRegisterIotDevicesResult = z.infer<typeof zBulkRegisterIotDevicesResult>;
 export type EnsureMobileDeviceBody = z.infer<typeof zEnsureMobileDeviceBody>;
+export type EnsureMultispeqDeviceBody = z.infer<typeof zEnsureMultispeqDeviceBody>;
+export type EnsureMultispeqDeviceResult = z.infer<typeof zEnsureMultispeqDeviceResult>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
 export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;

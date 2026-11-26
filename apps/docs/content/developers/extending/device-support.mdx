@@ -58,6 +58,8 @@ Two things intentionally do **not** change per family:
 
 The `mobile` family is special: phones register themselves silently when someone signs into the mobile app (one Thing per install, Cognito-authenticated, no certificate lifecycle), so it never appears in the manual registration dialog, has no credentials or onboarding surface, and cannot be selected as a protocol family.
 
+A MultispeQ connected in the mobile app is registered through `ensureMultispeqDevice` once its identity handshake returns. The serial is the canonical `device_info.device_id` (four lowercase colon-separated bytes, from `canonicalMultispeqSerial`), never the phone or the transport. A second connection reuses the row, an identity held by another family is a 409, and the Thing records `registeredVia`, `identitySource` and the reporting firmware as provenance.
+
 ## Adding a new family
 
 Work through the layers top to bottom; the exhaustive types surface most omissions as compile errors.

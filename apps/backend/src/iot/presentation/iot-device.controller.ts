@@ -14,6 +14,7 @@ import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { BulkRegisterIotDevicesUseCase } from "../application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
 import { DeleteIotDeviceUseCase } from "../application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "../application/use-cases/ensure-mobile-device/ensure-mobile-device";
+import { EnsureMultispeqDeviceUseCase } from "../application/use-cases/ensure-multispeq-device/ensure-multispeq-device";
 import { GetDeviceMonitoringUseCase } from "../application/use-cases/get-device-monitoring/get-device-monitoring";
 import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetIotDeviceActivityUseCase } from "../application/use-cases/get-iot-device-activity/get-iot-device-activity";
@@ -36,6 +37,7 @@ export class IotDeviceController {
     private readonly registerIotDeviceUseCase: RegisterIotDeviceUseCase,
     private readonly bulkRegisterIotDevicesUseCase: BulkRegisterIotDevicesUseCase,
     private readonly ensureMobileDeviceUseCase: EnsureMobileDeviceUseCase,
+    private readonly ensureMultispeqDeviceUseCase: EnsureMultispeqDeviceUseCase,
     private readonly listIotDevicesUseCase: ListIotDevicesUseCase,
     private readonly getIotDeviceUseCase: GetIotDeviceUseCase,
     private readonly getIotDeviceActivityUseCase: GetIotDeviceActivityUseCase,
@@ -135,6 +137,20 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "ensureMobileDevice");
+    });
+  }
+
+  @Implement(iotContract.ensureMultispeqDevice)
+  ensureMultispeqDevice(@Session() session: UserSession) {
+    return implement(iotContract.ensureMultispeqDevice).handler(async ({ input }) => {
+      const result = await this.ensureMultispeqDeviceUseCase.execute(input, session.user.id);
+
+      if (result.isSuccess()) {
+        const { device, outcome } = result.value;
+        return { outcome, device: device === null ? null : formatDates(device) };
+      }
+
+      return throwOrpcFailure(result, this.logger, "ensureMultispeqDevice");
     });
   }
 

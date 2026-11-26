@@ -22,6 +22,8 @@ import {
   zObservedExperimentsQuery,
   zIotUploadUrl,
   zEnsureMobileDeviceBody,
+  zEnsureMultispeqDeviceBody,
+  zEnsureMultispeqDeviceResult,
   zIotUploadUrlRequest,
   zIssueIotCredentialsResponse,
   zOnboardDeviceBody,
@@ -54,6 +56,12 @@ export const iotContract = {
     .route({ method: "POST", path: "/api/v1/devices/mobile", successStatus: 200 })
     .input(zEnsureMobileDeviceBody)
     .output(zIotDevice),
+  // Idempotent registration of a MultispeQ the mobile app connected. Static path,
+  // like the phone route above.
+  ensureMultispeqDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/multispeq", successStatus: 200 })
+    .input(zEnsureMultispeqDeviceBody)
+    .output(zEnsureMultispeqDeviceResult),
   listIotDevices: oc
     .route({ method: "GET", path: "/api/v1/devices", successStatus: 200 })
     .input(zIotDeviceFilterQuery)

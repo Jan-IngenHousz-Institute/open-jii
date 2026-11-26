@@ -24,6 +24,7 @@ import { DeleteCalibrationDefinitionUseCase } from "./application/use-cases/dele
 import { DeleteIotDeviceGroupUseCase } from "./application/use-cases/delete-iot-device-group/delete-iot-device-group";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
 import { EnsureMobileDeviceUseCase } from "./application/use-cases/ensure-mobile-device/ensure-mobile-device";
+import { EnsureMultispeqDeviceUseCase } from "./application/use-cases/ensure-multispeq-device/ensure-multispeq-device";
 import { GetActiveDeviceCalibrationUseCase } from "./application/use-cases/get-active-device-calibration/get-active-device-calibration";
 import { GetCalibrationDefinitionUseCase } from "./application/use-cases/get-calibration-definition/get-calibration-definition";
 import { GetCalibrationRunUseCase } from "./application/use-cases/get-calibration-run/get-calibration-run";
@@ -126,6 +127,7 @@ import { IotController } from "./presentation/iot.controller";
     RegisterIotDeviceUseCase,
     BulkRegisterIotDevicesUseCase,
     EnsureMobileDeviceUseCase,
+    EnsureMultispeqDeviceUseCase,
     ListIotDevicesUseCase,
     GetIotDeviceUseCase,
     GetIotDeviceActivityUseCase,
