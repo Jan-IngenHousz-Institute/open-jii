@@ -41,6 +41,7 @@ import {
   detectAxisType,
   effectiveLegendPosition,
   extendLayoutForFacets,
+  facetSeriesOffsetGroups,
   getPlotType,
   getRenderer,
   refineAxisType,
@@ -302,13 +303,22 @@ export function CartesianChart({
   const traceColorScale = data.length === 1 ? colorAxis : undefined;
   const sharedColorAxis = traceColorScale ? undefined : colorAxis;
   const hasSharedColorAxis = sharedColorAxis !== undefined;
-  const plotData: PlotData[] = useMemo(
-    () =>
-      visibleData.map((series) =>
-        buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale),
-      ),
-    [visibleData, scatterPlotType, hasSharedColorAxis, traceColorScale],
-  );
+  const groupBars = (config.barmode ?? "group") === "group";
+  const plotData = useMemo(() => {
+    // Bars on overlay axes share a position axis and need distinct slots within it.
+    const offsetGroups = groupBars
+      ? facetSeriesOffsetGroups(
+          visibleData.map((series) =>
+            series.orientation === "h"
+              ? { yaxisId: series.yaxisId ?? cartesianAxisId(series.axis) }
+              : { xaxisId: series.xaxisId },
+          ),
+        )
+      : [];
+    return visibleData.map((series, index) =>
+      buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale, offsetGroups[index]),
+    );
+  }, [visibleData, scatterPlotType, hasSharedColorAxis, traceColorScale, groupBars]);
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
   // a theme change, neither of which can alter an axis kind. Horizontal bars
@@ -662,6 +672,7 @@ function buildTrace(
   scatterPlotType: string,
   hasSharedColorAxis: boolean,
   traceColorScale?: CartesianColorAxis,
+  barOffsetGroup?: string,
 ): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
   // charts pin each trace to its cell) wins over the single-chart assignment.
@@ -701,6 +712,7 @@ function buildTrace(
       y: horizontal ? series.x : series.y,
       type: "bar",
       orientation: series.orientation ?? "v",
+      offsetgroup: barOffsetGroup,
       marker: {
         ...series.marker,
         color: series.marker?.color ?? series.color,
