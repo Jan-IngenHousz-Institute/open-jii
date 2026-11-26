@@ -319,6 +319,30 @@ describe("transformCartesianData", () => {
     expect(b?.y).toEqual([12, 15]);
   });
 
+  it("keeps a line series out of the percent area stack on the same axis", () => {
+    const sources: ExperimentDataSourceConfig[] = [
+      ds("x", "x"),
+      ds("y", "a"),
+      ds("y", "b"),
+      { ...ds("y", "target"), traceType: "line" },
+    ];
+    const { chartSeries } = transformCartesianData(
+      [
+        { x: 1, a: 5, b: 15, target: 75 },
+        { x: 2, a: 10, b: 10, target: 80 },
+      ],
+      sources,
+      { stackMode: "percent" },
+      { ...baseOptions, defaultTraceType: "area" },
+    );
+
+    expect(chartSeries).toMatchObject([
+      { name: "a", traceType: "area", axis: "primary", y: [25, 50], fill: "tozeroy" },
+      { name: "b", traceType: "area", axis: "primary", y: [100, 100], fill: "tonexty" },
+      { name: "target", traceType: "line", axis: "primary", y: [75, 80] },
+    ]);
+  });
+
   it("normalises to percent when stackMode is 'percent'", () => {
     const rows = [
       { x: 1, v: 25, g: "A" },

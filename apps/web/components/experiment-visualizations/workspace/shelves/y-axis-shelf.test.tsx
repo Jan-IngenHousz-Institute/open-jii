@@ -340,19 +340,27 @@ describe("YAxisShelf", () => {
     expect(form.getValues("config.y2AxisType")).toBe("log");
   });
 
-  it("edits axis 6 without creating settings for unused axes", async () => {
+  it("reveals Axis 6 settings after assigning a series to it", async () => {
     const user = userEvent.setup();
     const values = defaults();
     values.dataConfig.dataSources.push({
       tableName: "readings",
       columnName: "humidity",
       role: "y",
-      axis: "y6",
     });
     const { form } = renderShelf(
       (form) => <YAxisShelf form={form} columns={columns} showCartesianControls />,
       { useFormProps: { defaultValues: values } },
     );
+    const axisPicker = screen.getByRole("combobox", { name: "workspace.shelves.axisAssignment" });
+    expect(axisPicker).toHaveTextContent("workspace.shelves.axis.primary");
+    expect(screen.queryByLabelText("workspace.shelves.numberedAxisTitle")).not.toBeInTheDocument();
+
+    await user.click(axisPicker);
+    await user.click(await screen.findByRole("option", { name: "workspace.shelves.axis.y6" }));
+
+    expect(axisPicker).toHaveTextContent("workspace.shelves.axis.y6");
+    expect(form.getValues("dataConfig.dataSources.2.axis")).toBe("y6");
     const titles = screen.getAllByLabelText("workspace.shelves.numberedAxisTitle");
     expect(titles).toHaveLength(2);
     expect(screen.queryByText("workspace.shelves.secondaryAxisTitle")).not.toBeInTheDocument();
