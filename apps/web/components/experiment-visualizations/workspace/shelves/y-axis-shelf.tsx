@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
+import { canUseHorizontalBars, effectiveSeriesAxis } from "../../charts/cartesian/series-axis";
 import { defaultAxisTypeFor } from "../../charts/chart-config";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { getDefaultSeriesColor } from "../../charts/colors/palettes";
@@ -103,12 +104,29 @@ export function YAxisShelf({
 
   const sources = useWatch({ control: form.control, name: "dataConfig.dataSources" });
   const aggregation = useWatch({ control: form.control, name: "dataConfig.aggregation" });
+  const orientation = useWatch({ control: form.control, name: "config.orientation" });
 
   const ySources = dataSourcesByRole(sources, "y");
   const colorSources = dataSourcesByRole(sources, "color");
   const isColorMapped = colorSources.length > 0 && Boolean(colorSources[0].source.columnName);
   const xColumnName = firstDataSourceByRole(sources, "x")?.source.columnName ?? "";
-  const hasSecondaryAxisSeries = ySources.some((s) => s.source.axis === "secondary");
+  const faceted = sources.some((source) => source.role === "facet" && source.columnName);
+  const horizontalBars = orientation === "h" && canUseHorizontalBars(ySources, defaultTraceType);
+  const usedAxes = new Set(
+    ySources.map(({ source }, index) =>
+      effectiveSeriesAxis(source.axis, index, faceted, horizontalBars),
+    ),
+  );
+  const usedOverlayAxes = ([2, 3, 4, 5, 6] as const).filter((axis) =>
+    usedAxes.has(axis === 2 ? "secondary" : `y${axis}`),
+  );
+  const numberedLabels = showCartesianControls && usedAxes.size > 1;
+  const yAxisTitleLabel = numberedLabels
+    ? t("workspace.shelves.numberedAxisTitle", { index: 1 })
+    : t(showCartesianControls ? "workspace.shelves.yAxisTitle" : "workspace.shelves.axisTitle");
+  const yAxisScaleLabel = numberedLabels
+    ? t("workspace.shelves.numberedAxisType", { index: 1 })
+    : t(showCartesianControls ? "workspace.shelves.yAxisScale" : "workspace.shelves.axisType");
   const canAddSeries = maxSeries === undefined || ySources.length < maxSeries;
 
   // GROUP BY activates when X is bucketed or any sibling has a row aggregate
@@ -343,6 +361,7 @@ export function YAxisShelf({
               form={form}
               dsIndex={dsIndex}
               seriesIndex={seriesIndex}
+              faceted={faceted}
               seriesColumn={seriesColumn}
               canRemove={ySources.length > 1}
               willBeSilentlyDropped={willBeSilentlyDropped}
@@ -359,7 +378,7 @@ export function YAxisShelf({
               rowWindowConflict={rowWindowConflict}
               groupingColumns={groupingColumns}
               windowColumns={windowColumns}
-              showCartesianControls={showCartesianControls}
+              showCartesianControls={showCartesianControls && !horizontalBars}
               showErrorColumn={showErrorColumn}
               showSeriesColor={showSeriesColor}
               hideAggregate={hideAggregate}
@@ -379,9 +398,7 @@ export function YAxisShelf({
           name="config.yAxisTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs font-medium">
-                {t("workspace.shelves.axisTitle")}
-              </FormLabel>
+              <FormLabel className="text-xs font-medium">{yAxisTitleLabel}</FormLabel>
               <FormControl>
                 <Input
                   placeholder={t("workspace.shelves.axisTitlePlaceholder")}
@@ -403,9 +420,7 @@ export function YAxisShelf({
             name="config.yAxisType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-medium">
-                  {t("workspace.shelves.axisType")}
-                </FormLabel>
+                <FormLabel className="text-xs font-medium">{yAxisScaleLabel}</FormLabel>
                 <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger>
@@ -426,58 +441,73 @@ export function YAxisShelf({
         )}
       </div>
 
-      {showCartesianControls && hasSecondaryAxisSeries && (
-        <div className="grid grid-cols-2 gap-3">
-          <FormField
-            control={form.control}
-            name="config.y2AxisTitle"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-medium">
-                  {t("workspace.shelves.secondaryAxisTitle")}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t("workspace.shelves.secondaryAxisTitlePlaceholder")}
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="config.y2AxisType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-medium">
-                  {t("workspace.shelves.secondaryAxisType")}
-                </FormLabel>
-                <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
+      {showCartesianControls &&
+        usedOverlayAxes.map((axis) => (
+          <div key={axis} className="grid grid-cols-2 gap-3">
+            <FormField
+              control={form.control}
+              name={`config.y${axis}AxisTitle`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium">
+                    {axis === 2
+                      ? t("workspace.shelves.secondaryAxisTitle")
+                      : t("workspace.shelves.numberedAxisTitle", { index: axis })}
+                  </FormLabel>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <Input
+                      placeholder={
+                        axis === 2
+                          ? t("workspace.shelves.secondaryAxisTitlePlaceholder")
+                          : undefined
+                      }
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
-                    <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
-                    <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
-                    <SelectItem value="category">{t("workspace.axisTypes.category")}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-      )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name={`config.y${axis}AxisType`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium">
+                    {axis === 2
+                      ? t("workspace.shelves.secondaryAxisType")
+                      : t("workspace.shelves.numberedAxisType", { index: axis })}
+                  </FormLabel>
+                  <Select value={String(field.value ?? "linear")} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="linear">{t("workspace.axisTypes.linear")}</SelectItem>
+                      <SelectItem value="log">{t("workspace.axisTypes.log")}</SelectItem>
+                      {axis === 2 && (
+                        <SelectItem value="date">{t("workspace.axisTypes.date")}</SelectItem>
+                      )}
+                      {axis === 2 && (
+                        <SelectItem value="category">
+                          {t("workspace.axisTypes.category")}
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        ))}
     </section>
   );
 }

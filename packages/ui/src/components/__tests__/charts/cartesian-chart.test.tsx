@@ -19,7 +19,8 @@ vi.mock("../../charts/plotly-chart", () => ({
   )),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config) => ({
@@ -207,6 +208,80 @@ describe("CartesianChart", () => {
     expect(layout.bargroupgap).toBe(0.05);
   });
 
+  const barsOnTwoAxes: [CartesianSeries, CartesianSeries] = [
+    { traceType: "bar", x: ["A", "B"], y: [10, 20], name: "Value" },
+    { traceType: "bar", x: ["A", "B"], y: [100, 10_000], name: "Value", axis: "y3" },
+  ];
+
+  it.each([undefined, "group"] as const)(
+    "separates bars on different axes in Group mode (%s)",
+    (barmode) => {
+      const config = { barmode };
+      const { rerender } = render(<CartesianChart data={barsOnTwoAxes} config={config} />);
+      const traces = readData() as Array<{ offsetgroup?: string }>;
+      expect(traces).toMatchObject([
+        { offsetgroup: expect.any(String) },
+        { offsetgroup: expect.any(String), yaxis: "y3" },
+      ]);
+      expect(traces[0]?.offsetgroup).not.toBe(traces[1]?.offsetgroup);
+
+      rerender(
+        <CartesianChart
+          data={[{ ...barsOnTwoAxes[0], visible: "legendonly" }, barsOnTwoAxes[1]]}
+          config={config}
+        />,
+      );
+      expect(readData()).toMatchObject(traces.map(({ offsetgroup }) => ({ offsetgroup })));
+    },
+  );
+
+  it("lets Plotly position disjoint categories when the bars share one value axis", () => {
+    const data: CartesianSeries[] = [
+      { traceType: "bar", x: ["Site A"], y: [10], name: "Device A" },
+      { traceType: "bar", x: ["Site B"], y: [20], name: "Device B", axis: "primary" },
+    ];
+    const config = { barmode: "group" } as const;
+    const { rerender } = render(<CartesianChart data={data} config={config} />);
+
+    for (const trace of readData()) {
+      expect(trace).not.toHaveProperty("offsetgroup");
+    }
+
+    rerender(
+      <CartesianChart
+        data={[...data, { traceType: "line", x: ["Site A", "Site B"], y: [1, 2], axis: "y3" }]}
+        config={config}
+      />,
+    );
+    expect(readData()[2]).toHaveProperty("yaxis", "y3");
+    for (const trace of readData()) {
+      expect(trace).not.toHaveProperty("offsetgroup");
+    }
+  });
+
+  it("lets Plotly stack repeated X values within a grouped bar trace", () => {
+    const data: CartesianSeries[] = [
+      { traceType: "bar", x: [0, 0, 2], y: [10, 20, 30] },
+      { traceType: "bar", x: [0, 8], y: [100, 200], axis: "y3" },
+    ];
+    render(<CartesianChart data={data} config={{ barmode: "group" }} />);
+
+    for (const trace of readData()) {
+      expect(trace).toHaveProperty("offsetgroup");
+      expect(trace).not.toHaveProperty("offset");
+    }
+  });
+
+  it.each(["stack", "relative", "overlay"] as const)("omits bar offsets in %s mode", (barmode) => {
+    render(<CartesianChart data={barsOnTwoAxes} config={{ barmode }} />);
+
+    expect(readLayout().barmode).toBe(barmode);
+    expect(readData()).toMatchObject([{ type: "bar" }, { type: "bar", yaxis: "y3" }]);
+    for (const trace of readData()) {
+      expect(trace).not.toHaveProperty("offsetgroup");
+    }
+  });
+
   describe("Subplot facets", () => {
     const facetData: CartesianSeries[] = [
       {
@@ -240,6 +315,69 @@ describe("CartesianChart", () => {
       sharedYTitle: false,
       roworder: "top to bottom" as const,
     };
+
+    it("reuses the grouped bar slots across facets with overlay axes", () => {
+      const data: CartesianSeries[] = [
+        { ...barsOnTwoAxes[0], xaxisId: "x", yaxisId: "y" },
+        { ...barsOnTwoAxes[1], xaxisId: "x", yaxisId: "y3" },
+        { ...barsOnTwoAxes[0], xaxisId: "x2", yaxisId: "y2" },
+        { ...barsOnTwoAxes[1], xaxisId: "x2", yaxisId: "y4" },
+      ];
+      render(
+        <CartesianChart
+          data={data}
+          subplots={{
+            ...subplots,
+            cells: subplots.cells.map((cell, index) => ({
+              ...cell,
+              secondaryYaxisId: `y${index + 3}`,
+            })),
+          }}
+        />,
+      );
+
+      expect(readData()).toMatchObject([
+        { xaxis: "x", yaxis: "y", offsetgroup: expect.any(String) },
+        { xaxis: "x", yaxis: "y3", offsetgroup: expect.any(String) },
+        { xaxis: "x2", yaxis: "y2", offsetgroup: expect.any(String) },
+        { xaxis: "x2", yaxis: "y4", offsetgroup: expect.any(String) },
+      ]);
+      const groups = (readData() as Array<{ offsetgroup: string }>).map(
+        (trace) => trace.offsetgroup,
+      );
+      expect(groups.slice(2)).toEqual(groups.slice(0, 2));
+      expect(groups[0]).not.toBe(groups[1]);
+    });
+
+    it("sets offsets only on a facet whose bars share a position axis across value axes", () => {
+      const data: CartesianSeries[] = [
+        { ...barsOnTwoAxes[0], xaxisId: "x", yaxisId: "y" },
+        { ...barsOnTwoAxes[1], xaxisId: "x", yaxisId: "y" },
+        { ...barsOnTwoAxes[0], xaxisId: "x2", yaxisId: "y2" },
+        { ...barsOnTwoAxes[1], xaxisId: "x2", yaxisId: "y3" },
+      ];
+      render(<CartesianChart data={data} subplots={subplots} />);
+
+      const traces = readData();
+      expect(traces[0]).not.toHaveProperty("offsetgroup");
+      expect(traces[1]).not.toHaveProperty("offsetgroup");
+      expect(traces[0]).not.toHaveProperty("alignmentgroup");
+      expect(traces[1]).not.toHaveProperty("alignmentgroup");
+      expect(traces.slice(2)).toMatchObject([
+        {
+          xaxis: "x2",
+          yaxis: "y2",
+          offsetgroup: expect.any(String),
+          alignmentgroup: expect.any(String),
+        },
+        {
+          xaxis: "x2",
+          yaxis: "y3",
+          offsetgroup: expect.any(String),
+          alignmentgroup: expect.any(String),
+        },
+      ]);
+    });
 
     it("invokes extendLayoutForFacets with the grid spec when subplots is set", async () => {
       const utils = await import("../../charts/utils");

@@ -322,6 +322,8 @@
       "column": "Column",
       "selectColumn": "Select a column",
       "none": "Geen",
+      "yAxisTitle": "Titel van Y-as",
+      "yAxisScale": "Schaal van Y-as",
       "axisTitle": "Axis title",
       "axisTitlePlaceholder": "Axis title",
       "axisType": "Axis type",
@@ -347,9 +349,11 @@
       "renderAs": "Weergeven als",
       "renderAsDefault": "Standaard ({{type}})",
       "axisAssignment": "As",
-      "secondaryAxisTitle": "Titel secundaire as",
-      "secondaryAxisTitlePlaceholder": "Titel secundaire as",
-      "secondaryAxisType": "Schaal secundaire as",
+      "secondaryAxisTitle": "Titel van as 2",
+      "secondaryAxisTitlePlaceholder": "Titel van as 2",
+      "secondaryAxisType": "Schaal van as 2",
+      "numberedAxisType": "Schaal van as {{index}}",
+      "numberedAxisTitle": "Titel van as {{index}}",
       "errorColumn": "Foutkolom (±)",
       "errorColumnPlaceholder": "Geen",
       "errorColumnNone": "Geen",
@@ -362,8 +366,12 @@
         "area": "Vlak"
       },
       "axis": {
-        "primary": "Primair",
-        "secondary": "Secundair (rechts)"
+        "primary": "As 1 (links)",
+        "secondary": "As 2 (rechts)",
+        "y3": "As 3 (links)",
+        "y4": "As 4 (rechts)",
+        "y5": "As 5 (links)",
+        "y6": "As 6 (rechts)"
       },
       "colorScaleHeatmap": "Heatmap color scale"
     },

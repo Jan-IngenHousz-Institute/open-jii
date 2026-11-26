@@ -12167,7 +12167,11 @@
                                 "axis": {
                                   "enum": [
                                     "primary",
-                                    "secondary"
+                                    "secondary",
+                                    "y3",
+                                    "y4",
+                                    "y5",
+                                    "y6"
                                   ],
                                   "type": "string"
                                 },
@@ -12570,7 +12574,11 @@
                             "axis": {
                               "enum": [
                                 "primary",
-                                "secondary"
+                                "secondary",
+                                "y3",
+                                "y4",
+                                "y5",
+                                "y6"
                               ],
                               "type": "string"
                             },
@@ -12951,7 +12959,11 @@
                               "axis": {
                                 "enum": [
                                   "primary",
-                                  "secondary"
+                                  "secondary",
+                                  "y3",
+                                  "y4",
+                                  "y5",
+                                  "y6"
                                 ],
                                 "type": "string"
                               },
@@ -13381,7 +13393,11 @@
                               "axis": {
                                 "enum": [
                                   "primary",
-                                  "secondary"
+                                  "secondary",
+                                  "y3",
+                                  "y4",
+                                  "y5",
+                                  "y6"
                                 ],
                                 "type": "string"
                               },
@@ -13793,7 +13809,11 @@
                             "axis": {
                               "enum": [
                                 "primary",
-                                "secondary"
+                                "secondary",
+                                "y3",
+                                "y4",
+                                "y5",
+                                "y6"
                               ],
                               "type": "string"
                             },
@@ -14174,7 +14194,11 @@
                               "axis": {
                                 "enum": [
                                   "primary",
-                                  "secondary"
+                                  "secondary",
+                                  "y3",
+                                  "y4",
+                                  "y5",
+                                  "y6"
                                 ],
                                 "type": "string"
                               },
