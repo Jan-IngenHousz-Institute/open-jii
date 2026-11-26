@@ -26,6 +26,10 @@ try {
     if (subplots) {
       layout = extendLayoutForFacets(layout, subplots.cells, subplots);
       for (const { xaxisId, yaxisId, secondaryYaxisId } of subplots.cells) {
+        if (subplots.sharedX === false) {
+          const key = `xaxis${xaxisId.slice(1)}`;
+          layout[key] = { ...layout[key], range };
+        }
         layout[`yaxis${secondaryYaxisId.slice(1)}`] = { anchor: xaxisId, overlaying: yaxisId };
       }
     } else {
@@ -63,22 +67,38 @@ try {
     );
   }
 
-  function transform(rows, ...extraSources) {
+  function transform(rows, extraSources = [], config = {}) {
     const sources = [
       { role: "x", columnName: "x" },
       { role: "y", columnName: "first" },
       { role: "y", columnName: "third", axis: "y3" },
       ...extraSources,
     ].map((source) => ({ ...source, tableName: "t" }));
-    return transformCartesianData(
+    return transformCartesianData(rows, sources, config, {
+      defaultTraceType: "bar",
+      supportsContinuousColor: false,
+      supportsSize: false,
+    });
+  }
+
+  function facets(left, right, { sharedX = true } = {}) {
+    const rows = [
+      ...left.map((row) => ({ ...row, panel: "Left" })),
+      ...right.map((row) => ({ ...row, panel: "Right" })),
+    ].map((row) => ({ ...row, first: 2, third: 3 }));
+    return transform(
       rows,
-      sources,
-      {},
-      {
-        defaultTraceType: "bar",
-        supportsContinuousColor: false,
-        supportsSize: false,
-      },
+      [
+        { role: "color", columnName: "color" },
+        { role: "facet", columnName: "panel" },
+      ],
+      { facetSharedX: sharedX },
+    );
+  }
+
+  function colorRows(positions) {
+    return Object.entries(positions).flatMap(([color, values]) =>
+      values.map((x) => ({ x, color })),
     );
   }
 
@@ -155,11 +175,10 @@ try {
           ...[0, 2].flatMap((x) => ["Alpha", "Beta"].map((color) => ({ x, color, panel: "Left" }))),
           ...[0, rightMax].map((x) => ({ x, color: "Beta", panel: "Right" })),
         ].map((row) => ({ ...row, first: 2, third: 3 }));
-        const { chartSeries, subplots } = transform(
-          rows,
+        const { chartSeries, subplots } = transform(rows, [
           { role: "color", columnName: "color" },
           { role: "facet", columnName: "panel" },
-        );
+        ]);
         const groups = await render(chartSeries, [-2, 6], subplots);
         const left = groups.filter(({ xaxis, name }) => xaxis === "x" && name.endsWith("Beta"));
         const right = groups.filter(({ xaxis }) => xaxis === "x2");
@@ -178,7 +197,7 @@ try {
         ...[0, 10].map((x) => ({ x, color: "Sparse" })),
         ...[0, 0.001, 10].map((x) => ({ x, color: "Dense" })),
       ].map((row) => ({ ...row, first: 2, third: 3 }));
-      const { chartSeries } = transform(rows, { role: "color", columnName: "color" });
+      const { chartSeries } = transform(rows, [{ role: "color", columnName: "color" }]);
       const range = [-3, 13];
       const reference = await render(
         chartSeries.map((series) => ({ ...series, x: [0, 10], y: [2, 3] })),
@@ -209,6 +228,62 @@ try {
           assert.ok(Math.abs(actual.left - expected.left) <= 1, JSON.stringify({ hidden, sparse }));
         }
       }
+    },
+    shiftedFacets: async () => {
+      const { chartSeries, subplots } = facets(
+        colorRows({ Alpha: [0, 2], Beta: [0, 2] }),
+        colorRows({ Alpha: [0.001, 2.001], Beta: [0.001, 2.001] }),
+      );
+      const groups = await render(chartSeries, [-2, 8], subplots);
+      const widths = groups.flatMap(({ bars }) => bars.map(({ width }) => width));
+      assert.equal(widths.length, 16, JSON.stringify(groups));
+      assert.ok(Math.min(...widths) > 10, JSON.stringify(groups));
+      assert.ok(Math.max(...widths) - Math.min(...widths) <= 1, JSON.stringify(groups));
+    },
+    repeatedFacet: async () => {
+      const { chartSeries, subplots } = facets(
+        colorRows({ Alpha: [0, 0, 2], Beta: [0, 0, 2] }),
+        colorRows({ Alpha: [0, 2], Beta: [0, 4] }),
+      );
+      const groups = await render(
+        chartSeries.map((series) =>
+          series.name === "first — Alpha" || series.name === "third — Beta"
+            ? series
+            : { ...series, visible: "legendonly" },
+        ),
+        [-2, 12],
+        subplots,
+      );
+      const left = groups.filter(({ xaxis }) => xaxis === "x");
+      const [alpha, beta] = groups.filter(({ xaxis }) => xaxis === "x2");
+      assert.equal(left.length, 2, JSON.stringify(groups));
+      for (const { bars } of left) {
+        assert.ok(Math.abs(bars[0].top - bars[1].bottom) <= 1, JSON.stringify(groups));
+      }
+      assert.ok(beta.bars[0].right <= alpha.bars[1].left + 1, JSON.stringify(groups));
+    },
+    independentFacets: async () => {
+      const left = Object.fromEntries(
+        Array.from({ length: 40 }, (_, index) => [`Category ${index}`, [0, 2]]),
+      );
+      const { chartSeries, subplots } = facets(
+        colorRows(left),
+        colorRows({ "Category 39": [0, 2] }),
+        {
+          sharedX: false,
+        },
+      );
+      const groups = await render(chartSeries, [-2, 8], subplots);
+      const right = groups.filter(({ xaxis }) => xaxis === "x2");
+      assert.equal(right.length, 2, JSON.stringify(right));
+      assert.ok(
+        right.every(({ bars }) => bars.every(({ width }) => width > 20)),
+        JSON.stringify(right),
+      );
+      assert.ok(
+        Math.abs(right[0].bars[0].right - right[1].bars[0].left) <= 1,
+        JSON.stringify(right),
+      );
     },
   };
   for (const [name, check] of Object.entries(cases)) {
