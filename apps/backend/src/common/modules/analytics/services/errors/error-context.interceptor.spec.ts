@@ -8,10 +8,10 @@ import { oc } from "@orpc/contract";
 import { Implement, implement, ORPCError, ORPCModule } from "@orpc/nest";
 import { PostHog } from "posthog-node";
 import { from, lastValueFrom } from "rxjs";
-import request from "supertest";
 import type { App } from "supertest/types";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { requestsTo } from "../../../../../test/local-requests";
 import { AnalyticsConfigService } from "../config/config.service";
 import { ErrorContextInterceptor } from "./error-context.interceptor";
 import { ErrorReporterService } from "./error-reporter.service";
@@ -123,6 +123,7 @@ describe("ErrorContextInterceptor, through a real oRPC route", () => {
     ),
   );
   let app: INestApplication<App>;
+  let requests: Awaited<ReturnType<typeof requestsTo>>;
 
   beforeAll(async () => {
     vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
@@ -137,7 +138,7 @@ describe("ErrorContextInterceptor, through a real oRPC route", () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication<INestApplication<App>>();
-    await app.init();
+    requests = await requestsTo(app);
   });
 
   afterAll(async () => {
@@ -145,7 +146,7 @@ describe("ErrorContextInterceptor, through a real oRPC route", () => {
   });
 
   it("reports an oRPC server error against the signed-in user and the request's id", async () => {
-    await request(app.getHttpServer()).get("/failing").expect(500);
+    await requests.get("/failing").expect(500);
 
     expect(recorder.reportedAs).toEqual([{ distinctId: "user-1", requestId: "req-1" }]);
   });
