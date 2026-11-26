@@ -16524,6 +16524,188 @@
         }
       }
     },
+    "/api/v1/devices/multispeq": {
+      "post": {
+        "operationId": "iot.ensureMultispeqDevice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serialNumber": {
+                    "type": "string",
+                    "description": "device_info.device_id as the firmware reported it"
+                  },
+                  "firmwareVersion": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "pattern": "^[a-zA-Z0-9_.,@/:#=[\\]-]+$",
+                    "description": "Firmware that reported the identity, kept as registration provenance"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "device_info.device_name"
+                  }
+                },
+                "required": [
+                  "serialNumber"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "enum": [
+                        "created",
+                        "existing"
+                      ],
+                      "type": "string"
+                    },
+                    "device": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "thingName": {
+                              "type": "string"
+                            },
+                            "thingArn": {
+                              "type": "string"
+                            },
+                            "serialNumber": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "deviceType": {
+                              "enum": [
+                                "multispeq",
+                                "ambyte",
+                                "minipar",
+                                "generic",
+                                "ambit",
+                                "mobile"
+                              ],
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "registered",
+                                "active",
+                                "revoked",
+                                "retired"
+                              ],
+                              "type": "string"
+                            },
+                            "certificateId": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "certificateArn": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "createdBy": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "organizationId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "visibility": {
+                              "enum": [
+                                "private",
+                                "public"
+                              ],
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "thingName",
+                            "thingArn",
+                            "serialNumber",
+                            "name",
+                            "deviceType",
+                            "status",
+                            "certificateId",
+                            "certificateArn",
+                            "createdBy",
+                            "organizationId",
+                            "visibility",
+                            "createdAt",
+                            "updatedAt"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "outcome",
+                    "device"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices": {
       "get": {
         "operationId": "iot.listIotDevices",
