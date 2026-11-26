@@ -1,6 +1,10 @@
 "use client";
 
-import { experimentDashboardQuery } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
+import { usePrincipalSession } from "@/components/auth/principal-context";
+import {
+  experimentDashboardQuery,
+  reloadExperimentDashboard,
+} from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import { useExperimentDashboardUpdate } from "@/hooks/experiment/useExperimentDashboardUpdate/useExperimentDashboardUpdate";
 import { useAutosave } from "@/hooks/useAutosave";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +26,9 @@ const stringifyDashboard = (v: DashboardFormValues) => JSON.stringify(v);
 type GetCopyLinks = (locale: string) => { id: string; name: string; href: string }[];
 
 export interface DashboardCloseSave {
+  userId: string | undefined;
+  sessionId: string | undefined;
+  flush: Promise<void>;
   dashboard: Promise<ExperimentDashboard>;
   getCopyLinks?: GetCopyLinks;
 }
@@ -61,6 +68,7 @@ export function useDashboardAutosave({
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
   const queryClient = useQueryClient();
+  const { userId, sessionId } = usePrincipalSession();
   const [inFlightWidgetIds, setInFlightWidgetIds] = useState<ReadonlySet<string> | null>(null);
   const onUnmountFlushedRef = useRef(onUnmountFlushed);
   onUnmountFlushedRef.current = onUnmountFlushed;
@@ -97,25 +105,27 @@ export function useDashboardAutosave({
   const { flushIfPending } = autosave;
   useEffect(() => {
     const key = dashboardKey(experimentId, dashboardId);
-    const query = experimentDashboardQuery(dashboardId, experimentId);
+    const query = experimentDashboardQuery(dashboardId, experimentId, userId);
     return () => {
       const flush = flushIfPending();
       void (flush ?? Promise.resolve()).then(() => onUnmountFlushedRef.current?.());
       if (!flush) return;
 
-      const settledDashboard = flush.then(async () => {
-        // A detail request started during the PATCH can still return the old widgets.
-        await queryClient.cancelQueries({ queryKey: query.queryKey, exact: true });
-        return queryClient.fetchQuery({ ...query, staleTime: 0 });
-      });
-      const closeSave = { dashboard: settledDashboard, getCopyLinks: getCopyLinksRef.current };
+      const settledDashboard = flush.then(() => reloadExperimentDashboard(queryClient, query));
+      const closeSave = {
+        userId,
+        sessionId,
+        flush,
+        dashboard: settledDashboard,
+        getCopyLinks: getCopyLinksRef.current,
+      };
       pendingCloseSaves.set(key, closeSave);
       const clear = () => {
         if (pendingCloseSaves.get(key) === closeSave) pendingCloseSaves.delete(key);
       };
       void settledDashboard.then(clear, clear);
     };
-  }, [dashboardId, experimentId, flushIfPending, queryClient]);
+  }, [dashboardId, experimentId, flushIfPending, queryClient, sessionId, userId]);
   useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
   return { ...autosave, inFlightWidgetIds };
 }

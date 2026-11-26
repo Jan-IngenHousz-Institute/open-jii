@@ -1,10 +1,16 @@
 "use client";
 
+import { usePrincipalSession } from "@/components/auth/principal-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { PageLoading } from "@/components/shared/page-loading";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import {
+  experimentDashboardQuery,
+  reloadExperimentDashboard,
+} from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import { useLocale } from "@/hooks/useLocale";
 import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -47,6 +53,17 @@ export interface DashboardFormShellProps {
 
 export function DashboardFormShell(props: DashboardFormShellProps) {
   const { experimentId, dashboardId } = props;
+  const { userId, sessionId } = usePrincipalSession();
+  return (
+    <DashboardFormGate
+      key={JSON.stringify([experimentId, dashboardId, userId, sessionId])}
+      {...props}
+    />
+  );
+}
+
+function DashboardFormGate(props: DashboardFormShellProps) {
+  const { experimentId, dashboardId } = props;
   const [closeSave, setCloseSave] = useState<DashboardCloseSave | null>();
 
   useEffect(() => {
@@ -73,12 +90,24 @@ function DashboardFormAfterCloseSave({
 }: DashboardFormShellProps & { closeSave: DashboardCloseSave }) {
   const { t } = useTranslation("experimentDashboards");
   const locale = useLocale();
+  const queryClient = useQueryClient();
+  const { userId, sessionId } = usePrincipalSession();
+  const { dashboardId, experimentId } = props;
+  const sameSession = closeSave.userId === userId && closeSave.sessionId === sessionId;
   const [result, setResult] = useState<{ dashboard?: ExperimentDashboard; error?: unknown }>();
   const [showStatus, setShowStatus] = useState(false);
   useEffect(() => {
     let active = true;
     const timeout = setTimeout(() => setShowStatus(true), CLOSE_SAVE_STATUS_DELAY_MS);
-    void closeSave.dashboard
+    const dashboardRead = sameSession
+      ? closeSave.dashboard
+      : closeSave.flush.then(() =>
+          reloadExperimentDashboard(
+            queryClient,
+            experimentDashboardQuery(dashboardId, experimentId, userId),
+          ),
+        );
+    void dashboardRead
       .finally(() => clearTimeout(timeout))
       .then(
         (dashboard) => {
@@ -92,10 +121,10 @@ function DashboardFormAfterCloseSave({
       active = false;
       clearTimeout(timeout);
     };
-  }, [closeSave]);
+  }, [closeSave, dashboardId, experimentId, queryClient, sameSession, userId]);
 
   if (!result && showStatus) {
-    const links = closeSave.getCopyLinks?.(locale) ?? [];
+    const links = sameSession ? (closeSave.getCopyLinks?.(locale) ?? []) : [];
     return (
       <div className="space-y-3 p-8 text-center">
         <p role="status">{t("ui.messages.saveStillInProgress")}</p>

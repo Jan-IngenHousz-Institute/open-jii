@@ -3,6 +3,8 @@ import { orpc } from "@/lib/orpc";
 import {
   createExperimentAccess,
   createExperimentDashboard,
+  createSession,
+  createUseSessionResult,
   createTableWidget,
   createVisualization,
   createVisualizationWidget,
@@ -20,10 +22,11 @@ import {
 } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import { authClient, useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
@@ -146,14 +149,23 @@ function expectOpenCopyLink(chartId: string, basePath = "experiments") {
   });
 }
 
+const dashboardSession = createSession();
+
 describe("DashboardToolbar", () => {
   beforeEach(() => {
+    vi.mocked(useSession).mockReturnValue(createUseSessionResult({ data: dashboardSession }));
+    vi.mocked(authClient.getSession).mockResolvedValue({ data: dashboardSession, error: null });
     server.mount(contract.experiments.getExperimentAccess, {
       body: createExperimentAccess({
         experiment: { id: "exp-1", status: "active" },
         isAdmin: true,
       }),
     });
+  });
+
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue(createUseSessionResult());
+    vi.mocked(authClient.getSession).mockResolvedValue({ data: null, error: null });
   });
 
   it("keeps the chosen section while the same widget stays selected", async () => {
@@ -746,7 +758,7 @@ describe("DashboardToolbar", () => {
       const queryClient = createTestQueryClient();
       if (archived) {
         queryClient.setQueryData(
-          experimentAccessQueryKey(undefined, "exp-1"),
+          experimentAccessQueryKey(dashboardSession.user.id, "exp-1"),
           createExperimentAccess({ experiment: { id: "exp-1", status: "active" }, isAdmin: true }),
         );
       }

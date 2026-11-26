@@ -6,6 +6,8 @@ import {
   createExperimentAccess,
   createExperimentDashboard,
   createRichTextWidget,
+  createSession,
+  createUseSessionResult,
   createVisualization,
   createVisualizationWidget,
 } from "@/test/factories";
@@ -23,10 +25,11 @@ import {
 } from "@/test/test-utils";
 import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import { useFormContext, useWatch } from "react-hook-form";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { zUpdateExperimentDashboardBody } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import { authClient, useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { DashboardFormShell } from "./dashboard-form-shell";
@@ -60,6 +63,18 @@ function FormProbe() {
     </div>
   );
 }
+
+const dashboardSession = createSession();
+
+beforeEach(() => {
+  vi.mocked(useSession).mockReturnValue(createUseSessionResult({ data: dashboardSession }));
+  vi.mocked(authClient.getSession).mockResolvedValue({ data: dashboardSession, error: null });
+});
+
+afterEach(() => {
+  vi.mocked(useSession).mockReturnValue(createUseSessionResult());
+  vi.mocked(authClient.getSession).mockResolvedValue({ data: null, error: null });
+});
 
 describe("DashboardFormShell", () => {
   it.each(["stale", "published"] as const)(
@@ -349,7 +364,7 @@ function setupDashboardReopen() {
     const incomingCache = createTestQueryClient();
     if (warm) {
       incomingCache.setQueryData(
-        experimentDashboardQuery(dashboard.id, experimentId).queryKey,
+        experimentDashboardQuery(dashboard.id, experimentId, dashboardSession.user.id).queryKey,
         stored,
       );
     }
@@ -534,6 +549,63 @@ describe("DashboardFormShell reopen while saving", () => {
         vi.useRealTimers();
         onlineManager.setOnline(true);
         reload.resolve();
+      }
+    },
+  );
+
+  it.each(["sign-out", "account switch"] as const)(
+    "keeps a failed copy private after %s",
+    async (transition) => {
+      const editor = setupDashboardReopen();
+      const release = Promise.withResolvers<void>();
+      const oldReload = Promise.withResolvers<void>();
+      const patch = server.mount(contract.experiments.updateExperimentDashboard, {
+        status: 500,
+        unblock: release.promise,
+      });
+
+      try {
+        await screen.findByRole("textbox", { name: "Dashboard name" });
+        await editor.duplicateChart();
+        await waitFor(() => expect(patch.callCount).toBe(1));
+        editor.leave();
+
+        const session =
+          transition === "sign-out"
+            ? null
+            : createSession({ user: { id: "user-2" }, session: { id: "session-2" } });
+        vi.mocked(useSession).mockReturnValue(createUseSessionResult({ data: session }));
+        vi.mocked(authClient.getSession).mockResolvedValue({ data: session, error: null });
+        const unexpectedAccess = server.mount(contract.experiments.getExperimentAccess, {
+          status: 403,
+        });
+        const previousDetail = server.mount(contract.experiments.getExperimentDashboard, {
+          body: editor.getStored,
+          unblock: oldReload.promise,
+        });
+
+        act(() => release.resolve());
+        await waitFor(() => expect(previousDetail.called).toBe(true));
+        expect(unexpectedAccess.callCount).toBe(0);
+        expect(toast).not.toHaveBeenCalled();
+
+        if (session) {
+          const ownDashboard = { ...editor.getStored(), name: "Dashboard for user 2" };
+          const ownDetail = server.mount(contract.experiments.getExperimentDashboard, {
+            body: ownDashboard,
+          });
+          editor.reopen();
+          expect(await screen.findByRole("textbox", { name: "Dashboard name" })).toHaveValue(
+            ownDashboard.name,
+          );
+          expect(ownDetail.called).toBe(true);
+        }
+        act(() => oldReload.resolve());
+        await waitFor(() => expect(editor.queryClient.isFetching()).toBe(0));
+        expect(toast).not.toHaveBeenCalled();
+      } finally {
+        release.resolve();
+        oldReload.resolve();
       }
     },
   );
