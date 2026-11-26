@@ -119,6 +119,11 @@ export interface CartesianSeries extends BaseSeries {
   error_y?: ErrorBarConfig;
 }
 
+type LegendOverrides = Map<
+  number,
+  { incoming: CartesianSeries["visible"]; value: NonNullable<CartesianSeries["visible"]> }
+>;
+
 /**
  * One cell of a facet grid. The renderer builds N of these and stamps
  * each cell's `xaxisId` / `yaxisId` onto the corresponding traces.
@@ -267,18 +272,28 @@ export function CartesianChart({
   );
   const [visibility, setVisibility] = React.useState<{
     key: string;
-    values: Record<number, boolean | "legendonly">;
-  }>({ key: legendKey, values: {} });
+    overrides: LegendOverrides;
+  }>({ key: legendKey, overrides: new Map() });
+  const retainedOverrides = useMemo<LegendOverrides>(() => {
+    if (visibility.key !== legendKey) return new Map();
+    const retained = new Map(
+      [...visibility.overrides].filter(
+        ([index, choice]) => data[index]?.visible === choice.incoming,
+      ),
+    );
+    return retained.size === visibility.overrides.size ? visibility.overrides : retained;
+  }, [data, legendKey, visibility]);
+  if (retainedOverrides !== visibility.overrides) {
+    setVisibility({ key: legendKey, overrides: retainedOverrides });
+  }
+
   const visibleData = useMemo(
     () =>
       data.map((series, index) => ({
         ...series,
-        visible:
-          visibility.key === legendKey
-            ? (visibility.values[index] ?? series.visible)
-            : series.visible,
+        visible: retainedOverrides.get(index)?.value ?? series.visible,
       })),
-    [data, legendKey, visibility],
+    [data, retainedOverrides],
   );
   const handleRestyle = React.useCallback(
     (event: Readonly<PlotRestyleEvent>) => {
@@ -288,15 +303,18 @@ export function CartesianChart({
       const raw: unknown = update.visible;
       const values = Array.isArray(raw) ? raw : [raw];
       setVisibility((previous) => {
-        const next = previous.key === legendKey ? { ...previous.values } : {};
+        const next = new Map(previous.key === legendKey ? previous.overrides : undefined);
         indices.forEach((index, offset) => {
+          const series = data[index];
           const value: unknown = values[offset % values.length];
-          if (value === true || value === false || value === "legendonly") next[index] = value;
+          if (series && (value === true || value === false || value === "legendonly")) {
+            next.set(index, { incoming: series.visible, value });
+          }
         });
-        return { key: legendKey, values: next };
+        return { key: legendKey, overrides: next };
       });
     },
-    [legendKey, onRestyle],
+    [data, legendKey, onRestyle],
   );
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);

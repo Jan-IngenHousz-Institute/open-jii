@@ -497,4 +497,43 @@ describe("numbered Y-axis layout", () => {
     expect(readLayout().yaxis?.visible).toBe(false);
     expect(readLayout().xaxis?.domain?.[0]).toBe(0);
   });
+
+  it("applies a parent's visibility change after the legend has shown the axis", () => {
+    const config = { width: 900, height: 500 };
+    const data = series(3);
+    const { rerender } = render(<CartesianChart data={data} config={config} />);
+    fireEvent.click(screen.getByText("Hide last series"));
+    expect(readLayout().yaxis3?.visible).toBe(false);
+    fireEvent.click(screen.getByText("Show last series"));
+    expect(readLayout().yaxis3?.visible).toBe(true);
+
+    const updated = data.map((trace) =>
+      trace.axis === "y3" ? { ...trace, visible: false } : trace,
+    );
+    rerender(<CartesianChart data={updated} config={config} />);
+    expect(readLayout().yaxis3?.visible).toBe(false);
+    expect(
+      JSON.parse(screen.getByTestId("chart").getAttribute("data-traces") ?? "[]")[2],
+    ).toMatchObject({
+      visible: false,
+    });
+  });
+
+  it("clears only the override for the series whose visibility prop changed", () => {
+    const config = { width: 900, height: 500 };
+    const data = series(6);
+    const { rerender } = render(<CartesianChart data={data} config={config} />);
+    fireEvent.click(screen.getByText("Isolate right axes"));
+    expect(readLayout().yaxis3?.visible).toBe(false);
+    expect(readLayout().yaxis5?.visible).toBe(false);
+
+    const forcedHidden = data.map((trace) =>
+      trace.axis === "y3" ? { ...trace, visible: false } : trace,
+    );
+    rerender(<CartesianChart data={forcedHidden} config={config} />);
+    expect(readLayout().yaxis3?.visible).toBe(false);
+    rerender(<CartesianChart data={data} config={config} />);
+    expect(readLayout().yaxis3?.visible).toBe(true);
+    expect(readLayout().yaxis5?.visible).toBe(false);
+  });
 });
