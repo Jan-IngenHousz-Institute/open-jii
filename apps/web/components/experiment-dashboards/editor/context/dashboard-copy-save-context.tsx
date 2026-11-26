@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrincipalSession } from "@/components/auth/principal-context";
-import { isCurrentSession } from "@/hooks/auth/is-current-session";
+import { isCurrentSession, waitForCurrentSession } from "@/hooks/auth/is-current-session";
 import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
 import {
   experimentAccessQuery,
@@ -94,6 +94,7 @@ export function DashboardAutosaveBoundary({
     if (mounted.current) setCopies(next);
   }, []);
   const unattachedCharts = useRef(new Map<string, CreatedChart>());
+  const checkingRecovery = useRef(false);
   const lastReadableStatus = useRef<ExperimentAccess["experiment"]["status"] | undefined>(
     undefined,
   );
@@ -122,37 +123,50 @@ export function DashboardAutosaveBoundary({
 
   const showUnattachedCopies = useCallback(
     async (charts: CreatedChart[]) => {
-      if (!(await isCurrentSession(sessionId))) return;
       for (const chart of charts) unattachedCharts.current.set(chart.id, chart);
-      let status = readCopyAccess();
-      if (onlineManager.isOnline()) {
-        const query = experimentAccessQuery(orpc, userId, experimentId);
-        await queryClient
-          .fetchQuery({ ...query, staleTime: 0, retry: false })
-          .catch(() => undefined);
-        status = readCopyAccess();
+      if (checkingRecovery.current) return;
+      checkingRecovery.current = true;
+      try {
+        if (!(await waitForCurrentSession(queryClient, userId, sessionId))) {
+          unattachedCharts.current.clear();
+          return;
+        }
+        readCopyAccess();
+        if (onlineManager.isOnline()) {
+          const query = experimentAccessQuery(orpc, userId, experimentId);
+          await queryClient
+            .fetchQuery({ ...query, staleTime: 0, retry: false })
+            .catch(() => undefined);
+          readCopyAccess();
+        }
+        if (!(await waitForCurrentSession(queryClient, userId, sessionId))) {
+          unattachedCharts.current.clear();
+          return;
+        }
+        const status = readCopyAccess();
+        const title = t("editor.inspector.copyNotAttached");
+        if (status === undefined) {
+          toast({ title });
+          return;
+        }
+        const openCopy = t("editor.inspector.openChartCopy");
+        const nameLinks = unattachedCharts.current.size > 1;
+        const links = [...unattachedCharts.current.values()].map((chart) => (
+          <ToastAction key={chart.id} asChild altText={`${openCopy} ${chart.name}`}>
+            <Link href={chartCopyHref(locale, experimentId, chart.id, status === "archived")}>
+              {nameLinks ? chart.name : openCopy}
+            </Link>
+          </ToastAction>
+        ));
+        toast({
+          title,
+          ...(nameLinks
+            ? { description: <div className="mt-1 flex flex-wrap gap-1">{links}</div> }
+            : { action: links[0] }),
+        });
+      } finally {
+        checkingRecovery.current = false;
       }
-      if (!(await isCurrentSession(sessionId))) return;
-      const title = t("editor.inspector.copyNotAttached");
-      if (status === undefined) {
-        toast({ title });
-        return;
-      }
-      const openCopy = t("editor.inspector.openChartCopy");
-      const nameLinks = unattachedCharts.current.size > 1;
-      const links = [...unattachedCharts.current.values()].map((chart) => (
-        <ToastAction key={chart.id} asChild altText={`${openCopy} ${chart.name}`}>
-          <Link href={chartCopyHref(locale, experimentId, chart.id, status === "archived")}>
-            {nameLinks ? chart.name : openCopy}
-          </Link>
-        </ToastAction>
-      ));
-      toast({
-        title,
-        ...(nameLinks
-          ? { description: <div className="mt-1 flex flex-wrap gap-1">{links}</div> }
-          : { action: links[0] }),
-      });
     },
     [experimentId, locale, queryClient, readCopyAccess, sessionId, t, userId],
   );

@@ -702,4 +702,53 @@ describe("DashboardFormShell reopen while saving", () => {
       closeSave.resolve();
     }
   });
+
+  it("offers an unattached chart after the originating session reconnects", async () => {
+    const editor = setupDashboardReopen();
+    const closeSave = Promise.withResolvers<void>();
+    const patch = server.mount(contract.experiments.updateExperimentDashboard, {
+      status: 503,
+      unblock: closeSave.promise,
+    });
+    const getSession = vi.mocked(authClient.getSession);
+
+    try {
+      await screen.findByRole("textbox", { name: "Dashboard name" });
+      await editor.duplicateChart();
+      await waitFor(() => expect(screen.getByTestId("probe-widgets")).toHaveTextContent("3"));
+      editor.leave();
+      await waitFor(() => expect(patch.callCount).toBe(1));
+
+      getSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      act(() => {
+        onlineManager.setOnline(false);
+        closeSave.resolve();
+      });
+      await waitFor(() => expect(getSession).toHaveBeenCalledTimes(1));
+      expect(toast).not.toHaveBeenCalled();
+
+      act(() => onlineManager.setOnline(true));
+      await waitFor(
+        () => {
+          const action = vi
+            .mocked(toast)
+            .mock.calls.find(
+              ([value]) => value.title === "editor.inspector.copyNotAttached",
+            )?.[0].action;
+          assertExists(action);
+          expect(action.props).toMatchObject({
+            children: {
+              props: {
+                href: `/en-US/platform/experiments/${editor.experimentId}/analysis/visualizations/${editor.copy.id}`,
+              },
+            },
+          });
+        },
+        { timeout: 1500 },
+      );
+    } finally {
+      onlineManager.setOnline(true);
+      closeSave.resolve();
+    }
+  });
 });
