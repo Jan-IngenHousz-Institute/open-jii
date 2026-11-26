@@ -1,7 +1,11 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
+import { experimentAccessQuery } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
 import { useLocale } from "@/hooks/useLocale";
+import { orpc } from "@/lib/orpc";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -58,6 +62,8 @@ export function DashboardAutosaveBoundary({
 }: DashboardAutosaveBoundaryProps) {
   const { t } = useTranslation("experimentDashboards");
   const locale = useLocale();
+  const queryClient = useQueryClient();
+  const { userId } = usePrincipal();
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
   const mounted = useRef(false);
   const enabledRef = useRef(enabled);
@@ -90,14 +96,20 @@ export function DashboardAutosaveBoundary({
   if (pending.length < copies.size) setCopies(new Map(pending));
 
   const showUnattachedCopies = useCallback(
-    (charts: CreatedChart[]) => {
+    async (charts: CreatedChart[]) => {
       for (const chart of charts) unattachedCharts.current.set(chart.id, chart);
+      const query = experimentAccessQuery(orpc, userId, experimentId);
+      const access = await queryClient
+        .fetchQuery({ ...query, staleTime: 0, retry: false })
+        .catch(() => queryClient.getQueryData(query.queryKey));
+      const basePath =
+        access?.experiment.status === "archived" ? "experiments-archive" : "experiments";
       const openCopy = t("editor.inspector.openChartCopy");
       const nameLinks = unattachedCharts.current.size > 1;
       const links = [...unattachedCharts.current.values()].map((chart) => (
         <ToastAction key={chart.id} asChild altText={`${openCopy} ${chart.name}`}>
           <Link
-            href={`/${locale}/platform/experiments/${experimentId}/analysis/visualizations/${chart.id}`}
+            href={`/${locale}/platform/${basePath}/${experimentId}/analysis/visualizations/${chart.id}`}
           >
             {nameLinks ? chart.name : openCopy}
           </Link>
@@ -110,7 +122,7 @@ export function DashboardAutosaveBoundary({
           : { action: links[0] }),
       });
     },
-    [experimentId, locale, t],
+    [experimentId, locale, queryClient, t, userId],
   );
 
   const onSaved = useCallback(
@@ -130,7 +142,7 @@ export function DashboardAutosaveBoundary({
           ? [copy.chart]
           : [];
       });
-      if (charts.length > 0) showUnattachedCopies(charts);
+      if (charts.length > 0) void showUnattachedCopies(charts);
     },
     [form, showUnattachedCopies],
   );
@@ -179,7 +191,7 @@ export function DashboardAutosaveBoundary({
     form.setValue("widgets", compactWidgets(remaining, form.getValues("layout.columns")), {
       shouldDirty: true,
     });
-    showUnattachedCopies([...removedCopies.values()]);
+    void showUnattachedCopies([...removedCopies.values()]);
   }, [
     enabled,
     copies,
@@ -204,7 +216,7 @@ export function DashboardAutosaveBoundary({
       source?.type !== "visualization" ||
       source.config.visualizationId !== sourceChartId
     ) {
-      showUnattachedCopies([created]);
+      await showUnattachedCopies([created]);
       return;
     }
     const copy = {

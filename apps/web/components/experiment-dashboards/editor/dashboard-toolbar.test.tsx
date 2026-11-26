@@ -1,5 +1,7 @@
+import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { orpc } from "@/lib/orpc";
 import {
+  createExperimentAccess,
   createExperimentDashboard,
   createTableWidget,
   createVisualization,
@@ -18,7 +20,7 @@ import {
 } from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -127,19 +129,25 @@ function ChartSelection({ sourceWidgetId }: { sourceWidgetId: string }) {
   );
 }
 
-function expectOpenCopyLink(chartId: string) {
+function expectOpenCopyLink(chartId: string, basePath = "experiments") {
   const action = vi
     .mocked(toast)
     .mock.calls.find(([value]) => value.title === "editor.inspector.copyNotAttached")?.[0].action;
   assertExists(action);
   expect(action.props).toMatchObject({
     children: {
-      props: { href: `/en-US/platform/experiments/exp-1/analysis/visualizations/${chartId}` },
+      props: { href: `/en-US/platform/${basePath}/exp-1/analysis/visualizations/${chartId}` },
     },
   });
 }
 
 describe("DashboardToolbar", () => {
+  beforeEach(() => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({ experiment: { id: "exp-1", status: "active" } }),
+    });
+  });
+
   it("keeps the chosen section while the same widget stays selected", async () => {
     const user = userEvent.setup();
     renderToolbar();
@@ -530,7 +538,7 @@ describe("DashboardToolbar", () => {
     expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
     rerender(dashboard(false));
     expect(dismiss).toHaveBeenCalled();
-    expectOpenCopyLink(created.id);
+    await waitFor(() => expectOpenCopyLink(created.id));
     expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
     expect(screen.getByLabelText("Selected widget")).toHaveTextContent("none");
     await user.click(screen.getByRole("button", { name: "select chart" }));
@@ -549,9 +557,13 @@ describe("DashboardToolbar", () => {
     expect(update.callCount).toBe(1);
     expect(create.callCount).toBe(1);
   });
-  it.each([200, 500])(
-    "reconciles an attachment PATCH that returns %s after edit access is revoked",
-    async (status) => {
+  it.each([
+    { status: 200, reason: "edit access is revoked", archived: false },
+    { status: 500, reason: "edit access is revoked", archived: false },
+    { status: 403, reason: "the experiment is archived", archived: true },
+  ])(
+    "reconciles an attachment PATCH that returns $status after $reason",
+    async ({ status, archived }) => {
       const user = userEvent.setup();
       const original = createVisualization({ id: "source" });
       const created = createVisualization({ id: "copy" });
@@ -585,6 +597,12 @@ describe("DashboardToolbar", () => {
       }
 
       const queryClient = createTestQueryClient();
+      if (archived) {
+        queryClient.setQueryData(
+          experimentAccessQueryKey(undefined, "exp-1"),
+          createExperimentAccess({ experiment: { id: "exp-1", status: "active" } }),
+        );
+      }
       const { rerender } = render(dashboard(true), { queryClient });
       await user.click(screen.getByRole("button", { name: "select chart" }));
       await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
@@ -592,11 +610,19 @@ describe("DashboardToolbar", () => {
       await waitFor(() => expect(attaching.callCount).toBe(1));
       expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
 
+      if (archived) {
+        server.mount(contract.experiments.getExperimentAccess, {
+          body: createExperimentAccess({ experiment: { id: "exp-1", status: "archived" } }),
+        });
+      }
       rerender(dashboard(false));
       expect(screen.getByLabelText("Chart IDs")).toHaveTextContent("source, copy");
       act(() => resolve());
-      if (status === 500) {
-        await waitFor(() => expectOpenCopyLink(created.id));
+      if (status !== 200) {
+        await waitFor(
+          () => expectOpenCopyLink(created.id, archived ? "experiments-archive" : "experiments"),
+          { timeout: 1500 },
+        );
         expect(screen.getByLabelText("Chart IDs")).toHaveTextContent(/^source$/u);
       } else {
         await waitFor(() =>
@@ -617,6 +643,7 @@ describe("DashboardToolbar", () => {
       await waitFor(() => expect(queryClient.isMutating()).toBe(0));
       expect(attaching.callCount).toBe(1);
       expect(create.callCount).toBe(1);
+      if (archived) return;
 
       const nextSave = server.mount(contract.experiments.updateExperimentDashboard, {
         body: savedDashboard,
