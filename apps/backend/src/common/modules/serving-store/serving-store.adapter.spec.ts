@@ -1,5 +1,6 @@
 import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
+import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
 import { z } from "zod";
@@ -8,8 +9,8 @@ import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-dat
 import { STORE_QUERY_TOO_LARGE } from "../../../experiments/core/ports/serving-store.port";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
 import { emptyStore, storeSetting, testStoreAdmin } from "../../../test/store-admin";
-import { storeMigrationStatements } from "../../../test/store-migrations";
-import { STORE_READER_ACCESS } from "../../../test/store-reader";
+import { storeMigrationStatements, storeRefreshedViews } from "../../../test/store-migrations";
+import { STORE_READER_ACCESS, STORE_READER_PROFILE } from "../../../test/store-reader";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
@@ -438,6 +439,138 @@ describe("ServingStoreAdapter", () => {
     expect(query.mock.calls[1][0]).toBe(
       "SELECT client_id FROM experiment_client_ids(experiment = 'e1')",
     );
+  });
+
+  describe("platform metrics", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function storeQuery() {
+      return vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+    }
+
+    it("reads the newest days of the daily view and gives them oldest first", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["2026-08-28", 120, 1000, 2400],
+            ["2026-08-27", 80, 880, 1600],
+          ],
+        }),
+      );
+
+      const result = await adapter.getPublicDailyActivity(366);
+
+      assertSuccess(result);
+      expect(result.value.map(({ date }) => date)).toEqual(["2026-08-27", "2026-08-28"]);
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT date, measurements, cumulative_measurements, volume_bytes FROM metrics_daily_activity ORDER BY date DESC LIMIT 366",
+      );
+    });
+
+    it("bounds the experiment and resource days as the warehouse reads do, today included", async () => {
+      vi.useFakeTimers({ now: new Date("2026-08-28T12:00:00Z"), toFake: ["Date"] });
+      const query = storeQuery();
+
+      await adapter.getScopedDailyActivity(60);
+      await adapter.getResourceDailyActivity("workbook_version", 30);
+
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT date, experiment_id, measurements FROM metrics_daily_activity_by_experiment WHERE date BETWEEN '2026-06-30' AND '2026-08-28' ORDER BY date ASC",
+      );
+      expect(query.mock.calls[1][0]).toBe(
+        "SELECT date, resource_type, resource_id, measurements FROM metrics_daily_activity_by_resource WHERE resource_type = 'workbook_version' AND date BETWEEN '2026-07-30' AND '2026-08-28' ORDER BY date ASC",
+      );
+    });
+
+    it("reads the whole category, which the rows' order cannot decide a tie in", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["", "", 0, "nan"],
+            ["humidity", "Relative humidity", 12, 55],
+          ],
+        }),
+      );
+
+      const result = await adapter.getTopParameter("sensor");
+
+      assertSuccess(result);
+      expect(result.value?.name).toBe("humidity");
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT parameter, label, observations, median_value FROM metrics_parameter_stats WHERE category = 'sensor'",
+      );
+    });
+
+    it("reads a refreshed category where no parameter qualified as no parameter", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(success({ rows: [["", "", 0, "nan"]] }));
+
+      const result = await adapter.getTopParameter("derived");
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("fails a category the view has not refreshed yet, rather than reading it as none", async () => {
+      storeQuery();
+
+      const result = await adapter.getTopParameter("derived");
+
+      assertFailure(result);
+    });
+
+    it("reads a client without an id as no client", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["thing-1", 500],
+            [null, 15],
+          ],
+        }),
+      );
+
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "thing-1", measurements: 500 },
+        { clientId: null, measurements: 15 },
+      ]);
+    });
+
+    it("leaves out a client whose total is no number, rather than counting it as NaN", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["thing-1", "500"],
+            ["thing-2", "nan"],
+            ["thing-3", null],
+          ],
+        }),
+      );
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([{ clientId: "thing-1", measurements: 500 }]);
+      expect(warn).toHaveBeenCalledWith({
+        msg: "Skipped malformed metrics rows",
+        operation: "readMetricsView",
+        view: "metrics_client_totals",
+        dropped: 2,
+      });
+    });
+
+    it("passes a failed read through", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        failure(AppError.internal("The serving store could not answer the read")),
+      );
+
+      assertFailure(await adapter.getPoolFacts());
+      assertFailure(await adapter.getClientTotals());
+    });
   });
 });
 
@@ -2437,6 +2570,347 @@ describe("ServingStoreAdapter against a store", () => {
         expect({ name, refused: read.isFailure() }).toEqual({ name, refused: true });
       }
     });
+  });
+});
+
+/** Waits out the refresh each view runs when it is made, which would miss rows inserted during it. */
+async function firstRefreshes(admin: ClickHouseClient): Promise<void> {
+  const views = storeRefreshedViews().length;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const result = await admin.query({
+      query:
+        "SELECT countIf(last_success_time IS NOT NULL) AS refreshed FROM system.view_refreshes WHERE database = 'store'",
+      format: "JSONEachRow",
+    });
+    const [{ refreshed }] = await result.json<{ refreshed: number }>();
+    if (Number(refreshed) === views) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("The metrics views never finished their first refresh");
+}
+
+/** A time as the store takes and gives it, in UTC. */
+function storeTime(time: Date): string {
+  return time.toISOString().replace("T", " ").replace("Z", "");
+}
+
+const METRICS_READER = "metrics_backend_test_reader";
+const METRICS_READER_PASSWORD = "metrics-backend-test";
+const METRICS_READER_PROFILE = "metrics_backend_test_profile";
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+/**
+ * The platform metrics, read as a login granted only the metrics views, with the reader's profile.
+ */
+describe("ServingStoreAdapter's platform metrics against a store", () => {
+  // Far enough apart that their dates differ wherever the clock is.
+  const now = Date.now();
+  const recent = new Date(now - HOUR);
+  const earlier = new Date(now - 3 * DAY);
+  const older = new Date(now - 40 * DAY);
+  const dateOf = (time: Date) => time.toISOString().slice(0, 10);
+
+  let admin: ClickHouseClient;
+  let client: ServingStoreClientService;
+  let adapter: ServingStoreAdapter;
+
+  beforeAll(async () => {
+    const url = STORE_URL;
+    admin = testStoreAdmin({ json_type_escape_dots_in_keys: 1 });
+    await admin.command({ query: `DROP USER IF EXISTS ${METRICS_READER}` });
+    await admin.command({ query: `DROP SETTINGS PROFILE IF EXISTS ${METRICS_READER_PROFILE}` });
+    await emptyStore(admin);
+    await firstRefreshes(admin);
+
+    const committed = { _commit_version: 1, _commit_timestamp: storeTime(new Date(now)) };
+    const unannotated = { questions_data: {}, annotations: [] };
+    await admin.insert({
+      table: "measurements",
+      format: "JSONEachRow",
+      values: [
+        {
+          ...committed,
+          ...unannotated,
+          experiment_id: "e1",
+          id: 1,
+          device_id: "d1",
+          client_id: "c1",
+          user_id: "u1",
+          timestamp: storeTime(recent),
+          timezone: "Europe/Amsterdam",
+          hour_local: 14,
+          protocol_id: "p1",
+          workbook_run_id: "r1",
+          data: '{"a":1}',
+          par_readings: [150, 160],
+        },
+        {
+          ...committed,
+          ...unannotated,
+          experiment_id: "e1",
+          id: 2,
+          device_id: "d2",
+          client_id: "c2",
+          user_id: "u2",
+          timestamp: storeTime(earlier),
+          timezone: "UTC",
+          hour_local: 3,
+          protocol_id: "p1",
+          workbook_run_id: "r1",
+          data: '{"bb":22}',
+          temperature_readings: [21.5],
+        },
+        {
+          ...committed,
+          ...unannotated,
+          experiment_id: "e2",
+          id: 3,
+          device_id: "d1",
+          timestamp: storeTime(older),
+          timezone: "UTC",
+          hour_local: 3,
+        },
+      ],
+    });
+    await admin.insert({
+      table: "macro_results",
+      format: "JSONEachRow",
+      values: [
+        { id: 11, rawId: 1, time: recent, phi2: 0.7 },
+        { id: 12, rawId: 2, time: earlier, phi2: 0.5 },
+        { id: 13, rawId: 3, time: older, phi2: 0.6 },
+      ].map(({ id, rawId, time, phi2 }) => ({
+        ...committed,
+        ...unannotated,
+        experiment_id: "e1",
+        id,
+        raw_id: rawId,
+        macro_id: "mac1",
+        timestamp: storeTime(time),
+        macro_output: { Phi2: phi2 },
+      })),
+    });
+    await admin.insert({
+      table: "uploads",
+      format: "JSONEachRow",
+      values: [
+        {
+          ...committed,
+          experiment_id: "e1",
+          id: 21,
+          upload_table_id: "t1",
+          uploaded_at: storeTime(recent),
+          uploaded_data: { h: 1 },
+        },
+      ],
+    });
+
+    for (const view of storeRefreshedViews()) {
+      await admin.command({ query: `SYSTEM REFRESH VIEW ${view}` });
+      await admin.command({ query: `SYSTEM WAIT VIEW ${view}` });
+    }
+
+    await admin.command({
+      query: `CREATE SETTINGS PROFILE ${METRICS_READER_PROFILE} SETTINGS ${STORE_READER_PROFILE}`,
+    });
+    await admin.command({
+      query: `CREATE USER ${METRICS_READER} IDENTIFIED BY '${METRICS_READER_PASSWORD}' SETTINGS PROFILE '${METRICS_READER_PROFILE}'`,
+    });
+    for (const view of storeRefreshedViews()) {
+      await admin.command({ query: `GRANT SELECT ON store.${view} TO ${METRICS_READER}` });
+    }
+
+    const config = new ConfigService({
+      servingStore: { url, username: METRICS_READER, password: METRICS_READER_PASSWORD },
+    });
+    client = new ServingStoreClientService(new ServingStoreConfigService(config));
+    adapter = new ServingStoreAdapter(client);
+  });
+
+  afterAll(async () => {
+    await client.onModuleDestroy();
+    await admin.command({ query: `DROP USER IF EXISTS ${METRICS_READER}` });
+    await admin.command({ query: `DROP SETTINGS PROFILE IF EXISTS ${METRICS_READER_PROFILE}` });
+    await emptyStore(admin);
+    await admin.close();
+  });
+
+  it.each([
+    ["the measurements", "SELECT count() FROM measurements"],
+    ["the macro results", "SELECT count() FROM macro_results"],
+    ["the views' refresh state", "SELECT count() FROM system.view_refreshes"],
+    ["a longer time limit than its profile's", "SELECT 1 SETTINGS max_execution_time = 60"],
+  ])("is refused %s", async (_name, sql) => {
+    assertFailure(await client.query(sql));
+  });
+
+  it("reads the platform totals", async () => {
+    const result = await adapter.getPublicPlatformTotals();
+
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      totalMeasurements: 3,
+      totalVolumeBytes: 16,
+      totalUploadedRows: 1,
+      totalMacroExecutions: 3,
+      devicesAllTime: 2,
+      experimentsWithData: 2,
+      firstMeasurementAt: older.toISOString(),
+      lastMeasurementAt: recent.toISOString(),
+    });
+    expect(result.value?.computedAt).not.toBeNull();
+  });
+
+  it("reads the daily activity oldest first", async () => {
+    const result = await adapter.getPublicDailyActivity(366);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      { date: dateOf(older), measurements: 1, cumulativeMeasurements: 1, volumeBytes: 0 },
+      { date: dateOf(earlier), measurements: 1, cumulativeMeasurements: 2, volumeBytes: 9 },
+      { date: dateOf(recent), measurements: 1, cumulativeMeasurements: 3, volumeBytes: 7 },
+    ]);
+  });
+
+  it("reads each client's total", async () => {
+    const result = await adapter.getClientTotals();
+
+    assertSuccess(result);
+    expect(result.value).toEqual(
+      expect.arrayContaining([
+        { clientId: "c1", measurements: 1 },
+        { clientId: "c2", measurements: 1 },
+        { clientId: null, measurements: 1 },
+      ]),
+    );
+    expect(result.value).toHaveLength(3);
+  });
+
+  it("reads the activity windows", async () => {
+    const result = await adapter.getActivityWindows();
+
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      measurements24h: 1,
+      measurements30d: 2,
+      experiments30d: 1,
+      contributors30d: 2,
+      devices30d: 2,
+      lastMeasurementAt: recent.toISOString(),
+    });
+  });
+
+  it("reads the measurements by their local hour", async () => {
+    const result = await adapter.getHourlyActivity();
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      { hourLocal: 3, measurements: 2 },
+      { hourLocal: 14, measurements: 1 },
+    ]);
+  });
+
+  it("reads the most observed parameter of each category", async () => {
+    const derived = await adapter.getTopParameter("derived");
+    const sensor = await adapter.getTopParameter("sensor");
+
+    assertSuccess(derived);
+    assertSuccess(sensor);
+    expect(derived.value).toEqual({
+      label: "Photosystem II efficiency (Phi2)",
+      name: "Phi2",
+      observations: 3,
+      median: 0.6,
+    });
+    expect(sensor.value).toEqual({
+      label: "Light intensity, PAR",
+      name: "par",
+      observations: 2,
+      median: 150,
+    });
+  });
+
+  it("writes each category a row without a parameter on every refresh, beside the counted ones", async () => {
+    const result = await client.query(
+      "SELECT category, observations FROM metrics_parameter_stats WHERE parameter = '' ORDER BY category",
+    );
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([
+      ["derived", 0],
+      ["sensor", 0],
+    ]);
+  });
+
+  it("reads the pool facts", async () => {
+    const result = await adapter.getPoolFacts();
+
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      sessionMedianMeasurements: 2,
+      currentStreakDays: 1,
+      deviceEnduranceDays: 1,
+      simultaneityPeakDevices: 1,
+      timezonesAllTime: 2,
+      timezonesPeakDay: 1,
+    });
+    expect(result.value?.meanArrivalGapSeconds).toBeCloseTo(
+      (recent.getTime() - earlier.getTime()) / 1000,
+      3,
+    );
+  });
+
+  it("reads an experiment's days within the window", async () => {
+    const result = await adapter.getScopedDailyActivity(60);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      { date: dateOf(older), experimentId: "e2", measurements: 1 },
+      { date: dateOf(earlier), experimentId: "e1", measurements: 1 },
+      { date: dateOf(recent), experimentId: "e1", measurements: 1 },
+    ]);
+  });
+
+  it("reads one kind of resource's days within the window", async () => {
+    const protocols = await adapter.getResourceDailyActivity("protocol", 60);
+    const macros = await adapter.getResourceDailyActivity("macro", 30);
+
+    assertSuccess(protocols);
+    assertSuccess(macros);
+    expect(protocols.value).toEqual([
+      { date: dateOf(earlier), resourceType: "protocol", resourceId: "p1", measurements: 1 },
+      { date: dateOf(recent), resourceType: "protocol", resourceId: "p1", measurements: 1 },
+    ]);
+    expect(macros.value).toEqual([
+      { date: dateOf(earlier), resourceType: "macro", resourceId: "mac1", measurements: 1 },
+      { date: dateOf(recent), resourceType: "macro", resourceId: "mac1", measurements: 1 },
+    ]);
+  });
+
+  it("reads the last 30 days' contributors and publishers per experiment", async () => {
+    const contributors = await adapter.getContributorPairs();
+    const devices = await adapter.getDevicePairs();
+
+    assertSuccess(contributors);
+    assertSuccess(devices);
+    expect(contributors.value).toEqual(
+      expect.arrayContaining([
+        { experimentId: "e1", userId: "u1" },
+        { experimentId: "e1", userId: "u2" },
+      ]),
+    );
+    expect(contributors.value).toHaveLength(2);
+    expect(devices.value).toEqual(
+      expect.arrayContaining([
+        { experimentId: "e1", clientId: "c1" },
+        { experimentId: "e1", clientId: "c2" },
+      ]),
+    );
+    expect(devices.value).toHaveLength(2);
   });
 });
 

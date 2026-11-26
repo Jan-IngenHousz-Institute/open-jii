@@ -224,7 +224,7 @@ describe("ListProtocolsUseCase", () => {
       );
       await testApp.module
         .get<CachePort>(CACHE_PORT)
-        .invalidate(resourceMetricsCacheKey("protocol"));
+        .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
     }
 
     it("falls back to the default order and reports unavailable when sorting by activity with no snapshot", async () => {
@@ -307,7 +307,7 @@ describe("ListProtocolsUseCase", () => {
       );
       await testApp.module
         .get<CachePort>(CACHE_PORT)
-        .invalidate(resourceMetricsCacheKey("protocol"));
+        .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
       const result = await useCase.executePaginated(1, 20, undefined, "all", testUserId, [
         { field: "activity", direction: "desc" },
@@ -347,7 +347,7 @@ describe("ListProtocolsUseCase", () => {
       );
       await testApp.module
         .get<CachePort>(CACHE_PORT)
-        .invalidate(resourceMetricsCacheKey("protocol"));
+        .invalidate(resourceMetricsCacheKey("warehouse", "protocol"));
 
       const result = await useCase.execute(undefined, "all", testUserId, [
         { field: "activity", direction: "desc" },

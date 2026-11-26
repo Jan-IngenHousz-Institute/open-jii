@@ -23,3 +23,6 @@ export const STORE_READER_ACCESS = {
   tables: reader.tables,
   rowFilter: reader.rowFilter,
 };
+
+/** The reader's settings profile as users.xml writes it, its parent's first, its limits fixed. */
+export const STORE_READER_PROFILE = reader.settings.join(", ");

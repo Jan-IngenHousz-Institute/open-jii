@@ -15,6 +15,24 @@ import type {
   StoreQueryParams,
 } from "../../../experiments/core/ports/serving-store.port";
 import { STORE_QUERY_TOO_LARGE } from "../../../experiments/core/ports/serving-store.port";
+import { MetricsTable } from "../../../metrics/core/models/metrics-table.model";
+import type {
+  ActivityWindowsRow,
+  ContributorPairRow,
+  DailyActivityRow,
+  DevicePairRow,
+  HourlyActivityRow,
+  ParameterCategory,
+  ParameterStatsRow,
+  PlatformTotalsRow,
+  PoolFactsRow,
+  ResourceDailyRow,
+  ScopedDailyRow,
+} from "../../../metrics/core/ports/metrics-reads.port";
+import type {
+  ClientTotalsRow,
+  ServingStorePort as MetricsServingStorePort,
+} from "../../../metrics/core/ports/serving-store.port";
 import { AppError, failure, success } from "../../utils/fp-utils";
 import type { Result } from "../../utils/fp-utils";
 import { hasAggregationContent } from "../databricks/services/query-builder/expressions/aggregation";
@@ -38,7 +56,7 @@ const TABLE_TYPES: Record<string, ExperimentTableType> = {
 };
 
 @Injectable()
-export class ServingStoreAdapter implements ServingStorePort {
+export class ServingStoreAdapter implements ServingStorePort, MetricsServingStorePort {
   private readonly logger = new Logger(ServingStoreAdapter.name);
 
   constructor(private readonly client: ServingStoreClientService) {}
@@ -412,6 +430,235 @@ export class ServingStoreAdapter implements ServingStorePort {
       return result;
     }
     return success(result.value.rows.flatMap(([id]) => (typeof id === "string" ? [id] : [])));
+  }
+
+  async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
+    const columns = [
+      "total_measurements",
+      "total_volume_bytes",
+      "total_uploaded_rows",
+      "total_macro_executions",
+      "devices_all_time",
+      "experiments_with_data",
+      "first_measurement_at",
+      "last_measurement_at",
+      "computed_at",
+    ];
+    const result = await this.readMetricsView("metrics_platform_totals", columns, "LIMIT 1");
+    return result.isFailure() ? result : success(result.value.platformTotals());
+  }
+
+  async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
+    const columns = ["date", "measurements", "cumulative_measurements", "volume_bytes"];
+    const result = await this.readMetricsView(
+      "metrics_daily_activity",
+      columns,
+      `ORDER BY date DESC LIMIT ${days}`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.dailyActivity();
+    this.warnDroppedMetricsRows("metrics_daily_activity", result.value.rows.length - mapped.length);
+    return success(mapped.reverse());
+  }
+
+  async getClientTotals(): Promise<Result<ClientTotalsRow[]>> {
+    const result = await this.readMetricsView("metrics_client_totals", [
+      "client_id",
+      "total_measurements",
+    ]);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.clientTotals();
+    this.warnDroppedMetricsRows("metrics_client_totals", result.value.rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {
+    const columns = [
+      "measurements_24h",
+      "measurements_30d",
+      "experiments_30d",
+      "contributors_30d",
+      "devices_30d",
+      "last_measurement_at",
+      "computed_at",
+    ];
+    const result = await this.readMetricsView("metrics_activity_windows", columns, "LIMIT 1");
+    return result.isFailure() ? result : success(result.value.activityWindows());
+  }
+
+  async getHourlyActivity(): Promise<Result<HourlyActivityRow[]>> {
+    const result = await this.readMetricsView(
+      "metrics_hourly_activity",
+      ["hour_local", "measurements"],
+      "ORDER BY hour_local ASC",
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.hourlyActivity();
+    this.warnDroppedMetricsRows(
+      "metrics_hourly_activity",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
+    const result = await this.readMetricsView(
+      "metrics_parameter_stats",
+      ["parameter", "label", "observations", "median_value"],
+      `WHERE category = ${new StoreQueryBuilder().escapeValue(category)}`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    // Every refresh writes each category a row without a parameter, so a category with no row at
+    // all has not refreshed yet, and reads as a failure, as a warehouse table not yet written does.
+    const hasRefreshed = result.value.rows.length > 0;
+    if (!hasRefreshed) {
+      return failure(AppError.notFound("metrics_parameter_stats has not refreshed yet"));
+    }
+
+    return success(result.value.topParameter());
+  }
+
+  async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
+    const columns = [
+      "session_median_measurements",
+      "mean_arrival_gap_seconds",
+      "current_streak_days",
+      "device_endurance_days",
+      "simultaneity_peak_devices",
+      "timezones_all_time",
+      "timezones_peak_day",
+    ];
+    const result = await this.readMetricsView("metrics_pool_facts", columns, "LIMIT 1");
+    return result.isFailure() ? result : success(result.value.poolFacts());
+  }
+
+  async getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>> {
+    const result = await this.readMetricsView(
+      "metrics_daily_activity_by_experiment",
+      ["date", "experiment_id", "measurements"],
+      `WHERE ${this.lastDays(days)} ORDER BY date ASC`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.scopedDaily();
+    this.warnDroppedMetricsRows(
+      "metrics_daily_activity_by_experiment",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getResourceDailyActivity(
+    resourceType: string,
+    days: number,
+  ): Promise<Result<ResourceDailyRow[]>> {
+    const type = new StoreQueryBuilder().escapeValue(resourceType);
+    const result = await this.readMetricsView(
+      "metrics_daily_activity_by_resource",
+      ["date", "resource_type", "resource_id", "measurements"],
+      `WHERE resource_type = ${type} AND ${this.lastDays(days)} ORDER BY date ASC`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.resourceDaily();
+    this.warnDroppedMetricsRows(
+      "metrics_daily_activity_by_resource",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getContributorPairs(): Promise<Result<ContributorPairRow[]>> {
+    const result = await this.readMetricsView("metrics_experiment_contributors_window", [
+      "experiment_id",
+      "user_id",
+    ]);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.contributorPairs();
+    this.warnDroppedMetricsRows(
+      "metrics_experiment_contributors_window",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  async getDevicePairs(): Promise<Result<DevicePairRow[]>> {
+    const result = await this.readMetricsView("metrics_experiment_devices_window", [
+      "experiment_id",
+      "client_id",
+    ]);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const mapped = result.value.devicePairs();
+    this.warnDroppedMetricsRows(
+      "metrics_experiment_devices_window",
+      result.value.rows.length - mapped.length,
+    );
+    return success(mapped);
+  }
+
+  /**
+   * A metrics view's columns, each cell as the warehouse's text: the views hold only numbers, text,
+   * dates and times, and the store quotes a NaN double, which reads as no number either way.
+   */
+  private async readMetricsView(
+    view: string,
+    columns: string[],
+    clauses = "",
+  ): Promise<Result<MetricsTable>> {
+    const result = await this.client.query(`SELECT ${columns.join(", ")} FROM ${view} ${clauses}`);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const rows = result.value.rows.map((row) =>
+      row.map((value) =>
+        typeof value === "string" || typeof value === "number" ? String(value) : null,
+      ),
+    );
+    const index = Object.fromEntries(columns.map((column, position) => [column, position]));
+    return success(new MetricsTable(rows, index));
+  }
+
+  /** Today and the `days - 1` dates before it, as the warehouse's metrics reads bound them. */
+  private lastDays(days: number): string {
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+    const asDate = (value: Date) =>
+      new StoreQueryBuilder().escapeValue(value.toISOString().slice(0, 10));
+    return `date BETWEEN ${asDate(from)} AND ${asDate(to)}`;
+  }
+
+  private warnDroppedMetricsRows(view: string, dropped: number): void {
+    if (dropped > 0) {
+      this.logger.warn({
+        msg: "Skipped malformed metrics rows",
+        operation: "readMetricsView",
+        view,
+        dropped,
+      });
+    }
   }
 
   private experimentArgument(experimentId: string): string {

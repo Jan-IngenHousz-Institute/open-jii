@@ -369,7 +369,7 @@ describe("ListExperimentsUseCase", () => {
       );
       await testApp.module
         .get<CachePort>(CACHE_PORT)
-        .invalidate(resourceMetricsCacheKey("experiment"));
+        .invalidate(resourceMetricsCacheKey("warehouse", "experiment"));
     }
 
     it("falls back to name order and reports unavailable when activity is paired with name and there is no snapshot", async () => {
@@ -451,7 +451,7 @@ describe("ListExperimentsUseCase", () => {
       );
       await testApp.module
         .get<CachePort>(CACHE_PORT)
-        .invalidate(resourceMetricsCacheKey("experiment"));
+        .invalidate(resourceMetricsCacheKey("warehouse", "experiment"));
 
       const result = await useCase.executePaginated(
         testUserId,
@@ -495,7 +495,7 @@ describe("ListExperimentsUseCase", () => {
       );
       await testApp.module
         .get<CachePort>(CACHE_PORT)
-        .invalidate(resourceMetricsCacheKey("experiment"));
+        .invalidate(resourceMetricsCacheKey("warehouse", "experiment"));
 
       const result = await useCase.execute(testUserId, undefined, undefined, undefined, [
         { field: "activity", direction: "desc" },
