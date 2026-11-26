@@ -35,6 +35,12 @@ return addresses. openJII Lab does not join Better Auth's trusted browser origin
 - Every application under `openjii.org` sees openJII sessions, so each one has to
   meet openJII's bar: the token is never stored or logged, changes are reviewed,
   and its AWS account runs under the same guardrails as openJII's.
+- **Exception: openJII Lab's production releases.** The service owner reviews
+  each release against its exact plan and records the evidence, but the
+  repository does not enforce that review before a deploy. The service owner
+  accepted this on 2026-11-12. It ends on 2027-03-31, or sooner if openJII Lab
+  opens to people outside JII, its repository moves to a plan that can enforce
+  review, or more people deploy it. From then openJII Lab meets the bar in full.
 - Return addresses are approved by origin, so any path on openJII Lab passes.
   openJII Lab accepts only same-origin relative paths in its own `redirect`
   parameter, so an approved return cannot chain on to another site.
