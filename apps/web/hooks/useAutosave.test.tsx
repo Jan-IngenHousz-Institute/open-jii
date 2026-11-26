@@ -278,6 +278,26 @@ describe("useAutosave", () => {
     expect(result.current.status).toBe("idle");
   });
 
+  it("does not retry a failed save after autosave is disabled", async () => {
+    const save = vi.fn().mockRejectedValue(new Error("Save failed"));
+    const { result, rerender } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, enabled, delayMs: 50 }),
+      { initialProps: { value: "v0", enabled: true } },
+    );
+
+    rerender({ value: "v1", enabled: true });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(result.current.status).toBe("error");
+    const retry = result.current.flush;
+
+    rerender({ value: "v1", enabled: false });
+    await act(() => retry({ retryFailed: true }));
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("flush() with no pending save still awaits an in-flight save", async () => {
     let resolveSave: (() => void) | null = null;
     const save = vi.fn(
@@ -313,6 +333,43 @@ describe("useAutosave", () => {
     expect(flushResolved).toBe(true);
   });
 
+  it("flushes an undo made during a save before the editor disables autosave", async () => {
+    const edit = Promise.withResolvers<void>();
+    const undo = Promise.withResolvers<void>();
+    const save = vi
+      .fn<(value: string) => Promise<void>>()
+      .mockReturnValueOnce(edit.promise)
+      .mockReturnValueOnce(undo.promise);
+    const { result, rerender } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, enabled, delayMs: 50 }),
+      { initialProps: { value: "original", enabled: true } },
+    );
+
+    rerender({ value: "edited", enabled: true });
+    await act(() => vi.advanceTimersByTimeAsync(50));
+    rerender({ value: "original", enabled: true });
+
+    let closed = false;
+    const closing = result.current.flush().then(() => {
+      rerender({ value: "original", enabled: false });
+      closed = true;
+    });
+    expect(save.mock.calls).toEqual([["edited"]]);
+    await act(async () => {
+      edit.resolve();
+      await edit.promise;
+    });
+
+    expect(save.mock.calls).toEqual([["edited"], ["original"]]);
+    expect(closed).toBe(false);
+    await act(async () => {
+      undo.resolve();
+      await closing;
+    });
+    expect(closed).toBe(true);
+  });
+
   it("fires a pending save on unmount when flushOnUnmount is true (default)", () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const { rerender, unmount } = renderHook(
@@ -324,6 +381,20 @@ describe("useAutosave", () => {
     rerender({ value: "v1" });
     unmount();
     expect(save).toHaveBeenCalledWith("v1");
+  });
+
+  it("does not flush a pending save on unmount after editing is disabled", () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const { rerender, unmount } = renderHook(
+      ({ value, enabled }: { value: string; enabled: boolean }) =>
+        useAutosave({ value, toKey: (v) => v, save, enabled, delayMs: 5_000 }),
+      { initialProps: { value: "v0", enabled: true } },
+    );
+
+    rerender({ value: "v1", enabled: true });
+    rerender({ value: "v1", enabled: false });
+    unmount();
+    expect(save).not.toHaveBeenCalled();
   });
 
   it("skips the unmount flush when flushOnUnmount is false", () => {
