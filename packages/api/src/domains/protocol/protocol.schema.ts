@@ -17,6 +17,7 @@ export const zSensorFamily = z.enum([
   "minipar",
   "generic",
   "ambit",
+  "co2dot",
   "mobile",
 ]);
 

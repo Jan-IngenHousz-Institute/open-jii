@@ -20,7 +20,14 @@ export type TransportType = "bluetooth-classic" | "ble" | "usb" | "web-bluetooth
 export type TransportCategory = "bluetooth" | "serial";
 
 /** Supported device types */
-export type DeviceType = "multispeq" | "ambit" | "minipar" | "ambyte" | "generic" | "mobile";
+export type DeviceType =
+  | "multispeq"
+  | "ambit"
+  | "minipar"
+  | "co2dot"
+  | "ambyte"
+  | "generic"
+  | "mobile";
 
 /** Transport support declaration for a device type */
 export interface DeviceTransportSupport {
@@ -67,6 +74,13 @@ export const DEVICE_TRANSPORT_SUPPORT: Record<DeviceType, DeviceTransportSupport
     supportsStoredConfig: false,
   },
   minipar: {
+    supportedTransports: ["serial"],
+    supportsBLE: false,
+    supportsBluetoothClassic: false,
+    supportsStoredConfig: false,
+  },
+  // CO2Dot is an ESP32 CO2 and spectral sensor with the MiniPAR's console style, on USB only.
+  co2dot: {
     supportedTransports: ["serial"],
     supportsBLE: false,
     supportsBluetoothClassic: false,

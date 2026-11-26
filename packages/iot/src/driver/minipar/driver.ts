@@ -10,6 +10,7 @@
  */
 import type { DeviceIdentity, SensorFamily } from "../../core/families";
 import type { ITransportAdapter } from "../../transport/interface";
+import { INFO_COMMAND, parseInfoData, reportedMac } from "../../utils/device-info/device-info";
 import { collectReply, parseOpenJiiEnvelope } from "../../utils/framing/openjii-envelope";
 import type { RxCollectorHooks } from "../../utils/framing/openjii-envelope";
 import type { Logger } from "../../utils/logger/logger";
@@ -136,13 +137,35 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
     });
   }
 
-  /** Identity from `hello` (`MiniPAR,<version>,<firmware>` or the JSON-mode form). */
+  /**
+   * The eFuse MAC from INFO, or undefined when the firmware does not answer it.
+   * Plain mode, the usual one, takes the `info` line and JSON mode takes
+   * `{"command":"INFO"}`; both print the same INFO reply.
+   */
+  private async readInfoMac(): Promise<string | undefined> {
+    for (const command of [MINIPAR_COMMANDS.INFO, INFO_COMMAND]) {
+      const info = await this.execute<string>(command, {
+        timeoutMs: Math.min(2_000, this.defaultTimeoutMs),
+      });
+      if (!info.success || typeof info.data !== "string") continue;
+      const mac = reportedMac(parseInfoData(info.data)?.device_id);
+      if (mac) return mac;
+    }
+    return undefined;
+  }
+
+  /**
+   * Identity from `hello` (`MiniPAR,<version>,<firmware>` or the JSON-mode form).
+   * The serial is the eFuse MAC: the JSON hello carries it as `mac`; otherwise
+   * INFO is asked, which firmware without it refuses and leaves the serial unknown.
+   */
   async getDeviceIdentity(): Promise<DeviceIdentity> {
     const result = await this.execute<string>(MINIPAR_COMMANDS.HELLO, { timeoutMs: 3_000 });
     const text = typeof result.data === "string" ? result.data : "";
 
     let name: string | undefined;
     let firmwareVersion: string | undefined;
+    let deviceId: string | undefined;
     const csv = /^minipar\s*,\s*(?<version>[^,\s]+)\s*(?:,\s*(?<firmware>[^,\s]+))?/im.exec(text);
     if (csv) {
       name = "MiniPAR";
@@ -156,6 +179,7 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
           name = parsed.device;
         }
         if (typeof parsed.version === "string") firmwareVersion = parsed.version;
+        deviceId = reportedMac(parsed.mac);
       } catch {
         // unrecognized hello; identity stays minimal
       }
@@ -168,11 +192,14 @@ export class MiniParDriver extends DeviceDriver<MiniParStreamEvents> {
         ? named.data.trim()
         : undefined;
 
+    deviceId ??= await this.readInfoMac();
+
     return {
       family: this.family,
       name: deviceName && !/noname/i.test(deviceName) ? deviceName : name,
+      ...(deviceId ? { deviceId } : {}),
       firmwareVersion,
-      raw: { helloReply: text, deviceName },
+      raw: { helloReply: text, deviceName, ...(deviceId ? { mac: deviceId } : {}) },
     };
   }
 

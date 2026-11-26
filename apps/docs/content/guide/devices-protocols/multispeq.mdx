@@ -52,15 +52,21 @@ Bluetooth Classic (BR/EDR), which the browser's Web Bluetooth API cannot reach.
 
 ## The MultispeQ joins your device registry
 
-The first time you connect a MultispeQ in the mobile app, openJII adds it to
-**Devices** on the web as a MultispeQ, named by the four Bluetooth address bytes
-its firmware reports (for example `03:25:05:25`). It lands in your personal
-organization; to share it with a team, transfer it to that organization from the
-device page. Connecting the same MultispeQ again, from any phone or account,
-reuses the existing record. A device that does not report an identity, or the
-app's demo device, is not registered.
+The first time you connect a MultispeQ to the Android app over Bluetooth,
+openJII adds it to **Devices** on the web as a MultispeQ. Its serial is the
+MultispeQ's full Bluetooth address (for example `98:D3:31:03:25:05`), which the
+phone knows from the Bluetooth connection. The firmware reports only four bytes
+of that address, and the app registers the MultispeQ only when those four bytes
+match the first or last four bytes of the address. The MultispeQ lands in your
+personal organization; to share it with a team, transfer it to that
+organization from the device page. Connecting the same MultispeQ again, from any
+phone or account, reuses the existing record.
 
-{/* NEEDS-LIVE-CHECK: confirm on production that a real MultispeQ connected in the Android app appears under Devices with the four-byte serial. */}
+A MultispeQ connected over USB is not registered automatically, because the
+phone has no Bluetooth address for it there. Neither is a MultispeQ whose
+reported bytes do not match its address, nor the app's demo device.
+
+{/* NEEDS-LIVE-CHECK: confirm on production that a real MultispeQ connected in the Android app over Bluetooth appears under Devices with its full Bluetooth address as the serial. */}
 
 ## Before the first field session
 

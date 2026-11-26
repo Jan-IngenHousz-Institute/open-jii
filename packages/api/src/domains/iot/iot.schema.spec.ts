@@ -16,7 +16,7 @@ import {
   zDeviceExperiment,
   zMonitoringRangeQuery,
   zEnsureMobileDeviceBody,
-  zEnsureMultispeqDeviceBody,
+  zEnsureConnectedDeviceBody,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -556,23 +556,60 @@ describe("Iot Schema", () => {
     });
   });
 
-  describe("zEnsureMultispeqDeviceBody", () => {
-    it("canonicalizes the reported identity before it reaches the registry", () => {
-      const parsed = zEnsureMultispeqDeviceBody.parse({
-        serialNumber: "AB:CD:EF:01",
-        firmwareVersion: "2.345",
-      });
-
-      expect(parsed).toEqual({ serialNumber: "ab:cd:ef:01", firmwareVersion: "2.345" });
+  describe("zEnsureConnectedDeviceBody", () => {
+    it("normalizes an eFuse MAC for an Ambit, MiniPAR or CO2Dot", () => {
+      for (const family of ["ambit", "minipar", "co2dot"] as const) {
+        expect(
+          zEnsureConnectedDeviceBody.parse({
+            family,
+            serialNumber: "58cf79123456",
+            firmwareVersion: "1.07",
+          }),
+        ).toEqual({ family, serialNumber: "58:CF:79:12:34:56", firmwareVersion: "1.07" });
+      }
     });
 
-    it.each(["mock-1", "00:11:22:33:44:55", "00:00:00:00"])("rejects %s", (serialNumber) => {
-      expect(zEnsureMultispeqDeviceBody.safeParse({ serialNumber }).success).toBe(false);
+    it.each(["mock-1", "03:25:05:25", "00:00:00:00:00:00"])("rejects serial %s", (serialNumber) => {
+      expect(zEnsureConnectedDeviceBody.safeParse({ family: "ambit", serialNumber }).success).toBe(
+        false,
+      );
+    });
+
+    it("registers a MultispeQ only by a full address that contains its reported bytes", () => {
+      const address = "98:d3:31:03:25:05";
+      expect(
+        zEnsureConnectedDeviceBody.safeParse({
+          family: "multispeq",
+          serialNumber: address,
+          reportedId: "31:03:25:05",
+        }).success,
+      ).toBe(true);
+      expect(
+        zEnsureConnectedDeviceBody.safeParse({ family: "multispeq", serialNumber: address })
+          .success,
+      ).toBe(false);
+      expect(
+        zEnsureConnectedDeviceBody.safeParse({
+          family: "multispeq",
+          serialNumber: address,
+          reportedId: "11:22:33:44",
+        }).success,
+      ).toBe(false);
+    });
+
+    it("refuses families that do not register by connection", () => {
+      for (const family of ["ambyte", "generic", "mobile"]) {
+        expect(
+          zEnsureConnectedDeviceBody.safeParse({ family, serialNumber: "58:CF:79:12:34:56" })
+            .success,
+        ).toBe(false);
+      }
     });
 
     it("rejects a firmware string AWS could not store as a thing attribute", () => {
-      const parsed = zEnsureMultispeqDeviceBody.safeParse({
-        serialNumber: "03:25:05:25",
+      const parsed = zEnsureConnectedDeviceBody.safeParse({
+        family: "minipar",
+        serialNumber: "58:CF:79:12:34:56",
         firmwareVersion: "v 2 beta!",
       });
 

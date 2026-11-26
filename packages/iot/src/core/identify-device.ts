@@ -4,12 +4,14 @@
  * only transport send errors propagate. The transport is never disconnected.
  */
 import { AmbitDriver } from "../driver/ambit/driver";
+import { Co2DotDriver } from "../driver/co2dot/driver";
 import type { IDeviceDriver } from "../driver/driver-base";
 import { GenericCommandConnector } from "../driver/generic/command-connector";
 import { GenericDeviceDriver } from "../driver/generic/driver";
 import { MiniParDriver } from "../driver/minipar/driver";
 import { MultispeqDriver } from "../driver/multispeq/driver";
 import type { ITransportAdapter } from "../transport/interface";
+import { INFO_COMMAND, parseInfoReply, reportedMac } from "../utils/device-info/device-info";
 import type { Logger } from "../utils/logger/logger";
 import { defaultLogger } from "../utils/logger/logger";
 import type { DeviceIdentity, SensorFamily } from "./families";
@@ -32,7 +34,7 @@ export interface IdentifiedDevice {
 }
 
 const HELLO_PROBE = "hello\r\n";
-const INFO_PROBE = '{"command":"INFO"}\n';
+const INFO_PROBE = `${INFO_COMMAND}\n`;
 const DEFAULT_PROBE_TIMEOUT_MS = 2000;
 const DEFAULT_HELLO_RETRIES = 1;
 
@@ -45,6 +47,8 @@ export function createConnectorForFamily(family: SensorFamily, logger?: Logger):
       return new AmbitDriver(undefined, logger);
     case "minipar":
       return new MiniParDriver(undefined, logger);
+    case "co2dot":
+      return new Co2DotDriver(undefined, logger);
     case "generic":
       return new GenericDeviceDriver(undefined, logger);
   }
@@ -93,12 +97,15 @@ interface JsonHello {
   family: SensorFamily | null;
   name?: string;
   firmwareVersion?: string;
+  /** The eFuse MAC, when the firmware reports one (`mac`). */
+  mac?: string;
 }
 
 /**
  * JSON hello line carrying a string `device` key, lowercase-matched against
  * the known families (family null when unrecognized, first recognized line
- * wins). Every JSON hello carries `version`; some carry a persisted `name`.
+ * wins). Every JSON hello carries `version`; some carry a persisted `name`,
+ * and current MiniPAR and CO2Dot firmware carries `mac`, the eFuse MAC.
  */
 function parseJsonHello(text: string): JsonHello | null {
   let unknown: JsonHello | null = null;
@@ -122,6 +129,7 @@ function parseJsonHello(text: string): JsonHello | null {
           ? record.name.trim()
           : record.device,
       firmwareVersion: typeof record.version === "string" ? record.version : undefined,
+      mac: reportedMac(record.mac),
     };
     if (hello.family) return hello;
     unknown ??= hello;
@@ -139,7 +147,7 @@ function parseJsonHello(text: string): JsonHello | null {
  *  - Ambit: any other `<name> Ready` line, with or without trailing build text
  *    (`NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty`); never trust the name,
  *    only the sentinel, skipped
- *    when a JSON line self-declared an unrecognized device (e.g. CO2Dot):
+ *    when a JSON line self-declared an unrecognized device:
  *    that must fall through rather than be handed to the AmbitDriver
  */
 function classifyHelloReply(reply: string): DeviceIdentity | null {
@@ -152,6 +160,7 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
     return {
       family: jsonHello.family,
       name: jsonHello.name,
+      ...(jsonHello.mac ? { deviceId: jsonHello.mac } : {}),
       firmwareVersion: jsonHello.firmwareVersion,
       raw,
     };
@@ -190,23 +199,6 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
     return { family: "ambit", ...(firmwareVersion ? { firmwareVersion } : {}), raw };
   }
 
-  return null;
-}
-
-/** First buffered line that parses to an object with a "status" key, if any. */
-function parseInfoReply(buffer: string): Record<string, unknown> | null {
-  for (const line of buffer.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    try {
-      const parsed: unknown = JSON.parse(trimmed);
-      if (parsed !== null && typeof parsed === "object" && "status" in parsed) {
-        return parsed;
-      }
-    } catch {
-      // not JSON, keep scanning
-    }
-  }
   return null;
 }
 
@@ -322,6 +314,7 @@ export async function identifyDevice(
       ? {
           family: "generic",
           name: selfDeclared.name,
+          ...(selfDeclared.mac ? { deviceId: selfDeclared.mac } : {}),
           firmwareVersion: selfDeclared.firmwareVersion,
           raw: { helloReply },
         }

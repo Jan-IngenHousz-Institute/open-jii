@@ -14,8 +14,8 @@ vi.mock("~/features/connection/services/device-connection-manager/device-connect
   createDeviceCommandExecutor: vi.fn(),
 }));
 // The store registers MultispeQs through the API client, which needs runtime env.
-vi.mock("~/shared/composition/ensure-multispeq-registered", () => ({
-  ensureMultispeqRegistered: vi.fn(),
+vi.mock("~/shared/composition/ensure-connected-registered", () => ({
+  ensureConnectedRegistered: vi.fn(),
 }));
 
 const DEVICE_A: Device = { id: "usb-a", type: "usb", name: "MultispeQ #1" };

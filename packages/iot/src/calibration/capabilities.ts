@@ -5,6 +5,7 @@
  */
 import type { SensorFamily } from "../core/families";
 import { AMBIT_COMMANDS } from "../driver/ambit/commands";
+import { CO2DOT_COMMANDS } from "../driver/co2dot/commands";
 import { GENERIC_COMMANDS } from "../driver/generic/commands";
 import { MINIPAR_COMMANDS } from "../driver/minipar/commands";
 import { MULTISPEQ_COMMANDS } from "../driver/multispeq/commands";
@@ -22,6 +23,7 @@ const FAMILY_COMMANDS: Record<SensorFamily, Record<string, string>> = {
   minipar: MINIPAR_COMMANDS,
   ambit: AMBIT_COMMANDS,
   multispeq: MULTISPEQ_COMMANDS,
+  co2dot: CO2DOT_COMMANDS,
   generic: GENERIC_COMMANDS,
 };
 

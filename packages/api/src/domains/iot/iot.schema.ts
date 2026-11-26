@@ -4,7 +4,7 @@ import { zListFilter, zListSort, zPaginated, zPaginationQuery } from "../../shar
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
 import { zProtocolFamily, zSensorFamily } from "../protocol/protocol.schema";
-import { canonicalMultispeqSerial } from "./multispeq-identity";
+import { CONNECTED_FAMILIES, multispeqAddressMatches, normalizeMacSerial } from "./device-identity";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -51,7 +51,8 @@ export const zRegisterableDeviceType = zDeviceType.exclude(["mobile"]);
 export const zIotDevice = z.object({
   id: z.string().guid(),
   thingName: z.string(),
-  thingArn: z.string(),
+  // Null until credentials are issued: registering creates no AWS thing (decision 2).
+  thingArn: z.string().nullable(),
   serialNumber: z.string(),
   name: z.string().nullable(),
   deviceType: zDeviceType,
@@ -198,36 +199,63 @@ export const zEnsureMobileDeviceBody = z.object({
   name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
 });
 
-export const zMultispeqSerial = z.string().transform((raw, ctx) => {
-  const serial = canonicalMultispeqSerial(raw);
-  if (serial === null) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "A MultispeQ identity is four Bluetooth MAC bytes, e.g. 03:25:05:25",
-    });
-    return z.NEVER;
-  }
-  return serial;
-});
+const zProvenanceAttribute = z
+  .string()
+  .max(64)
+  .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/);
 
-// Automatic registration when the mobile app connects a MultispeQ: an idempotent
-// ensure keyed on the physical identity, never on the phone or the transport.
-export const zEnsureMultispeqDeviceBody = z.object({
-  serialNumber: zMultispeqSerial.describe("device_info.device_id as the firmware reported it"),
-  firmwareVersion: z
-    .string()
-    .max(64)
-    .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/)
-    .optional()
-    .describe("Firmware that reported the identity, kept as registration provenance"),
-  name: z.string().min(1).max(255).optional().describe("device_info.device_name"),
-});
+/**
+ * Automatic registration when the mobile app connects a unit: an idempotent ensure keyed on
+ * the family plus the unit's own serial (decision 8), never on the phone or the transport.
+ * The serial is the eFuse MAC an Ambit, MiniPAR or CO2Dot reports, or for a MultispeQ the
+ * full Bluetooth address the phone holds, confirmed by the four bytes it reports (decision 13).
+ */
+export const zEnsureConnectedDeviceBody = z
+  .object({
+    family: z.enum(CONNECTED_FAMILIES),
+    serialNumber: z
+      .string()
+      .describe("The unit's eFuse MAC, or a MultispeQ's full Bluetooth address")
+      .transform((raw, ctx) => {
+        const serial = normalizeMacSerial(raw);
+        if (serial === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "A serial is a six-byte MAC or Bluetooth address, e.g. 58:CF:79:12:34:56",
+          });
+          return z.NEVER;
+        }
+        return serial;
+      }),
+    reportedId: z
+      .string()
+      .optional()
+      .describe("The four bytes a MultispeQ reports as device_info.device_id"),
+    firmwareVersion: zProvenanceAttribute
+      .optional()
+      .describe("Firmware that reported the identity, kept as registration provenance"),
+    name: z.string().min(1).max(255).optional().describe("The name the unit reports"),
+  })
+  .superRefine((body, ctx) => {
+    if (body.family !== "multispeq") return;
+    if (
+      body.reportedId === undefined ||
+      !multispeqAddressMatches(body.reportedId, body.serialNumber)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["reportedId"],
+        message:
+          "A MultispeQ registers by its full Bluetooth address, which must contain the four bytes it reports at one of its ends",
+      });
+    }
+  });
 
 /**
  * `created` registered the unit now; `existing` reused the unit already on record. The row is
  * returned only to the person who registered it, so a shared instrument never reveals its owner.
  */
-export const zEnsureMultispeqDeviceResult = z.object({
+export const zEnsureConnectedDeviceResult = z.object({
   outcome: z.enum(["created", "existing"]),
   device: zIotDevice.nullable(),
 });
@@ -607,7 +635,7 @@ export type BulkRegisterIotDevicesBody = z.infer<typeof zBulkRegisterIotDevicesB
 export type BulkRegisteredIotDevice = z.infer<typeof zBulkRegisteredIotDevice>;
 export type BulkRegisterIotDevicesResult = z.infer<typeof zBulkRegisterIotDevicesResult>;
 export type EnsureMobileDeviceBody = z.infer<typeof zEnsureMobileDeviceBody>;
-export type EnsureMultispeqDeviceBody = z.infer<typeof zEnsureMultispeqDeviceBody>;
-export type EnsureMultispeqDeviceResult = z.infer<typeof zEnsureMultispeqDeviceResult>;
+export type EnsureConnectedDeviceBody = z.infer<typeof zEnsureConnectedDeviceBody>;
+export type EnsureConnectedDeviceResult = z.infer<typeof zEnsureConnectedDeviceResult>;
 export type IotDevicePathParam = z.infer<typeof zIotDevicePathParam>;
 export type IssueIotCredentialsResponse = z.infer<typeof zIssueIotCredentialsResponse>;

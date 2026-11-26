@@ -67,6 +67,7 @@ export function getSensorFamilyBadgeTone(family: string): StatusTone {
     case "ambit":
       return "active";
     case "minipar":
+    case "co2dot":
       return "stale";
     default:
       return "archived";

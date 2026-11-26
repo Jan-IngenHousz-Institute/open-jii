@@ -75,6 +75,11 @@ export const DEVICE_PROFILES: Readonly<Record<SensorFamily, DeviceProfile>> = Ob
     productName: "MiniPAR",
     roles: ["measurement-device"],
   }),
+  co2dot: freezeProfile({
+    productId: "co2dot",
+    productName: "CO2Dot",
+    roles: ["measurement-device"],
+  }),
   ambyte: freezeProfile({
     productId: "ambyte",
     productName: "Ambyte",

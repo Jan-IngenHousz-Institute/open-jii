@@ -16,5 +16,5 @@ export type CreateIotDeviceDto = z.infer<typeof createIotDeviceSchema>;
 export type IotDeviceDto = z.infer<typeof selectIotDeviceSchema>;
 
 export type UpdateIotDeviceDto = Partial<
-  Pick<IotDeviceDto, "status" | "certificateId" | "certificateArn" | "name">
+  Pick<IotDeviceDto, "status" | "certificateId" | "certificateArn" | "name" | "thingArn">
 >;

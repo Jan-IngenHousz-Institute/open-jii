@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { contract } from "@repo/api/contract";
 import type {
   BulkRegisterIotDevicesResult,
-  EnsureMultispeqDeviceResult,
+  EnsureConnectedDeviceResult,
   IotDevice,
   IotDeviceDetail,
   IotDeviceList,
@@ -299,24 +299,25 @@ describe("IotDeviceController", () => {
     });
   });
 
-  describe("ensureMultispeqDevice", () => {
-    const path = () => testApp.resolveOrpcPath(contract.iot.ensureMultispeqDevice);
+  describe("ensureConnectedDevice", () => {
+    const path = () => testApp.resolveOrpcPath(contract.iot.ensureConnectedDevice);
 
-    it("registers a connected MultispeQ under its canonical identity, then reuses it (200)", async () => {
-      const first: SuperTestResponse<EnsureMultispeqDeviceResult> = await testApp
+    it("registers a connected unit by family and MAC without a thing, then reuses it (200)", async () => {
+      const first: SuperTestResponse<EnsureConnectedDeviceResult> = await testApp
         .post(path())
         .withAuth(userId)
-        .send({ serialNumber: "AB:CD:EF:01", firmwareVersion: "2.345" })
+        .send({ family: "minipar", serialNumber: "58cf79123456", firmwareVersion: "1.07" })
         .expect(StatusCodes.OK);
 
       expect(first.body.outcome).toBe("created");
-      expect(first.body.device?.serialNumber).toBe("ab:cd:ef:01");
-      expect(first.body.device?.deviceType).toBe("multispeq");
+      expect(first.body.device?.serialNumber).toBe("58:CF:79:12:34:56");
+      expect(first.body.device?.deviceType).toBe("minipar");
+      expect(first.body.device?.thingArn).toBeNull();
 
-      const second: SuperTestResponse<EnsureMultispeqDeviceResult> = await testApp
+      const second: SuperTestResponse<EnsureConnectedDeviceResult> = await testApp
         .post(path())
         .withAuth(userId)
-        .send({ serialNumber: "ab:cd:ef:01" })
+        .send({ family: "minipar", serialNumber: "58:CF:79:12:34:56" })
         .expect(StatusCodes.OK);
 
       expect(second.body.outcome).toBe("existing");
@@ -325,37 +326,58 @@ describe("IotDeviceController", () => {
 
     it("reuses a colleague's unit without returning it (200)", async () => {
       const otherUser = await testApp.createTestUser({ name: "Other" });
-      await testApp
-        .post(path())
-        .withAuth(otherUser)
-        .send({ serialNumber: "03:25:05:25" })
-        .expect(StatusCodes.OK);
+      const body = { family: "ambit", serialNumber: "A0:B1:C2:D3:E4:F5" };
+      await testApp.post(path()).withAuth(otherUser).send(body).expect(StatusCodes.OK);
 
-      const response: SuperTestResponse<EnsureMultispeqDeviceResult> = await testApp
+      const response: SuperTestResponse<EnsureConnectedDeviceResult> = await testApp
         .post(path())
         .withAuth(userId)
-        .send({ serialNumber: "03:25:05:25" })
+        .send(body)
         .expect(StatusCodes.OK);
 
       expect(response.body).toEqual({ outcome: "existing", device: null });
     });
 
-    it.each(["mock-1", "00:11:22:33:44:55", "00:00:00:00"])(
-      "rejects %s as a MultispeQ identity (400)",
-      async (serialNumber) => {
-        await testApp
-          .post(path())
-          .withAuth(userId)
-          .send({ serialNumber })
-          .expect(StatusCodes.BAD_REQUEST);
-      },
-    );
+    it("registers a MultispeQ only by a full address that fits its reported bytes", async () => {
+      await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ family: "multispeq", serialNumber: "98:D3:31:03:25:05", reportedId: "31:03:25:05" })
+        .expect(StatusCodes.OK);
+      await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ family: "multispeq", serialNumber: "98:D3:31:03:25:06", reportedId: "11:22:33:44" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("refuses a serial held by another family (409)", async () => {
+      await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ family: "ambit", serialNumber: "58:CF:79:12:34:57" })
+        .expect(StatusCodes.OK);
+      await testApp
+        .post(path())
+        .withAuth(userId)
+        .send({ family: "co2dot", serialNumber: "58:CF:79:12:34:57" })
+        .expect(StatusCodes.CONFLICT);
+    });
+
+    it.each([
+      { family: "ambit", serialNumber: "mock-1" },
+      { family: "ambit", serialNumber: "03:25:05:25" },
+      { family: "multispeq", serialNumber: "03:25:05:25" },
+      { family: "ambyte", serialNumber: "58:CF:79:12:34:56" },
+    ])("rejects $family $serialNumber (400)", async (body) => {
+      await testApp.post(path()).withAuth(userId).send(body).expect(StatusCodes.BAD_REQUEST);
+    });
 
     it("requires a signed-in person (401)", async () => {
       await testApp
         .post(path())
         .withoutAuth()
-        .send({ serialNumber: "03:25:05:25" })
+        .send({ family: "ambit", serialNumber: "A0:B1:C2:D3:E4:F5" })
         .expect(StatusCodes.UNAUTHORIZED);
     });
   });

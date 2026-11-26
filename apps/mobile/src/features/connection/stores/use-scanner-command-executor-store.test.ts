@@ -15,9 +15,10 @@ vi.mock("~/features/connection/services/device-connection-manager/device-connect
   createDeviceCommandExecutor: (device: Device | undefined) => createDeviceCommandExecutor(device),
 }));
 
-const ensureMultispeqRegistered = vi.fn();
-vi.mock("~/shared/composition/ensure-multispeq-registered", () => ({
-  ensureMultispeqRegistered: (identity: DeviceIdentity) => ensureMultispeqRegistered(identity),
+const ensureConnectedRegistered = vi.fn();
+vi.mock("~/shared/composition/ensure-connected-registered", () => ({
+  ensureConnectedRegistered: (identity: DeviceIdentity, device: Device) =>
+    ensureConnectedRegistered(identity, device),
 }));
 
 interface ExecuteCall {
@@ -443,7 +444,7 @@ describe("useScannerCommandExecutorStore", () => {
       });
     });
 
-    it("hands each fresh identity to MultispeQ registration", async () => {
+    it("hands each fresh identity and its device to connected registration", async () => {
       const identity: DeviceIdentity = { family: "multispeq", deviceId: "03:25:05:25", raw: {} };
       const exec = createControllableExecutor();
       exec.getIdentity = vi.fn().mockResolvedValue(identity);
@@ -452,7 +453,7 @@ describe("useScannerCommandExecutorStore", () => {
       await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
 
       await vi.waitFor(() => {
-        expect(ensureMultispeqRegistered).toHaveBeenCalledWith(identity);
+        expect(ensureConnectedRegistered).toHaveBeenCalledWith(identity, USB_DEVICE_A);
       });
     });
 

@@ -17,6 +17,7 @@ export const MINIPAR_COMMANDS = {
   STATUS:   "status",   // "model=...,available=...,atime=...,astep=...,gain=..."
   BATTERY:  "battery",  // always "NaN" (no battery)
   REBOOT:   "reboot",   // echoes "reboot" then restarts
+  INFO:     "info",     // plain-mode INFO: {"status":"success","data":{...,"device_id":<eFuse MAC>}}
 
   // Measurements
   PAR:        "par",        // calibrated PAR float

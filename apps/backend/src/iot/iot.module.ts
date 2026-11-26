@@ -13,6 +13,7 @@ import { NotificationModule } from "../notifications/notification.module";
 import { SharingModule } from "../sharing/sharing.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { CalibrationRunNotifier } from "./application/services/calibration-run-notifier";
+import { DeviceThingService } from "./application/services/device-thing";
 import { AddIotDeviceGroupMembersUseCase } from "./application/use-cases/add-iot-device-group-members/add-iot-device-group-members";
 import { ApproveCalibrationRunUseCase } from "./application/use-cases/approve-calibration-run/approve-calibration-run";
 import { BulkRegisterIotDevicesUseCase } from "./application/use-cases/bulk-register-iot-devices/bulk-register-iot-devices";
@@ -23,8 +24,8 @@ import { CreateIotDeviceGroupUseCase } from "./application/use-cases/create-iot-
 import { DeleteCalibrationDefinitionUseCase } from "./application/use-cases/delete-calibration-definition/delete-calibration-definition";
 import { DeleteIotDeviceGroupUseCase } from "./application/use-cases/delete-iot-device-group/delete-iot-device-group";
 import { DeleteIotDeviceUseCase } from "./application/use-cases/delete-iot-device/delete-iot-device";
+import { EnsureConnectedDeviceUseCase } from "./application/use-cases/ensure-connected-device/ensure-connected-device";
 import { EnsureMobileDeviceUseCase } from "./application/use-cases/ensure-mobile-device/ensure-mobile-device";
-import { EnsureMultispeqDeviceUseCase } from "./application/use-cases/ensure-multispeq-device/ensure-multispeq-device";
 import { GetActiveDeviceCalibrationUseCase } from "./application/use-cases/get-active-device-calibration/get-active-device-calibration";
 import { GetCalibrationDefinitionUseCase } from "./application/use-cases/get-calibration-definition/get-calibration-definition";
 import { GetCalibrationRunUseCase } from "./application/use-cases/get-calibration-run/get-calibration-run";
@@ -127,7 +128,7 @@ import { IotController } from "./presentation/iot.controller";
     RegisterIotDeviceUseCase,
     BulkRegisterIotDevicesUseCase,
     EnsureMobileDeviceUseCase,
-    EnsureMultispeqDeviceUseCase,
+    EnsureConnectedDeviceUseCase,
     ListIotDevicesUseCase,
     GetIotDeviceUseCase,
     GetIotDeviceActivityUseCase,
@@ -181,6 +182,7 @@ import { IotController } from "./presentation/iot.controller";
     ListDeviceCalibrationsUseCase,
     ReportDeviceCalibrationWriteUseCase,
     CalibrationRunNotifier,
+    DeviceThingService,
     IotDeviceRepository,
     IotDeviceGroupRepository,
     ExperimentDeviceRepository,

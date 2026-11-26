@@ -342,8 +342,8 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
     });
 
     // The console saw three raw reads, both coefficient writers and their
-    // readback, the identity read for the record, then the check's calibrated
-    // read, in order.
+    // readback, the identity read for the record (this firmware refuses both
+    // INFO forms, so it reports no MAC), then the check's calibrated read, in order.
     expect(console.sent).toEqual([
       "par_raw",
       "par_raw",
@@ -353,6 +353,8 @@ describe("CalibrationWizard", { timeout: 20_000 }, () => {
       "get_cal_par",
       "hello",
       "get_name",
+      "info",
+      '{"command":"INFO"}',
       "par",
     ]);
   });

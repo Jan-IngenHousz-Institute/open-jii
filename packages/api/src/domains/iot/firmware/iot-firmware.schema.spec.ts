@@ -4,7 +4,7 @@ import { zFirmwareFamily, zFirmwareRelease } from "./iot-firmware.schema";
 
 describe("zFirmwareFamily", () => {
   it("covers only the families JII builds firmware for", () => {
-    expect(zFirmwareFamily.options).toEqual(["ambyte", "minipar", "ambit"]);
+    expect(zFirmwareFamily.options).toEqual(["ambyte", "minipar", "ambit", "co2dot"]);
   });
 
   it("rejects families with no JII firmware line", () => {

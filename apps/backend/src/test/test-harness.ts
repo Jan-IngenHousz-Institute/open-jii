@@ -722,8 +722,10 @@ export class TestHarness {
     thingName?: string;
     /** Explicit `null` seeds a nameless device — the column is nullable in reality. */
     name?: string | null;
-    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic" | "ambit" | "mobile";
+    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic" | "ambit" | "co2dot" | "mobile";
     status?: "registered" | "active" | "revoked" | "retired";
+    /** Explicit `null` seeds a device registered by connection, which has no thing yet. */
+    thingArn?: string | null;
     certificateId?: string;
     certificateArn?: string;
     visibility?: "private" | "public";
@@ -740,7 +742,10 @@ export class TestHarness {
       .insert(iotDevices)
       .values({
         thingName,
-        thingArn: `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`,
+        thingArn:
+          data.thingArn === undefined
+            ? `arn:aws:iot:eu-central-1:000000000000:thing/${thingName}`
+            : data.thingArn,
         serialNumber,
         name: data.name === undefined ? "Test device" : data.name,
         deviceType: data.deviceType ?? "generic",
