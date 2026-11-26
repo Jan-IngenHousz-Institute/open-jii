@@ -1,6 +1,7 @@
 "use client";
 
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
+import { PageLoading } from "@/components/shared/page-loading";
 import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useEffect, useMemo, useState } from "react";
@@ -37,9 +38,16 @@ export interface DashboardFormShellProps {
 }
 
 export function DashboardFormShell(props: DashboardFormShellProps) {
-  const [closeSave] = useState(() =>
-    getPendingDashboardCloseSave(props.experimentId, props.dashboardId),
-  );
+  const { experimentId, dashboardId } = props;
+  const [closeSave, setCloseSave] = useState<Promise<ExperimentDashboard> | null>();
+
+  useEffect(() => {
+    // The outgoing editor registers its close save during passive cleanup.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCloseSave(getPendingDashboardCloseSave(experimentId, dashboardId) ?? null);
+  }, [experimentId, dashboardId]);
+
+  if (closeSave === undefined) return <PageLoading />;
 
   return closeSave ? (
     <DashboardFormAfterCloseSave {...props} closeSave={closeSave} />
