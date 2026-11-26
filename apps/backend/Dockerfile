@@ -45,7 +45,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
 
-RUN turbo build --filter=${PROJECT}
+# Reuse the frozen install so parallel builds cannot start competing installs.
+RUN pnpm_config_verify_deps_before_run=false turbo build --filter=${PROJECT}
 
 # Dependencies stage - create a clean production dependencies directory
 FROM builder AS dependencies
