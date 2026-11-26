@@ -845,8 +845,9 @@ function groupedBars(
   return grouping;
 }
 
-function measureGroupedBars(bars: GroupedBar[]): { spacing?: number; hasRepeatedPosition?: true } {
+function measureGroupedBars(bars: GroupedBar[]) {
   const positions: number[] = [];
+  let hasRepeatedPosition = false;
   for (const {
     series: { x, y },
   } of bars) {
@@ -857,13 +858,16 @@ function measureGroupedBars(bars: GroupedBar[]): { spacing?: number; hasRepeated
       const position = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
       if (typeof position !== "number" || !Number.isFinite(position)) continue;
       // Explicit offsets disable Plotly's stacking of identical X values within a trace.
-      if (seen.has(position)) return { hasRepeatedPosition: true };
+      if (seen.has(position)) hasRepeatedPosition = true;
       seen.add(position);
       positions.push(position);
     }
   }
   const { count, spacing } = distinctBarSpacing(positions);
-  return { spacing: count > 1 && Number.isFinite(spacing) ? spacing : undefined };
+  return {
+    spacing: count > 1 && Number.isFinite(spacing) ? spacing : undefined,
+    hasRepeatedPosition,
+  };
 }
 
 function distinctBarSpacing(positions: number[]) {

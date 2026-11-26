@@ -455,6 +455,38 @@ describe("CartesianChart", () => {
       ]);
     });
 
+    it.each([
+      { repeatGap: 4, neighborX: [0], width: 1 },
+      { repeatGap: 2, neighborX: [0, 8], width: 0.5 },
+    ])(
+      "uses a matched facet's $repeatGap-unit gap after repeated X values",
+      ({ repeatGap, neighborX, width }) => {
+        const repeatedX = [0, 0, repeatGap];
+        const data = [
+          bar(repeatedX, left),
+          bar(repeatedX, left),
+          bar(repeatedX, leftOverlay),
+          bar(repeatedX, leftOverlay),
+          bar([], right),
+          bar(neighborX, right),
+          bar([], rightOverlay),
+          bar(neighborX, rightOverlay),
+        ];
+        render(<CartesianChart data={data} config={groupBars} subplots={groupedSubplots} />);
+
+        expect(readBarPlacements()).toEqual([
+          nativeBarPlacement,
+          nativeBarPlacement,
+          nativeBarPlacement,
+          nativeBarPlacement,
+          nativeBarPlacement,
+          [width, -width],
+          nativeBarPlacement,
+          [width, width],
+        ]);
+      },
+    );
+
     it("counts only populated series in independent facets, including hidden series", () => {
       const data = [
         ...[left, left, left, leftOverlay, leftOverlay, leftOverlay].map((axes) =>

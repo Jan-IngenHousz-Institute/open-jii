@@ -297,7 +297,9 @@ each panel.
 For grouped bars on multiple Y axes with a linear X scale, sharing the X scale
 reserves the same slots in each panel, even for a category missing from that
 panel. With independent X scales, each panel reserves slots for its own
-categories.
+categories. When a series has multiple bars at the same X value, those bars
+stack in its slot. A panel with stacked bars can still set the spacing for
+other panels that share its X scale.
 
 ### Colour a scatter chart by a column
 

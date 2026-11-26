@@ -295,6 +295,25 @@ try {
         assertMatchingBetaBounds(groups);
       }
     },
+    repeatedFacetSpacing: async () => {
+      for (const [repeatGap, neighborX] of [
+        [4, [0]],
+        [2, [0, 8]],
+      ]) {
+        const repeatedX = [0, 0, repeatGap];
+        const { chartSeries, subplots } = facets(
+          colorRows({ Alpha: repeatedX, Beta: repeatedX }),
+          colorRows({ Beta: neighborX }),
+        );
+        const groups = await render(chartSeries, [-2, 10], subplots);
+        const repeated = groups.filter(({ xaxis }) => xaxis === "x");
+        assert.equal(repeated.length, 4, JSON.stringify(groups));
+        for (const { bars } of repeated) {
+          assert.ok(Math.abs(bars[0].top - bars[1].bottom) <= 1, JSON.stringify(groups));
+        }
+        assertMatchingBetaBounds(groups);
+      }
+    },
     independentFacets: async () => {
       const left = Object.fromEntries(
         Array.from({ length: 40 }, (_, index) => [`Category ${index}`, [0, 2]]),
