@@ -1,6 +1,7 @@
 "use client";
 
 import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { parseWarehouseTimestamp } from "@/util/date";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 
 import { useTranslation } from "@repo/i18n";
@@ -9,15 +10,6 @@ interface ActivityIndicatorProps {
   measurements24h: number;
   lastMeasurementAt: string | null;
   locale: string;
-}
-
-/** Warehouse timestamps are UTC text, with or without an explicit zone. */
-const HAS_TIMEZONE = /(?:Z|[+-]\d{2}:?\d{2})$/;
-
-export function parseWarehouseTimestamp(value: string): Date | null {
-  const normalized = HAS_TIMEZONE.test(value) ? value : `${value.replace(" ", "T")}Z`;
-  const parsed = new Date(normalized);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /** The rolling 24h count. The recency line appears only when there is silence to report. */
