@@ -1,6 +1,7 @@
 "use client";
 
-import { usePrincipal } from "@/components/auth/principal-context";
+import { usePrincipalSession } from "@/components/auth/principal-context";
+import { isCurrentSession } from "@/hooks/auth/is-current-session";
 import { experimentAccessQuery } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
@@ -69,7 +70,7 @@ export function DashboardAutosaveBoundary({
   const { t } = useTranslation("experimentDashboards");
   const locale = useLocale();
   const queryClient = useQueryClient();
-  const { userId } = usePrincipal();
+  const { userId, sessionId } = usePrincipalSession();
   const { selectedWidgetId, selectWidget } = useDashboardEditor();
   const mounted = useRef(false);
   const enabledRef = useRef(enabled);
@@ -103,11 +104,13 @@ export function DashboardAutosaveBoundary({
 
   const showUnattachedCopies = useCallback(
     async (charts: CreatedChart[]) => {
+      if (!(await isCurrentSession(sessionId))) return;
       for (const chart of charts) unattachedCharts.current.set(chart.id, chart);
       const query = experimentAccessQuery(orpc, userId, experimentId);
       const access = await queryClient
         .fetchQuery({ ...query, staleTime: 0, retry: false })
         .catch(() => queryClient.getQueryData(query.queryKey));
+      if (!(await isCurrentSession(sessionId))) return;
       const isArchived = access?.experiment.status === "archived";
       const openCopy = t("editor.inspector.openChartCopy");
       const nameLinks = unattachedCharts.current.size > 1;
@@ -125,7 +128,7 @@ export function DashboardAutosaveBoundary({
           : { action: links[0] }),
       });
     },
-    [experimentId, locale, queryClient, t, userId],
+    [experimentId, locale, queryClient, sessionId, t, userId],
   );
 
   const onSaved = useCallback(
@@ -181,17 +184,25 @@ export function DashboardAutosaveBoundary({
   const failureTitle = t("editor.inspector.copySaveFailed");
   useEffect(() => {
     if (!showFailure) return;
-    const notification = toast({
-      title: failureTitle,
-      variant: "destructive",
-      action: (
-        <ToastAction altText={retryLabel} onClick={retry}>
-          {retryLabel}
-        </ToastAction>
-      ),
+    let active = true;
+    let dismiss: (() => void) | undefined;
+    void isCurrentSession(sessionId).then((current) => {
+      if (!active || !current) return;
+      dismiss = toast({
+        title: failureTitle,
+        variant: "destructive",
+        action: (
+          <ToastAction altText={retryLabel} onClick={retry}>
+            {retryLabel}
+          </ToastAction>
+        ),
+      }).dismiss;
     });
-    return notification.dismiss;
-  }, [showFailure, error, retry, retryLabel, failureTitle]);
+    return () => {
+      active = false;
+      dismiss?.();
+    };
+  }, [showFailure, error, retry, retryLabel, failureTitle, sessionId]);
 
   useEffect(() => {
     if (enabled || copies.size === 0) return;

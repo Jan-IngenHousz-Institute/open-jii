@@ -5,10 +5,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useSession } from "@repo/auth/client";
 
-import { PrincipalProvider, usePrincipal } from "./principal-context";
+import { PrincipalProvider, usePrincipal, usePrincipalSession } from "./principal-context";
 
 function ServerUser({ children }: { children: ReactNode }) {
-  return <PrincipalProvider userId="user-1">{children}</PrincipalProvider>;
+  return (
+    <PrincipalProvider userId="user-1" sessionId="server-session">
+      {children}
+    </PrincipalProvider>
+  );
 }
 
 describe("usePrincipal", () => {
@@ -27,9 +31,13 @@ describe("usePrincipal", () => {
   it("uses the server's user while the browser's session loads", () => {
     vi.mocked(useSession).mockReturnValue(createUseSessionResult({ isPending: true }));
 
-    const { result } = renderHook(() => usePrincipal(), { wrapper: ServerUser });
+    const { result } = renderHook(
+      () => ({ principal: usePrincipal(), session: usePrincipalSession() }),
+      { wrapper: ServerUser },
+    );
 
-    expect(result.current).toEqual({ userId: "user-1", isPending: false });
+    expect(result.current.principal).toEqual({ userId: "user-1", isPending: false });
+    expect(result.current.session).toEqual({ userId: "user-1", sessionId: "server-session" });
   });
 
   it("lets the browser's session win once it has loaded", () => {
@@ -37,8 +45,12 @@ describe("usePrincipal", () => {
       createUseSessionResult({ data: createSession({ user: { id: "user-2" } }) }),
     );
 
-    const { result } = renderHook(() => usePrincipal(), { wrapper: ServerUser });
+    const { result } = renderHook(
+      () => ({ principal: usePrincipal(), session: usePrincipalSession() }),
+      { wrapper: ServerUser },
+    );
 
-    expect(result.current).toEqual({ userId: "user-2", isPending: false });
+    expect(result.current.principal).toEqual({ userId: "user-2", isPending: false });
+    expect(result.current.session).toEqual({ userId: "user-2", sessionId: "session-1" });
   });
 });
