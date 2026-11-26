@@ -1,7 +1,7 @@
 import type { Layout, LayoutAxis } from "plotly.js";
 
 import type { CartesianColorAxis, CartesianSeries, FacetGridConfig } from "./cartesian-chart";
-import { chartTextWidth } from "./outer-labels";
+import { chartTextWidth, HORIZONTAL_LEGEND_HEIGHT, LEGEND_PADDING } from "./outer-labels";
 import type { PlotlyChartConfig } from "./types";
 import type { ChartTierOptions } from "./utils";
 import {
@@ -364,7 +364,8 @@ export function applyCartesianAxes(
   }
   const left = visible.filter(({ index }) => index % 2 === 0).length;
   const right = visible.length - left;
-  if (!config.sparkline && (left > 1 || right > 1)) {
+  const stacked = !config.sparkline && (left > 1 || right > 1);
+  if (stacked) {
     visible.forEach((entry) => {
       // Only configure a label array if this axis is categorical.
       Object.assign(entry.axis, truncateCategoryTicks(entry.axis, entry.values, sizing));
@@ -375,8 +376,32 @@ export function applyCartesianAxes(
   }
   if (layout.legend && config.legendPosition?.startsWith("inside-") && layout.xaxis?.domain) {
     const [left = 0, right = 1] = layout.xaxis.domain;
-    const { x } = legendAnchorFor(config.legendPosition);
-    layout.legend = { ...layout.legend, xref: "paper", x: left + (right - left) * x };
+    const paperWidth = width - (layout.margin?.l ?? 0) - (layout.margin?.r ?? 0);
+    const plotWidth = (right - left) * paperWidth;
+    const legendFont = layout.legend.font?.size ?? 12;
+    const tooWide =
+      stacked &&
+      layout.showlegend !== false &&
+      data.some(
+        (series) =>
+          series.visible !== false &&
+          series.showlegend !== false &&
+          chartTextWidth(series.name ?? "", legendFont) + LEGEND_PADDING > plotWidth * 0.96,
+      );
+    const anchor = legendAnchorFor(tooWide ? "bottom" : config.legendPosition);
+    const ref = tooWide ? "container" : "paper";
+    const legend: Layout["legend"] & { maxheight?: number } = {
+      ...layout.legend,
+      ...anchor,
+      xref: ref,
+      yref: ref,
+      x: tooWide ? anchor.x : left + (right - left) * anchor.x,
+      maxheight: tooWide ? HORIZONTAL_LEGEND_HEIGHT : undefined,
+    };
+    layout.legend = legend;
+    if (tooWide) {
+      layout.margin = { ...layout.margin, b: (layout.margin?.b ?? 0) + HORIZONTAL_LEGEND_HEIGHT };
+    }
   }
   styleCartesianAxes(layout, data, config);
 }
@@ -395,7 +420,12 @@ export function prepareStackedAxesForExport(
     ...current,
     xaxis: { ...base.xaxis },
     yaxis: { ...base.yaxis },
-    margin: { ...current.margin, l: base.margin?.l, r: base.margin?.r },
+    margin: {
+      ...current.margin,
+      l: base.margin?.l,
+      r: base.margin?.r,
+      ...(config.legendPosition?.startsWith("inside-") ? { b: base.margin?.b } : {}),
+    },
   };
   applyCartesianAxes(exported, data, config, width, colorbar, sizing, ranges);
 

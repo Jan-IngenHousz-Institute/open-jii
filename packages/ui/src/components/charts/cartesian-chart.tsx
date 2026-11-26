@@ -553,7 +553,13 @@ export function CartesianChart({
       next.legend = { ...next.legend, uirevision: legendKey };
     }
 
-    return { layout: next, boundHorizontalLegend: topLegend || bottomLegend, preparePngLayout };
+    const movedInsideLegend =
+      requestedLegend.startsWith("inside-") && next.legend?.orientation === "h";
+    return {
+      layout: next,
+      boundHorizontalLegend: topLegend || bottomLegend || movedInsideLegend,
+      preparePngLayout,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
   }, [
     config,

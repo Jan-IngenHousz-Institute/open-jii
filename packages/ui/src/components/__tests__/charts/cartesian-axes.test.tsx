@@ -165,6 +165,49 @@ describe("numbered Y-axis layout", () => {
     },
   );
 
+  it("moves an oversized inside legend below six titled axes and refits it for a wider export", () => {
+    const data = series(6).map((trace, index) =>
+      index ? trace : { ...trace, name: "Photosystem II quantum yield after dark adaptation" },
+    );
+    render(
+      <CartesianChart
+        data={data}
+        config={{
+          width: 560,
+          height: 500,
+          legendPosition: "inside-top-right",
+          yAxisTitle: "Yield",
+          y2AxisTitle: "Temperature",
+          y3AxisTitle: "Light",
+          y4AxisTitle: "Humidity",
+          y5AxisTitle: "Pressure",
+          y6AxisTitle: "Count",
+        }}
+      />,
+    );
+
+    const layout = readLayout();
+    expect(layout.legend).toMatchObject({
+      orientation: "h",
+      y: 0,
+      yref: "container",
+      maxheight: 64,
+    });
+    expect(layout.margin?.b).toBeGreaterThanOrEqual(64);
+
+    const exported: Partial<Layout> = JSON.parse(
+      screen.getByTestId("chart").getAttribute("data-export-layout") ?? "{}",
+    );
+    expect(exported.legend).toMatchObject({
+      orientation: "v",
+      xanchor: "right",
+      y: 0.98,
+      yref: "paper",
+    });
+    expect(exported.legend).not.toHaveProperty("maxheight");
+    expect(exported.margin?.b).toBeLessThan(layout.margin?.b ?? 0);
+  });
+
   it.each([1, 2, 3, 4, 5, 6])("draws %i used axes in alternating side order", (count) => {
     const layout = layoutFor(series(count));
     const record = layout as Record<string, Partial<Layout["yaxis"]>>;
