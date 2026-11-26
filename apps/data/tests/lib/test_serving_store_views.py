@@ -1,20 +1,20 @@
 """The serving store's reads for the backend: views that name one experiment, which are all its reader
 may read, and the contributor and client ids kept beside the rows.
 
-The tests run against a real store, as described in test_serving_store_tables.py, and skip without
-one.
+The tests run against the test store ``pnpm test`` starts.
 """
 
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Iterator
 from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
 import requests
+
+from tests.serving_store_module import ServingStoreModule
 
 pytestmark = pytest.mark.clickhouse
 
@@ -24,34 +24,32 @@ _READER_PROFILE = "views_test_reader_profile"
 
 _USERS_XML = Path(__file__).parents[4] / "infrastructure/modules/serving-store/templates/users.xml.tftpl"
 
-# The reader's grants in infrastructure/modules/serving-store/main.tf.
-_READER_VIEWS = (
-    "experiment_measurements",
-    "experiment_macro_results",
-    "experiment_uploads",
-    "experiment_contributor_ids",
-    "experiment_client_ids",
-    "experiment_payload_schemas",
-    "experiment_metadata_rows",
-    "experiment_metadata_sheets",
-)
+_TEST_READER = Path(__file__).parents[4] / "packages/database/test-store/reader.json"
+_STORE_MODULE = ServingStoreModule.read()
+_READER_VIEWS = tuple(_STORE_MODULE.local_list("reader_views"))
 
 _COMMIT = "_commit_version, _commit_timestamp"
 
 
 def _reader_profile() -> str:
-    """The reader's profile as the store's users.xml sets it, its fixed settings fixed, as a
-    statement a test server can run."""
+    """The profile the module gives the reader, with the profiles it inherits, as the store's
+    users.xml sets them, its fixed settings fixed, as a statement a test server can run."""
     template = _USERS_XML.read_text()
     profiles = ElementTree.fromstring(
         template[template.index("<profiles>") : template.index("</profiles>") + 11]
     )
-    default, reader = profiles.find("default"), profiles.find("reader")
-    assert default is not None and reader is not None
-    fixed = {setting.tag for setting in reader.findall("constraints/*")}
+    inherited: list[ElementTree.Element] = []
+    name: str | None = _STORE_MODULE.local("users")["reader"]["profile"]
+    while name is not None:
+        profile = profiles.find(name)
+        assert profile is not None, f"users.xml has no profile {name}"
+        inherited.insert(0, profile)
+        name = profile.findtext("profile")
+    fixed = {setting.tag for profile in inherited for setting in profile.findall("constraints/*")}
     values = {
         setting.tag: setting.text
-        for setting in [*default, *reader]
+        for profile in inherited
+        for setting in profile
         if setting.tag not in ("profile", "constraints")
     }
     settings = [f"{name} = {value}{' CONST' if name in fixed else ''}" for name, value in values.items()]
@@ -82,11 +80,8 @@ class _User:
 
 
 @pytest.fixture
-def admin(store_migrations: list[str]) -> Iterator[_User]:
-    url = os.environ.get("CLICKHOUSE_TEST_URL")
-    if not url:
-        pytest.skip("CLICKHOUSE_TEST_URL is not set")
-    admin = _User(url, os.environ["CLICKHOUSE_TEST_USER"], os.environ["CLICKHOUSE_TEST_PASSWORD"])
+def admin(store_admin: tuple[str, str, str], store_migrations: list[str]) -> Iterator[_User]:
+    admin = _User(*store_admin)
     admin.ok(f"DROP DATABASE IF EXISTS {_DATABASE} SYNC")
     admin.ok(f"DROP USER IF EXISTS {_READER}")
     admin.ok(f"DROP SETTINGS PROFILE IF EXISTS {_READER_PROFILE}")
@@ -123,6 +118,19 @@ def admin(store_migrations: list[str]) -> Iterator[_User]:
 @pytest.fixture
 def reader(admin: _User) -> _User:
     return _User(admin.url, _READER, "views-test")
+
+
+def test_the_test_stores_reader_has_the_access_the_module_gives_the_reader() -> None:
+    test_reader = json.loads(_TEST_READER.read_text())
+    module_reader = _STORE_MODULE.local("users")["reader"]
+
+    granted = [*test_reader["views"], *test_reader["tables"]]
+    assert sorted(module_reader["grants"]) == sorted(f"GRANT SELECT ON store.{name}" for name in granted)
+    assert module_reader.get("row_filters", {}) == dict.fromkeys(
+        test_reader["tables"], test_reader["rowFilter"]
+    )
+    profile = _reader_profile().split(f"{_READER_PROFILE} SETTINGS ", 1)[1].split(", ")
+    assert sorted(test_reader["settings"]) == sorted(profile)
 
 
 def test_the_reader_reads_one_experiments_rows_through_each_view(reader: _User) -> None:
