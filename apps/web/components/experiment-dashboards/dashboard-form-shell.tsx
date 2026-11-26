@@ -15,7 +15,7 @@ import {
 } from "@/hooks/experiment/useExperimentDashboard/useExperimentDashboard";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { matchQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -107,15 +107,12 @@ function DashboardFormAfterCloseSave({
   });
   useEffect(() => {
     let active = true;
+    let unsubscribe: (() => void) | undefined;
     const timeout = setTimeout(() => setShowStatus(true), CLOSE_SAVE_STATUS_DELAY_MS);
+    const query = experimentDashboardQuery(dashboardId, experimentId, userId);
     const dashboardRead = sameSession
       ? closeSave.dashboard
-      : closeSave.flush.then(() =>
-          reloadExperimentDashboard(
-            queryClient,
-            experimentDashboardQuery(dashboardId, experimentId, userId),
-          ),
-        );
+      : closeSave.flush.then(() => reloadExperimentDashboard(queryClient, query));
     void dashboardRead
       .finally(() => clearTimeout(timeout))
       .then(
@@ -123,12 +120,29 @@ function DashboardFormAfterCloseSave({
           if (active) setResult({ dashboard });
         },
         (error) => {
-          if (active) setResult({ error });
+          if (!active) return;
+          setResult({ error });
+          unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+            // A cached PATCH response cannot stand in for a new detail read.
+            if (
+              event.type !== "updated" ||
+              event.action.type !== "success" ||
+              event.action.manual ||
+              !matchQuery({ queryKey: query.queryKey, exact: true }, event.query)
+            ) {
+              return;
+            }
+            const dashboard = queryClient.getQueryData<ExperimentDashboard>(query.queryKey);
+            if (!dashboard) return;
+            unsubscribe?.();
+            setResult({ dashboard });
+          });
         },
       );
     return () => {
       active = false;
       clearTimeout(timeout);
+      unsubscribe?.();
     };
   }, [closeSave, dashboardId, experimentId, queryClient, sameSession, userId]);
 
