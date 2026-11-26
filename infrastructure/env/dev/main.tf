@@ -2668,9 +2668,11 @@ module "backend_alb_private" {
   security_groups = [module.vpc.alb_security_group_id]
   environment     = var.environment
 
+  # Every 10 s. A new task takes traffic after its first passing check; three misses take a task out
+  # and three passes bring it back, so a slow /health does not flap.
   health_check_path                = "/health"
   health_check_timeout             = 5
-  health_check_interval            = 90
+  health_check_interval            = 10
   health_check_healthy_threshold   = 3
   health_check_unhealthy_threshold = 3
   health_check_matcher             = "200-299"

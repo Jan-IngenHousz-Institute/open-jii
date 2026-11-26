@@ -1,0 +1,17 @@
+# The image installs and builds everything itself, so only the repository's own files go in.
+# Installed dependencies and build output would otherwise send gigabytes the build never reads.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/.expo
+**/coverage
+**/*.tsbuildinfo
+**/.venv
+.git
+infrastructure/
+
+# Local credentials, which git ignores the same way.
+**/.env
+**/.env.local
+**/.env.*.local

@@ -99,6 +99,12 @@ variable "target_group_arn" {
   default     = null
 }
 
+variable "health_check_grace_period_seconds" {
+  description = "How long ECS ignores a failing load balancer health check after a task starts. The clock starts after the image pull, so it covers the app's start: a slow cold start is not killed, and a healthy task still takes traffic at its first passing check."
+  type        = number
+  default     = 120
+}
+
 variable "additional_target_group_arns" {
   description = "Further target groups the tasks register with, such as a second ALB during a move between load balancers. Used only with target_group_arn."
   type        = list(string)
