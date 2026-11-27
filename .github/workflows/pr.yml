@@ -42,10 +42,9 @@ jobs:
         id: detect
         uses: ./.github/actions/detect-affected-packages
 
-      # Both apps' tests build their store from these files and read the data app's fixtures, and
-      # Turbo ties none of them to both apps. Widened here, not in the shared action, which also
-      # decides what deploys.
-      - name: Detect Serving Store Changes
+      # The shared action also decides what deploys. Add packages here when their tests read
+      # files that Turbo's workspace graph does not associate with them.
+      - name: Detect Changes to Shared Test Inputs
         id: store
         shell: bash
         env:
@@ -65,6 +64,17 @@ jobs:
               apps/data/tests/fixtures/ | grep -q .; then
             TEST_APPS=$(echo "$TEST_APPS" | jq -c '. + ["backend", "data"] | unique')
             echo "Serving store changes detected, so the backend and data are tested"
+          fi
+          # Keep the session-contract paths in sync with packages/auth/turbo.json.
+          if git diff --name-only "$BASE_SHA" HEAD -- \
+              infrastructure/env/dev/main.tf \
+              infrastructure/env/dev/variables.tf \
+              infrastructure/env/prod/main.tf \
+              infrastructure/env/prod/variables.tf \
+              infrastructure/modules/route53/main.tf \
+              infrastructure/modules/route53/outputs.tf | grep -q .; then
+            TEST_APPS=$(echo "$TEST_APPS" | jq -c '. + ["@repo/auth"] | unique')
+            echo "Auth contract inputs changed, so @repo/auth is tested"
           fi
           echo "test_apps=$TEST_APPS" >> $GITHUB_OUTPUT
           if [ "$(echo "$TEST_APPS" | jq 'length')" -gt 0 ]; then
