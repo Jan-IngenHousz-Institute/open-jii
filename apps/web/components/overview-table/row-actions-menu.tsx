@@ -2,6 +2,7 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import {
@@ -40,9 +41,10 @@ interface RowActionsMenuProps {
   labels: RowActionsMenuLabels;
   /** Settles when the server answers; a rejection keeps the confirm dialog open. */
   onDelete: () => Promise<unknown>;
+  children?: ReactNode;
 }
 
-export function RowActionsMenu({ editHref, labels, onDelete }: RowActionsMenuProps) {
+export function RowActionsMenu({ editHref, labels, onDelete, children }: RowActionsMenuProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -84,6 +86,7 @@ export function RowActionsMenu({ editHref, labels, onDelete }: RowActionsMenuPro
               {labels.edit}
             </IntentLink>
           </DropdownMenuItem>
+          {children}
           <DropdownMenuItem
             variant="destructive"
             onSelect={(e) => {

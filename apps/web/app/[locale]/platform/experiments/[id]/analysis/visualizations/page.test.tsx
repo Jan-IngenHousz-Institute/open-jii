@@ -14,12 +14,18 @@ vi.mock("~/components/experiment-visualizations/list/experiment-visualizations-l
     experimentId,
     visualizations,
     isLoading,
+    canDuplicate,
   }: {
     experimentId: string;
     visualizations: { id: string; name: string }[];
     isLoading: boolean;
+    canDuplicate: boolean;
   }) => (
-    <div data-testid="visualizations-list" data-loading={isLoading}>
+    <div
+      data-testid="visualizations-list"
+      data-loading={isLoading}
+      data-can-duplicate={canDuplicate}
+    >
       <div>Experiment: {experimentId}</div>
       {visualizations.map((viz) => (
         <div key={viz.id} data-testid={`viz-${viz.id}`}>
@@ -178,6 +184,30 @@ describe("VisualizationsPage", () => {
   });
 
   describe("Component integration", () => {
+    it.each([
+      { status: "active", isAdmin: true },
+      { status: "active", isAdmin: false },
+      { status: "stale", isAdmin: true },
+      { status: "published", isAdmin: true },
+    ] as const)(
+      "matches Duplicate eligibility for $status with admin=$isAdmin",
+      async ({ status, isAdmin }) => {
+        mountDefaults();
+        server.mount(contract.experiments.getExperimentAccess, {
+          body: createExperimentAccess({ experiment: { id: "exp-123", status }, isAdmin }),
+        });
+
+        render(<VisualizationsPage />);
+
+        await waitFor(() => {
+          expect(screen.getByTestId("visualizations-list")).toHaveAttribute(
+            "data-can-duplicate",
+            String(isAdmin),
+          );
+        });
+      },
+    );
+
     it("should pass correct experiment ID to list component", async () => {
       mountDefaults();
 
@@ -190,19 +220,22 @@ describe("VisualizationsPage", () => {
   });
 
   describe("Archived experiment handling", () => {
-    it("should call notFound when experiment is archived", async () => {
+    it("calls notFound and disables Duplicate for an admin of an archived experiment", async () => {
       server.mount(contract.experiments.getExperimentAccess, {
         body: createExperimentAccess({
           experiment: { status: "archived" },
+          isAdmin: true,
         }),
       });
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       render(<VisualizationsPage />);
 
-      await waitFor(() => {
-        expect(notFound).toHaveBeenCalled();
-      });
+      await waitFor(() => expect(notFound).toHaveBeenCalled());
+      expect(screen.getByTestId("visualizations-list")).toHaveAttribute(
+        "data-can-duplicate",
+        "false",
+      );
     });
   });
 });

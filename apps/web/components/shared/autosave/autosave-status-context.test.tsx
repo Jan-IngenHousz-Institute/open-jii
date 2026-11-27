@@ -57,4 +57,36 @@ describe("AutosaveStatusProvider", () => {
     expect(screen.getByRole("status")).toHaveTextContent('"status":"saving"');
     expect(screen.getByRole("status")).toHaveTextContent('"hasUnsavedChanges":true');
   });
+  it("restores the dashboard report when a chart closes", () => {
+    const { rerender } = render(
+      <AutosaveStatusProvider>
+        <Reporter key="dashboard" status="error" />
+        <Reporter key="chart" status="idle" />
+        <Status />
+      </AutosaveStatusProvider>,
+    );
+    rerender(
+      <AutosaveStatusProvider>
+        <Reporter key="dashboard" status="error" />
+        <Status />
+      </AutosaveStatusProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent('"status":"error"');
+  });
+
+  it("keeps unsaved changes from any reporter when another reports idle", () => {
+    function SavedReporter() {
+      useReportAutosaveStatus({ status: "idle", error: null });
+      return null;
+    }
+    render(
+      <AutosaveStatusProvider>
+        <Reporter status="dirty" />
+        <SavedReporter />
+        <Status />
+      </AutosaveStatusProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent('"status":"idle"');
+    expect(screen.getByRole("status")).toHaveTextContent('"hasUnsavedChanges":true');
+  });
 });

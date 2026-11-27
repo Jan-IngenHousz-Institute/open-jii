@@ -1,6 +1,7 @@
 "use client";
 
 import { lineChartType } from "@/components/experiment-visualizations/charts/basic/line";
+import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
@@ -83,6 +84,7 @@ export default function ExperimentVisualizationsPage() {
         visualizations={visualizationsData ?? []}
         experimentId={experimentId}
         isLoading={isLoading}
+        canDuplicate={canEditExperimentContent(accessData)}
       />
     </div>
   );

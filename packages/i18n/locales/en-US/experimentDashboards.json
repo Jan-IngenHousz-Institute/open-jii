@@ -84,7 +84,8 @@
       "viz": {
         "pickVisualizationFirst": "Pick a visualization first"
       },
-      "moreShelves": "More"
+      "moreShelves": "More",
+      "duplicate": "Duplicate"
     },
     "vizDataStrip": {
       "dataset": "Dataset",
