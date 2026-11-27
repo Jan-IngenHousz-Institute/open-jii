@@ -8,7 +8,8 @@ FROM debian:bookworm-slim
 # libgnutls30 3.7.9-2+deb12u7 (CVE-2026-33845/42010 CRITICAL, 33846/3833/42009 HIGH),
 # libpcre2-8-0 10.42-1+deb12u2 (CVE-2026-86145/89161/103111 HIGH, regex bugs in R's PCRE2),
 # perl-base 5.36.0-7+deb12u4 (CVE-2026-13221/42496/8376 CRITICAL, 42497/48962/57432/57433 HIGH),
-# libexpat1 2.5.0-1+deb12u5 (CVE-2025-59375, CVE-2026-77214 HIGH).
+# libexpat1 2.5.0-1+deb12u5 (CVE-2025-59375, CVE-2026-77214 HIGH);
+# PAM 1.5.2-6+deb12u3 (CVE-2025-6020 HIGH).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     r-base \
     r-cran-jsonlite \
@@ -16,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     ca-certificates \
     && apt-get install -y --only-upgrade libgnutls30 libpcre2-8-0 perl-base libexpat1 \
+        libpam-modules libpam-modules-bin libpam-runtime libpam0g \
     && rm -rf /var/lib/apt/lists/*
 
 ENV LAMBDA_TASK_ROOT=/var/task

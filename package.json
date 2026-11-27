@@ -63,12 +63,12 @@
     "@types/node": "catalog:",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.12",
-    "turbo": "2.10.5",
+    "turbo": "2.11.13",
     "typescript": "catalog:",
     "vite": "^7.3.7",
     "vitest": "catalog:testing"
   },
-  "packageManager": "pnpm@11.15.0+sha512.266f8957a30d2be6e9468e5e66bcdedd35a794175f71b067ba8504d686cce1d0c0f429b33c323c3c569ad4891e667574a49ff71d1b89a22cc66f13c65818c578",
+  "packageManager": "pnpm@12.23.0+sha512.02da94ffaf133f46074322afe552f90d40b5f71ae259aefbccdacc5085b1d617e98d65e0131f5748b9b67445978ee5055d7d59a473f1eef0d504854fefcd5975",
   "engines": {
     "node": ">=24"
   }
