@@ -661,15 +661,13 @@ jobs:
     if: github.actor != 'dependabot[bot]' && needs.detect.outputs.has_infrastructure_changes == 'true'
     strategy:
       matrix:
+        # The plan environments hold read-only credentials, which cannot read every resource, so
+        # the plans compare the change with the state. The nightly drift check compares the rest.
         include:
           - environment: dev
-            github_environment: dev
-            refresh: true
-          # prod-plan holds read-only credentials, which cannot read every resource, so the plan
-          # compares the change with the state. Drift shows in the release's plan.
+            github_environment: dev-plan
           - environment: prod
             github_environment: prod-plan
-            refresh: false
       fail-fast: false
     environment: ${{ matrix.github_environment }}
     permissions:
@@ -687,7 +685,6 @@ jobs:
       TF_VAR_slack_webhook_url_grafana: ${{ secrets.SLACK_WEBHOOK_URL_GRAFANA }}
       TF_VAR_slack_webhook_url_posthog: ${{ secrets.SLACK_WEBHOOK_URL_POSTHOG }}
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
-      TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
 
     steps:
@@ -709,32 +706,18 @@ jobs:
       - name: OpenTofu Init and Validate
         uses: ./.github/actions/tofu/tofu-init-validate
 
-      # prod-plan's read-only role cannot create Grafana tokens, and its plan needs none: without a
-      # refresh, the Grafana provider calls the API only for data sources and imports, and the roots
-      # declare neither. Adding a Grafana data source would need a real token here again.
-      - name: Create a Grafana token for this run
-        id: grafana
-        if: matrix.environment == 'dev'
-        uses: ./.github/actions/tofu/grafana-token
-        with:
-          workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
-
+      # The plans pass no Grafana token, which the read-only roles cannot create, and no PostHog key,
+      # so the plan environments hold none. Without a refresh, those providers call their APIs only
+      # for data sources and imports, and the roots declare neither. Adding one would need a real
+      # credential here again.
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
         env:
-          TF_VAR_grafana_auth_service_token: ${{ steps.grafana.outputs.token || 'unused-without-refresh' }}
+          TF_VAR_grafana_auth_service_token: unused-without-refresh
+          TF_VAR_posthog_tofu_api_key: unused-without-refresh
         with:
           lock: false
-          refresh: ${{ matrix.refresh }}
-
-      - name: Delete the Grafana token
-        if: always() && steps.grafana.outputs.token_id != ''
-        uses: ./.github/actions/tofu/grafana-token-delete
-        with:
-          workspace_id: ${{ secrets.GRAFANA_WORKSPACE_ID_DEV }}
-          service_account_id: ${{ vars.GRAFANA_SERVICE_ACCOUNT_ID_DEV }}
-          token_id: ${{ steps.grafana.outputs.token_id }}
+          refresh: false
 
   tofu-foundation:
     name: OpenTofu Foundation (Plan) (${{ matrix.environment }})
@@ -745,11 +728,9 @@ jobs:
       matrix:
         include:
           - environment: dev
-            github_environment: dev
-            refresh: true
+            github_environment: dev-plan
           - environment: prod
             github_environment: prod-plan
-            refresh: false
       fail-fast: false
     environment: ${{ matrix.github_environment }}
     permissions:
@@ -785,4 +766,4 @@ jobs:
         with:
           root: foundation
           lock: false
-          refresh: ${{ matrix.refresh }}
+          refresh: false

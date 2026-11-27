@@ -60,6 +60,8 @@ OpenTofu reads a personal API key from `TF_VAR_posthog_tofu_api_key`, which the 
 from the `POSTHOG_TOFU_API_KEY` secret of the dev GitHub environment. It needs write access to the
 project's settings, feature flags, actions, insights, dashboards and hog functions.
 
-The provider refreshes these objects on every dev plan, so a PostHog outage or a revoked key fails
-the whole dev apply, AWS included. A key belongs to the person who minted it: when they leave or it
-is rotated, mint a new one with the same scopes and replace the secret before the next merge.
+The provider refreshes these objects in every dev deploy's plan, so a PostHog outage or a revoked key
+fails the whole dev apply, AWS included. Pull request plans skip the refresh and pass a placeholder,
+so the key stays out of the `dev-plan` environment. A key belongs to the person who minted it: when
+they leave or it is rotated, mint a new one with the same scopes and replace the secret before the
+next merge.

@@ -192,11 +192,10 @@ is separate and lives outside OpenTofu.
 
 ### Pull request plans
 
-A pull request's dev plan creates its own token like a deploy. Its prod plan runs through the
-`prod-plan` GitHub environment, whose read-only role cannot create one, and needs none: it plans
-without a refresh, and the Grafana provider then calls the API only for data sources and imports,
-which the roots do not use. It passes a placeholder token. A Grafana data source would need a real
-token there again.
+A pull request's plans run through the `dev-plan` and `prod-plan` GitHub environments, whose
+read-only roles cannot create a token, and need none: they plan without a refresh, and the Grafana
+provider then calls the API only for data sources and imports, which the roots do not use. They pass
+a placeholder token. A Grafana data source would need a real token there again.
 
 ### Access Grafana Dashboard
 
