@@ -220,23 +220,22 @@ describe("VisualizationsPage", () => {
   });
 
   describe("Archived experiment handling", () => {
-    it("should call notFound when experiment is archived", async () => {
+    it("calls notFound and disables Duplicate for an admin of an archived experiment", async () => {
       server.mount(contract.experiments.getExperimentAccess, {
         body: createExperimentAccess({
           experiment: { status: "archived" },
+          isAdmin: true,
         }),
       });
       server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
 
       render(<VisualizationsPage />);
 
-      await waitFor(() => {
-        expect(notFound).toHaveBeenCalled();
-        expect(screen.getByTestId("visualizations-list")).toHaveAttribute(
-          "data-can-duplicate",
-          "false",
-        );
-      });
+      await waitFor(() => expect(notFound).toHaveBeenCalled());
+      expect(screen.getByTestId("visualizations-list")).toHaveAttribute(
+        "data-can-duplicate",
+        "false",
+      );
     });
   });
 });
