@@ -53,9 +53,12 @@ const SESSION_QUERY = "/get-session?disableCookieCache=true&disableRefresh=true"
 const EMAIL = "sibling-contract@example.com";
 
 function readTerraform(path: string) {
-  const source = readFileSync(path, "utf8");
+  return maskTerraformCommentsAndHeredocs(readFileSync(path, "utf8"));
+}
+
+function maskTerraformCommentsAndHeredocs(source: string) {
   return source.replace(
-    /("(?:\\.|[^"\\])*")|\/\*[\s\S]*?\*\/|(?:#|\/\/)[^\r\n]*/g,
+    /("(?:\\.|[^"\\])*")|<<-?(?<delimiter>[\p{ID_Start}_][\p{ID_Continue}-]*)\r?\n[\s\S]*?^[ \t]*\k<delimiter>[ \t]*(?=\r?\n)|\/\*[\s\S]*?\*\/|(?:#|\/\/)[^\r\n]*/gmu,
     (match, quoted: string | undefined) => quoted ?? match.replace(/[^\r\n]/g, " "),
   );
 }
@@ -280,6 +283,41 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.unstubAllEnvs());
+
+describe("Terraform settings reader", () => {
+  it("reads the real Route53 output value after an indented description heredoc", () => {
+    const source = `output "environment_domain" {
+  description = <<-EOT
+    value = local.base_domain
+  EOT
+  value = "portal.\${local.base_domain}"
+}`;
+    const block = terraformBlock(
+      maskTerraformCommentsAndHeredocs(source),
+      'output "environment_domain"',
+    );
+    expect(terraformAttribute(block, "value")).toBe('"portal.${local.base_domain}"');
+  });
+
+  it("ignores comment markers inside a heredoc and keeps quoted URLs", () => {
+    const source = `output "environment_domain" {
+  description = <<EOT
+// slash comment
+# hash comment
+/* block comment opener
+EOT
+  # value = local.base_domain
+  // value = local.base_domain
+  value = "https://openjii.org/#lab" // Lab URL
+  /* end of output */
+}`;
+    const block = terraformBlock(
+      maskTerraformCommentsAndHeredocs(source),
+      'output "environment_domain"',
+    );
+    expect(terraformAttribute(block, "value")).toBe('"https://openjii.org/#lab"');
+  });
+});
 
 // Every test cold-imports the server after vi.resetModules(); under CI coverage that alone can pass 5 s.
 describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
