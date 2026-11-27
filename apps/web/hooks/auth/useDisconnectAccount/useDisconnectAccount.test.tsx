@@ -1,5 +1,5 @@
 import { useGetUserProfile } from "@/hooks/profile/useGetUserProfile/useGetUserProfile";
-import { createUserProfile } from "@/test/factories";
+import { createUserProfileResponse } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
@@ -41,7 +41,7 @@ describe("useDisconnectAccount", () => {
       data: { status: true },
       error: null,
     });
-    const profile = { ...createUserProfile({ userId: "u-1" }), orcidId: "0000-0002-1825-0097" };
+    const profile = createUserProfileResponse({ orcidId: "0000-0002-1825-0097" });
     server.mount(contract.users.getUserProfile, { body: profile });
     const queryClient = new QueryClient({
       defaultOptions: { queries: { staleTime: FRESH_FOR_MS, retry: false } },
@@ -53,7 +53,7 @@ describe("useDisconnectAccount", () => {
     );
     await waitFor(() => expect(result.current.profile.data?.orcidId).toBe("0000-0002-1825-0097"));
 
-    server.mount(contract.users.getUserProfile, { body: { ...profile, orcidId: null } });
+    server.mount(contract.users.getUserProfile, { body: createUserProfileResponse() });
     await result.current.disconnect.mutateAsync({ accountId: "row-1", provider: "orcid" });
 
     await waitFor(() => expect(result.current.profile.data?.orcidId).toBeNull());

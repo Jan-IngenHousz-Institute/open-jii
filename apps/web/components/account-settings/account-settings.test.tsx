@@ -1,4 +1,4 @@
-import { createSession, createUserProfile } from "@/test/factories";
+import { createSession, createUserProfile, createUserProfileResponse } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import {
   createTestQueryClient,
@@ -70,12 +70,6 @@ vi.mock("./profile-information-card", () => ({
         save-bio
       </button>
     </div>
-  ),
-}));
-
-vi.mock("./orcid-id-card", () => ({
-  OrcidIdCard: ({ orcidId }: { orcidId: string | null }) => (
-    <div data-testid="orcid-id-card">{orcidId ?? "none"}</div>
   ),
 }));
 
@@ -214,30 +208,50 @@ describe("<AccountSettings />", () => {
   });
 
   describe("ORCID iD card", () => {
-    it("receives the iD from the profile", async () => {
-      mountGetProfile({ body: { ...profile, orcidId: "0000-0002-1825-0097" } });
-      render(<AccountSettings user={signedInUser} />);
+    const recordUrl = "https://orcid.org/0000-0002-1825-0097";
+    const securityPath = "/en-US/platform/account/security";
+    const profileWithOrcid = (orcidId: string | null) =>
+      createUserProfileResponse({ firstName: "Ada", lastName: "Lovelace", orcidId });
 
-      expect(await screen.findByTestId("orcid-id-card")).toHaveTextContent("0000-0002-1825-0097");
+    it("shows the iD from the profile as a link to the record", async () => {
+      mountGetProfile({ body: profileWithOrcid("0000-0002-1825-0097") });
+      const { container } = render(<AccountSettings user={signedInUser} />);
+      const page = within(container);
+
+      expect(await page.findByRole("link", { name: new RegExp(recordUrl) })).toHaveAttribute(
+        "href",
+        recordUrl,
+      );
+      expect(
+        page.getByRole("link", { name: "settings.OrcidIdCard.manageInSecurity" }),
+      ).toHaveAttribute("href", securityPath);
     });
 
-    it("receives null when the profile has no iD", async () => {
-      mountGetProfile({ body: { ...profile, orcidId: null } });
-      render(<AccountSettings user={signedInUser} />);
+    it("offers Connect ORCID when the profile has no iD", async () => {
+      mountGetProfile({ body: profileWithOrcid(null) });
+      const { container } = render(<AccountSettings user={signedInUser} />);
+      const page = within(container);
 
-      expect(await screen.findByTestId("orcid-id-card")).toHaveTextContent("none");
+      expect(
+        await page.findByRole("link", { name: "settings.OrcidIdCard.connect" }),
+      ).toHaveAttribute("href", securityPath);
+      expect(container.querySelector('a[href^="https://orcid.org"]')).not.toBeInTheDocument();
     });
 
     it("follows the profile query when the iD goes away", async () => {
       const queryClient = createTestQueryClient();
-      mountGetProfile({ body: { ...profile, orcidId: "0000-0002-1825-0097" } });
-      render(<AccountSettings user={signedInUser} />, { queryClient });
-      expect(await screen.findByTestId("orcid-id-card")).toHaveTextContent("0000-0002-1825-0097");
+      mountGetProfile({ body: profileWithOrcid("0000-0002-1825-0097") });
+      const { container } = render(<AccountSettings user={signedInUser} />, { queryClient });
+      const page = within(container);
+      expect(await page.findByRole("link", { name: new RegExp(recordUrl) })).toBeInTheDocument();
 
-      mountGetProfile({ body: { ...profile, orcidId: null } });
+      mountGetProfile({ body: profileWithOrcid(null) });
       await queryClient.invalidateQueries();
 
-      await waitFor(() => expect(screen.getByTestId("orcid-id-card")).toHaveTextContent("none"));
+      expect(
+        await page.findByRole("link", { name: "settings.OrcidIdCard.connect" }),
+      ).toBeInTheDocument();
+      expect(container.querySelector('a[href^="https://orcid.org"]')).not.toBeInTheDocument();
     });
   });
 });
