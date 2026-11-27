@@ -19,6 +19,7 @@ import {
   waitFor,
 } from "@/test/test-utils";
 import { onlineManager } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -50,13 +51,14 @@ const activeCopyHref = "/en-US/platform/experiments/exp-1/analysis/visualization
 const archivedCopyHref = "/en-US/platform/experiments-archive/exp-1/analysis/visualizations/copy";
 const failureTitle = "editor.inspector.copySaveFailed";
 const recoveryTitle = "editor.inspector.copyNotAttached";
-const namedOpenLabel = "editor.inspector.openChartCopyNamed";
+const namedOpenLabel = `editor.inspector.openChartCopyNamed:${copy.name}`;
 const retryLabel = "editor.inspector.retryCopySave";
 
 function Actions() {
   const { selectWidget } = useDashboardEditor();
   const recovery = useDashboardCopySave();
   assertExists(recovery);
+  const [originalRetry] = useState(() => recovery.retry);
 
   return (
     <>
@@ -67,6 +69,7 @@ function Actions() {
       >
         Duplicate
       </button>
+      <button onClick={originalRetry}>Invoke original retry</button>
       {recovery.retryAvailable && <button onClick={recovery.retry}>Retry</button>}
       {recovery.openCopyHref && <a href={recovery.openCopyHref}>Open copy</a>}
     </>
@@ -148,7 +151,7 @@ describe("DashboardAutosaveBoundary", () => {
   beforeEach(() => {
     vi.mocked(toast).mockReturnValue({ id: "copy-toast", dismiss: vi.fn(), update: vi.fn() });
     vi.mocked(useSession).mockReturnValue(createUseSessionResult({ data: session }));
-    vi.mocked(authClient.getSession).mockResolvedValue({ data: session, error: null });
+    vi.mocked(authClient.getSession).mockReset().mockResolvedValue({ data: session, error: null });
     server.mount(contract.experiments.getExperimentAccess, { body: activeAccess });
     server.mount(contract.experiments.getExperimentDashboard, { body: dashboard });
     server.mount(contract.experiments.getExperimentVisualization, { body: source });
@@ -157,7 +160,7 @@ describe("DashboardAutosaveBoundary", () => {
 
   afterEach(() => {
     vi.mocked(useSession).mockReturnValue(createUseSessionResult());
-    vi.mocked(authClient.getSession).mockResolvedValue({ data: null, error: null });
+    vi.mocked(authClient.getSession).mockReset().mockResolvedValue({ data: null, error: null });
     onlineManager.setOnline(true);
   });
 
@@ -259,13 +262,19 @@ describe("DashboardAutosaveBoundary", () => {
   it.each([
     { change: "sign-out", data: null },
     { change: "new session", data: createSession({ session: { id: "other-session" } }) },
-  ])("suppresses the failure toast after a confirmed $change", async ({ data }) => {
+  ])("disables recovery actions after a confirmed $change", async ({ data }) => {
     const verification = Promise.withResolvers<Awaited<ReturnType<typeof authClient.getSession>>>();
     vi.mocked(authClient.getSession).mockReturnValue(verification.promise);
     server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
 
-    await startDuplicate();
+    const { queryClient, user } = await startDuplicate();
+    const dashboardSaves = () =>
+      queryClient.getMutationCache().findAll({
+        mutationKey: orpc.experiments.updateExperimentDashboard.key(),
+      });
     try {
+      await waitFor(() => expect(dashboardSaves()[0]?.state.status).toBe("error"));
+      expect(await screen.findByRole("button", { name: "Retry" })).toBeEnabled();
       await waitFor(() => expect(authClient.getSession).toHaveBeenCalled());
     } finally {
       await act(() => {
@@ -274,5 +283,10 @@ describe("DashboardAutosaveBoundary", () => {
       });
     }
     expect(getToast(failureTitle)).toBeUndefined();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Open copy" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Invoke original retry" }));
+    expect(dashboardSaves()).toHaveLength(1);
   });
 });

@@ -85,6 +85,8 @@ export function DashboardAutosaveBoundary({
   const { selectedWidgetId, selectWidget, chartDuplicatePending, runChartDuplicate, isMounted } =
     useDashboardEditor();
   const mounted = useRef(false);
+  const [sessionChanged, setSessionChanged] = useState(false);
+  const sessionChangedRef = useRef(false);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   useEffect(() => {
@@ -224,9 +226,10 @@ export function DashboardAutosaveBoundary({
     getCopyLinks,
   });
   const retry = useCallback(() => {
-    if (mounted.current) void flush({ retryFailed: true });
+    if (mounted.current && !sessionChangedRef.current) void flush({ retryFailed: true });
   }, [flush]);
-  const showFailure = enabled && hasError && pending.length > 0 && hasEditAccess();
+  const showFailure =
+    !sessionChanged && enabled && hasError && pending.length > 0 && hasEditAccess();
   const accessQuery = experimentAccessQuery(orpc, userId, experimentId);
   const { data: copyAccess, error: copyAccessError } = useQuery({ ...accessQuery, enabled: false });
   const copyLinkStatus =
@@ -247,7 +250,12 @@ export function DashboardAutosaveBoundary({
     let active = true;
     let dismiss: (() => void) | undefined;
     void checkCurrentSession(sessionId).then((status) => {
-      if (!active || status === "changed") return;
+      if (status === "changed") {
+        sessionChangedRef.current = true;
+        if (mounted.current) setSessionChanged(true);
+        return;
+      }
+      if (!active || sessionChangedRef.current) return;
       const links =
         copyLinkStatus === undefined
           ? []

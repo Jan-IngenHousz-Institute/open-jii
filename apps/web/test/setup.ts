@@ -163,7 +163,9 @@ vi.mock("@repo/i18n", () => ({
                               typeof options[name] === "string" ? [options[name]] : [],
                             ),
                           ].join(":")
-                        : key,
+                        : key === "editor.inspector.openChartCopyNamed"
+                          ? `${key}:${String(options?.name)}`
+                          : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   useCurrentLocale: () => "en-US",
