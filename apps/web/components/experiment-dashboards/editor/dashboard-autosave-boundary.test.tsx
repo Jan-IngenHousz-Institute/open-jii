@@ -19,13 +19,13 @@ import {
   waitFor,
 } from "@/test/test-utils";
 import { onlineManager } from "@tanstack/react-query";
-import { isValidElement } from "react";
-import type { ReactElement } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { authClient, useSession } from "@repo/auth/client";
+import type { ToastActionElement } from "@repo/ui/components/toast";
+import { Toast, ToastProvider, ToastViewport } from "@repo/ui/components/toast";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
@@ -133,6 +133,15 @@ async function waitForToast(title: string) {
   );
 }
 
+function renderToastActions(action: ToastActionElement | undefined) {
+  render(
+    <ToastProvider>
+      <Toast>{action}</Toast>
+      <ToastViewport />
+    </ToastProvider>,
+  );
+}
+
 describe("DashboardAutosaveBoundary", () => {
   beforeEach(() => {
     vi.mocked(toast).mockReturnValue({ id: "copy-toast", dismiss: vi.fn(), update: vi.fn() });
@@ -201,25 +210,20 @@ describe("DashboardAutosaveBoundary", () => {
     expect(screen.getByLabelText("Charts")).toHaveTextContent("source, copy");
     expect(screen.getByRole("link", { name: "Open copy" })).toHaveAttribute("href", activeCopyHref);
     const failure = await waitForToast(failureTitle);
-    const description = failure.description;
-    assertExists(description);
-    if (!isValidElement<{ children: ReactElement[] }>(description)) {
-      throw new Error("Expected a toast description with an Open copy action");
-    }
-    expect(description.props.children[0]?.props).toMatchObject({
-      altText: namedOpenLabel,
-      children: { props: { href: activeCopyHref } },
-    });
-    expect(failure.action?.props).toMatchObject({ altText: retryLabel });
+    renderToastActions(failure.action);
+    expect(screen.getByRole("link", { name: "editor.inspector.openChartCopy" })).toHaveAttribute(
+      "href",
+      activeCopyHref,
+    );
 
     const saved = server.mount(contract.experiments.updateExperimentDashboard, { body: dashboard });
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(screen.getByRole("button", { name: retryLabel }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Duplicate" })).toBeEnabled());
     expect(saved.body).toEqual(failed.body);
     expect(create.callCount).toBe(1);
   });
 
-  it("removes Open copy after a confirmed read denial even when the older access data is cached", async () => {
+  it("hides Open copy after a confirmed read denial even when the older access data is cached", async () => {
     const attachment = Promise.withResolvers<void>();
     const save = server.mount(contract.experiments.updateExperimentDashboard, {
       status: 500,
@@ -244,8 +248,9 @@ describe("DashboardAutosaveBoundary", () => {
     expect(await screen.findByRole("button", { name: "Retry" })).toBeEnabled();
     expect(screen.queryByRole("link", { name: "Open copy" })).toBeNull();
     const failure = await waitForToast(failureTitle);
-    expect(failure.description).toBeUndefined();
-    expect(failure.action?.props).toMatchObject({ altText: retryLabel });
+    renderToastActions(failure.action);
+    expect(screen.getByRole("button", { name: retryLabel })).toBeEnabled();
+    expect(screen.queryByRole("link", { name: "editor.inspector.openChartCopy" })).toBeNull();
   });
 
   it.each([
@@ -260,7 +265,10 @@ describe("DashboardAutosaveBoundary", () => {
     try {
       await waitFor(() => expect(authClient.getSession).toHaveBeenCalled());
     } finally {
-      await act(async () => verification.resolve({ data, error: null }));
+      await act(() => {
+        verification.resolve({ data, error: null });
+        return verification.promise;
+      });
     }
     expect(getToast(failureTitle)).toBeUndefined();
   });
