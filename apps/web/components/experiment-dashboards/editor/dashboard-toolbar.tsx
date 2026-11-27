@@ -3,7 +3,7 @@
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
 import { Copy, Database, MoreHorizontal, Palette, Sliders, Trash2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -86,13 +86,6 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
     experimentId,
     sourceChartId,
   );
-  const mounted = useRef(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
 
   const sections = widget ? SECTIONS_BY_WIDGET[widget.type] : [];
   const hasSections = sections.length > 1;
@@ -126,7 +119,7 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
     if (widget?.type !== "visualization" || !sourceChartId) return;
     const sourceWidgetId = widget.id;
     const created = await duplicate();
-    if (!created || !mounted.current) return;
+    if (!created) return;
     const current = form.getValues("widgets");
     const source = current.find((candidate) => candidate.id === sourceWidgetId);
     if (source?.type !== "visualization" || source.config.visualizationId !== sourceChartId) return;
