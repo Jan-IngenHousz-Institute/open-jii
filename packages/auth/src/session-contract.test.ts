@@ -1,5 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -12,9 +14,93 @@ function relied(reason: string) {
   return `${reason} openJII Lab's server relies on this; coordinate an openJII Lab release before changing it. See ${ADR}.`;
 }
 
-const AUTH_URL = "https://api.openjii.org/api/v1/auth";
+const authEnv = {
+  prod: {
+    ENVIRONMENT_PREFIX: "prod",
+    NEXT_PUBLIC_BASE_URL: "https://openjii.org",
+    NEXT_PUBLIC_API_URL: "https://api.openjii.org",
+    COOKIE_DOMAIN: ".openjii.org",
+  },
+  dev: {
+    ENVIRONMENT_PREFIX: "dev",
+    NEXT_PUBLIC_BASE_URL: "https://dev.openjii.org",
+    NEXT_PUBLIC_API_URL: "https://api.dev.openjii.org",
+    COOKIE_DOMAIN: ".dev.openjii.org",
+  },
+  local: {
+    ENVIRONMENT_PREFIX: "dev",
+    NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
+    NEXT_PUBLIC_API_URL: "http://localhost:3020",
+    COOKIE_DOMAIN: undefined,
+  },
+};
+
+type Environment = keyof typeof authEnv;
+type DeployedEnvironment = Exclude<Environment, "local">;
+
+const AUTH_URL = `${authEnv.prod.NEXT_PUBLIC_API_URL}/api/v1/auth`;
 const SESSION_QUERY = "/get-session?disableCookieCache=true&disableRefresh=true";
 const EMAIL = "sibling-contract@example.com";
+
+function terraformBlock(source: string, declaration: string) {
+  const body = new RegExp(`^${declaration}\\s*\\{([\\s\\S]*?)^\\}`, "m").exec(source)?.[1];
+  if (body === undefined) throw new Error(relied(`Missing Terraform block ${declaration}.`));
+  return body;
+}
+
+function readDeployedAuthEnv(environment: DeployedEnvironment) {
+  const source = resolve(__dirname, `../../../infrastructure/env/${environment}`);
+  const main = readFileSync(join(source, "main.tf"), "utf8");
+  const variables = readFileSync(join(source, "variables.tf"), "utf8");
+  const variableDefault = (name: string) => {
+    const block = terraformBlock(variables, `variable "${name}"`);
+    return /^\s*default\s*=\s*"([^"]+)"/m.exec(block)?.[1];
+  };
+  const route53 = terraformBlock(main, 'module "route53"');
+  const domain = variableDefault("domain_name");
+  const prefix = variableDefault("environment");
+  const usePrefix = /^\s*use_environment_prefix\s*=\s*(true|false)\b/m.exec(route53)?.[1];
+  if (!domain || !prefix || !usePrefix) {
+    throw new Error(relied(`Could not read the ${environment} Terraform domain settings.`));
+  }
+
+  const environmentDomain = usePrefix === "true" ? `${prefix}.${domain}` : domain;
+  const references = new Map([
+    ["var.domain_name", domain],
+    ["var.environment", prefix],
+    ["module.route53.environment_domain", environmentDomain],
+    ["module.route53.api_domain", `api.${environmentDomain}`],
+  ]);
+  const backend = terraformBlock(main, 'module "backend_ecs"');
+  const settings = /^( +)environment_variables\s*=\s*\[([\s\S]*?)^\1\]/m.exec(backend)?.[2];
+  if (settings === undefined) {
+    throw new Error(relied(`Missing ${environment} backend ECS environment variables in main.tf.`));
+  }
+
+  return (name: string) => {
+    const entry = new RegExp(
+      `\\{\\s*name\\s*=\\s*"${name}"\\s+value\\s*=\\s*([^\\r\\n]+)\\s*\\}`,
+      "g",
+    );
+    const matches = [...settings.matchAll(entry)];
+    if (matches.length !== 1) {
+      throw new Error(relied(`Expected one ${name} in ${environment} backend ECS settings.`));
+    }
+
+    const expression = matches[0][1].trim();
+    const resolveReference = (reference: string) => {
+      const value = references.get(reference);
+      if (value === undefined) {
+        throw new Error(relied(`Unsupported Terraform reference ${reference} for ${name}.`));
+      }
+      return value;
+    };
+    const literal = /^"([^"]*)"$/.exec(expression)?.[1];
+    return literal === undefined
+      ? resolveReference(expression)
+      : literal.replace(/\$\{([^}]+)\}/g, (_, reference: string) => resolveReference(reference));
+  };
+}
 
 const sessionAnswer = z.object({
   user: z.object({
@@ -58,34 +144,10 @@ vi.mock("@repo/database", async (importOriginal) => {
   };
 });
 
-async function configuredServer(environment = "prod") {
+async function configuredServer(environment: Environment = "prod") {
   vi.resetModules();
   vi.stubEnv("NODE_ENV", environment === "local" ? "development" : "production");
-  vi.stubEnv("ENVIRONMENT_PREFIX", environment === "local" ? "dev" : environment);
-  vi.stubEnv(
-    "NEXT_PUBLIC_BASE_URL",
-    environment === "local"
-      ? "http://localhost:3000"
-      : environment === "prod"
-        ? "https://openjii.org"
-        : "https://dev.openjii.org",
-  );
-  vi.stubEnv(
-    "NEXT_PUBLIC_API_URL",
-    environment === "local"
-      ? "http://localhost:3020"
-      : environment === "dev"
-        ? "https://api.dev.openjii.org"
-        : "https://api.openjii.org",
-  );
-  vi.stubEnv(
-    "COOKIE_DOMAIN",
-    environment === "local"
-      ? undefined
-      : environment === "prod"
-        ? ".openjii.org"
-        : ".dev.openjii.org",
-  );
+  for (const [name, value] of Object.entries(authEnv[environment])) vi.stubEnv(name, value);
   vi.stubEnv("AUTH_SECRET", "test-only-sibling-session-0123456789abcdef");
   for (const key of [
     "AUTH_EMAIL_SERVER",
@@ -170,30 +232,42 @@ afterEach(() => vi.unstubAllEnvs());
 
 // Every test cold-imports the server after vi.resetModules(); under CI coverage that alone can pass 5 s.
 describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
+  it.each(["prod", "dev"] as const)("matches the %s Terraform auth settings", (environment) => {
+    const deployedValue = readDeployedAuthEnv(environment);
+    for (const [name, stub] of Object.entries(authEnv[environment])) {
+      expect(stub, relied(`${name} differs from the ${environment} backend ECS settings.`)).toBe(
+        deployedValue(name),
+      );
+    }
+  });
+
   it.each([
     ["prod", "__Secure-better-auth.prod.session_token", ".openjii.org"],
     ["local", "better-auth.dev.session_token", undefined],
     ["dev", "__Secure-better-auth.dev.session_token", ".dev.openjii.org"],
-  ])("pins the configured %s cookie name and attributes", async (environment, name, domain) => {
-    const auth = await configuredServer(environment);
-    const { authCookies } = await auth.$context;
-    expect(
-      authCookies.sessionToken,
-      relied(
-        `The ${environment} token cookie name and attributes changed. openJII Lab reads the token by this exact name, and the domain decides which hosts receive it.`,
-      ),
-    ).toEqual({
-      name,
-      attributes: {
-        secure: environment !== "local",
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        ...(domain ? { domain } : {}),
-        maxAge: 60 * 60 * 24 * 30,
-      },
-    });
-  });
+  ] as const)(
+    "pins the configured %s cookie name and attributes",
+    async (environment, name, domain) => {
+      const auth = await configuredServer(environment);
+      const { authCookies } = await auth.$context;
+      expect(
+        authCookies.sessionToken,
+        relied(
+          `The ${environment} token cookie name and attributes changed. openJII Lab reads the token by this exact name, and the domain decides which hosts receive it.`,
+        ),
+      ).toEqual({
+        name,
+        attributes: {
+          secure: environment !== "local",
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          ...(domain ? { domain } : {}),
+          maxAge: 60 * 60 * 24 * 30,
+        },
+      });
+    },
+  );
 
   it("emits the production session token with the documented attributes", async () => {
     const auth = await configuredServer();
