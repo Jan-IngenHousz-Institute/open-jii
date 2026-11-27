@@ -32,10 +32,10 @@ defaults:
     shell: bash
 
 jobs:
-  # Drift is the difference between the live resources and the code that put them there. Dev
-  # deploys every merge to main. Prod is compared, root by root, with the newest release whose apply
-  # of that root succeeded, whatever the rest of the release did: main would report every merged
-  # but unreleased change as drift, and a dry run or an app-only release applied nothing.
+  # Drift is the difference between the live resources and the code that put them there. Dev is
+  # compared with main. Prod is compared, root by root, with the newest prod release whose apply of
+  # that root succeeded, whatever the rest of the release did: main would report every merged but
+  # unreleased change as drift, and a dry run or an app-only release applied nothing.
   deployed:
     name: Find the deployed commits
     runs-on: ubuntu-latest
@@ -54,6 +54,8 @@ jobs:
           fi
 
       # A failed lookup leaves the commits empty, which fails only prod's checks, so dev still runs.
+      # A release whose jobs cannot be read ends the search, so an older release is never used in
+      # its place. Prod applies from release branches, and once came from main.
       - name: Find the last applied prod release of each root
         id: prod
         env:
@@ -62,13 +64,24 @@ jobs:
         run: |
           if ! runs=$(gh run list --repo "$REPO" --workflow production-release.yml --limit 30 \
             --json databaseId,headSha,headBranch \
-            --jq '[.[] | select(.headBranch | test("^release/[0-9]{8}$"))]'); then
+            --jq '[.[] | select(.headBranch | test("^(release/[0-9]{8}|main)$"))]'); then
             echo "::warning::Could not list the prod releases."
             exit 0
           fi
           env_sha="" foundation_sha=""
           while read -r id sha branch; do
-            jobs=$(gh run view "$id" --repo "$REPO" --json jobs --jq '[.jobs[] | {name, conclusion}]') || continue
+            jobs=""
+            for attempt in 1 2 3; do
+              if jobs=$(gh run view "$id" --repo "$REPO" --json jobs --jq '[.jobs[] | {name, conclusion}]'); then
+                break
+              fi
+              jobs=""
+              sleep $((attempt * 5))
+            done
+            if [[ -z "$jobs" ]]; then
+              echo "::warning::Could not read the jobs of run $id, so the search stops there."
+              break
+            fi
             if [[ -z "$env_sha" ]] && jq -e 'any(.[]; (.name | endswith("Deploy Infrastructure / OpenTofu Apply")) and .conclusion == "success")' <<<"$jobs" >/dev/null; then
               env_sha=$sha
               echo "Prod's environment root is compared with ${sha:0:7} from $branch"
@@ -121,30 +134,42 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
       TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
-      ROOT_DIR: infrastructure/${{ matrix.root }}/${{ matrix.environment }}
+      # Prod's configuration is planned from a checkout of the release under deployed/, which also
+      # holds the files it reads from outside infrastructure/, such as the SQL views and the metrics
+      # catalog.
+      ROOT_DIR: ${{ format('{0}infrastructure/{1}/{2}', matrix.environment == 'prod' && 'deployed/' || '', matrix.root, matrix.environment) }}
       LABEL: ${{ matrix.environment }} ${{ matrix.root == 'env' && 'environment root' || 'foundation' }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      DEPLOYED_SHA: ${{ matrix.environment == 'prod' && (matrix.root == 'env' && needs.deployed.outputs.prod_env_sha || needs.deployed.outputs.prod_foundation_sha) || '' }}
     steps:
-      - name: Check the prod commit was found
-        if: matrix.environment == 'prod' && env.DEPLOYED_SHA == ''
+      - name: Pick the deployed prod commit
+        id: deployed
+        if: matrix.environment == 'prod'
+        env:
+          ROOT: ${{ matrix.root }}
+          ENV_SHA: ${{ needs.deployed.outputs.prod_env_sha }}
+          FOUNDATION_SHA: ${{ needs.deployed.outputs.prod_foundation_sha }}
         run: |
-          echo "::error::Found no prod release that applied the $LABEL."
-          exit 1
+          if [[ "$ROOT" == "env" ]]; then sha=$ENV_SHA; else sha=$FOUNDATION_SHA; fi
+          if [[ -z "$sha" ]]; then
+            echo "::error::Found no prod release that applied the $LABEL."
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
-      # The workflow, its actions and its tools always come from main. Only prod's configuration
-      # comes from the release, which went through review and the release process.
+      # The workflow, its actions and its tools always come from main. Prod's release is checked out
+      # only as data for OpenTofu to read; nothing in it runs.
       - name: Checkout main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Use the deployed prod configuration
+      - name: Checkout the deployed prod release
         if: matrix.environment == 'prod'
-        run: |
-          git fetch --quiet --no-tags --depth 1 origin "$DEPLOYED_SHA"
-          rm -rf infrastructure
-          git checkout "$DEPLOYED_SHA" -- infrastructure
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.deployed.outputs.sha }}
+          path: deployed
+          persist-credentials: false
 
       - name: Setup OpenTofu and AWS Credentials
         uses: ./.github/actions/tofu/tofu-setup
@@ -154,9 +179,10 @@ jobs:
           wrapper: "false"
 
       - name: OpenTofu Init and Validate
-        uses: ./.github/actions/tofu/tofu-init-validate
-        with:
-          root: ${{ matrix.root }}
+        working-directory: ${{ env.ROOT_DIR }}
+        run: |
+          tofu init -input=false -lockfile=readonly
+          tofu validate
 
       - name: Create a Grafana token for this run
         id: grafana
