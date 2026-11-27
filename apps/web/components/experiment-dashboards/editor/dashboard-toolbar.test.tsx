@@ -21,7 +21,10 @@ import { describe, expect, it, vi } from "vitest";
 import { contract } from "@repo/api/contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 
-import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
+import {
+  AutosaveStatusProvider,
+  useAutosaveStatus,
+} from "../../shared/autosave/autosave-status-context";
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { DashboardEditorProvider, useDashboardEditor } from "./context/dashboard-editor-context";
 import DashboardToolbar from "./dashboard-toolbar";
@@ -273,4 +276,52 @@ describe("DashboardToolbar", () => {
       consoleError.mockRestore();
     }
   });
+
+  it.each(["dirty", "error"] as const)(
+    "disables Duplicate when the dashboard autosave is %s",
+    async (status) => {
+      const user = userEvent.setup();
+      const chart = createVisualizationWidget({
+        config: { visualizationId: "source", showTitle: true, showDescription: false },
+      });
+      const save = server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
+
+      function Editor() {
+        const form = useFormContext<DashboardFormValues>();
+        useDashboardAutosave({ form, experimentId: "exp-1", dashboardId: "dash-1" });
+        const autosave = useAutosaveStatus();
+        return (
+          <>
+            <input aria-label="Dashboard name" {...form.register("name")} />
+            <output>{autosave?.status}</output>
+            <ChartSelection chartId={chart.id} />
+          </>
+        );
+      }
+
+      render(
+        <AutosaveStatusProvider>
+          <Harness initialWidgets={[chart]}>
+            <Editor />
+          </Harness>
+        </AutosaveStatusProvider>,
+      );
+      await user.click(screen.getByRole("button", { name: "select chart" }));
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      expect(
+        screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }),
+      ).not.toHaveAttribute("aria-disabled");
+      await user.keyboard("{Escape}");
+      await user.type(screen.getByRole("textbox", { name: "Dashboard name" }), " edited");
+      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(status), {
+        timeout: 2_000,
+      });
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      expect(save.callCount).toBe(status === "dirty" ? 0 : 1);
+      expect(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
+    },
+  );
 });
