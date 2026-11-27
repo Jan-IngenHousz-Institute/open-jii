@@ -5,6 +5,7 @@ import { vi, expect, beforeEach, afterEach } from "vitest";
 
 import { LineChart } from "../../charts/line-chart";
 import type { LineSeriesData } from "../../charts/line-chart";
+import { PlotlyChart } from "../../charts/plotly-chart";
 
 // Mock common utilities
 vi.mock("../../charts/plotly-chart", () => ({
@@ -105,6 +106,15 @@ describe("LineChart", () => {
   });
 
   describe("Basic Rendering", () => {
+    it("preserves missing readings and gap policy in the Plotly trace", () => {
+      render(
+        <LineChart data={[{ x: [0, 1, 2, 3], y: [3.8, null, 3.5, null], connectgaps: false }]} />,
+      );
+      expect(vi.mocked(PlotlyChart).mock.lastCall?.[0].data).toEqual([
+        expect.objectContaining({ x: [0, 1, 2, 3], y: [3.8, null, 3.5, null], connectgaps: false }),
+      ]);
+    });
+
     it("renders line chart with data", () => {
       render(<LineChart data={mockData} />);
 

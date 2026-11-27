@@ -4,6 +4,7 @@ import { zListFilter, zListSort, zPaginated, zPaginationQuery } from "../../shar
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zCommandFormat, zExperiment } from "../experiment/experiment.schema";
 import { zProtocolFamily, zSensorFamily } from "../protocol/protocol.schema";
+import { zDevicePower } from "./device-power.schema";
 
 // --- Iot Credentials ---
 export const zIotCredentials = z.object({
@@ -381,6 +382,11 @@ export const zDeviceThroughputBucket = z.object({
 export const zDeviceBatteryPoint = z.object({
   bucketStart: z.string().datetime(),
   averageBattery: z.number().nullable(),
+  sampleCount: z.number().int().nonnegative().optional(),
+  reportedCount: z.number().int().nonnegative().optional(),
+  latestAt: z.string().datetime().nullable().optional(),
+  latestBattery: z.number().nullable().optional(),
+  lastReportedAt: z.string().datetime().nullable().optional(),
 });
 
 // A device reports the workbook VERSION it ran, not a workbook id, so the
@@ -446,6 +452,7 @@ export const zDeviceMonitoring = z.object({
   truncated: z.boolean(),
   throughput: z.array(zDeviceThroughputBucket),
   battery: z.array(zDeviceBatteryPoint),
+  power: zDevicePower.optional(),
   payload: zDevicePayloadStats,
   firmwareHistory: z.array(zDeviceFirmwareVersion),
   recentMeasurements: z.array(zDeviceMeasurement),

@@ -29,9 +29,7 @@ export class GetDeviceBatteryUseCase {
 
     return success(
       result.value.flatMap((row) =>
-        row.bucketStart === null
-          ? []
-          : [{ bucketStart: row.bucketStart, averageBattery: row.averageBattery }],
+        row.bucketStart === null ? [] : [{ ...row, bucketStart: row.bucketStart }],
       ),
     );
   }

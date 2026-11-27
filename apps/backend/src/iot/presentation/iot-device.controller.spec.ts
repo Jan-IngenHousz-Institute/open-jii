@@ -706,6 +706,9 @@ describe("IotDeviceController", () => {
         success([{ bucketStart: "2026-08-13T01:00:00.000Z", experimentId: null, count: 12 }]),
       );
       vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicePower").mockResolvedValue(
+        success({ latest: null, lastValidBattery: null }),
+      );
       vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
@@ -738,6 +741,9 @@ describe("IotDeviceController", () => {
       );
       vi.spyOn(databricksAdapter, "getDeviceThroughput").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceBatterySeries").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicePower").mockResolvedValue(
+        success({ latest: null, lastValidBattery: null }),
+      );
       vi.spyOn(databricksAdapter, "getDevicePayloadBreakdown").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceMacroBreakdown").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceFirmwareHistory").mockResolvedValue(success([]));
