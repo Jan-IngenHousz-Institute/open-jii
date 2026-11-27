@@ -2,7 +2,6 @@
 
 import { personName } from "@/components/people/person-name";
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { ChevronLeft, Eye, Pencil } from "lucide-react";
@@ -37,11 +36,8 @@ export function DashboardLayoutContent({
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const form = useFormContext<DashboardFormValues>();
-  const { mode, toggleMode } = useDashboardMode();
-
-  const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = accessData?.isAdmin ?? false;
-  const isEditing = canEdit && mode === "edit";
+  const { canEdit, mode, toggleMode } = useDashboardMode();
+  const isEditing = mode === "edit";
 
   const name = useWatch({ control: form.control, name: "name" });
   const description = useWatch({ control: form.control, name: "description" }) ?? "";

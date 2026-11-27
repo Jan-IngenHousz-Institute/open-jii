@@ -50,5 +50,9 @@ export function useDashboardAutosave({
     save,
     enabled,
   });
-  useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
+  useReportAutosaveStatus({
+    status: enabled ? autosave.status : null,
+    error: autosave.error,
+    hasUnsavedChanges: enabled && stringifyDashboard(values) !== autosave.savedKey,
+  });
 }

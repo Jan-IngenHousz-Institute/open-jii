@@ -12,6 +12,7 @@ function renderActions() {
     <VisualizationRowActions
       visualization={createVisualization({ id: "viz-7", name: "My Plot" })}
       experimentId="exp-1"
+      canDuplicate
       href="/platform/experiments/exp-1/analysis/visualizations/viz-7"
     />,
   );
@@ -27,6 +28,36 @@ describe("VisualizationRowActions", () => {
       "href",
       "/platform/experiments/exp-1/analysis/visualizations/viz-7",
     );
+  });
+
+  it("duplicates the saved chart and opens the copy in its editor", async () => {
+    const user = userEvent.setup();
+    const saved = createVisualization({
+      id: "viz-7",
+      name: "My Plot",
+      config: { showLegend: false },
+    });
+    server.mount(contract.experiments.getExperimentVisualization, { body: saved });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [saved] });
+    const created = createVisualization({ id: "copied-chart", name: "My Plot (copy)" });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+    });
+    const { router } = renderActions();
+
+    await user.click(screen.getByRole("button", { name: "ui.actions.moreActions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "ui.actions.duplicate" }));
+
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith(
+        "/en-US/platform/experiments/exp-1/analysis/visualizations/copied-chart",
+      ),
+    );
+    expect(create.body).toMatchObject({
+      name: "My Plot (copy)",
+      config: saved.config,
+      dataConfig: saved.dataConfig,
+    });
   });
 
   it("asks before deleting, then calls the delete endpoint with the chart's id", async () => {
