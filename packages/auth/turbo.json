@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/infrastructure/env/dev/main.tf",
+        "$TURBO_ROOT$/infrastructure/env/dev/variables.tf",
+        "$TURBO_ROOT$/infrastructure/env/prod/main.tf",
+        "$TURBO_ROOT$/infrastructure/env/prod/variables.tf",
+        "$TURBO_ROOT$/infrastructure/modules/route53/main.tf",
+        "$TURBO_ROOT$/infrastructure/modules/route53/outputs.tf"
+      ]
+    },
+    "test:coverage": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/infrastructure/env/dev/main.tf",
+        "$TURBO_ROOT$/infrastructure/env/dev/variables.tf",
+        "$TURBO_ROOT$/infrastructure/env/prod/main.tf",
+        "$TURBO_ROOT$/infrastructure/env/prod/variables.tf",
+        "$TURBO_ROOT$/infrastructure/modules/route53/main.tf",
+        "$TURBO_ROOT$/infrastructure/modules/route53/outputs.tf"
+      ]
+    }
+  }
+}
