@@ -37,7 +37,7 @@ The environment compositions select the modules they need. The DR composition do
 
 ## Foundation
 
-`foundation/` holds what lets CI reach AWS: the GitHub OIDC trust, the deploy role, prod's read-only plan role, the state bucket and the lock table. The environment roots only read these, so a change to CI's access goes through its own workflow.
+`foundation/` holds what lets CI reach AWS: the GitHub OIDC trust, the deploy role, each environment's read-only plan role, the state bucket and the lock table. The environment roots only read these, so a change to CI's access goes through its own workflow.
 
 A release runs the Foundation workflow before the infrastructure deploy whenever `foundation/` or the `iam-oidc`, `s3` or `dynamodb` modules change, and on every dispatched run with `deploy_infrastructure` on, which includes a prod release that deploys infrastructure. It plans with the environment's deploy role and applies with `GithubActionsFoundationAccess`, which only the `foundation-dev` or `foundation-prod` GitHub environment can assume, and only from `main` (or a `release/*` branch in prod). In prod the apply waits for the reviewers of `foundation-prod`; in dev it applies after the merge without approval, because the change was already reviewed in its pull request. A plan with no changes applies nothing.
 
