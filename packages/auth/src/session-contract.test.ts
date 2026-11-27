@@ -228,6 +228,11 @@ function request(auth: Server, path: string, cookie?: string) {
   );
 }
 
+function normalizeCookieAttribute(attribute: string) {
+  const [name, ...value] = attribute.trim().split("=");
+  return [name.toLowerCase(), ...value].join("=");
+}
+
 async function signIn(auth: Server) {
   await auth.api.sendVerificationOTP({ body: { email: EMAIL, type: "sign-in" } });
   const { otp } = await auth.api.getVerificationOTP({ query: { email: EMAIL, type: "sign-in" } });
@@ -365,6 +370,7 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
   it("emits the production session token with the documented attributes", async () => {
     const auth = await configuredServer();
     const { tokenHeader } = await signIn(auth);
+    const attributes = tokenHeader.split(";").slice(1).map(normalizeCookieAttribute);
     for (const attribute of [
       "Secure",
       "HttpOnly",
@@ -374,11 +380,11 @@ describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
       "Max-Age=2592000",
     ]) {
       expect(
-        tokenHeader,
+        attributes,
         relied(
           `The production token cookie lost ${attribute}. It must stay a Secure, HttpOnly, 30-day cookie on .openjii.org.`,
         ),
-      ).toContain(attribute);
+      ).toContain(normalizeCookieAttribute(attribute));
     }
   });
 
