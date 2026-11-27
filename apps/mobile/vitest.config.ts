@@ -77,6 +77,8 @@ export default defineConfig({
           name: "jsdom",
           globals: true,
           environment: "jsdom",
+          // AsyncStorage uses jsdom storage in hook tests.
+          execArgv: ["--no-experimental-webstorage"],
           include: ["src/**/hooks/**/*.test.{ts,tsx}"],
         },
       },

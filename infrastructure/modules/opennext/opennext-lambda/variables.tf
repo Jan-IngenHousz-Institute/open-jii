@@ -12,7 +12,7 @@ variable "handler" {
 variable "runtime" {
   description = "Lambda runtime"
   type        = string
-  default     = "nodejs24.x"
+  default     = "nodejs26.x"
 }
 
 variable "architecture" {

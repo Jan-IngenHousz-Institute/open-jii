@@ -49,7 +49,7 @@ function mountUploadCapture(status = 201, unblock?: Promise<unknown>) {
 
   server.use(
     http.post(`${API_URL}/api/v1/experiments/:id/data/uploads`, async ({ request }) => {
-      // Node 24's undici multipart parser builds entries with the global File
+      // Node's Undici multipart parser builds entries with the global File
       // (jsdom's here) then brand-checks its own; parse with Node's File.
       const JsdomFile = globalThis.File;
       globalThis.File = NodeFile as unknown as typeof File;

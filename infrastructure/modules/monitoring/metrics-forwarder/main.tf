@@ -93,7 +93,7 @@ resource "aws_lambda_function" "metrics_forwarder" {
   function_name    = "${var.environment}-metrics-forwarder"
   role             = aws_iam_role.metrics_forwarder.arn
   handler          = "index.handler"
-  runtime          = "nodejs24.x"
+  runtime          = "nodejs26.x"
   timeout          = 60
   memory_size      = 256
 

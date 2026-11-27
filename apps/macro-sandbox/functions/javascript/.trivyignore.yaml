@@ -1,4 +1,4 @@
-# JS sandbox image (public.ecr.aws/lambda/nodejs:24). All entries are AWS-managed
+# JS sandbox image (public.ecr.aws/lambda/nodejs:26). All entries are AWS-managed
 # components awaiting an AWS base republish. Sandbox is VPC-isolated: no outbound
 # HTTP, no IAM creds, macro code cannot spawn processes.
 # Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2

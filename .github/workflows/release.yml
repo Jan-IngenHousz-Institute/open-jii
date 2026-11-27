@@ -58,7 +58,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "24"
+          node-version: "26"
 
       # apps/data builds through uv; only provision it when that app is affected.
       - name: Setup uv
@@ -93,7 +93,7 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Filter Apps for Release
         id: filter_apps

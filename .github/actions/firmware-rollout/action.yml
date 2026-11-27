@@ -129,7 +129,7 @@ runs:
         echo "SHA-256: \`$(cat artifact/sha256)\`" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      uses: aws-actions/configure-aws-credentials@45666896f5d8e0f10ae255413f3a4cdd03bdc8f5 # v6.3.1
       with:
         role-to-assume: ${{ inputs.aws-role-arn }}
         aws-region: ${{ inputs.aws-region }}

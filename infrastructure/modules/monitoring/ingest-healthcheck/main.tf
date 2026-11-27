@@ -77,7 +77,7 @@ resource "aws_lambda_function" "ingest_healthcheck" {
   function_name                  = "${var.environment}-ingest-healthcheck"
   role                           = aws_iam_role.ingest_healthcheck.arn
   handler                        = "index.handler"
-  runtime                        = "nodejs24.x"
+  runtime                        = "nodejs26.x"
   timeout                        = 10
   memory_size                    = 128
   reserved_concurrent_executions = 1

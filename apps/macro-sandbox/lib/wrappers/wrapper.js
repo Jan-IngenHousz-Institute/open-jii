@@ -109,6 +109,7 @@ const sandbox = {
   console: { log: () => {} },
   Date: undefined,
   performance: undefined,
+  Temporal: undefined,
   setTimeout: undefined,
   setInterval: undefined,
   setImmediate: undefined,

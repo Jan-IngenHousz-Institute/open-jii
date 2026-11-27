@@ -113,7 +113,7 @@ resource "aws_lambda_function" "status_publisher" {
   function_name                  = "${var.environment}-status-publisher"
   role                           = aws_iam_role.status_publisher.arn
   handler                        = "index.handler"
-  runtime                        = "nodejs24.x"
+  runtime                        = "nodejs26.x"
   timeout                        = 50
   memory_size                    = 256
   reserved_concurrent_executions = 1
