@@ -2585,5 +2585,22 @@
       "success": true,
       "error": true
     }
+  },
+  {
+    "name": "temporal_is_unavailable",
+    "language": "javascript",
+    "script": "f43b9f967383529c8750a14527e47c97:52e82ad498a70b4df19c8a917d3c5f8db4acd05f5e3d56741a974b246469ac6f6529747391e6b71fcdd2634030c211f0829cc8f341525377fddeea3d5ccfdc510c3258b68e6642c0f34439cff8375561f92386cec708f81c82e57175a0d980e8f6f7050a02f94e7f3c478ada34543ad56551a6a1241de5cbad498921d9676e74328ed0c9bcdb6eb04b2fd1ae89705a9abe9b3f7344e21d8c3ec50c4b1aa78bdf",
+    "items": [
+      {
+        "id": "temporal",
+        "data": {}
+      }
+    ],
+    "timeout": 10,
+    "protocol_id": "test-security-temporal_is_unavailable",
+    "expect": {
+      "success": true,
+      "error": false
+    }
   }
 ]
