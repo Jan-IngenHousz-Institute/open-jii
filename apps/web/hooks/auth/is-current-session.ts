@@ -16,8 +16,15 @@ async function getVerifiedSession() {
   }
 }
 
+export async function checkCurrentSession(sessionId: string | undefined) {
+  if (!sessionId) return "changed";
+  const session = await getVerifiedSession();
+  if (session === undefined) return "unknown";
+  return session?.session.id === sessionId ? "current" : "changed";
+}
+
 export async function isCurrentSession(sessionId: string | undefined): Promise<boolean> {
-  return !!sessionId && (await getVerifiedSession())?.session.id === sessionId;
+  return (await checkCurrentSession(sessionId)) === "current";
 }
 
 export async function waitForCurrentSession(
@@ -28,20 +35,23 @@ export async function waitForCurrentSession(
   if (!userId || !sessionId) return false;
 
   for (;;) {
-    const retry = Promise.withResolvers<void>();
+    let resolveRetry!: () => void;
+    const retry = new Promise<void>((resolve) => {
+      resolveRetry = resolve;
+    });
     const unsubscribeOnline = onlineManager.subscribe((online) => {
-      if (online) retry.resolve();
+      if (online) resolveRetry();
     });
     const unsubscribeQueries = queryClient.getQueryCache().subscribe((event) => {
       if (event.type === "updated" && event.action.type === "success" && !event.action.manual) {
-        retry.resolve();
+        resolveRetry();
       }
     });
     try {
       const session = await getVerifiedSession();
       if (session === null) return false;
       if (session) return session.user.id === userId && session.session.id === sessionId;
-      await retry.promise;
+      await retry;
     } finally {
       unsubscribeOnline();
       unsubscribeQueries();
