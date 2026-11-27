@@ -1,24 +1,15 @@
 "use client";
 
-import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
-import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { useMemo } from "react";
+import { usePrincipalSession } from "@/components/auth/principal-context";
 import type { ReactNode } from "react";
-import { FormProvider, useForm } from "react-hook-form";
-import type { UseFormReturn } from "react-hook-form";
 
 import type {
+  ExperimentDashboard,
   ExperimentDashboardLayout,
   ExperimentDashboardWidget,
-  ExperimentDashboard,
 } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
-import { Form } from "@repo/ui/components/form";
 
-import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
-import { DashboardLayoutContent } from "./dashboard-layout-content";
-import { DashboardModeProvider } from "./dashboard-mode-context";
-import { DashboardEditorProvider } from "./editor/context/dashboard-editor-context";
-import { useDashboardAutosave } from "./editor/hooks/use-dashboard-autosave";
+import { DashboardFormGate } from "./dashboard-form-gate";
 
 export interface DashboardFormValues {
   name: string;
@@ -30,76 +21,20 @@ export interface DashboardFormValues {
 export interface DashboardFormShellProps {
   experimentId: string;
   dashboardId: string;
-  dashboard: ExperimentDashboard;
+  dashboard?: ExperimentDashboard;
+  isLoading?: boolean;
+  error?: unknown;
   initialMode: "view" | "edit";
   children: ReactNode;
 }
 
-export function DashboardFormShell({
-  experimentId,
-  dashboardId,
-  dashboard,
-  initialMode,
-  children,
-}: DashboardFormShellProps) {
-  const defaults = useMemo<DashboardFormValues>(
-    () => ({
-      name: dashboard.name,
-      description: dashboard.description ?? "",
-      layout: dashboard.layout,
-      widgets: dashboard.widgets,
-    }),
-    [dashboard],
-  );
-
-  const form = useForm<DashboardFormValues>({ defaultValues: defaults });
-  const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = canEditExperimentContent(accessData);
-
+export function DashboardFormShell(props: DashboardFormShellProps) {
+  const { experimentId, dashboardId } = props;
+  const { userId, sessionId } = usePrincipalSession();
   return (
-    <AutosaveStatusProvider>
-      <DashboardEditorProvider>
-        <DashboardModeProvider initialMode={initialMode} canEdit={canEdit}>
-          <FormProvider {...form}>
-            <Form {...form}>
-              <DashboardFormShellBody
-                form={form}
-                experimentId={experimentId}
-                dashboardId={dashboardId}
-                canEdit={canEdit}
-                dashboard={dashboard}
-              >
-                {children}
-              </DashboardFormShellBody>
-            </Form>
-          </FormProvider>
-        </DashboardModeProvider>
-      </DashboardEditorProvider>
-    </AutosaveStatusProvider>
-  );
-}
-
-interface DashboardFormShellBodyProps {
-  form: UseFormReturn<DashboardFormValues>;
-  experimentId: string;
-  dashboardId: string;
-  dashboard: ExperimentDashboard;
-  canEdit: boolean;
-  children: ReactNode;
-}
-
-function DashboardFormShellBody({
-  form,
-  experimentId,
-  dashboardId,
-  dashboard,
-  canEdit,
-  children,
-}: DashboardFormShellBodyProps) {
-  useDashboardAutosave({ form, experimentId, dashboardId, enabled: canEdit });
-  return (
-    <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>
-      {children}
-    </DashboardLayoutContent>
+    <DashboardFormGate
+      key={JSON.stringify([experimentId, dashboardId, userId, sessionId])}
+      {...props}
+    />
   );
 }

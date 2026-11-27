@@ -18,6 +18,7 @@
       "deleteSuccess": "Dashboard gelöscht",
       "deleteConfirm": "\"{{name}}\" dauerhaft löschen? Visualisierungen, auf die dieses Dashboard verweist, sind nicht betroffen.",
       "loading": "Dashboard wird geladen…",
+      "saveStillInProgress": "Dein Dashboard wird noch gespeichert. Du kannst es wieder bearbeiten, sobald es neu geladen wurde.",
       "loadFailed": "Dashboard konnte nicht geladen werden",
       "emptyDashboard": "Noch nichts hier"
     },
@@ -84,7 +85,12 @@
         "pickVisualizationFirst": "Zuerst eine Visualisierung auswählen"
       },
       "moreShelves": "Mehr",
-      "duplicate": "Duplizieren"
+      "duplicate": "Duplizieren",
+      "copySaveFailed": "Das Diagramm wurde kopiert, aber das Dashboard konnte die Kopie nicht speichern.",
+      "retryCopySave": "Kopie erneut speichern",
+      "copyNotAttached": "Das Diagramm wurde kopiert, konnte aber nicht zum Dashboard hinzugefügt werden.",
+      "openChartCopyNamed": "Kopie von {{name}} öffnen",
+      "openChartCopy": "Kopie öffnen"
     },
     "vizDataStrip": {
       "dataset": "Datensatz",

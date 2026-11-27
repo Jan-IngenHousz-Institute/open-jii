@@ -1,4 +1,5 @@
-import { createExperimentDashboard } from "@/test/factories";
+import { useDashboardMode } from "@/components/experiment-dashboards/dashboard-mode-context";
+import { createExperimentAccess, createExperimentDashboard } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
 import { notFound, useParams, useSearchParams } from "next/navigation";
@@ -9,29 +10,28 @@ import { contract } from "@repo/api/contract";
 
 import DashboardLayout from "./layout";
 
-// The form shell pulls in the full editor canvas tree (react-grid-layout,
-// Plotly). Stub it for the layout test; the shell has its own coverage.
-vi.mock("@/components/experiment-dashboards/dashboard-form-shell", () => ({
-  DashboardFormShell: ({
+vi.mock("@/components/experiment-dashboards/dashboard-layout-content", () => ({
+  DashboardLayoutContent: ({
     experimentId,
-    dashboardId,
-    initialMode,
+    dashboard,
     children,
   }: {
     experimentId: string;
-    dashboardId: string;
-    initialMode: "view" | "edit";
+    dashboard: { id: string };
     children: ReactNode;
-  }) => (
-    <div
-      data-testid="form-shell"
-      data-experiment={experimentId}
-      data-dashboard={dashboardId}
-      data-mode={initialMode}
-    >
-      {children}
-    </div>
-  ),
+  }) => {
+    const { mode } = useDashboardMode();
+    return (
+      <div
+        data-testid="form-shell"
+        data-experiment={experimentId}
+        data-dashboard={dashboard.id}
+        data-mode={mode}
+      >
+        {children}
+      </div>
+    );
+  },
 }));
 
 const dashboardId = "dash-1";
@@ -43,6 +43,12 @@ function renderLayout(children: ReactNode = <div data-testid="child">child</div>
 
 describe("DashboardLayout", () => {
   beforeEach(() => {
+    server.mount(contract.experiments.getExperimentAccess, {
+      body: createExperimentAccess({
+        experiment: { id: experimentId, status: "active" },
+        isAdmin: true,
+      }),
+    });
     vi.mocked(useParams).mockReturnValue({ id: experimentId, dashboardId });
     vi.mocked(useSearchParams).mockReturnValue(
       new URLSearchParams() as ReturnType<typeof useSearchParams>,

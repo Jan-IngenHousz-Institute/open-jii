@@ -81,7 +81,7 @@ export default async function AppLayout({
 
   return (
     <TranslationBundles resources={bundles}>
-      <PrincipalProvider userId={session.user.id}>
+      <PrincipalProvider userId={session.user.id} sessionId={session.session.id}>
         <SidebarProvider defaultWidth={232}>
           <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
             <ActivityProvider>

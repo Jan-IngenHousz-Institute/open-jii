@@ -18,6 +18,7 @@
       "deleteSuccess": "Dashboard deleted",
       "deleteConfirm": "Permanently delete \"{{name}}\"? Visualizations referenced by this dashboard are not affected.",
       "loading": "Loading dashboard\u2026",
+      "saveStillInProgress": "Your last dashboard save is still in progress. You can edit again once the dashboard reloads.",
       "loadFailed": "Failed to load dashboard",
       "emptyDashboard": "Nothing here yet",
       "emptyDashboardEditorHint": "Pick a widget from the toolbar to get started."
@@ -85,7 +86,12 @@
         "pickVisualizationFirst": "Pick a visualization first"
       },
       "moreShelves": "More",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "copySaveFailed": "The chart was copied, but the dashboard could not save it.",
+      "retryCopySave": "Retry saving copy",
+      "copyNotAttached": "The chart was copied, but it could not be added to the dashboard.",
+      "openChartCopyNamed": "Open copy of {{name}}",
+      "openChartCopy": "Open copy"
     },
     "vizDataStrip": {
       "dataset": "Dataset",

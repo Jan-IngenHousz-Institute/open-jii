@@ -134,11 +134,24 @@ In the dashboard editor, select a chart widget, open **More**, and choose
 **Duplicate**. A widget of the same size appears below the original and becomes
 selected. The widget is still added and saved if you clear the selection while
 the copy is being created. Its chart is a separate copy, so editing it leaves
-the original alone. Dashboards in archived experiments are read-only.
+the original alone.
+
+If the dashboard cannot save the new widget, choose **Retry saving copy** in the
+toast or in **More** to save the widget with the chart you already copied. If you
+have read access, both places also offer **Open copy** so you can open the saved
+chart. If you sign out or switch sessions, these recovery actions disappear.
+If you lose edit access or leave the dashboard and the widget cannot be saved,
+a message confirms the chart was copied and offers **Open copy** if you still
+have read access. In an archived experiment, charts and dashboards open in
+read-only view.
 
 The copy keeps the chart's settings, data sources and chart filters. Its name
 ends in **(copy)**, with a number added if that name is already taken. Duplicate
-is unavailable while edits are waiting to save or a save is running.
+is unavailable while edits are waiting to save or a save is running. If you
+return to a dashboard before its last save finishes, editing is unavailable
+until the dashboard reloads. If the save takes more than a few seconds, the
+dashboard shows a status message. If your read access is confirmed, use **Open
+copy** to open a chart you already copied while the save is still in progress.
 
 In the dashboard editor, **Duplicate** also stays disabled while a copy is
 being created.
