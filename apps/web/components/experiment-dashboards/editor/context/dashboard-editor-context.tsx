@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 
 export type DashboardTool = "cursor" | "chart" | "text" | "table" | "filter";
@@ -10,6 +18,7 @@ interface DashboardEditorContextValue {
   selectWidget: (id: string | null) => void;
   chartDuplicatePending: boolean;
   runChartDuplicate: (duplicate: () => Promise<void>) => Promise<void>;
+  isMounted: () => boolean;
   tool: DashboardTool;
   setTool: (tool: DashboardTool) => void;
   /**
@@ -28,22 +37,35 @@ export function DashboardEditorProvider({ children }: { children: ReactNode }) {
   const [datasetOpen, setDatasetOpen] = useState(false);
   const [chartDuplicatePending, setChartDuplicatePending] = useState(false);
   const chartDuplicateInFlight = useRef(false);
+  const mounted = useRef(false);
+
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const isMounted = useCallback(() => mounted.current, []);
 
   const selectWidget = useCallback((id: string | null) => {
     setSelectedWidgetId(id);
   }, []);
 
-  const runChartDuplicate = useCallback(async (duplicate: () => Promise<void>) => {
-    if (chartDuplicateInFlight.current) return;
-    chartDuplicateInFlight.current = true;
-    setChartDuplicatePending(true);
-    try {
-      await duplicate();
-    } finally {
-      chartDuplicateInFlight.current = false;
-      setChartDuplicatePending(false);
-    }
-  }, []);
+  const runChartDuplicate = useCallback(
+    async (duplicate: () => Promise<void>) => {
+      if (!isMounted() || chartDuplicateInFlight.current) return;
+      chartDuplicateInFlight.current = true;
+      setChartDuplicatePending(true);
+      try {
+        await duplicate();
+      } finally {
+        chartDuplicateInFlight.current = false;
+        if (isMounted()) setChartDuplicatePending(false);
+      }
+    },
+    [isMounted],
+  );
 
   const value = useMemo<DashboardEditorContextValue>(
     () => ({
@@ -51,12 +73,21 @@ export function DashboardEditorProvider({ children }: { children: ReactNode }) {
       selectWidget,
       chartDuplicatePending,
       runChartDuplicate,
+      isMounted,
       tool,
       setTool,
       datasetOpen,
       setDatasetOpen,
     }),
-    [selectedWidgetId, selectWidget, chartDuplicatePending, runChartDuplicate, tool, datasetOpen],
+    [
+      selectedWidgetId,
+      selectWidget,
+      chartDuplicatePending,
+      runChartDuplicate,
+      isMounted,
+      tool,
+      datasetOpen,
+    ],
   );
 
   return (

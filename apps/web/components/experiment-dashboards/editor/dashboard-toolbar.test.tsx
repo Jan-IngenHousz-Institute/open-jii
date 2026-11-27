@@ -5,7 +5,15 @@ import {
   createVisualizationWidget,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import {
+  assertExists,
+  createTestQueryClient,
+  render,
+  renderWithForm,
+  screen,
+  userEvent,
+  waitFor,
+} from "@/test/test-utils";
 import type { ReactNode } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
@@ -211,5 +219,58 @@ describe("DashboardToolbar", () => {
     );
     expect(create.callCount).toBe(1);
     expect(save.callCount).toBe(1);
+  });
+
+  it("leaves the form untouched when a chart copy arrives after the dashboard unmounts", async () => {
+    const user = userEvent.setup();
+    const queryClient = createTestQueryClient();
+    const original = createVisualization({ id: "source" });
+    const created = createVisualization({ id: "copy" });
+    const chart = createVisualizationWidget({
+      config: { visualizationId: original.id, showTitle: true, showDescription: false },
+    });
+    const { promise, resolve } = Promise.withResolvers<void>();
+    server.mount(contract.experiments.getExperimentVisualization, { body: original });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    const create = server.mount(contract.experiments.createExperimentVisualization, {
+      body: created,
+      unblock: promise,
+    });
+    const save = server.mount(contract.experiments.updateExperimentDashboard, {
+      body: createExperimentDashboard({ id: "dash-1" }),
+    });
+    function Editor() {
+      const form = useFormContext<DashboardFormValues>();
+      useDashboardAutosave({ form, experimentId: "exp-1", dashboardId: "dash-1" });
+      return <ChartSelection chartId={chart.id} />;
+    }
+
+    const { name, layout } = createExperimentDashboard();
+    const { form, unmount } = renderWithForm<DashboardFormValues>(
+      () => (
+        <DashboardEditorProvider>
+          <Editor />
+        </DashboardEditorProvider>
+      ),
+      { queryClient, useFormProps: { defaultValues: { name, layout, widgets: [chart] } } },
+    );
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      await user.click(screen.getByRole("button", { name: "select chart" }));
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+      await waitFor(() => expect(create.callCount).toBe(1));
+      const [creation] = queryClient.getMutationCache().getAll();
+      assertExists(creation);
+      unmount();
+      resolve();
+      await waitFor(() => expect(creation.state.status).toBe("success"));
+      expect(form.getValues("widgets")).toEqual([chart]);
+      expect(save.callCount).toBe(0);
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      resolve();
+      consoleError.mockRestore();
+    }
   });
 });
