@@ -2,6 +2,7 @@
 
 import { usePrincipalSession } from "@/components/auth/principal-context";
 import { checkCurrentSession, waitForCurrentSession } from "@/hooks/auth/is-current-session";
+import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
 import {
   experimentAccessQuery,
   experimentAccessQueryKey,
@@ -11,7 +12,6 @@ import {
 import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExperimentVisualizationDuplicate/useExperimentVisualizationDuplicate";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
 import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -210,7 +210,7 @@ export function DashboardAutosaveBoundary({
     // The access cache updates before the form shell receives its new enabled prop.
     const query = experimentAccessQuery(orpc, userId, experimentId);
     const access = queryClient.getQueryData(query.queryKey);
-    return access === undefined || canDuplicateExperimentChart(access);
+    return access === undefined || canEditExperimentContent(access);
   }, [experimentId, queryClient, userId]);
   const { hasError, error, flush, inFlightWidgetIds } = useDashboardAutosave({
     form,

@@ -1,7 +1,7 @@
 "use client";
 
+import { canEditExperimentContent } from "@/hooks/experiment/useExperimentAccess/can-edit-experiment-content";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
-import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
@@ -38,7 +38,7 @@ export function DashboardForm({
 
   const form = useForm<DashboardFormValues>({ defaultValues: defaults });
   const { data: accessData } = useExperimentAccess(experimentId);
-  const canEdit = canDuplicateExperimentChart(accessData);
+  const canEdit = canEditExperimentContent(accessData);
 
   return (
     <AutosaveStatusProvider>

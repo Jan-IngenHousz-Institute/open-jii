@@ -1,7 +1,7 @@
 import { useAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { orpc } from "@/lib/orpc";
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -30,6 +30,13 @@ export function useExperimentVisualizationDuplicate(
   const { mutateAsync: create } = useExperimentVisualizationCreate({ experimentId });
   const [isDuplicating, setIsDuplicating] = useState(false);
   const busy = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const disabled = isDuplicating || pendingSaves > 0 || !!autosave?.hasUnsavedChanges;
 
   async function duplicate(): Promise<ExperimentVisualization | undefined> {
@@ -67,7 +74,7 @@ export function useExperimentVisualizationDuplicate(
       });
     } finally {
       busy.current = false;
-      setIsDuplicating(false);
+      if (mounted.current) setIsDuplicating(false);
     }
   }
 
