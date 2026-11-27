@@ -53,7 +53,7 @@ const recoveryTitle = "editor.inspector.copyNotAttached";
 const namedOpenLabel = "editor.inspector.openChartCopyNamed";
 const retryLabel = "editor.inspector.retryCopySave";
 
-function Actions({ widgets }: { widgets: DashboardFormValues["widgets"] }) {
+function Actions() {
   const { selectWidget } = useDashboardEditor();
   const recovery = useDashboardCopySave();
   assertExists(recovery);
@@ -69,18 +69,11 @@ function Actions({ widgets }: { widgets: DashboardFormValues["widgets"] }) {
       </button>
       {recovery.retryAvailable && <button onClick={recovery.retry}>Retry</button>}
       {recovery.openCopyHref && <a href={recovery.openCopyHref}>Open copy</a>}
-      <output aria-label="Charts">
-        {widgets
-          .flatMap((widget) =>
-            widget.type === "visualization" ? [widget.config.visualizationId] : [],
-          )
-          .join(", ")}
-      </output>
     </>
   );
 }
 
-function Editor() {
+function Editor({ showBoundary = true }: { showBoundary?: boolean }) {
   const form = useForm<DashboardFormValues>({
     defaultValues: {
       name: dashboard.name,
@@ -93,9 +86,18 @@ function Editor() {
   return (
     <AutosaveStatusProvider>
       <DashboardEditorProvider>
-        <DashboardAutosaveBoundary form={form} experimentId="exp-1" dashboardId="dash-1" enabled>
-          <Actions widgets={widgets} />
-        </DashboardAutosaveBoundary>
+        {showBoundary && (
+          <DashboardAutosaveBoundary form={form} experimentId="exp-1" dashboardId="dash-1" enabled>
+            <Actions />
+          </DashboardAutosaveBoundary>
+        )}
+        <output aria-label="Charts">
+          {widgets
+            .flatMap((widget) =>
+              widget.type === "visualization" ? [widget.config.visualizationId] : [],
+            )
+            .join(", ")}
+        </output>
       </DashboardEditorProvider>
     </AutosaveStatusProvider>
   );
@@ -165,7 +167,7 @@ describe("DashboardAutosaveBoundary", () => {
     try {
       const editor = await startDuplicate(creation.promise);
       expect(screen.getByLabelText("Charts")).toHaveTextContent(/^source$/u);
-      editor.unmount();
+      editor.rerender(<Editor showBoundary={false} />);
     } finally {
       creation.resolve();
     }
@@ -175,6 +177,7 @@ describe("DashboardAutosaveBoundary", () => {
       altText: namedOpenLabel,
       children: { props: { href: activeCopyHref } },
     });
+    expect(screen.getByLabelText("Charts")).toHaveTextContent(/^source$/u);
     expect(save.callCount).toBe(0);
   });
 

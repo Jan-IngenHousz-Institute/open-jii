@@ -82,7 +82,8 @@ export function DashboardAutosaveBoundary({
   const locale = useLocale();
   const queryClient = useQueryClient();
   const { userId, sessionId } = usePrincipalSession();
-  const { selectedWidgetId, selectWidget } = useDashboardEditor();
+  const { selectedWidgetId, selectWidget, chartDuplicatePending, runChartDuplicate, isMounted } =
+    useDashboardEditor();
   const mounted = useRef(false);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
@@ -317,50 +318,57 @@ export function DashboardAutosaveBoundary({
   const duplicateSelectedChart = async () => {
     if (!enabled || selectedWidget?.type !== "visualization" || !sourceChartId || selectedCopy)
       return;
-    readCopyAccess();
-    const sourceWidgetId = selectedWidget.id;
-    const created = await duplicate();
-    if (!created) return;
-    const current = form.getValues("widgets");
-    const source = current.find((candidate) => candidate.id === sourceWidgetId);
-    if (
-      !mounted.current ||
-      !enabledRef.current ||
-      source?.type !== "visualization" ||
-      source.config.visualizationId !== sourceChartId
-    ) {
-      await showUnattachedCopies([created]);
-      return;
-    }
-    const copy = {
-      ...source,
-      id: crypto.randomUUID(),
-      config: { ...source.config, visualizationId: created.id },
-      layout: { ...source.layout, row: source.layout.row + source.layout.rowSpan },
-    };
-    const insertionRow = copy.layout.row;
-    const shifted = current.map((candidate) =>
-      candidate.layout.row >= insertionRow
-        ? {
-            ...candidate,
-            layout: { ...candidate.layout, row: candidate.layout.row + copy.layout.rowSpan },
-          }
-        : candidate,
-    );
-    form.setValue("widgets", compactWidgets([...shifted, copy], form.getValues("layout.columns")), {
-      shouldDirty: true,
+    await runChartDuplicate(async () => {
+      readCopyAccess();
+      const sourceWidgetId = selectedWidget.id;
+      const created = await duplicate();
+      if (!created) return;
+      const current = form.getValues("widgets");
+      const source = current.find((candidate) => candidate.id === sourceWidgetId);
+      if (
+        !mounted.current ||
+        !isMounted() ||
+        !enabledRef.current ||
+        source?.type !== "visualization" ||
+        source.config.visualizationId !== sourceChartId
+      ) {
+        void showUnattachedCopies([created]);
+        return;
+      }
+      const copy = {
+        ...source,
+        id: crypto.randomUUID(),
+        config: { ...source.config, visualizationId: created.id },
+        layout: { ...source.layout, row: source.layout.row + source.layout.rowSpan },
+      };
+      const insertionRow = copy.layout.row;
+      const shifted = current.map((candidate) =>
+        candidate.layout.row >= insertionRow
+          ? {
+              ...candidate,
+              layout: { ...candidate.layout, row: candidate.layout.row + copy.layout.rowSpan },
+            }
+          : candidate,
+      );
+      form.setValue(
+        "widgets",
+        compactWidgets([...shifted, copy], form.getValues("layout.columns")),
+        {
+          shouldDirty: true,
+        },
+      );
+      updateCopies(
+        new Map(copiesRef.current).set(copy.id, { sourceWidgetId: source.id, chart: created }),
+      );
+      selectWidget(copy.id);
     });
-    updateCopies(
-      new Map(copiesRef.current).set(copy.id, { sourceWidgetId: source.id, chart: created }),
-    );
-    selectWidget(copy.id);
   };
 
   return (
     <DashboardCopySaveContext.Provider
       value={{
         enabled,
-        duplicateDisabled: disabled || !!selectedCopy || !sourceChartId,
+        duplicateDisabled: chartDuplicatePending || disabled || !!selectedCopy || !sourceChartId,
         duplicateSelectedChart,
         retryAvailable,
         openCopyHref,

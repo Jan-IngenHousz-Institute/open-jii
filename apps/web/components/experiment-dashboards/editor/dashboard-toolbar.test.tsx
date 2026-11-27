@@ -29,7 +29,10 @@ import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/das
 import { authClient, useSession } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
+import {
+  AutosaveStatusProvider,
+  useAutosaveStatus,
+} from "../../shared/autosave/autosave-status-context";
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { DashboardEditorProvider, useDashboardEditor } from "./context/dashboard-editor-context";
 import { DashboardAutosaveBoundary } from "./dashboard-autosave-boundary";
@@ -295,65 +298,88 @@ describe("DashboardToolbar", () => {
     );
   });
 
-  it("places and selects the copy even if Escape unmounts the toolbar while create is pending", async () => {
-    const user = userEvent.setup();
-    const original = createVisualization({ id: "source" });
-    const created = createVisualization({ id: "copy" });
-    const { promise, resolve } = Promise.withResolvers<void>();
-    server.mount(contract.experiments.getExperimentVisualization, { body: original });
-    server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
-    const create = server.mount(contract.experiments.createExperimentVisualization, {
-      body: created,
-      unblock: promise,
-    });
-    const update = server.mount(contract.experiments.updateExperimentDashboard, {
-      body: createExperimentDashboard({ id: "dash-1" }),
-    });
-    const chart = createVisualizationWidget({
-      config: { visualizationId: original.id, showTitle: true, showDescription: false },
-    });
+  it.each(["clear", "restore"])(
+    "saves one copy if you %s the selection while chart creation is pending",
+    async (selection) => {
+      const user = userEvent.setup();
+      const original = createVisualization({ id: "source" });
+      const created = createVisualization({ id: "copy" });
+      const { promise, resolve } = Promise.withResolvers<void>();
+      server.mount(contract.experiments.getExperimentVisualization, { body: original });
+      server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+      const create = server.mount(contract.experiments.createExperimentVisualization, {
+        body: created,
+        unblock: promise,
+      });
+      const update = server.mount(contract.experiments.updateExperimentDashboard, {
+        body: createExperimentDashboard({ id: "dash-1" }),
+      });
+      const chart = createVisualizationWidget({
+        config: { visualizationId: original.id, showTitle: true, showDescription: false },
+      });
 
-    function Canvas() {
-      const editor = useDashboardEditor();
-      useDeselectOnOutsideClick(editor);
-      const { control } = useFormContext<DashboardFormValues>();
-      const widgets = useWatch({ name: "widgets", control });
-      const selected = widgets.find((widget) => widget.id === editor.selectedWidgetId);
-      return (
-        <>
-          <button data-dashboard-widget="" onClick={() => editor.selectWidget(chart.id)}>
-            select chart
-          </button>
-          {selected?.type === "visualization" && (
-            <output aria-label="Selected chart">{selected.config.visualizationId}</output>
-          )}
-          {editor.selectedWidgetId && <DashboardToolbar visible experimentId="exp-1" />}
-        </>
+      function Canvas() {
+        const editor = useDashboardEditor();
+        useDeselectOnOutsideClick(editor);
+        const { control } = useFormContext<DashboardFormValues>();
+        const widgets = useWatch({ name: "widgets", control });
+        const selected = widgets.find((widget) => widget.id === editor.selectedWidgetId);
+        return (
+          <>
+            <button data-dashboard-widget="" onClick={() => editor.selectWidget(chart.id)}>
+              select chart
+            </button>
+            {selected?.type === "visualization" && (
+              <output aria-label="Selected chart">{selected.config.visualizationId}</output>
+            )}
+            {editor.selectedWidgetId && <DashboardToolbar visible experimentId="exp-1" />}
+          </>
+        );
+      }
+
+      render(
+        <Harness initialWidgets={[chart]} save>
+          <Canvas />
+        </Harness>,
       );
-    }
+      await user.click(screen.getByRole("button", { name: "select chart" }));
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
+      try {
+        await waitFor(() => expect(create.callCount).toBe(1));
+        await user.keyboard("{Escape}");
+        expect(
+          screen.queryByRole("button", { name: "editor.inspector.more" }),
+        ).not.toBeInTheDocument();
+        if (selection === "restore") {
+          await user.click(screen.getByRole("button", { name: "select chart" }));
+          await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+          const duplicate = screen.getByRole("menuitem", { name: "editor.inspector.duplicate" });
+          expect.soft(duplicate).toHaveAttribute("aria-disabled", "true");
+          await user.click(duplicate);
+          await user.keyboard("{Escape}");
+          expect(create.callCount).toBe(1);
+        }
+      } finally {
+        act(() => resolve());
+      }
 
-    render(
-      <Harness initialWidgets={[chart]} save>
-        <Canvas />
-      </Harness>,
-    );
-    await user.click(screen.getByRole("button", { name: "select chart" }));
-    await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
-    await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
-    await waitFor(() => expect(create.called).toBe(true));
-
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("button", { name: "editor.inspector.more" })).not.toBeInTheDocument();
-    act(() => resolve());
-
-    await waitFor(() =>
-      expect(screen.getByLabelText("Selected chart")).toHaveTextContent(created.id),
-    );
-    await waitFor(() => expect(update.called).toBe(true));
-    expect(toast).not.toHaveBeenCalledWith(
-      expect.objectContaining({ title: "editor.inspector.copyNotAttached" }),
-    );
-  });
+      await waitFor(() =>
+        expect(screen.getByLabelText("Selected chart")).toHaveTextContent(created.id),
+      );
+      await waitFor(() => expect(update.called).toBe(true));
+      expect(toast).not.toHaveBeenCalledWith(
+        expect.objectContaining({ title: "editor.inspector.copyNotAttached" }),
+      );
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }),
+        ).not.toHaveAttribute("aria-disabled", "true"),
+      );
+      expect(create.callCount).toBe(1);
+    },
+  );
 
   it.each([
     { leaveDashboard: false, view: "on the dashboard" },
@@ -827,6 +853,54 @@ describe("DashboardToolbar", () => {
       } else {
         expect(nextSave.body).toMatchObject({ widgets: [chart] });
       }
+    },
+  );
+
+  it.each(["dirty", "error"] as const)(
+    "disables Duplicate when the dashboard autosave is %s",
+    async (status) => {
+      const user = userEvent.setup();
+      const chart = createVisualizationWidget({
+        config: { visualizationId: "source", showTitle: true, showDescription: false },
+      });
+      const save = server.mount(contract.experiments.updateExperimentDashboard, { status: 500 });
+      function State() {
+        const { register } = useFormContext<DashboardFormValues>();
+        const autosave = useAutosaveStatus();
+        return (
+          <>
+            <input aria-label="Dashboard name" {...register("name")} />
+            <output aria-label="Autosave status">{autosave?.status}</output>
+          </>
+        );
+      }
+
+      render(
+        <Harness initialWidgets={[chart]} save>
+          <State />
+          <ChartSelection sourceWidgetId={chart.id} />
+          <DashboardToolbar visible experimentId="exp-1" />
+        </Harness>,
+      );
+      await user.click(screen.getByRole("button", { name: "select chart" }));
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      expect(
+        screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }),
+      ).not.toHaveAttribute("aria-disabled");
+      await user.keyboard("{Escape}");
+      await user.type(screen.getByRole("textbox", { name: "Dashboard name" }), " edited");
+      await waitFor(
+        () => expect(screen.getByLabelText("Autosave status")).toHaveTextContent(status),
+        {
+          timeout: 2_000,
+        },
+      );
+      await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+      expect(save.callCount).toBe(status === "dirty" ? 0 : 1);
+      expect(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
     },
   );
 });
