@@ -338,6 +338,8 @@ overrides:
   lightningcss: 1.30.1
   maplibre-gl: 6.4.1
 
+packageExtensionsChecksum: sha256-mjymkO+VQ4T5JTR4DGRNqI5CR3pfryZCVeg6VYqn5R4=
+
 patchedDependencies:
   '@better-auth/expo@1.7.14': b3f570b8d36a30b222e5cc32c2eff651081e392faa3f3f8b1b5ac4912e048151
   react-native-bluetooth-classic@1.73.0-rc.13: 42bdfd17d47733b27dcddfb9bfad62c4e429e33aac140b8bc8056d712c11bb33
@@ -590,7 +592,7 @@ importers:
         version: 6.0.3
       unplugin-swc:
         specifier: ^1.5.9
-        version: 1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.23))(rollup@4.62.2)
+        version: 1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.23))(rollup@4.62.2)(vite@7.3.7(@types/node@26.6.10)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
       vitest:
         specifier: catalog:testing
         version: 4.1.12(@opentelemetry/api@1.9.1)(@types/node@26.6.10)(@vitest/coverage-v8@4.1.12)(@vitest/ui@4.1.12)(jsdom@26.1.0(supports-color@8.1.1))(msw@2.14.6(@types/node@26.6.10)(typescript@6.0.3))(vite@7.3.7(@types/node@26.6.10)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
@@ -16461,6 +16463,8 @@ packages:
   unplugin@2.3.11:
     resolution: {integrity: sha512-5uKD0nqiYVzlmCRs01Fhs2BdkEgBS3SAVP6ndrBsuK42iC2+JHyxM05Rm9G8+5mkmRtzMZGY8Ct5+mliZxU/Ww==}
     engines: {node: '>=18.12.0'}
+    peerDependencies:
+      vite: ^7.3.7
 
   unquote@1.1.1:
     resolution: {integrity: sha512-vRCqFv6UhXpWxZPyGDh/F3ZpNv8/qo7w6iufLpQg9aKnQ71qM4B5KiI7Mia9COcjEhrO9LueHpMYjYzsWH3OIg==}
@@ -33887,20 +33891,22 @@ snapshots:
 
   unpipe@1.0.0: {}
 
-  unplugin-swc@1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.23))(rollup@4.62.2):
+  unplugin-swc@1.5.9(@swc/core@1.15.43(@swc/helpers@0.5.23))(rollup@4.62.2)(vite@7.3.7(@types/node@26.6.10)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
     dependencies:
       '@rollup/pluginutils': 5.4.0(rollup@4.62.2)
       '@swc/core': 1.15.43(@swc/helpers@0.5.23)
       load-tsconfig: 0.2.5
-      unplugin: 2.3.11
+      unplugin: 2.3.11(vite@7.3.7(@types/node@26.6.10)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0))
     transitivePeerDependencies:
       - rollup
+      - vite
 
-  unplugin@2.3.11:
+  unplugin@2.3.11(vite@7.3.7(@types/node@26.6.10)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)):
     dependencies:
       '@jridgewell/remapping': 2.3.5
       acorn: 8.17.0
       picomatch: 4.0.5
+      vite: 7.3.7(@types/node@26.6.10)(jiti@2.7.0)(lightningcss@1.30.1)(terser@5.48.0)(tsx@4.23.0)(yaml@2.9.0)
       webpack-virtual-modules: 0.6.2
 
   unquote@1.1.1: {}

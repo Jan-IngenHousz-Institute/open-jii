@@ -37,6 +37,12 @@ overrides:
   # CVE-2026-85061. Breaks plotly map traces; @repo/ui renders none.
   maplibre-gl: 6.4.1
 
+packageExtensions:
+  # unplugin imports Vite types without declaring Vite. Resolve them against Vitest's Vite peer.
+  unplugin@2.3.11:
+    peerDependencies:
+      vite: "^7.3.7"
+
 patchedDependencies:
   react-native-usb-serialport-for-android: patches/react-native-usb-serialport-for-android.patch
   "@better-auth/expo@1.7.14": patches/@better-auth__expo@1.7.14.patch
