@@ -76,6 +76,20 @@ function readLayout(): Record<string, unknown> {
   return JSON.parse(node.getAttribute("data-layout") ?? "{}") as Record<string, unknown>;
 }
 
+function readBarPlacements() {
+  const traces = readData() as { width?: number; offset?: number }[];
+  return traces.map(({ width, offset }) => [width, offset]);
+}
+
+const nativeBarPlacement = [undefined, undefined];
+const groupBars = { barmode: "group", bargap: 0, bargroupgap: 0 } as const;
+// The experiment bar chart sets these gaps in barDefaultConfig.
+const defaultBarGaps = { barmode: "group", bargap: 0.15, bargroupgap: 0.05 } as const;
+
+function bar(x: CartesianSeries["x"], axes: Pick<CartesianSeries, "xaxisId" | "yaxisId"> = {}) {
+  return { traceType: "bar", x, y: x.map(() => 2), ...axes } satisfies CartesianSeries;
+}
+
 describe("CartesianChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -272,6 +286,46 @@ describe("CartesianChart", () => {
     }
   });
 
+  it.each([
+    { config: groupBars, width: 0.125, left: -0.125, right: 0 },
+    { config: defaultBarGaps, width: 0.1009375, left: -0.10359375, right: 0.00265625 },
+  ])(
+    "keeps grouped bars wide through X rounding with bargap $config.bargap",
+    ({ config, width, left, right }) => {
+      const x = [0, "0.25", "0.25000000000000006", "invalid", "", null, 1];
+      render(<CartesianChart data={[bar(x), bar(x, { yaxisId: "y3" })]} config={config} />);
+
+      expect(readBarPlacements()).toEqual([
+        [expect.closeTo(width, 12), expect.closeTo(left, 12)],
+        [expect.closeTo(width, 12), expect.closeTo(right, 12)],
+      ]);
+    },
+  );
+
+  it("measures spacing from visible bars and keeps slots for hidden series", () => {
+    const data: CartesianSeries[] = [
+      bar([0, 8]),
+      { ...bar([0, 0.001, 8]), visible: "legendonly" },
+      bar([0, 8], { yaxisId: "y3" }),
+      { ...bar([0, 0.001, 8], { yaxisId: "y3" }), visible: false },
+    ];
+    render(<CartesianChart data={data} config={groupBars} />);
+
+    expect(readBarPlacements()).toEqual([[2, -4], nativeBarPlacement, [2, 0], nativeBarPlacement]);
+  });
+
+  it("lets Plotly size grouped bars when visible positions have no usable spacing", () => {
+    const invalid = bar([null, "invalid"]);
+    const data = [invalid, bar([0], { yaxisId: "y3" })];
+    const { rerender } = render(<CartesianChart data={data} config={groupBars} />);
+
+    expect(readBarPlacements()).toEqual([nativeBarPlacement, nativeBarPlacement]);
+    rerender(
+      <CartesianChart data={[invalid, bar([null], { yaxisId: "y3" })]} config={groupBars} />,
+    );
+    expect(readBarPlacements()).toEqual([nativeBarPlacement, nativeBarPlacement]);
+  });
+
   it.each(["stack", "relative", "overlay"] as const)("omits bar offsets in %s mode", (barmode) => {
     render(<CartesianChart data={barsOnTwoAxes} config={{ barmode }} />);
 
@@ -315,6 +369,186 @@ describe("CartesianChart", () => {
       sharedYTitle: false,
       roworder: "top to bottom" as const,
     };
+
+    const groupedSubplots = {
+      ...subplots,
+      cells: subplots.cells.map((cell, index) => ({ ...cell, secondaryYaxisId: `y${index + 3}` })),
+    };
+    const left = { xaxisId: "x", yaxisId: "y" };
+    const leftOverlay = { xaxisId: "x", yaxisId: "y3" };
+    const right = { xaxisId: "x2", yaxisId: "y2" };
+    const rightOverlay = { xaxisId: "x2", yaxisId: "y4" };
+
+    it.each([
+      { config: groupBars, width: 0.5, offsets: [-1, -0.5, 0, 0.5] },
+      {
+        config: defaultBarGaps,
+        width: 0.40375,
+        offsets: [-0.839375, -0.414375, 0.010625, 0.435625],
+      },
+    ])(
+      "shares grouped bar slots with missing categories and bargap $config.bargap",
+      ({ config, width, offsets }) => {
+        const data = [
+          bar([0, 2], left),
+          bar([0, 2], left),
+          bar([0, 2], leftOverlay),
+          bar([0, 2], leftOverlay),
+          bar([], right),
+          bar([0, 4], right),
+          bar([], rightOverlay),
+          bar([0, 4], rightOverlay),
+        ];
+        render(<CartesianChart data={data} config={config} subplots={groupedSubplots} />);
+
+        const slots = offsets.map((offset) => [
+          expect.closeTo(width, 12),
+          expect.closeTo(offset, 12),
+        ]);
+        expect(readBarPlacements()).toEqual([
+          ...slots,
+          nativeBarPlacement,
+          slots[1],
+          nativeBarPlacement,
+          slots[3],
+        ]);
+      },
+    );
+
+    it("uses gaps within each matched facet when their X grids are shifted", () => {
+      const data = [
+        bar([0, 2], left),
+        bar([0, 2], leftOverlay),
+        bar([0.001, 2.001], right),
+        bar([0.001, 2.001], rightOverlay),
+      ];
+      render(<CartesianChart data={data} config={groupBars} subplots={groupedSubplots} />);
+
+      expect(readBarPlacements()).toEqual([
+        [1, -1],
+        [1, 0],
+        [1, -1],
+        [1, 0],
+      ]);
+    });
+
+    it("uses native placement only in the matched facet with repeated X positions", () => {
+      const data = [
+        bar([0, 0, 2], left),
+        bar([0, 0, 2], leftOverlay),
+        bar([0, 2], right),
+        bar([0, 4], rightOverlay),
+      ];
+      render(<CartesianChart data={data} config={groupBars} subplots={groupedSubplots} />);
+
+      expect(readBarPlacements()).toEqual([
+        nativeBarPlacement,
+        nativeBarPlacement,
+        [1, -1],
+        [1, 0],
+      ]);
+    });
+
+    it("aligns explicit slots with the populated groups Plotly registers first", () => {
+      const data = [
+        bar([], left),
+        bar([0, 0, 2], left),
+        bar([], leftOverlay),
+        bar([0, 0, 2], leftOverlay),
+        bar([0, 2], right),
+        bar([0, 2], right),
+        bar([0, 2], rightOverlay),
+        bar([0, 2], rightOverlay),
+      ];
+      render(<CartesianChart data={data} config={groupBars} subplots={groupedSubplots} />);
+
+      expect(readBarPlacements()).toEqual([
+        nativeBarPlacement,
+        nativeBarPlacement,
+        nativeBarPlacement,
+        nativeBarPlacement,
+        [0.5, 0],
+        [0.5, -1],
+        [0.5, 0.5],
+        [0.5, -0.5],
+      ]);
+    });
+
+    it.each([
+      { config: groupBars, repeatGap: 4, neighborX: [0], width: 1, left: -1, right: 1 },
+      { config: groupBars, repeatGap: 2, neighborX: [0, 8], width: 0.5, left: -0.5, right: 0.5 },
+      {
+        config: defaultBarGaps,
+        repeatGap: 4,
+        neighborX: [0],
+        width: 0.8075,
+        left: -0.82875,
+        right: 0.87125,
+      },
+    ])(
+      "uses a matched facet's $repeatGap-unit gap after repeated X values with bargap $config.bargap",
+      ({ config, repeatGap, neighborX, width, left: leftOffset, right: rightOffset }) => {
+        const repeatedX = [0, 0, repeatGap];
+        const data = [
+          bar(repeatedX, left),
+          bar(repeatedX, left),
+          bar(repeatedX, leftOverlay),
+          bar(repeatedX, leftOverlay),
+          bar([], right),
+          bar(neighborX, right),
+          bar([], rightOverlay),
+          bar(neighborX, rightOverlay),
+        ];
+        render(<CartesianChart data={data} config={config} subplots={groupedSubplots} />);
+
+        expect(readBarPlacements()).toEqual([
+          nativeBarPlacement,
+          nativeBarPlacement,
+          nativeBarPlacement,
+          nativeBarPlacement,
+          nativeBarPlacement,
+          [expect.closeTo(width, 12), expect.closeTo(leftOffset, 12)],
+          nativeBarPlacement,
+          [expect.closeTo(width, 12), expect.closeTo(rightOffset, 12)],
+        ]);
+      },
+    );
+
+    it("counts only populated series in independent facets, including hidden series", () => {
+      const data = [
+        ...[left, left, left, leftOverlay, leftOverlay, leftOverlay].map((axes) =>
+          bar([0, 3], axes),
+        ),
+        bar([], right),
+        bar([0, 6], right),
+        { ...bar([0, 0.001, 6], rightOverlay), visible: "legendonly" as const },
+        bar([], rightOverlay),
+        bar([0, 6], rightOverlay),
+        { ...bar([0, 1], rightOverlay), y: [] },
+      ];
+      render(
+        <CartesianChart
+          data={data}
+          config={groupBars}
+          subplots={{ ...groupedSubplots, sharedX: false }}
+        />,
+      );
+
+      expect(readBarPlacements()).toEqual([
+        [0.5, -1.5],
+        [0.5, -1],
+        [0.5, -0.5],
+        [0.5, 0],
+        [0.5, 0.5],
+        [0.5, 1],
+        nativeBarPlacement,
+        [2, -3],
+        nativeBarPlacement,
+        nativeBarPlacement,
+        [2, 1],
+        nativeBarPlacement,
+      ]);
+    });
 
     it("reuses the grouped bar slots across facets with overlay axes", () => {
       const data: CartesianSeries[] = [
