@@ -11,7 +11,6 @@ interface Row {
 interface Seen {
   rows: readonly Row[] | undefined;
   viewKey: string;
-  readAt: number;
   latestRowAt: string | null | undefined;
   landed: ReadonlySet<string>;
 }
@@ -28,17 +27,18 @@ function isProcessedAfter(row: Row, latestRowAt: string): boolean {
  * arrival pushed onto the next page, was there before and lands nothing. So do
  * a first load, a change of view and a table with no newest-row time. `rows`
  * must belong to that view; pass `undefined` while another view's rows stand in.
- * `readAt` tells reads apart, since a read that changes nothing returns the same `rows`.
+ * `latestRowAt` must come from the read that returned `rows`: one read before
+ * them can predate some of them, and those would land when they next move.
  */
 export function useLandedRowIds(
   rows: readonly Row[] | undefined,
   viewKey: string,
   latestRowAt: string | null | undefined,
-  readAt: number,
 ): ReadonlySet<string> {
-  const [seen, setSeen] = useState<Seen>({ rows, viewKey, readAt, latestRowAt, landed: NONE });
+  const [seen, setSeen] = useState<Seen>({ rows, viewKey, latestRowAt, landed: NONE });
 
-  const isNewRead = seen.rows !== rows || seen.viewKey !== viewKey || seen.readAt !== readAt;
+  const isNewRead =
+    seen.rows !== rows || seen.viewKey !== viewKey || seen.latestRowAt !== latestRowAt;
   if (isNewRead) {
     const baseline = seen.latestRowAt;
     const isRefetch = seen.viewKey === viewKey && seen.rows !== undefined && rows !== undefined;
@@ -51,7 +51,7 @@ export function useLandedRowIds(
               .map((row) => String(row.id)),
           )
         : NONE;
-    setSeen({ rows, viewKey, readAt, latestRowAt, landed });
+    setSeen({ rows, viewKey, latestRowAt, landed });
     return landed;
   }
 

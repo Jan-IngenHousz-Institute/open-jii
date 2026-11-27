@@ -32,6 +32,9 @@ export interface ExperimentTableReads {
 
   tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>>;
 
+  /** One table's newest row time, read now rather than from the cached listing. */
+  latestRowAt(experimentId: string, identifier: string): Promise<Result<string | null>>;
+
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>>;
 
   buildQuery(params: ExperimentQueryParams): Promise<Result<TableQuery>>;

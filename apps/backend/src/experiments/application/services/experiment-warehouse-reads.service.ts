@@ -41,6 +41,18 @@ export class ExperimentWarehouseReadsService implements ExperimentTableReads {
     return this.numberAnswers.typed(experimentId, metadata.value);
   }
 
+  async latestRowAt(experimentId: string, identifier: string): Promise<Result<string | null>> {
+    const metadata = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+      identifier,
+      includeSchemas: false,
+    });
+    if (metadata.isFailure()) {
+      return metadata;
+    }
+    const table = metadata.value.find((candidate) => candidate.identifier === identifier);
+    return success(table?.latestRowAt ?? null);
+  }
+
   viewColumns(tableType: ExperimentTableType, identifier: string): Promise<Result<string[]>> {
     return this.databricksPort.getExperimentTableColumns(tableType, identifier);
   }

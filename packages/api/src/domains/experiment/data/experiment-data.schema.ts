@@ -567,6 +567,14 @@ export const zExperimentDataTable = z.object({
     .datetime()
     .optional()
     .describe("UTC minute used to resolve rolling time filters for this read"),
+  latestRowAt: z
+    .string()
+    .datetime()
+    .nullable()
+    .optional()
+    .describe(
+      "When the table's newest data reached the platform, read alongside this page rather than from the cached table listing. Set on paginated reads; null for an empty table or when it could not be read",
+    ),
 });
 
 export const zExperimentDataTableList = z.array(zExperimentDataTable);

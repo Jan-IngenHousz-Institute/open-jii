@@ -73,6 +73,7 @@ interface ReadTrace {
   startedAt: number;
   metadataMs: number;
   countMs?: number;
+  latestRowAtMs?: number;
   idsMs?: number;
   dataMs?: number;
   annotationsMs?: number;
@@ -332,7 +333,7 @@ export class ExperimentDataRepository {
         }
         const countQuery = this.reads(shape).countQuery(countSubqueryResult.value);
 
-        const [[countResult, countMs], pageResult] = await Promise.all([
+        const [[countResult, countMs], pageResult, latestRowAt] = await Promise.all([
           this.measure(() => this.executeQuery(shape, countQuery)),
           this.pageData(experimentId, shape, read, {
             columns,
@@ -341,6 +342,7 @@ export class ExperimentDataRepository {
             limit: pageSize,
             offset,
           }),
+          this.latestRowAt(shape, read),
         ]);
         read.countMs = countMs;
         if (countResult.isFailure()) {
@@ -367,6 +369,7 @@ export class ExperimentDataRepository {
             pageSize,
             rowCount: totalRows,
             data: filled.value,
+            latestRowAt,
           }),
         ]);
       }
@@ -390,11 +393,14 @@ export class ExperimentDataRepository {
     const usedPage = page ?? 1;
     const usedPageSize = pageSize ?? 5;
     const offset = (usedPage - 1) * usedPageSize;
-    const pageResult = await this.pageData(experimentId, shape, read, {
-      ordering,
-      limit: usedPageSize,
-      offset,
-    });
+    const [pageResult, latestRowAt] = await Promise.all([
+      this.pageData(experimentId, shape, read, {
+        ordering,
+        limit: usedPageSize,
+        offset,
+      }),
+      this.latestRowAt(shape, read),
+    ]);
     if (pageResult.isFailure()) {
       return pageResult;
     }
@@ -415,6 +421,7 @@ export class ExperimentDataRepository {
         pageSize: usedPageSize,
         rowCount: shape.metadata.rowCount,
         data: filled.value,
+        latestRowAt,
       }),
     ]);
   }
@@ -1315,6 +1322,29 @@ export class ExperimentDataRepository {
   }
 
   /**
+   * The table's newest row time, read beside its page so it is no older than the rows the page
+   * saw, as the cached listing's can be. A failure leaves it unknown rather than failing the page.
+   */
+  private async latestRowAt(shape: TableShape, read: ReadTrace): Promise<string | null> {
+    const [result, latestRowAtMs] = await this.measure(() =>
+      this.reads(shape).latestRowAt(read.experimentId, shape.metadata.identifier),
+    );
+    read.latestRowAtMs = latestRowAtMs;
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Could not read the table's newest row time; the page carries none",
+        operation: "getTableData",
+        experimentId: read.experimentId,
+        tableName: read.tableName,
+        source: shape.source,
+        error: result.error.message,
+      });
+      return null;
+    }
+    return result.value;
+  }
+
+  /**
    * One page of rows. On a large table the page is first picked by row id over only the columns
    * its filters and sort need, and just those rows are then read in full, because one statement
    * would extract the payload of every row before its LIMIT. A page that picks no ids is read as
@@ -1439,8 +1469,9 @@ export class ExperimentDataRepository {
     pageSize: number;
     rowCount: number;
     data: SchemaData;
+    latestRowAt: string | null;
   }): TableDataDto {
-    const { tableName, experiment, shape, page, pageSize, rowCount, data } = params;
+    const { tableName, experiment, shape, page, pageSize, rowCount, data, latestRowAt } = params;
     return {
       name: tableName,
       catalog_name: experiment.name,
@@ -1450,6 +1481,7 @@ export class ExperimentDataRepository {
       pageSize,
       totalRows: rowCount,
       totalPages: Math.ceil(rowCount / pageSize),
+      latestRowAt,
     };
   }
 
@@ -1470,6 +1502,7 @@ export class ExperimentDataRepository {
       mode: read.mode,
       metadataMs: read.metadataMs,
       countMs: read.countMs,
+      latestRowAtMs: read.latestRowAtMs,
       idsMs: read.idsMs,
       dataMs: read.dataMs,
       annotationsMs: read.annotationsMs,

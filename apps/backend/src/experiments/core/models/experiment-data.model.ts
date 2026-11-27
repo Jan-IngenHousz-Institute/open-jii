@@ -191,4 +191,5 @@ export interface TableDataDto {
   totalPages: number;
   totalRows: number;
   filterEvaluatedAt?: string;
+  latestRowAt?: string | null;
 }

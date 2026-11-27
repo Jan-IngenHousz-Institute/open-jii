@@ -42,6 +42,11 @@ type ExperimentQuery = Parameters<DatabricksPort["buildExperimentQuery"]>[0];
 
 const WAREHOUSE: ExperimentDataSource = "warehouse";
 
+/** Metadata reads that loaded the cached listing, not a page's read of its newest row. */
+function listingLoads(calls: Parameters<DatabricksPort["getExperimentTableMetadata"]>[]) {
+  return calls.filter(([, options]) => options?.identifier === undefined);
+}
+
 describe("ExperimentDataRepository", () => {
   const testApp = TestHarness.App;
   let repository: ExperimentDataRepository;
@@ -435,7 +440,7 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(first);
       assertSuccess(second);
       expect(second.value[0]).toMatchObject({ page: 2, totalRows: 100 });
-      expect(metadataSpy).toHaveBeenCalledTimes(1);
+      expect(listingLoads(metadataSpy.mock.calls)).toHaveLength(1);
     });
 
     it("reads a table from the snapshot the tables listing served", async () => {
@@ -483,7 +488,7 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(page);
       expect(listing.value).toEqual(mockMetadata);
       expect(page.value[0]).toMatchObject({ totalRows: 100, totalPages: 20 });
-      expect(metadataSpy).toHaveBeenCalledTimes(1);
+      expect(listingLoads(metadataSpy.mock.calls)).toHaveLength(1);
     });
 
     it("does not cache a failed metadata lookup", async () => {
@@ -508,8 +513,8 @@ describe("ExperimentDataRepository", () => {
       };
       const metadataSpy = vi
         .spyOn(databricksPort, "getExperimentTableMetadata")
-        .mockResolvedValueOnce(failure(AppError.internal("warehouse unavailable")))
-        .mockResolvedValueOnce(success(mockMetadata));
+        .mockResolvedValue(success(mockMetadata))
+        .mockResolvedValueOnce(failure(AppError.internal("warehouse unavailable")));
       metadataSpy.mockClear();
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(pageData));
@@ -520,7 +525,91 @@ describe("ExperimentDataRepository", () => {
       assertFailure(first);
       expect(first.error.message).toContain("warehouse unavailable");
       assertSuccess(second);
-      expect(metadataSpy).toHaveBeenCalledTimes(2);
+      expect(listingLoads(metadataSpy.mock.calls)).toHaveLength(2);
+    });
+
+    describe("newest row time", () => {
+      const listed: ExperimentTableMetadata = {
+        identifier: "raw_data",
+        tableType: "static",
+        displayName: null,
+        rowCount: 100,
+        latestRowAt: "2026-09-22T10:00:00.000Z",
+        schemaRevision: null,
+        macroSchema: null,
+        questionsSchema: null,
+        customMetadataSchema: null,
+      };
+      const READ_NOW = "2026-09-22T10:05:00.000Z";
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"]],
+        totalRows: 1,
+        truncated: false,
+      };
+
+      beforeEach(() => {
+        vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(pageData));
+      });
+
+      it("reads it beside a page rather than taking the cached listing's", async () => {
+        const metadataSpy = vi
+          .spyOn(databricksPort, "getExperimentTableMetadata")
+          .mockImplementation((_experimentId, options) =>
+            Promise.resolve(
+              success([
+                options?.identifier === undefined ? listed : { ...listed, latestRowAt: READ_NOW },
+              ]),
+            ),
+          );
+
+        const page = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
+
+        assertSuccess(page);
+        expect(page.value[0]?.latestRowAt).toBe(READ_NOW);
+        expect(metadataSpy).toHaveBeenCalledWith(experimentId, {
+          identifier: "raw_data",
+          includeSchemas: false,
+        });
+      });
+
+      it("reads it beside a filtered page too", async () => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockImplementation(
+          (_experimentId, options) =>
+            Promise.resolve(
+              success([
+                options?.identifier === undefined ? listed : { ...listed, latestRowAt: READ_NOW },
+              ]),
+            ),
+        );
+
+        const page = await repository.getTableData({
+          ...baseParams,
+          page: 1,
+          pageSize: 5,
+          filters: [{ column: "id", operator: "equals", value: "1" }],
+        });
+
+        assertSuccess(page);
+        expect(page.value[0]?.latestRowAt).toBe(READ_NOW);
+      });
+
+      it("still serves the page when it cannot be read", async () => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockImplementation(
+          (_experimentId, options) =>
+            Promise.resolve(
+              options?.identifier === undefined
+                ? success([listed])
+                : failure(AppError.internal("warehouse unavailable")),
+            ),
+        );
+
+        const page = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
+
+        assertSuccess(page);
+        expect(page.value[0]).toMatchObject({ totalRows: 100, latestRowAt: null });
+      });
     });
 
     it("tags contributor id filters with the pseudonym salt when anonymizing", async () => {
