@@ -7,6 +7,8 @@ import {
   zCreateUserProfileBody,
   zUserIdPathParam,
   zInvitation,
+  zUserMetadata,
+  zUserProfileResponse,
   zUserSearchResult,
 } from "./user.schema";
 
@@ -207,6 +209,63 @@ describe("User Schema", () => {
       };
 
       expect(() => zCreateUserProfileBody.parse(profile)).toThrow();
+    });
+  });
+
+  describe("zUserProfileResponse", () => {
+    const profile = {
+      firstName: "Amara",
+      lastName: "Okafor",
+      bio: null,
+      activated: true,
+      avatarUrl: null,
+    };
+
+    it.each(["0000-0002-1825-0097", "0000-0002-9079-593X"])("accepts the iD %s", (orcidId) => {
+      expect(zUserProfileResponse.parse({ ...profile, orcidId }).orcidId).toBe(orcidId);
+    });
+
+    it("accepts null", () => {
+      expect(zUserProfileResponse.parse({ ...profile, orcidId: null }).orcidId).toBeNull();
+    });
+
+    it("rejects a missing iD", () => {
+      expect(zUserProfileResponse.safeParse(profile).success).toBe(false);
+    });
+  });
+
+  describe("the iD stays off every other shape", () => {
+    const orcidId = "0000-0002-1825-0097";
+    const userId = "123e4567-e89b-12d3-a456-426614174000";
+
+    it("drops it from a profile save", () => {
+      const parsed = zCreateUserProfileBody.parse({ firstName: "John", lastName: "Doe", orcidId });
+      expect(parsed).not.toHaveProperty("orcidId");
+    });
+
+    it("drops it from a search row", () => {
+      const parsed = zUserSearchResult.parse({
+        userId,
+        firstName: "Lin",
+        lastName: "Zhao",
+        email: null,
+        bio: null,
+        activated: true,
+        matchedEmail: false,
+        orcidId,
+      });
+      expect(parsed).not.toHaveProperty("orcidId");
+    });
+
+    it("drops it from user metadata", () => {
+      const parsed = zUserMetadata.parse({
+        userId,
+        firstName: "Lin",
+        lastName: "Zhao",
+        avatarUrl: null,
+        orcidId,
+      });
+      expect(parsed).not.toHaveProperty("orcidId");
     });
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { ProviderMark } from "@/components/auth/provider-mark";
+import { orcidRecordUrl } from "@/components/people/orcid-id";
 import Link from "next/link";
 import { profileLogin, useAccountInfo } from "~/hooks/auth/useAccountInfo/useAccountInfo";
 import { CONNECTABLE_PROVIDERS, PROVIDER_NAMES } from "~/lib/sign-in-providers";
@@ -45,7 +46,7 @@ export function ConnectedAccountTile({
         : t("signInMethods.onlyWayIn", { provider: PROVIDER_NAMES[otherProvider] })
       : undefined;
 
-  const orcidUrl = `https://orcid.org/${account.accountId}`;
+  const orcidUrl = orcidRecordUrl(account.accountId);
   const status =
     provider === "orcid" ? (
       <Link

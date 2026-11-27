@@ -1,6 +1,13 @@
-import { createSession, createUserProfile } from "@/test/factories";
+import { createSession, createUserProfile, createUserProfileResponse } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import {
+  createTestQueryClient,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -197,6 +204,54 @@ describe("<AccountSettings />", () => {
       firstName: "Ada",
       lastName: "Lovelace",
       bio: "Updated bio",
+    });
+  });
+
+  describe("ORCID iD card", () => {
+    const recordUrl = "https://orcid.org/0000-0002-1825-0097";
+    const securityPath = "/en-US/platform/account/security";
+    const profileWithOrcid = (orcidId: string | null) =>
+      createUserProfileResponse({ firstName: "Ada", lastName: "Lovelace", orcidId });
+
+    it("shows the iD from the profile as a link to the record", async () => {
+      mountGetProfile({ body: profileWithOrcid("0000-0002-1825-0097") });
+      const { container } = render(<AccountSettings user={signedInUser} />);
+      const page = within(container);
+
+      expect(await page.findByRole("link", { name: new RegExp(recordUrl) })).toHaveAttribute(
+        "href",
+        recordUrl,
+      );
+      expect(
+        page.getByRole("link", { name: "settings.OrcidIdCard.manageInSecurity" }),
+      ).toHaveAttribute("href", securityPath);
+    });
+
+    it("offers Connect ORCID when the profile has no iD", async () => {
+      mountGetProfile({ body: profileWithOrcid(null) });
+      const { container } = render(<AccountSettings user={signedInUser} />);
+      const page = within(container);
+
+      expect(
+        await page.findByRole("link", { name: "settings.OrcidIdCard.connect" }),
+      ).toHaveAttribute("href", securityPath);
+      expect(container.querySelector('a[href^="https://orcid.org"]')).not.toBeInTheDocument();
+    });
+
+    it("follows the profile query when the iD goes away", async () => {
+      const queryClient = createTestQueryClient();
+      mountGetProfile({ body: profileWithOrcid("0000-0002-1825-0097") });
+      const { container } = render(<AccountSettings user={signedInUser} />, { queryClient });
+      const page = within(container);
+      expect(await page.findByRole("link", { name: new RegExp(recordUrl) })).toBeInTheDocument();
+
+      mountGetProfile({ body: profileWithOrcid(null) });
+      await queryClient.invalidateQueries();
+
+      expect(
+        await page.findByRole("link", { name: "settings.OrcidIdCard.connect" }),
+      ).toBeInTheDocument();
+      expect(container.querySelector('a[href^="https://orcid.org"]')).not.toBeInTheDocument();
     });
   });
 });

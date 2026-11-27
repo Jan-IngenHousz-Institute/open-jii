@@ -1,3 +1,5 @@
+import { OrcidIdIcon } from "@/components/people/orcid-id";
+
 /** The GitHub and ORCID marks, for the login form and the Security page. */
 export function ProviderMark({ id, size = 24 }: { id: string; size?: number }) {
   const imageStyle = { width: size, height: size };
@@ -18,14 +20,7 @@ export function ProviderMark({ id, size = 24 }: { id: string; size?: number }) {
         </svg>
       );
     case "orcid":
-      return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style={imageStyle}>
-          <path
-            d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zM7.369 4.378c.525 0 .947.431.947.947 0 .525-.422.947-.947.947A.943.943 0 0 1 6.422 5.325c0-.516.422-.947.947-.947zm-.722 3.038h1.444v10.041H6.647V7.416zm3.562 0h3.9c3.712 0 5.344 2.653 5.344 5.025 0 2.578-2.016 5.016-5.325 5.016h-3.919V7.416zm1.444 1.303v7.444h2.297c2.359 0 3.588-1.313 3.588-3.722 0-2.2-1.313-3.722-3.588-3.722h-2.297z"
-            fill="#A6CE39"
-          />
-        </svg>
-      );
+      return <OrcidIdIcon size={size} />;
     default:
       return null;
   }

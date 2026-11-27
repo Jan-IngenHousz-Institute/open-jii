@@ -36,6 +36,16 @@
       "institutionPlaceholder": "Institution oder Organisation eingeben",
       "emptyInstitution": "Keine Institution hinzugefügt"
     },
+    "OrcidIdCard": {
+      "title": "ORCID iD",
+      "connectedDescription": "Die iD des ORCID-Kontos, das mit Ihrem openJII-Konto verbunden ist.",
+      "help": "Sie stammt aus Ihrer ORCID-Anmeldung und kann hier nicht bearbeitet werden. Wenn Sie ORCID trennen, wird sie entfernt.",
+      "manageInSecurity": "Unter Sicherheit verwalten",
+      "notConnectedDescription": "Verbinden Sie Ihr ORCID-Konto, um Ihre ORCID iD in Ihrem Konto anzuzeigen.",
+      "notConnectedHelp": "ORCID wird unter Sicherheit als Anmeldemöglichkeit verbunden.",
+      "connect": "ORCID verbinden",
+      "iconLabel": "ORCID iD"
+    },
     "NewsletterSubscriptionCard": {
       "title": "Newsletter",
       "description": "Verwalten Sie Ihr Abonnement des openJII-Community-Newsletters.",
@@ -247,7 +257,7 @@
     "githubConnectedAs": "Verbunden als {{login}}",
     "githubConnected": "Verbunden",
     "notConnected": "Nicht verbunden",
-    "orcidNotConnected": "Nicht verbunden. Sobald verbunden, erscheint Ihre iD in Ihrem Profil, sobald das verfügbar ist.",
+    "orcidNotConnected": "Nicht verbunden. Sobald verbunden, erscheint Ihre ORCID iD in Ihrem Konto.",
     "connect": "Verbinden",
     "disconnect": "Trennen",
     "onlyWayIn": "Dies ist Ihre einzige Möglichkeit, sich anzumelden. Fügen Sie zuerst einen Passkey hinzu oder verbinden Sie {{provider}}.",
@@ -260,7 +270,7 @@
     "connectedGithubTitle": "GitHub verbunden.",
     "connectedGithubBody": "Sie können sich jetzt mit GitHub bei diesem Konto anmelden.",
     "connectedOrcidTitle": "ORCID verbunden.",
-    "connectedOrcidBody": "Ihre iD erscheint in Ihrem Profil, sobald das verfügbar ist.",
+    "connectedOrcidBody": "Ihre ORCID iD erscheint jetzt in Ihrem Konto unter Allgemein.",
     "nothingChanged": "Es hat sich nichts geändert.",
     "connectCancelled": "Die Anmeldung mit {{provider}} wurde vor dem Verbinden abgebrochen.",
     "connectAlreadyLinked": "Dieses {{provider}}-Konto ist bereits mit einem anderen openJII-Konto verbunden.",

@@ -82,7 +82,11 @@ import type {
   ResourceGrantDto,
   ResourceOwnerDto,
 } from "@repo/api/domains/sharing/sharing.schema";
-import type { Invitation, UserSearchResult } from "@repo/api/domains/user/user.schema";
+import type {
+  Invitation,
+  UserProfileResponse,
+  UserSearchResult,
+} from "@repo/api/domains/user/user.schema";
 import type { RecentlyOpenedResource } from "@repo/api/domains/visit/visit.schema";
 import type {
   BranchCell,
@@ -415,6 +419,21 @@ export function createUserProfile(overrides: Partial<UserSearchResult> = {}): Us
     activated: true,
     email: "test@example.com",
     matchedEmail: false,
+    ...overrides,
+  };
+}
+
+/** The profile route's response, which carries the ORCID iD rather than the email. */
+export function createUserProfileResponse(
+  overrides: Partial<UserProfileResponse> = {},
+): UserProfileResponse {
+  return {
+    firstName: "Test",
+    lastName: "User",
+    bio: null,
+    activated: true,
+    avatarUrl: null,
+    orcidId: null,
     ...overrides,
   };
 }

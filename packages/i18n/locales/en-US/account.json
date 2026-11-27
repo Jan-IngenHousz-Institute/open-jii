@@ -36,6 +36,16 @@
       "institutionPlaceholder": "Enter your institution or organization",
       "emptyInstitution": "No institution added"
     },
+    "OrcidIdCard": {
+      "title": "ORCID iD",
+      "connectedDescription": "The iD of the ORCID account connected to your openJII account.",
+      "help": "It comes from your ORCID sign-in and cannot be edited here. Disconnecting ORCID removes it.",
+      "manageInSecurity": "Manage in Security",
+      "notConnectedDescription": "Connect your ORCID account to show your ORCID iD on your account.",
+      "notConnectedHelp": "ORCID is connected under Security, as a way to sign in.",
+      "connect": "Connect ORCID",
+      "iconLabel": "ORCID iD"
+    },
     "NewsletterSubscriptionCard": {
       "title": "Newsletter",
       "description": "Manage your subscription to the openJII community newsletter.",
@@ -247,7 +257,7 @@
     "githubConnectedAs": "Connected as {{login}}",
     "githubConnected": "Connected",
     "notConnected": "Not connected",
-    "orcidNotConnected": "Not connected. Once connected, your iD will show on your profile when that becomes available.",
+    "orcidNotConnected": "Not connected. Once connected, your ORCID iD shows on your account.",
     "connect": "Connect",
     "disconnect": "Disconnect",
     "onlyWayIn": "This is your only way to sign in. Add a passkey or connect {{provider}} first.",
@@ -260,7 +270,7 @@
     "connectedGithubTitle": "GitHub connected.",
     "connectedGithubBody": "You can now sign in to this account with GitHub.",
     "connectedOrcidTitle": "ORCID connected.",
-    "connectedOrcidBody": "Your iD will show on your profile when that becomes available.",
+    "connectedOrcidBody": "Your ORCID iD now shows on your account, under General.",
     "nothingChanged": "Nothing changed.",
     "connectCancelled": "{{provider}} sign-in was cancelled before connecting.",
     "connectAlreadyLinked": "That {{provider}} account is already connected to another openJII account.",

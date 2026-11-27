@@ -320,6 +320,75 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("findOrcidId", () => {
+    async function addAccount(userId: string, providerId: string, accountId: string, at?: Date) {
+      const [row] = await testApp.database
+        .insert(accounts)
+        .values({ userId, providerId, accountId, ...(at && { createdAt: at }) })
+        .returning({ id: accounts.id });
+      return row.id;
+    }
+
+    it("returns null for a person with no connected account", async () => {
+      const result = await repository.findOrcidId(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("returns null for a person with only GitHub connected", async () => {
+      await addAccount(testUserId, "github", "0000-0002-1825-0097");
+
+      const result = await repository.findOrcidId(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it.each(["0000-0002-1825-0097", "0000-0002-9079-593X"])(
+      "returns the ORCID account's iD %s as stored",
+      async (orcidId) => {
+        await addAccount(testUserId, "github", "12345678");
+        await addAccount(testUserId, "orcid", orcidId);
+
+        const result = await repository.findOrcidId(testUserId);
+
+        assertSuccess(result);
+        expect(result.value).toBe(orcidId);
+      },
+    );
+
+    it("returns the older of two ORCID accounts", async () => {
+      await addAccount(testUserId, "orcid", "0000-0002-9079-593X", new Date("2026-02-01"));
+      await addAccount(testUserId, "orcid", "0000-0002-1825-0097", new Date("2026-01-01"));
+
+      const result = await repository.findOrcidId(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toBe("0000-0002-1825-0097");
+    });
+
+    it("leaves out another person's ORCID account", async () => {
+      const otherId = await testApp.createTestUser({});
+      await addAccount(otherId, "orcid", "0000-0002-1825-0097");
+
+      const result = await repository.findOrcidId(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("returns null once the ORCID account is removed", async () => {
+      const accountId = await addAccount(testUserId, "orcid", "0000-0002-1825-0097");
+      await testApp.database.delete(accounts).where(eq(accounts.id, accountId));
+
+      const result = await repository.findOrcidId(testUserId);
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
   describe("findPendingOrganizationInvitationsToNotify", () => {
     const INVITEE_EMAIL = "Invitee@Example.com";
     let inviteeId: string;

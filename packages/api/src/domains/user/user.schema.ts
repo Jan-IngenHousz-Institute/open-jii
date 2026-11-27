@@ -56,6 +56,15 @@ export const zUserProfile = z.object({
 
 export const zUserProfileList = z.array(zUserProfile);
 
+export const zUserProfileResponse = zUserProfile.omit({ userId: true, email: true }).extend({
+  orcidId: z
+    .string()
+    .nullable()
+    .describe(
+      "iD of the connected ORCID account; null when none is connected or when the profile is not the caller's own",
+    ),
+});
+
 export const zUserSearchResult = zUserProfile.extend({
   matchedEmail: z
     .boolean()
@@ -113,6 +122,7 @@ export type UserProfileList = z.infer<typeof zUserProfileList>;
 export type SearchUsersQuery = z.infer<typeof zSearchUsersQuery>;
 export type UserIdPathParam = z.infer<typeof zUserIdPathParam>;
 export type UserProfile = z.infer<typeof zUserProfile>;
+export type UserProfileResponse = z.infer<typeof zUserProfileResponse>;
 export type CreateUserProfileBody = z.infer<typeof zCreateUserProfileBody>;
 export type CreateUserProfileResponse = z.infer<typeof zCreateUserProfileResponse>;
 export type WebhookAuthHeader = z.infer<typeof zWebhookAuthHeader>;
