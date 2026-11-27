@@ -45,6 +45,7 @@ module "backend_waf" {
 | `service_name`                 | Base name for the service                                                                                                  | `string`       | none     | yes      |
 | `environment`                  | Environment name                                                                                                           | `string`       | none     | yes      |
 | `rate_limit`                   | Requests per 5-min window per IP                                                                                           | `number`       | `500`    | no       |
+| `read_rate_limit`              | A higher `limit` for GET requests whose path matches `path_regex`, which `rate_limit` then leaves out                      | `object`       | `null`   | no       |
 | `blocked_countries`            | ISO 3166-1 alpha-2 country codes to block                                                                                  | `list(string)` | `[]`     | no       |
 | `log_retention_days`           | Days to retain WAF logs                                                                                                    | `number`       | `365`    | no       |
 | `enable_bot_control`           | Enable AWS Bot Control rule set                                                                                            | `bool`         | `false`  | no       |

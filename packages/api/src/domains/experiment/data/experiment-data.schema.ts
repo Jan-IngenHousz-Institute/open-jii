@@ -666,11 +666,57 @@ export const zExperimentTableMetadata = z.object({
     .string()
     .nullable()
     .describe("Changes whenever the table's schema does, which can be after its rows changed"),
+  contentRevision: z
+    .string()
+    .nullable()
+    .optional()
+    .describe(
+      "Changes whenever the rows the table holds do, a row replaced in place included, in whatever order rows arrive. Only a listing the serving store answered carries one",
+    ),
   defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
   errorColumn: z.string().optional().describe("Column name that contains error information if any"),
 });
 
 export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
+
+export const zExperimentDataSource = z
+  .enum(["warehouse", "store"])
+  .describe(
+    "Which source answered: the serving store, read afresh on every call, or the SQL warehouse, served from a short-lived cache",
+  );
+
+export const zExperimentTablesListing = z.object({
+  headers: z.object({ "x-data-source": zExperimentDataSource }),
+  body: zExperimentTablesMetadataList,
+});
+
+export const zExperimentTableVersion = zExperimentTableMetadata
+  .pick({
+    identifier: true,
+    totalRows: true,
+    latestRowAt: true,
+    schemaRevision: true,
+    contentRevision: true,
+  })
+  .extend({
+    displayName: z
+      .string()
+      .nullable()
+      .describe(
+        "The name the store holds for the table, which for an upload is its newest upload's, so a listing showing another name is stale. Null for a table the platform names",
+      ),
+  });
+
+export const zExperimentTablesEvent = z.discriminatedUnion("type", [
+  z
+    .object({ type: z.literal("changed"), tables: z.array(zExperimentTableVersion) })
+    .describe(
+      "Each table's row count, newest row and schema as the store holds them, sent when the stream opens and whenever they change",
+    ),
+  z
+    .object({ type: z.literal("heartbeat") })
+    .describe("Sent while nothing changes, so a client can tell a quiet stream from a dropped one"),
+]);
 
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDistinctValuesQuery = z.infer<typeof zExperimentDistinctValuesQuery>;
@@ -682,3 +728,7 @@ export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type ExperimentColumnInfo = z.infer<typeof zExperimentColumnInfo>;
 export type ExperimentTableMetadata = z.infer<typeof zExperimentTableMetadata>;
 export type ExperimentTablesMetadataList = z.infer<typeof zExperimentTablesMetadataList>;
+export type ExperimentDataSource = z.infer<typeof zExperimentDataSource>;
+export type ExperimentTablesListing = z.infer<typeof zExperimentTablesListing>;
+export type ExperimentTableVersion = z.infer<typeof zExperimentTableVersion>;
+export type ExperimentTablesEvent = z.infer<typeof zExperimentTablesEvent>;

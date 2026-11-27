@@ -93,9 +93,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
     return Buffer.byteLength(sent) <= ServingStoreClientService.MAX_QUERY_BYTES;
   }
 
-  async query(sql: string): Promise<Result<StoreResult>> {
+  async query(sql: string, settings: Record<string, string> = {}): Promise<Result<StoreResult>> {
     const rows: unknown[][] = [];
-    const read = await this.stream(sql, {}, (row) => {
+    const read = await this.stream(sql, settings, (row) => {
       rows.push(row);
       return true;
     });

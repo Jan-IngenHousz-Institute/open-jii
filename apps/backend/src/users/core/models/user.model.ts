@@ -105,3 +105,10 @@ export interface PendingOrganizationInvitation {
 export interface UserSignInMethods extends SignInMethods {
   passkeyIds: string[];
 }
+
+/** What decides whether an API key still signs its owner in. */
+export interface ApiKeyState {
+  referenceId: string;
+  enabled: boolean;
+  expiresAt: Date | null;
+}

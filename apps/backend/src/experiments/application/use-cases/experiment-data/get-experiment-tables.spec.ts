@@ -11,8 +11,11 @@ import {
 } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { TestHarness } from "../../../../test/test-harness";
+import type { ExperimentTableMetadata } from "../../../core/models/experiment-data.model";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import { SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetExperimentTablesUseCase } from "./get-experiment-tables";
 
 describe("GetExperimentTablesUseCase", () => {
@@ -260,6 +263,39 @@ describe("GetExperimentTablesUseCase", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toHaveLength(0);
+    });
+
+    it("lists the store's rows as it holds them at each check", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Store Experiment",
+        userId: testUserId,
+      });
+      const rawData: ExperimentTableMetadata = {
+        identifier: ExperimentTableName.RAW_DATA,
+        tableType: "static",
+        displayName: null,
+        rowCount: 10,
+        latestRowAt: "2026-09-22T10:05:00.000Z",
+        schemaRevision: null,
+      };
+      const servingStore: ServingStorePort = testApp.module.get(SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "getMetadataSheets").mockResolvedValue(success([]));
+      vi.spyOn(servingStore, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([rawData]))
+        .mockResolvedValue(
+          success([{ ...rawData, rowCount: 11, latestRowAt: "2026-09-22T10:05:04.000Z" }]),
+        );
+
+      const first = await useCase.execute(experiment.id, testUserId, "store");
+      const second = await useCase.execute(experiment.id, testUserId, "store");
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(first.value[0].totalRows).toBe(10);
+      expect(second.value[0]).toMatchObject({
+        totalRows: 11,
+        latestRowAt: "2026-09-22T10:05:04.000Z",
+      });
     });
   });
 });

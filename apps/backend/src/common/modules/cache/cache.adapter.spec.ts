@@ -1,4 +1,5 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
 import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
@@ -406,6 +407,18 @@ describe("CacheAdapter", () => {
       expect(whole).toHaveBeenCalledTimes(1);
     });
 
+    it("logs a refresh behind a stale value that fails, since nobody waits on it", async () => {
+      await cacheManager.set("swr:logged", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
+      const warn = vi.spyOn(Logger.prototype, "warn");
+
+      await adapter.tryCache("logged", () => Promise.reject(new Error("warehouse asleep")));
+      await settle();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: "Background cache load failed", cacheKey: "swr:logged" }),
+      );
+    });
+
     it("gives a caller with nothing to serve null after the wait, and finishes the load anyway", async () => {
       // Fresh long enough for the final read to find it fresh, not merely servable.
       const adapter = new CacheAdapter(cacheManager, { ...namespace, ttlMs: 60_000 });
@@ -529,6 +542,67 @@ describe("CacheAdapter", () => {
       expect(served).toEqual(["old", "old", "old"]);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       release?.();
+    });
+  });
+
+  describe("refresh", () => {
+    const namespace = { prefix: "refresh:", ttlMs: 60_000, staleMs: 60_000 };
+    let adapter: CacheAdapter;
+
+    beforeEach(() => {
+      adapter = new CacheAdapter(cacheManager, namespace);
+    });
+
+    it("loads past a fresh value and keeps the answer for the next read", async () => {
+      await cacheManager.set("refresh:fresh", { value: "old", freshUntil: Date.now() + 60_000 });
+      const fetchFn = vi.fn().mockResolvedValue("new");
+
+      expect(await adapter.refresh("fresh", fetchFn)).toBe("new");
+      expect(await adapter.tryCache("fresh", fetchFn)).toBe("new");
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for the source on a stale value rather than serving it", async () => {
+      await cacheManager.set("refresh:stale", { value: "old", freshUntil: Date.now() - 1 });
+
+      expect(await adapter.refresh("stale", () => Promise.resolve("new"))).toBe("new");
+    });
+
+    it("leaves a failed load to the caller waiting on it, without logging it", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn");
+
+      await expect(
+        adapter.refresh("awaited", () => Promise.reject(new Error("store unreachable"))),
+      ).rejects.toThrow("store unreachable");
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a failed load and keeps the stored value for the next read", async () => {
+      await cacheManager.set("refresh:kept", { value: "old", freshUntil: Date.now() + 60_000 });
+
+      await expect(
+        adapter.refresh("kept", () => Promise.reject(new Error("store unreachable"))),
+      ).rejects.toThrow("store unreachable");
+      expect(await adapter.tryCache("kept", () => Promise.resolve("new"))).toBe("old");
+    });
+
+    it("joins a load already running for the key", async () => {
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("value");
+          }),
+      );
+
+      const read = adapter.tryCache("running", fetchFn);
+      const refreshed = adapter.refresh("running", fetchFn);
+      await vi.waitFor(() => expect(release).toBeDefined());
+      release?.();
+
+      expect(await Promise.all([read, refreshed])).toEqual(["value", "value"]);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
     });
   });
 });

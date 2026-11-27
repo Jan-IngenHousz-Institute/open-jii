@@ -17,6 +17,7 @@ import { AuthorizationModule } from "./authorization/authorization.module";
 import analyticsConfig from "./common/config/analytics.config";
 import apiConfig from "./common/config/api.config";
 import awsConfig from "./common/config/aws.config";
+import corsConfig from "./common/config/cors.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
@@ -63,6 +64,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
         githubConfig,
         healthConfig,
         servingStoreConfig,
+        corsConfig,
       ],
     }),
     LoggerModule.forRoot({

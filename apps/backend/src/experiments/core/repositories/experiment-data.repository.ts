@@ -548,29 +548,80 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Schemas, row count and newest row of every table in an experiment, as one
-   * cached snapshot. Reads build their SQL from it and the tables listing
-   * serves it, so a count the page has seen is the count its next read uses.
-   * A failed lookup is thrown through the cache so it is never stored, and
-   * callers sharing the in-flight load all see the failure.
+   * Schemas, row count and newest row of every table in an experiment, as one snapshot cached on
+   * this task that reads build their SQL from. A failed lookup is never stored, and callers sharing
+   * the in-flight load all see the failure.
    */
   tablesMetadata(
     experimentId: string,
     source: ExperimentDataSource,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     return tryCatch(async () => {
-      const rows = await this.cachePort.tryCache(
-        `table-metadata:${source}:${experimentId}`,
-        async () => {
-          const result = await this.dataSource.readsFor(source).tablesMetadata(experimentId);
-          if (result.isFailure()) {
-            throw result.error;
-          }
-          return result.value;
-        },
+      const rows = await this.cachePort.tryCache(this.tablesMetadataKey(experimentId, source), () =>
+        this.loadTablesMetadata(experimentId, source),
       );
       return rows ?? [];
     });
+  }
+
+  /** The snapshot the tables listing serves, reloaded on each call if the source lists cheaply. */
+  listedTablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    if (!this.dataSource.readsFor(source).listsTablesAfresh) {
+      return this.tablesMetadata(experimentId, source);
+    }
+
+    return tryCatch(() =>
+      this.cachePort.refresh(this.tablesMetadataKey(experimentId, source), () =>
+        this.loadTablesMetadata(experimentId, source),
+      ),
+    );
+  }
+
+  /**
+   * The listing from a read that began after this call. A read already running may have taken its
+   * snapshot before the change the caller saw, so a call that joined one reads once more after it.
+   */
+  async listTablesAfresh(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    if (!this.dataSource.readsFor(source).listsTablesAfresh) {
+      return this.tablesMetadata(experimentId, source);
+    }
+
+    const key = this.tablesMetadataKey(experimentId, source);
+    const ownRead = { hasStarted: false };
+    const listing = await tryCatch(() =>
+      this.cachePort.refresh(key, () => {
+        ownRead.hasStarted = true;
+        return this.loadTablesMetadata(experimentId, source);
+      }),
+    );
+    if (ownRead.hasStarted) {
+      return listing;
+    }
+
+    return tryCatch(() =>
+      this.cachePort.refresh(key, () => this.loadTablesMetadata(experimentId, source)),
+    );
+  }
+
+  private tablesMetadataKey(experimentId: string, source: ExperimentDataSource): string {
+    return `table-metadata:${source}:${experimentId}`;
+  }
+
+  private async loadTablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<ExperimentTableMetadata[]> {
+    const result = await this.dataSource.readsFor(source).tablesMetadata(experimentId);
+    if (result.isFailure()) {
+      throw result.error;
+    }
+    return result.value;
   }
 
   private async tableMetadata(

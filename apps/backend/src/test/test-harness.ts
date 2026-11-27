@@ -49,6 +49,7 @@ import {
   experimentJoinRequests,
   resourceGrants,
   resourceVisits,
+  apiKeys,
   ensurePersonalOrganization,
   eq,
   verifications,
@@ -336,6 +337,13 @@ export class TestHarness {
         this.mockUserSession(userId);
         return req;
       },
+      // Signs the user in through one of their API keys, as Better Auth's key plugin does: the
+      // session's id is the key's and its token the key the request sends.
+      withApiKey: (userId: string, key: { id: string; key: string }) => {
+        req.set("x-api-key", key.key);
+        this.mockUserSession(userId, { id: key.id, token: key.key });
+        return req;
+      },
       withoutAuth: () => {
         // Ensure no auth headers
         req.unset("Authorization");
@@ -353,12 +361,18 @@ export class TestHarness {
   };
 
   // Mock the Better Auth session for testing
-  private mockUserSession(userId: string) {
+  private mockUserSession(
+    userId: string,
+    {
+      id = `session-${userId}`,
+      token = `test-token-${userId}`,
+    }: { id?: string; token?: string } = {},
+  ) {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       session: {
-        id: `session-${userId}`,
+        id,
         userId,
-        token: `test-token-${userId}`,
+        token,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         ipAddress: "127.0.0.1",
         userAgent: "test-agent",
@@ -381,6 +395,14 @@ export class TestHarness {
   // Mock no session for unauthorized tests
   private mockNoSession() {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
+  }
+
+  /**
+   * The session lookup the app calls. Specs share one app, which keeps the mock from the file that
+   * started it, so a spec's own import of `auth` can be another mock.
+   */
+  public get sessionLookup() {
+    return vi.mocked(auth.api.getSession);
   }
 
   // HTTP request methods
@@ -621,6 +643,19 @@ export class TestHarness {
       .returning();
 
     return membership;
+  }
+
+  /** Seed one of the user's API keys, with its row as Better Auth's key plugin keeps it. */
+  public async createApiKey(
+    userId: string,
+    data: { enabled?: boolean; expiresAt?: Date | null } = {},
+  ) {
+    const key = `jii_${faker.string.alphanumeric(64)}`;
+    const [row] = await this.database
+      .insert(apiKeys)
+      .values({ name: "Script", key, referenceId: userId, ...data })
+      .returning();
+    return row;
   }
 
   /** Seed a resource grant. */

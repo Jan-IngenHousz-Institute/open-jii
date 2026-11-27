@@ -9,6 +9,7 @@ import type {
 import { PageBytes } from "../../../experiments/core/models/page-bytes.model";
 import type {
   ServingStorePort,
+  StoreChangeMark,
   StoreMetadataSheet,
   StoreQuery,
   StoreQueryColumn,
@@ -160,17 +161,20 @@ export class ServingStoreAdapter
 
   /**
    * Each table with rows, counted when read as gold's listing counts them, with the schemas the
-   * feed stored per batch merged into one per payload column.
+   * feed stored per batch merged into one per payload column and a revision of the rows it holds.
    */
   async getExperimentTableMetadata(
     experimentId: string,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     const experiment = this.experimentArgument(experimentId);
+    // Every insert stamps arrived_at afresh and no writer sets it, so a sum over the rows that win
+    // moves with any replacement, whichever insert was stamped or became visible first.
+    const contentRevision = "toString(sum(cityHash64(_commit_version, arrived_at)))";
     const tablesSql = [
-      `SELECT 'static' AS table_type, 'raw_data' AS identifier, CAST(NULL AS Nullable(String)) AS display_name, count() AS row_count, max(processed_timestamp) AS latest_row_at FROM experiment_measurements(${experiment}) HAVING count() > 0`,
-      `SELECT 'macro', macro_id, NULL, count(), max(processed_timestamp) FROM experiment_macro_results(${experiment}) WHERE macro_id IS NOT NULL GROUP BY macro_id`,
+      `SELECT 'static' AS table_type, 'raw_data' AS identifier, CAST(NULL AS Nullable(String)) AS display_name, count() AS row_count, max(processed_timestamp) AS latest_row_at, ${contentRevision} AS content_revision FROM experiment_measurements(${experiment}) HAVING count() > 0`,
+      `SELECT 'macro', macro_id, NULL, count(), max(processed_timestamp), ${contentRevision} FROM experiment_macro_results(${experiment}) WHERE macro_id IS NOT NULL GROUP BY macro_id`,
       // The newest upload names the table, so a rename shows once it is uploaded.
-      `SELECT 'upload', upload_table_id, argMax(upload_table_name, uploaded_at), count(), max(uploaded_at) FROM experiment_uploads(${experiment}) WHERE upload_table_id IS NOT NULL GROUP BY upload_table_id`,
+      `SELECT 'upload', upload_table_id, argMax(upload_table_name, uploaded_at), count(), max(uploaded_at), ${contentRevision} FROM experiment_uploads(${experiment}) WHERE upload_table_id IS NOT NULL GROUP BY upload_table_id`,
     ].join("\nUNION ALL\n");
     const schemasSql = `SELECT table_type, identifier, payload, schema FROM experiment_payload_schemas(${experiment})`;
 
@@ -187,7 +191,7 @@ export class ServingStoreAdapter
 
     const schemas = this.mergedSchemas(schemasResult.value.rows);
     const tables = tablesResult.value.rows.map(
-      ([tableType, identifier, displayName, rowCount, latestRowAt]) => {
+      ([tableType, identifier, displayName, rowCount, latestRowAt, revision]) => {
         const type = TABLE_TYPES[String(tableType)] ?? "static";
         const name = String(identifier);
         const schemaOf = (payload: string) => schemas.get(`${type}:${name}:${payload}`) ?? null;
@@ -201,6 +205,7 @@ export class ServingStoreAdapter
           rowCount: Number(rowCount),
           latestRowAt: CellValues.text(latestRowAt, "TIMESTAMP"),
           schemaRevision: this.schemaRevision([macroSchema, questionsSchema, null, uploadSchema]),
+          contentRevision: typeof revision === "string" ? revision : null,
           macroSchema,
           questionsSchema,
           customMetadataSchema: null,
@@ -216,6 +221,57 @@ export class ServingStoreAdapter
       tables: tables.length,
     });
     return success(tables);
+  }
+
+  /**
+   * Reads the tables directly rather than through their FINAL views, so their arrival time indexes
+   * can leave granules whose rows all arrived before `since` unread.
+   */
+  async getExperimentChangeMark(
+    experimentId: string,
+    since: string | null,
+  ): Promise<Result<StoreChangeMark>> {
+    const escape = (value: string) => new StoreQueryBuilder().escapeValue(value);
+    // A row is stamped as its insert begins and counted once it finishes, so the start trails the
+    // store's clock by more than any insert takes.
+    const nextFrom = "now64(6, 'UTC') - INTERVAL 10 MINUTE";
+    const from = since === null ? nextFrom : `toDateTime64(${escape(since)}, 6, 'UTC')`;
+    const arrived = ["measurements", "macro_results", "uploads"]
+      .map(
+        (table) =>
+          `SELECT arrived_at FROM ${table} WHERE experiment_id = ${escape(experimentId)} AND arrived_at >= least(${from}, ${nextFrom})`,
+      )
+      .join(" UNION ALL ");
+    // Rows that arrived together or out of order still change the count, and a replacement that
+    // a merge has already folded in still moves the newest arrival.
+    const arrivalsFrom = (start: string) =>
+      `concat(toString(countIf(arrived_at >= ${start})), ':', toString(maxIf(arrived_at, arrived_at >= ${start})))`;
+    const experiment = this.experimentArgument(experimentId);
+    const sql = `${[
+      `SELECT toString(${from})`,
+      arrivalsFrom(from),
+      `toString(${nextFrom})`,
+      arrivalsFrom(nextFrom),
+      `(SELECT count() FROM experiment_payload_schemas(${experiment}))`,
+      `(SELECT concat(toString(count()), ':', toString(max(_commit_version))) FROM experiment_metadata_sheets(${experiment}))`,
+    ].join(", ")} FROM (${arrived})`;
+
+    const rows: unknown[][] = [];
+    const read = await this.client.stream(sql, { [EXPERIMENT_SETTING]: experimentId }, (row) => {
+      rows.push(row);
+      return true;
+    });
+    if (read.isFailure()) {
+      return read;
+    }
+    const [countedFrom, arrivals, nextCountedFrom, nextArrivals, schemas, sheets] =
+      rows.at(0) ?? [];
+    const others = `${String(schemas)}|${String(sheets)}`;
+    return success({
+      since: String(countedFrom),
+      revision: `${String(arrivals)}|${others}`,
+      next: { since: String(nextCountedFrom), revision: `${String(nextArrivals)}|${others}` },
+    });
   }
 
   getExperimentTableColumns(
