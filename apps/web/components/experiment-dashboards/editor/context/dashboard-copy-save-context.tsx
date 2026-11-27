@@ -7,6 +7,7 @@ interface DashboardCopySave {
   duplicateDisabled: boolean;
   duplicateSelectedChart: () => Promise<void>;
   retryAvailable: boolean;
+  openCopyHref?: string;
   retry: () => void;
 }
 

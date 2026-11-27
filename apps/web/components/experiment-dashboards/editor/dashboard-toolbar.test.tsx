@@ -225,11 +225,17 @@ describe("DashboardToolbar", () => {
         </>
       );
     }
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(
+      experimentAccessQueryKey(dashboardSession.user.id, "exp-1"),
+      createExperimentAccess({ experiment: { id: "exp-1", status: "active" }, isAdmin: true }),
+    );
     render(
       <Harness initialWidgets={[chart, below, beside, belowBeside]} save>
         <State />
         <DashboardToolbar visible experimentId="exp-1" />
       </Harness>,
+      { queryClient },
     );
     await user.click(screen.getByRole("button", { name: "select chart" }));
     await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
@@ -264,6 +270,9 @@ describe("DashboardToolbar", () => {
     expect(
       screen.queryByRole("menuitem", { name: "editor.inspector.duplicate" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "editor.inspector.openChartCopy" }),
+    ).toHaveAttribute("href", "/en-US/platform/experiments/exp-1/analysis/visualizations/copy");
     await user.click(screen.getByRole("menuitem", { name: "editor.inspector.retryCopySave" }));
 
     await waitFor(() =>

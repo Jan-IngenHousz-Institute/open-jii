@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrincipalSession } from "@/components/auth/principal-context";
-import { isCurrentSession, waitForCurrentSession } from "@/hooks/auth/is-current-session";
+import { checkCurrentSession, waitForCurrentSession } from "@/hooks/auth/is-current-session";
 import {
   experimentAccessQuery,
   experimentAccessQueryKey,
@@ -12,7 +12,7 @@ import { useExperimentVisualizationDuplicate } from "@/hooks/experiment/useExper
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { canDuplicateExperimentChart } from "@/util/can-duplicate-experiment-chart";
-import { onlineManager, useQueryClient } from "@tanstack/react-query";
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -38,6 +38,24 @@ interface CreatedChart {
 function chartCopyHref(locale: string, experimentId: string, chartId: string, isArchived: boolean) {
   const basePath = isArchived ? "experiments-archive" : "experiments";
   return `/${locale}/platform/${basePath}/${experimentId}/analysis/visualizations/${chartId}`;
+}
+
+function copyToastActions(
+  charts: CreatedChart[],
+  hrefFor: (chart: CreatedChart) => string,
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  return charts.map((chart) => (
+    <ToastAction
+      key={chart.id}
+      asChild
+      altText={t("editor.inspector.openChartCopyNamed", { name: chart.name })}
+    >
+      <Link href={hrefFor(chart)}>
+        {charts.length > 1 ? chart.name : t("editor.inspector.openChartCopy")}
+      </Link>
+    </ToastAction>
+  ));
 }
 
 interface PendingCopy {
@@ -107,10 +125,10 @@ export function DashboardAutosaveBoundary({
     selectedWidget?.type === "visualization" ? selectedWidget.config.visualizationId : undefined;
   const { duplicate, disabled } = useExperimentVisualizationDuplicate(experimentId, sourceChartId);
   const pending = [...copies].filter(([id]) => widgets.some((widget) => widget.id === id));
-  const hasPendingCopy = pending.some(
+  const selectedCopy = pending.find(
     ([copyId, { sourceWidgetId }]) =>
       selectedWidgetId === copyId || selectedWidgetId === sourceWidgetId,
-  );
+  )?.[1];
   if (pending.length < copies.size) setCopies(new Map(pending));
 
   const showUnattachedCopies = useCallback(
@@ -141,18 +159,14 @@ export function DashboardAutosaveBoundary({
           toast({ title });
           return;
         }
-        const openCopy = t("editor.inspector.openChartCopy");
-        const nameLinks = unattachedCharts.current.size > 1;
-        const links = [...unattachedCharts.current.values()].map((chart) => (
-          <ToastAction key={chart.id} asChild altText={`${openCopy} ${chart.name}`}>
-            <Link href={chartCopyHref(locale, experimentId, chart.id, status === "archived")}>
-              {nameLinks ? chart.name : openCopy}
-            </Link>
-          </ToastAction>
-        ));
+        const links = copyToastActions(
+          [...unattachedCharts.current.values()],
+          ({ id }) => chartCopyHref(locale, experimentId, id, status === "archived"),
+          t,
+        );
         toast({
           title,
-          ...(nameLinks
+          ...(links.length > 1
             ? { description: <div className="mt-1 flex flex-wrap gap-1">{links}</div> }
             : { action: links[0] }),
         });
@@ -212,17 +226,40 @@ export function DashboardAutosaveBoundary({
     if (mounted.current) void flush({ retryFailed: true });
   }, [flush]);
   const showFailure = enabled && hasError && pending.length > 0 && hasEditAccess();
+  const accessQuery = experimentAccessQuery(orpc, userId, experimentId);
+  const { data: copyAccess, error: copyAccessError } = useQuery({ ...accessQuery, enabled: false });
+  const copyLinkStatus =
+    copyAccess?.hasAccess &&
+    !isExperimentReadDenied(copyAccessError) &&
+    !hasConfirmedExperimentReadDenial(queryClient, accessQuery.queryKey)
+      ? copyAccess.experiment.status
+      : undefined;
+  const retryAvailable = showFailure && !!selectedCopy;
+  const openCopyHref =
+    retryAvailable && copyLinkStatus !== undefined
+      ? chartCopyHref(locale, experimentId, selectedCopy.chart.id, copyLinkStatus === "archived")
+      : undefined;
   const retryLabel = t("editor.inspector.retryCopySave");
   const failureTitle = t("editor.inspector.copySaveFailed");
   useEffect(() => {
     if (!showFailure) return;
     let active = true;
     let dismiss: (() => void) | undefined;
-    void isCurrentSession(sessionId).then((current) => {
-      if (!active || !current) return;
+    void checkCurrentSession(sessionId).then((status) => {
+      if (!active || status === "changed") return;
+      const links =
+        copyLinkStatus === undefined
+          ? []
+          : copyToastActions(
+              Array.from(copies.values(), ({ chart }) => chart),
+              ({ id }) => chartCopyHref(locale, experimentId, id, copyLinkStatus === "archived"),
+              t,
+            );
       dismiss = toast({
         title: failureTitle,
         variant: "destructive",
+        description:
+          links.length > 0 ? <div className="mt-1 flex flex-wrap gap-1">{links}</div> : undefined,
         action: (
           <ToastAction altText={retryLabel} onClick={retry}>
             {retryLabel}
@@ -234,7 +271,19 @@ export function DashboardAutosaveBoundary({
       active = false;
       dismiss?.();
     };
-  }, [showFailure, error, retry, retryLabel, failureTitle, sessionId]);
+  }, [
+    showFailure,
+    error,
+    retry,
+    retryLabel,
+    failureTitle,
+    sessionId,
+    copyLinkStatus,
+    copies,
+    locale,
+    experimentId,
+    t,
+  ]);
 
   useEffect(() => {
     if (enabled || copies.size === 0) return;
@@ -265,7 +314,7 @@ export function DashboardAutosaveBoundary({
   ]);
 
   const duplicateSelectedChart = async () => {
-    if (!enabled || selectedWidget?.type !== "visualization" || !sourceChartId || hasPendingCopy)
+    if (!enabled || selectedWidget?.type !== "visualization" || !sourceChartId || selectedCopy)
       return;
     readCopyAccess();
     const sourceWidgetId = selectedWidget.id;
@@ -310,9 +359,10 @@ export function DashboardAutosaveBoundary({
     <DashboardCopySaveContext.Provider
       value={{
         enabled,
-        duplicateDisabled: disabled || hasPendingCopy || !sourceChartId,
+        duplicateDisabled: disabled || !!selectedCopy || !sourceChartId,
         duplicateSelectedChart,
-        retryAvailable: showFailure && hasPendingCopy,
+        retryAvailable,
+        openCopyHref,
         retry,
       }}
     >

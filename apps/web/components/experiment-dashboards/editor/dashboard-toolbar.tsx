@@ -1,7 +1,17 @@
 "use client";
 
-import { Copy, Database, MoreHorizontal, Palette, RotateCw, Sliders, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Database,
+  ExternalLink,
+  MoreHorizontal,
+  Palette,
+  RotateCw,
+  Sliders,
+  Trash2,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -167,10 +177,20 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
                 {copySave?.retryAvailable ? (
-                  <DropdownMenuItem onSelect={copySave.retry}>
-                    <RotateCw className="size-4" />
-                    {t("editor.inspector.retryCopySave")}
-                  </DropdownMenuItem>
+                  <>
+                    {copySave.openCopyHref && (
+                      <DropdownMenuItem asChild>
+                        <Link href={copySave.openCopyHref}>
+                          <ExternalLink className="size-4" />
+                          {t("editor.inspector.openChartCopy")}
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={copySave.retry}>
+                      <RotateCw className="size-4" />
+                      {t("editor.inspector.retryCopySave")}
+                    </DropdownMenuItem>
+                  </>
                 ) : (
                   widget.type === "visualization" &&
                   copySave?.enabled && (

@@ -90,6 +90,7 @@
       "copySaveFailed": "The chart was copied, but the dashboard could not save it.",
       "retryCopySave": "Retry saving copy",
       "copyNotAttached": "The chart was copied, but it could not be added to the dashboard.",
+      "openChartCopyNamed": "Open copy of {{name}}",
       "openChartCopy": "Open copy"
     },
     "vizDataStrip": {
