@@ -14,6 +14,17 @@ function relied(reason: string) {
   return `${reason} openJII Lab's server relies on this; coordinate an openJII Lab release before changing it. See ${ADR}.`;
 }
 
+const authEnvKeys = [
+  "ENVIRONMENT_PREFIX",
+  "NEXT_PUBLIC_BASE_URL",
+  "NEXT_PUBLIC_API_URL",
+  "COOKIE_DOMAIN",
+] as const;
+
+type AuthEnvKey = (typeof authEnvKeys)[number];
+type DeployedEnvironment = "prod" | "dev";
+type Environment = DeployedEnvironment | "local";
+
 const authEnv = {
   prod: {
     ENVIRONMENT_PREFIX: "prod",
@@ -33,14 +44,21 @@ const authEnv = {
     NEXT_PUBLIC_API_URL: "http://localhost:3020",
     COOKIE_DOMAIN: undefined,
   },
+} satisfies Record<DeployedEnvironment, Record<AuthEnvKey, string>> & {
+  local: Record<AuthEnvKey, string | undefined>;
 };
-
-type Environment = keyof typeof authEnv;
-type DeployedEnvironment = Exclude<Environment, "local">;
 
 const AUTH_URL = `${authEnv.prod.NEXT_PUBLIC_API_URL}/api/v1/auth`;
 const SESSION_QUERY = "/get-session?disableCookieCache=true&disableRefresh=true";
 const EMAIL = "sibling-contract@example.com";
+
+function readTerraform(path: string) {
+  const source = readFileSync(path, "utf8");
+  return source.replace(
+    /("(?:\\.|[^"\\])*")|\/\*[\s\S]*?\*\/|(?:#|\/\/)[^\r\n]*/g,
+    (match, quoted: string | undefined) => quoted ?? match.replace(/[^\r\n]/g, " "),
+  );
+}
 
 function terraformBlock(source: string, declaration: string) {
   const body = new RegExp(`^${declaration}\\s*\\{([\\s\\S]*?)^\\}`, "m").exec(source)?.[1];
@@ -48,36 +66,80 @@ function terraformBlock(source: string, declaration: string) {
   return body;
 }
 
+function terraformAttribute(block: string, name: string) {
+  const value = new RegExp(`^[ \\t]*${name}[ \\t]*=[ \\t]*([^\\r\\n]+)`, "m")
+    .exec(block)?.[1]
+    .trim();
+  if (!value) throw new Error(relied(`Missing Terraform attribute ${name}.`));
+  return value;
+}
+
+function terraformString(expression: string, references: ReadonlyMap<string, string>) {
+  const resolveReference = (reference: string) => {
+    const value = references.get(reference);
+    if (value === undefined) {
+      throw new Error(relied(`Unsupported Terraform reference ${reference} in ${expression}.`));
+    }
+    return value;
+  };
+  const literal = /^"([^"]*)"$/.exec(expression)?.[1];
+  return literal === undefined
+    ? resolveReference(expression)
+    : literal.replace(/\$\{([^}]+)\}/g, (_, reference: string) => resolveReference(reference));
+}
+
+function readRoute53Domains(source: string, module: string, env: ReadonlyMap<string, string>) {
+  const modulePath = "../../modules/route53";
+  if (terraformString(terraformAttribute(module, "source"), env) !== modulePath) {
+    throw new Error(relied(`Expected the route53 module to use ${modulePath}.`));
+  }
+  const route53Path = resolve(source, modulePath);
+  const inputs = new Map(
+    ["domain_name", "environment"].map((name) => [
+      `var.${name}`,
+      terraformString(terraformAttribute(module, name), env),
+    ]),
+  );
+  const usePrefix = terraformAttribute(module, "use_environment_prefix");
+  const locals = terraformBlock(readTerraform(join(route53Path, "main.tf")), "locals");
+  const baseDomain = terraformAttribute(locals, "base_domain");
+  const branches = /^var\.use_environment_prefix\s*\?\s*(.+?)\s*:\s*(.+)$/.exec(baseDomain);
+  if (!branches || (usePrefix !== "true" && usePrefix !== "false")) {
+    throw new Error(relied(`Unsupported Route53 base_domain expression or prefix flag.`));
+  }
+  inputs.set("local.base_domain", terraformString(branches[usePrefix === "true" ? 1 : 2], inputs));
+
+  const outputs = readTerraform(join(route53Path, "outputs.tf"));
+  return ["environment_domain", "api_domain"].map((name) => {
+    const block = terraformBlock(outputs, `output "${name}"`);
+    return [
+      `module.route53.${name}`,
+      terraformString(terraformAttribute(block, "value"), inputs),
+    ] as const;
+  });
+}
+
 function readDeployedAuthEnv(environment: DeployedEnvironment) {
   const source = resolve(__dirname, `../../../infrastructure/env/${environment}`);
-  const main = readFileSync(join(source, "main.tf"), "utf8");
-  const variables = readFileSync(join(source, "variables.tf"), "utf8");
-  const variableDefault = (name: string) => {
-    const block = terraformBlock(variables, `variable "${name}"`);
-    return /^\s*default\s*=\s*"([^"]+)"/m.exec(block)?.[1];
-  };
+  const main = readTerraform(join(source, "main.tf"));
+  const variables = readTerraform(join(source, "variables.tf"));
+  const references = new Map(
+    ["domain_name", "environment"].map((name) => {
+      const block = terraformBlock(variables, `variable "${name}"`);
+      return [`var.${name}`, terraformString(terraformAttribute(block, "default"), new Map())];
+    }),
+  );
   const route53 = terraformBlock(main, 'module "route53"');
-  const domain = variableDefault("domain_name");
-  const prefix = variableDefault("environment");
-  const usePrefix = /^\s*use_environment_prefix\s*=\s*(true|false)\b/m.exec(route53)?.[1];
-  if (!domain || !prefix || !usePrefix) {
-    throw new Error(relied(`Could not read the ${environment} Terraform domain settings.`));
+  for (const [name, value] of readRoute53Domains(source, route53, references)) {
+    references.set(name, value);
   }
-
-  const environmentDomain = usePrefix === "true" ? `${prefix}.${domain}` : domain;
-  const references = new Map([
-    ["var.domain_name", domain],
-    ["var.environment", prefix],
-    ["module.route53.environment_domain", environmentDomain],
-    ["module.route53.api_domain", `api.${environmentDomain}`],
-  ]);
   const backend = terraformBlock(main, 'module "backend_ecs"');
   const settings = /^( +)environment_variables\s*=\s*\[([\s\S]*?)^\1\]/m.exec(backend)?.[2];
   if (settings === undefined) {
     throw new Error(relied(`Missing ${environment} backend ECS environment variables in main.tf.`));
   }
 
-  return (name: string) => {
+  return (name: AuthEnvKey) => {
     const entry = new RegExp(
       `\\{\\s*name\\s*=\\s*"${name}"\\s+value\\s*=\\s*([^\\r\\n]+)\\s*\\}`,
       "g",
@@ -87,18 +149,7 @@ function readDeployedAuthEnv(environment: DeployedEnvironment) {
       throw new Error(relied(`Expected one ${name} in ${environment} backend ECS settings.`));
     }
 
-    const expression = matches[0][1].trim();
-    const resolveReference = (reference: string) => {
-      const value = references.get(reference);
-      if (value === undefined) {
-        throw new Error(relied(`Unsupported Terraform reference ${reference} for ${name}.`));
-      }
-      return value;
-    };
-    const literal = /^"([^"]*)"$/.exec(expression)?.[1];
-    return literal === undefined
-      ? resolveReference(expression)
-      : literal.replace(/\$\{([^}]+)\}/g, (_, reference: string) => resolveReference(reference));
+    return terraformString(matches[0][1].trim(), references);
   };
 }
 
@@ -234,7 +285,11 @@ afterEach(() => vi.unstubAllEnvs());
 describe(`first-party session contract (${ADR})`, { timeout: 30_000 }, () => {
   it.each(["prod", "dev"] as const)("matches the %s Terraform auth settings", (environment) => {
     const deployedValue = readDeployedAuthEnv(environment);
-    for (const [name, stub] of Object.entries(authEnv[environment])) {
+    for (const name of authEnvKeys) {
+      const stub = authEnv[environment][name];
+      expect(stub, relied(`Missing ${name} in the ${environment} auth stubs.`)).toBeTypeOf(
+        "string",
+      );
       expect(stub, relied(`${name} differs from the ${environment} backend ECS settings.`)).toBe(
         deployedValue(name),
       );
