@@ -80,6 +80,17 @@ function renderToolbar() {
   );
 }
 
+function ChartSelection({ chartId }: { chartId: string }) {
+  const { selectWidget, selectedWidgetId } = useDashboardEditor();
+  return (
+    <>
+      <button onClick={() => selectWidget(chartId)}>select chart</button>
+      <button onClick={() => selectWidget(null)}>clear selection</button>
+      {selectedWidgetId && <DashboardToolbar visible experimentId="exp-1" />}
+    </>
+  );
+}
+
 describe("DashboardToolbar", () => {
   it("keeps the chosen section while the same widget stays selected", async () => {
     const user = userEvent.setup();
@@ -110,7 +121,7 @@ describe("DashboardToolbar", () => {
     );
     expect(screen.getByTestId("table-widget-strip")).toBeInTheDocument();
   });
-  it.each(["kept", "cleared"])("saves a chart copy with selection %s", async (selection) => {
+  it.each(["kept", "cleared", "restored"])("saves one copy, selection %s", async (selection) => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
     const created = createVisualization({ id: "copy", name: "Growth (copy)" });
@@ -134,13 +145,11 @@ describe("DashboardToolbar", () => {
       const form = useFormContext<DashboardFormValues>();
       useDashboardAutosave({ form, experimentId: "exp-1", dashboardId: "dash-1" });
       const widgets = useWatch({ control: form.control, name: "widgets" });
-      const { selectWidget, selectedWidgetId } = useDashboardEditor();
+      const { selectedWidgetId } = useDashboardEditor();
       return (
         <>
-          <button onClick={() => selectWidget(chart.id)}>select chart</button>
-          <button onClick={() => selectWidget(null)}>clear selection</button>
+          <ChartSelection chartId={chart.id} />
           <output>{JSON.stringify({ widgets, selectedWidgetId })}</output>
-          {selectedWidgetId && <DashboardToolbar visible experimentId="exp-1" />}
         </>
       );
     }
@@ -156,11 +165,19 @@ describe("DashboardToolbar", () => {
     await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
     try {
       await waitFor(() => expect(create.called).toBe(true));
-      if (selection === "cleared") {
+      if (selection !== "kept") {
         await user.click(screen.getByRole("button", { name: "clear selection" }));
         expect(
           screen.queryByRole("button", { name: "editor.inspector.more" }),
         ).not.toBeInTheDocument();
+      }
+      if (selection === "restored") {
+        await user.click(screen.getByRole("button", { name: "select chart" }));
+        await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
+        const duplicate = screen.getByRole("menuitem", { name: "editor.inspector.duplicate" });
+        expect.soft(duplicate).toHaveAttribute("aria-disabled", "true");
+        await user.click(duplicate);
+        await user.keyboard("{Escape}");
       }
     } finally {
       resolve();

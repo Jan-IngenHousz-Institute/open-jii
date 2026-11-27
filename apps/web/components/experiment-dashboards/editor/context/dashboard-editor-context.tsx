@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 export type DashboardTool = "cursor" | "chart" | "text" | "table" | "filter";
@@ -8,6 +8,8 @@ export type DashboardTool = "cursor" | "chart" | "text" | "table" | "filter";
 interface DashboardEditorContextValue {
   selectedWidgetId: string | null;
   selectWidget: (id: string | null) => void;
+  chartDuplicatePending: boolean;
+  runChartDuplicate: (duplicate: () => Promise<void>) => Promise<void>;
   tool: DashboardTool;
   setTool: (tool: DashboardTool) => void;
   /**
@@ -24,21 +26,37 @@ export function DashboardEditorProvider({ children }: { children: ReactNode }) {
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [tool, setTool] = useState<DashboardTool>("cursor");
   const [datasetOpen, setDatasetOpen] = useState(false);
+  const [chartDuplicatePending, setChartDuplicatePending] = useState(false);
+  const chartDuplicateInFlight = useRef(false);
 
   const selectWidget = useCallback((id: string | null) => {
     setSelectedWidgetId(id);
+  }, []);
+
+  const runChartDuplicate = useCallback(async (duplicate: () => Promise<void>) => {
+    if (chartDuplicateInFlight.current) return;
+    chartDuplicateInFlight.current = true;
+    setChartDuplicatePending(true);
+    try {
+      await duplicate();
+    } finally {
+      chartDuplicateInFlight.current = false;
+      setChartDuplicatePending(false);
+    }
   }, []);
 
   const value = useMemo<DashboardEditorContextValue>(
     () => ({
       selectedWidgetId,
       selectWidget,
+      chartDuplicatePending,
+      runChartDuplicate,
       tool,
       setTool,
       datasetOpen,
       setDatasetOpen,
     }),
-    [selectedWidgetId, selectWidget, tool, datasetOpen],
+    [selectedWidgetId, selectWidget, chartDuplicatePending, runChartDuplicate, tool, datasetOpen],
   );
 
   return (
