@@ -136,3 +136,20 @@ describe("CellValues.text", () => {
     expect(CellValues.text('"x"', "VARIANT")).toBe('"x"');
   });
 });
+
+describe("CellValues.textOrNull", () => {
+  it("reads a string as itself and anything else as no value", () => {
+    expect(CellValues.textOrNull("2.345")).toBe("2.345");
+    expect(CellValues.textOrNull(2.345)).toBeNull();
+    expect(CellValues.textOrNull(null)).toBeNull();
+  });
+});
+
+describe("CellValues.numberOrNull", () => {
+  it("reads a number as itself, and the store's quoted NaN and infinities as no value", () => {
+    expect(CellValues.numberOrNull(87.5)).toBe(87.5);
+    expect(CellValues.numberOrNull("nan")).toBeNull();
+    expect(CellValues.numberOrNull("-inf")).toBeNull();
+    expect(CellValues.numberOrNull(null)).toBeNull();
+  });
+});

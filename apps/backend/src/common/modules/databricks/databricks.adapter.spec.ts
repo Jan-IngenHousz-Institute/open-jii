@@ -899,7 +899,7 @@ describe("DatabricksAdapter", () => {
     it("returns the last data arrival as an ISO timestamp", async () => {
       mockSqlResponse([["AMBYTE_A", "2026-08-13T09:00:00.000Z", "42"]], 1);
 
-      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A");
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A", ["exp-1"]);
 
       assertSuccess(result);
       expect(result.value).toEqual({ lastDataAt: "2026-08-13T09:00:00.000Z" });
@@ -908,7 +908,7 @@ describe("DatabricksAdapter", () => {
     it("returns null when the device has no activity row", async () => {
       mockSqlResponse([], 0);
 
-      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_NEW");
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_NEW", ["exp-1"]);
 
       assertSuccess(result);
       expect(result.value).toEqual({ lastDataAt: null });
@@ -917,7 +917,7 @@ describe("DatabricksAdapter", () => {
     it("returns null for a row without a parsable last_data_at", async () => {
       mockSqlResponse([["AMBYTE_A", null, "0"]], 1);
 
-      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A");
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A", ["exp-1"]);
 
       assertSuccess(result);
       expect(result.value).toEqual({ lastDataAt: null });
@@ -933,7 +933,7 @@ describe("DatabricksAdapter", () => {
         .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
         .reply(500, { message: "warehouse unavailable" });
 
-      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A");
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A", ["exp-1"]);
 
       expect(result.isFailure()).toBe(true);
     });
@@ -1018,6 +1018,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceThroughput(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-13T00:00:00.000Z",
         "2026-08-13T12:00:00.000Z",
         "hour",
@@ -1041,6 +1042,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceBatterySeries(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-13T00:00:00.000Z",
         "2026-08-15T00:00:00.000Z",
         "day",
@@ -1064,6 +1066,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceMacroBreakdown(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-13T00:00:00.000Z",
         "2026-08-13T12:00:00.000Z",
       );
@@ -1098,6 +1101,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceFirmwareHistory(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-13T00:00:00.000Z",
         "2026-08-13T12:00:00.000Z",
         "hour",
@@ -1139,6 +1143,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDevicePayloadBreakdown(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-13T00:00:00.000Z",
         "2026-08-13T12:00:00.000Z",
       );
@@ -1174,6 +1179,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceThroughput(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-15T00:00:00.000Z",
         "2026-08-15T12:00:00.000Z",
         "hour",
@@ -1214,6 +1220,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceRecentMeasurements(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-15T00:00:00.000Z",
         "2026-08-15T12:00:00.000Z",
         50,
@@ -1247,6 +1254,7 @@ describe("DatabricksAdapter", () => {
 
       const result = await databricksAdapter.getDeviceThroughput(
         "AMBYTE_A",
+        ["exp-1"],
         "2026-08-13T00:00:00.000Z",
         "2026-08-13T12:00:00.000Z",
         "hour",
@@ -1371,6 +1379,84 @@ describe("DatabricksAdapter", () => {
       expect(captured.statement).toContain("GROUP BY `client_id`");
       expect(captured.statement).toContain("ORDER BY `last_data_at` DESC");
       expect(captured.statement).toContain("LIMIT 500");
+    });
+
+    it("lists the experiments a device's rows in the window claim", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(["experiment_id"], [["exp-1"], [null]], captured);
+
+      const result = await databricksAdapter.getDeviceExperimentIds("AMBYTE_A", {
+        from: FROM,
+        to: TO,
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual(["exp-1"]);
+      expect(captured.statement).toContain("SELECT DISTINCT `experiment_id`");
+      expect(captured.statement).toContain("`client_id` = 'AMBYTE_A'");
+    });
+
+    it("lists the experiments every row of a device claims when given no window", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(["experiment_id"], [], captured);
+
+      await databricksAdapter.getDeviceExperimentIds("AMBYTE_A");
+
+      expect(captured.statement).toContain("`client_id` = 'AMBYTE_A'");
+      expect(captured.statement).not.toContain("BETWEEN");
+    });
+
+    it("dates a device's last data from its rows in the given experiments alone", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(["last_data_at"], [["2026-08-17T10:00:00.000Z"]], captured);
+
+      const result = await databricksAdapter.getDeviceLastActivity("AMBYTE_A", ["exp-1"]);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ lastDataAt: "2026-08-17T10:00:00.000Z" });
+      expect(captured.statement).toContain("clean_data");
+      expect(captured.statement).toContain(
+        "`client_id` = 'AMBYTE_A' AND (experiment_id IS NULL OR experiment_id IN ('exp-1'))",
+      );
+    });
+
+    it("reads a device's rows of the given experiments and those no experiment claims, before grouping", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(["timestamp_hour", "average_battery"], [], captured);
+
+      const result = await databricksAdapter.getDeviceBatterySeries(
+        "AMBYTE_A",
+        ["exp-1", "it's-2"],
+        FROM,
+        TO,
+        "hour",
+      );
+
+      assertSuccess(result);
+      const scope =
+        "`client_id` = 'AMBYTE_A' AND (experiment_id IS NULL OR experiment_id IN ('exp-1', 'it\\'s-2'))";
+      const statement = captured.statement ?? "";
+      expect(statement).toContain(scope);
+      expect(statement.indexOf(scope)).toBeLessThan(statement.indexOf("GROUP BY"));
+    });
+
+    it("reads only the rows no experiment claims when given no experiment, before the newest rows' cut", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(["timestamp"], [], captured);
+
+      const result = await databricksAdapter.getDeviceRecentMeasurements(
+        "AMBYTE_A",
+        [],
+        FROM,
+        TO,
+        50,
+      );
+
+      assertSuccess(result);
+      const scope = "`client_id` = 'AMBYTE_A' AND experiment_id IS NULL";
+      const statement = captured.statement ?? "";
+      expect(statement).toContain(scope);
+      expect(statement.indexOf(scope)).toBeLessThan(statement.indexOf("LIMIT 50"));
     });
 
     it("scopes a device series on both the experiment and the client id", async () => {

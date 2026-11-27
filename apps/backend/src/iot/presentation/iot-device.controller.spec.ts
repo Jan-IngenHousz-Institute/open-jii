@@ -1,6 +1,9 @@
 import { faker } from "@faker-js/faker";
+import type { AnyContractProcedure } from "@orpc/contract";
 import { StatusCodes } from "http-status-codes";
+import type { MockInstance } from "vitest";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   BulkRegisterIotDevicesResult,
@@ -9,16 +12,24 @@ import type {
   IotDeviceList,
   IotDevicePaginatedList,
 } from "@repo/api/domains/iot/iot.schema";
+import { experimentDevices } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
+import { DatabricksSqlService } from "../../common/modules/databricks/services/sql/sql.service";
+import { ServingStoreClientService } from "../../common/modules/serving-store/services/client/client.service";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
+import type { DeviceReads } from "../core/ports/device-reads.port";
+import { IOT_SERVING_STORE_PORT } from "../core/ports/serving-store.port";
+import type { ServingStorePort } from "../core/ports/serving-store.port";
 
 const RETURNED_THING = {
   thingName: "ambyte_TEST-SERIAL",
@@ -475,6 +486,7 @@ describe("IotDeviceController", () => {
 
   describe("getIotDeviceActivity", () => {
     it("returns the pipeline-computed last data arrival (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceExperimentIds").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
         success({ lastDataAt: "2026-08-13T09:00:00.000Z" }),
       );
@@ -495,6 +507,7 @@ describe("IotDeviceController", () => {
     });
 
     it("degrades to a null lastDataAt when the warehouse is unavailable (200)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceExperimentIds").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceLastActivity").mockResolvedValue(
         failure(AppError.internal("warehouse down")),
       );
@@ -686,6 +699,7 @@ describe("IotDeviceController", () => {
     };
 
     const mockWarehouse = () => {
+      vi.spyOn(databricksAdapter, "getDeviceExperimentIds").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
         success([
           {
@@ -733,6 +747,7 @@ describe("IotDeviceController", () => {
     });
 
     it("fails loudly when the warehouse is down, the dashboard owns the error state (500)", async () => {
+      vi.spyOn(databricksAdapter, "getDeviceExperimentIds").mockResolvedValue(success([]));
       vi.spyOn(databricksAdapter, "getDeviceLifecycleEvents").mockResolvedValue(
         failure(AppError.internal("warehouse down")),
       );
@@ -778,6 +793,179 @@ describe("IotDeviceController", () => {
 
       await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.FORBIDDEN);
     });
+  });
+
+  describe("read source", () => {
+    const WINDOW = { from: "2026-08-13T00:00:00.000Z", to: "2026-08-13T12:00:00.000Z" };
+
+    interface DevicePageRead {
+      name: string;
+      route: AnyContractProcedure;
+      query: Record<string, string>;
+      read: keyof DeviceReads;
+    }
+
+    const devicePageReads: DevicePageRead[] = [
+      {
+        name: "last activity",
+        route: contract.iot.getIotDeviceActivity,
+        query: {},
+        read: "getDeviceLastActivity",
+      },
+      {
+        name: "observed experiments",
+        route: contract.iot.listDeviceObservedExperiments,
+        query: WINDOW,
+        read: "getDeviceThroughput",
+      },
+      {
+        name: "firmware history",
+        route: contract.iot.getDeviceFirmwareHistory,
+        query: { ...WINDOW, bucket: "day" },
+        read: "getDeviceFirmwareHistory",
+      },
+      {
+        name: "monitoring",
+        route: contract.iot.getDeviceMonitoring,
+        query: { ...WINDOW, bucket: "hour" },
+        read: "getDeviceThroughput",
+      },
+    ];
+
+    let warehouseQuery: MockInstance<DatabricksSqlService["executeSqlQuery"]>;
+    let storeQuery: MockInstance<ServingStoreClientService["query"]>;
+
+    beforeEach(() => {
+      const emptyResult = { columns: [], rows: [], totalRows: 0, truncated: false };
+      warehouseQuery = vi
+        .spyOn(testApp.module.get(DatabricksSqlService), "executeSqlQuery")
+        .mockResolvedValue(success(emptyResult));
+      storeQuery = vi
+        .spyOn(testApp.module.get(ServingStoreClientService), "query")
+        .mockResolvedValue(success({ rows: [] }));
+      const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
+      vi.spyOn(servingStore, "isConfigured").mockReturnValue(true);
+      vi.spyOn(servingStore, "hasDeviceEventsLoaded").mockResolvedValue(success(true));
+    });
+
+    function readFromStore() {
+      const analyticsAdapter: MockAnalyticsAdapter = testApp.module.get(AnalyticsAdapter);
+      analyticsAdapter.setFlag(FEATURE_FLAGS.STORE_EXPERIMENT_READS, true);
+    }
+
+    it.each(devicePageReads)(
+      "reads a device's $name from the store, with no warehouse round trip, once the store flag is on",
+      async ({ route, query }) => {
+        const device = await testApp.createIotDevice({ createdBy: userId });
+        readFromStore();
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.OK);
+
+        expect(storeQuery).toHaveBeenCalled();
+        expect(warehouseQuery).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(devicePageReads)(
+      "reads a device's $name from the warehouse while the store flag is off",
+      async ({ route, query }) => {
+        const device = await testApp.createIotDevice({ createdBy: userId });
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.OK);
+
+        expect(warehouseQuery).toHaveBeenCalled();
+        expect(storeQuery).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(devicePageReads)(
+      "refuses a device's $name to a viewer without access before reading the store",
+      async ({ route, query, read }) => {
+        const owner = await testApp.createTestUser({ name: "Other" });
+        const device = await testApp.createIotDevice({ createdBy: owner });
+        readFromStore();
+        const servingStore: ServingStorePort = testApp.module.get(IOT_SERVING_STORE_PORT);
+        const storeRead = vi.spyOn(servingStore, read);
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.FORBIDDEN);
+
+        expect(storeRead).not.toHaveBeenCalled();
+        expect(storeQuery).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(devicePageReads)(
+      "reads a device's $name from the warehouse only in the experiments its viewer can read",
+      async ({ route, query }) => {
+        const owner = await testApp.createTestUser({ name: "Owner" });
+        const device = await testApp.createIotDevice({ createdBy: owner });
+        const { experiment: bound } = await testApp.createExperiment({
+          name: "Bound",
+          userId: owner,
+        });
+        const { experiment: hidden } = await testApp.createExperiment({
+          name: "Hidden",
+          userId: owner,
+        });
+        await testApp.database
+          .insert(experimentDevices)
+          .values({ experimentId: bound.id, deviceId: device.id, addedBy: owner });
+        await testApp.addExperimentCollaborator(bound.id, userId);
+        const claimed = {
+          columns: [
+            { name: "experiment_id", type_name: "string", type_text: "string", position: 0 },
+          ],
+          rows: [[bound.id], [hidden.id]],
+          totalRows: 2,
+          truncated: false,
+        };
+        const none = { columns: [], rows: [], totalRows: 0, truncated: false };
+        warehouseQuery.mockImplementation((_schema, statement) =>
+          Promise.resolve(success(statement.startsWith("SELECT DISTINCT") ? claimed : none)),
+        );
+
+        await testApp
+          .get(testApp.resolveOrpcPath(route, { deviceId: device.id }))
+          .withAuth(userId)
+          .query(query)
+          .expect(StatusCodes.OK);
+
+        const statements = warehouseQuery.mock.calls.map(([, statement]) => statement);
+        const sourceTable = (statement: string) =>
+          /\bFROM\s+([\w.]+)/.exec(statement)?.[1]?.split(".").at(-1) ?? "";
+        const isDiscovery = (statement: string) => statement.startsWith("SELECT DISTINCT");
+        // Sessions come from the device's own connection events, which no experiment owns.
+        const deviceTables = ["clean_device_lifecycle_events"];
+        const measurementTables = ["clean_data"];
+        for (const statement of statements) {
+          expect([...deviceTables, ...measurementTables]).toContain(sourceTable(statement));
+        }
+
+        const measurementReads = statements.filter(
+          (statement) =>
+            !isDiscovery(statement) && measurementTables.includes(sourceTable(statement)),
+        );
+        expect(measurementReads).not.toHaveLength(0);
+        for (const statement of measurementReads) {
+          expect(statement).toContain(
+            `(experiment_id IS NULL OR experiment_id IN ('${bound.id}'))`,
+          );
+        }
+        expect(statements.filter((statement) => statement.includes(hidden.id))).toEqual([]);
+      },
+    );
   });
 
   describe("credential endpoints", () => {

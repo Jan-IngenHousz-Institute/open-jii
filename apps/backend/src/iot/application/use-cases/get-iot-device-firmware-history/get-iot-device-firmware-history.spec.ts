@@ -1,17 +1,25 @@
 import { faker } from "@faker-js/faker";
 
+import { DatabricksAdapter } from "../../../../common/modules/databricks/databricks.adapter";
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
+import type { DeviceReads } from "../../../core/ports/device-reads.port";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
 import { GetIotDeviceFirmwareHistoryUseCase } from "./get-iot-device-firmware-history";
 
 const RANGE = { from: "2026-07-15T00:00:00.000Z", to: "2026-08-14T00:00:00.000Z" } as const;
+const SOURCES: DeviceDataSource[] = ["warehouse", "store"];
 
 describe("GetIotDeviceFirmwareHistoryUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetIotDeviceFirmwareHistoryUseCase;
   let inner: GetDeviceFirmwareHistoryUseCase;
+  let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
   let userId: string;
 
   beforeAll(async () => {
@@ -23,6 +31,10 @@ describe("GetIotDeviceFirmwareHistoryUseCase", () => {
     userId = await testApp.createTestUser({ name: "Owner" });
     useCase = testApp.module.get(GetIotDeviceFirmwareHistoryUseCase);
     inner = testApp.module.get(GetDeviceFirmwareHistoryUseCase);
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
+    vi.spyOn(databricksAdapter, "getDeviceExperimentIds").mockResolvedValue(success([]));
+    vi.spyOn(servingStore, "getDeviceExperimentIds").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -34,18 +46,100 @@ describe("GetIotDeviceFirmwareHistoryUseCase", () => {
     await testApp.teardown();
   });
 
-  it("resolves the device's thing name before reading the warehouse", async () => {
+  it.each(SOURCES)(
+    "reads the %s for the device's thing name and the experiments the caller can read",
+    async (source) => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const { experiment: readable } = await testApp.createExperiment({ name: "Readable", userId });
+      const otherOwner = await testApp.createTestUser({ name: "Other owner" });
+      const { experiment: hidden } = await testApp.createExperiment({
+        name: "Hidden",
+        userId: otherOwner,
+      });
+      const reads: DeviceReads = source === "store" ? servingStore : databricksAdapter;
+      vi.spyOn(reads, "getDeviceExperimentIds").mockResolvedValue(
+        success([readable.id, hidden.id]),
+      );
+      const execute = vi.spyOn(inner, "execute").mockResolvedValue(success([]));
+
+      const result = await useCase.execute(device.id, RANGE.from, RANGE.to, "day", userId, source);
+
+      assertSuccess(result);
+      expect(execute).toHaveBeenCalledWith(
+        device.thingName,
+        [readable.id],
+        RANGE.from,
+        RANGE.to,
+        "day",
+        source,
+      );
+    },
+  );
+
+  it("reads the store, not the warehouse, when the source is the store", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
-    const execute = vi.spyOn(inner, "execute").mockResolvedValue(success([]));
+    const rows = [
+      {
+        version: "1.3.0",
+        firstSeen: "2026-08-01T00:00:00.000Z",
+        lastSeen: "2026-08-01T00:00:00.000Z",
+        count: 5,
+      },
+      {
+        version: "1.3.0",
+        firstSeen: "2026-08-02T00:00:00.000Z",
+        lastSeen: "2026-08-02T00:00:00.000Z",
+        count: 2,
+      },
+    ];
+    const warehouse = vi
+      .spyOn(databricksAdapter, "getDeviceFirmwareHistory")
+      .mockResolvedValue(success(rows));
+    const store = vi
+      .spyOn(servingStore, "getDeviceFirmwareHistory")
+      .mockResolvedValue(success(rows));
 
-    const result = await useCase.execute(device.id, RANGE.from, RANGE.to, "day");
+    const fromWarehouse = await useCase.execute(
+      device.id,
+      RANGE.from,
+      RANGE.to,
+      "day",
+      userId,
+      "warehouse",
+    );
+    const fromStore = await useCase.execute(
+      device.id,
+      RANGE.from,
+      RANGE.to,
+      "day",
+      userId,
+      "store",
+    );
 
-    assertSuccess(result);
-    expect(execute).toHaveBeenCalledWith(device.thingName, RANGE.from, RANGE.to, "day");
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(fromStore.value).toEqual([
+      {
+        version: "1.3.0",
+        firstSeen: "2026-08-01T00:00:00.000Z",
+        lastSeen: "2026-08-02T00:00:00.000Z",
+        count: 7,
+      },
+    ]);
+    expect(warehouse).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledWith(device.thingName, [], RANGE.from, RANGE.to, "day");
   });
 
   it("returns 404 for a device that does not exist", async () => {
-    const result = await useCase.execute(faker.string.uuid(), RANGE.from, RANGE.to, "day");
+    const result = await useCase.execute(
+      faker.string.uuid(),
+      RANGE.from,
+      RANGE.to,
+      "day",
+      userId,
+      "warehouse",
+    );
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
@@ -55,7 +149,14 @@ describe("GetIotDeviceFirmwareHistoryUseCase", () => {
     const device = await testApp.createIotDevice({ createdBy: userId });
     vi.spyOn(inner, "execute").mockResolvedValue(failure(AppError.internal("boom")));
 
-    const result = await useCase.execute(device.id, RANGE.from, RANGE.to, "day");
+    const result = await useCase.execute(
+      device.id,
+      RANGE.from,
+      RANGE.to,
+      "day",
+      userId,
+      "warehouse",
+    );
 
     assertFailure(result);
     expect(result.error.statusCode).toBe(500);

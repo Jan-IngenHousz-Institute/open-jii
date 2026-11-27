@@ -226,6 +226,17 @@ then on, and none before.
    It lists `measurements` and `device_events`. A table missing from it has had no reload of `all`
    that passed: its run's result line and error say why, and the next run that passes records it.
 
+7. Device pages of the users `store-experiment-reads` targets then move to the store on their own;
+   every other user's stay on the warehouse whatever the reloads do. Until `store.completed_reloads`
+   records a reload of `all` that passed for both `measurements` and `device_events`, the backend
+   reads every device page from the warehouse, targeted users' too, so the backend deploy need not
+   wait for these loads. Each backend task asks the store once a minute (the
+   `device_events_reloaded` view), so targeted users' pages move within a minute of the second
+   reload passing, and not before, since a reload that runs or fails records nothing. A task whose
+   check fails keeps its pages on the warehouse and asks again 10 seconds later. Once both have
+   passed, targeted users' pages stay on the store: they read it during a later reload, which
+   inserts before it deletes, and a later reload that fails leaves them there.
+
 ## After a full or large reload
 
 A reload of `all`, or of an experiment with millions of rows, leaves each month it wrote in many

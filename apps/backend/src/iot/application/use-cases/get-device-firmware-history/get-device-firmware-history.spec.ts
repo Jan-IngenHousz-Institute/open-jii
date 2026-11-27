@@ -7,17 +7,21 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDeviceFirmwareHistoryUseCase } from "./get-device-firmware-history";
 
 const THING = "AMBYTE_A";
 const FROM = "2026-08-13T00:00:00.000Z";
 const TO = "2026-08-13T12:00:00.000Z";
+const EXPERIMENT_IDS = ["33333333-3333-4333-8333-333333333333"];
 const BUCKET = "hour" as const;
 
 describe("GetDeviceFirmwareHistoryUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetDeviceFirmwareHistoryUseCase;
   let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -27,6 +31,7 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(GetDeviceFirmwareHistoryUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
   });
 
   afterEach(() => {
@@ -63,7 +68,7 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, BUCKET);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, BUCKET, "warehouse");
 
     assertSuccess(result);
     expect(result.value.map((run) => run.version)).toEqual(["1.0.0", "1.1.0", "1.0.0"]);
@@ -87,7 +92,7 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, BUCKET);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, BUCKET, "warehouse");
 
     assertSuccess(result);
     expect(result.value).toEqual([
@@ -118,7 +123,7 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, BUCKET);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, BUCKET, "warehouse");
 
     assertSuccess(result);
     expect(result.value.map((entry) => entry.version)).toEqual(["1.0.0", "1.1.0"]);
@@ -143,7 +148,7 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
       ]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, BUCKET);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, BUCKET, "warehouse");
 
     assertSuccess(result);
     expect(result.value).toEqual([
@@ -161,8 +166,55 @@ describe("GetDeviceFirmwareHistoryUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO, BUCKET);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, BUCKET, "warehouse");
 
     assertFailure(result);
+  });
+
+  it("reads the store, not the warehouse, when the source is the store", async () => {
+    const rows = [
+      {
+        version: "2.1",
+        firstSeen: "2026-08-13T01:05:00.000Z",
+        lastSeen: "2026-08-13T01:55:00.000Z",
+        count: 3,
+      },
+      {
+        version: "2.2",
+        firstSeen: "2026-08-13T02:10:00.000Z",
+        lastSeen: "2026-08-13T02:10:00.000Z",
+        count: 1,
+      },
+      {
+        version: "2.1",
+        firstSeen: "2026-08-13T03:00:00.000Z",
+        lastSeen: "2026-08-13T03:30:00.000Z",
+        count: 2,
+      },
+    ];
+    const warehouse = vi
+      .spyOn(databricksAdapter, "getDeviceFirmwareHistory")
+      .mockResolvedValue(success(rows));
+    const store = vi
+      .spyOn(servingStore, "getDeviceFirmwareHistory")
+      .mockResolvedValue(success(rows));
+
+    const fromWarehouse = await useCase.execute(
+      THING,
+      EXPERIMENT_IDS,
+      FROM,
+      TO,
+      BUCKET,
+      "warehouse",
+    );
+    const fromStore = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, BUCKET, "store");
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(fromStore.value.map(({ version }) => version)).toEqual(["2.1", "2.2", "2.1"]);
+    expect(warehouse).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledWith(THING, EXPERIMENT_IDS, FROM, TO, BUCKET);
   });
 });

@@ -58,6 +58,7 @@ import {
 import {
   accessibleResourceCondition,
   contributingResourceCondition,
+  readingResourceCondition,
   relatedResourceCondition,
   resourceRoleExpression,
   resourceTierExpression,
@@ -828,6 +829,38 @@ export class ExperimentRepository {
       .limit(1);
 
     return pending.length > 0 ? "pending_request" : "none";
+  }
+
+  /**
+   * Of `experimentIds`, the ones `can(read)` admits for the caller, in one query. Role-aware
+   * like `can()`: a grant or membership whose role carries no read does not count.
+   */
+  async findReadableIds(experimentIds: string[], userId: string): Promise<Result<string[]>> {
+    return tryCatch(async () => {
+      if (experimentIds.length === 0) {
+        return [];
+      }
+
+      const reading = readingResourceCondition({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        userId,
+      });
+
+      const rows = await this.database
+        .select({ id: experiments.id })
+        .from(experiments)
+        .where(
+          and(
+            inArray(experiments.id, experimentIds),
+            or(eq(experiments.visibility, "public"), reading),
+          ),
+        );
+
+      return rows.map((row) => row.id);
+    });
   }
 
   async checkAccess(

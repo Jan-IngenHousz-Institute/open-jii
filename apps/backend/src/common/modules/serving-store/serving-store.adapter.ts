@@ -15,6 +15,17 @@ import type {
   StoreQueryParams,
 } from "../../../experiments/core/ports/serving-store.port";
 import { STORE_QUERY_TOO_LARGE } from "../../../experiments/core/ports/serving-store.port";
+import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
+import type {
+  DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
+  DeviceMeasurementRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+  DeviceWindow,
+} from "../../../iot/core/ports/device-reads.port";
+import type { ServingStorePort as IotServingStorePort } from "../../../iot/core/ports/serving-store.port";
 import { MetricsTable } from "../../../metrics/core/models/metrics-table.model";
 import type {
   ActivityWindowsRow,
@@ -49,6 +60,12 @@ import { StoreTables } from "./services/query-builder/store-tables";
 /** The setting the reader's row policy on each table reads (infrastructure/modules/serving-store). */
 export const EXPERIMENT_SETTING = "SQL_experiment";
 
+// The store's DateTime64 range, which the feed clamps every capture time into.
+const WHOLE_HISTORY: DeviceWindow = {
+  from: "1900-01-01T00:00:00Z",
+  to: "2299-12-31T23:59:59.999999Z",
+};
+
 const TABLE_TYPES: Record<string, ExperimentTableType> = {
   static: "static",
   macro: "macro",
@@ -56,13 +73,59 @@ const TABLE_TYPES: Record<string, ExperimentTableType> = {
 };
 
 @Injectable()
-export class ServingStoreAdapter implements ServingStorePort, MetricsServingStorePort {
+export class ServingStoreAdapter
+  implements ServingStorePort, IotServingStorePort, MetricsServingStorePort
+{
   private readonly logger = new Logger(ServingStoreAdapter.name);
+
+  // Every device page asks, and the answer changes once, when the events reload lands.
+  private static readonly DEVICE_EVENTS_CHECK_TTL_MS = 60_000;
+  // A hanging store makes a check wait out the client's timeout. A failed check answers for this
+  // long without asking, so the wait is paid once per task, not per request.
+  private static readonly DEVICE_EVENTS_PAUSE_MS = 10_000;
+  private deviceEventsCheck: { result: Result<boolean>; expiresAt: number } | null = null;
+  // A page load asks for several reads at once; they share one check.
+  private pendingDeviceEventsCheck: Promise<Result<boolean>> | null = null;
 
   constructor(private readonly client: ServingStoreClientService) {}
 
   isConfigured(): boolean {
     return this.client.isConfigured();
+  }
+
+  hasDeviceEventsLoaded(): Promise<Result<boolean>> {
+    const cached = this.deviceEventsCheck;
+    if (cached !== null && cached.expiresAt > Date.now()) {
+      return Promise.resolve(cached.result);
+    }
+
+    this.pendingDeviceEventsCheck ??= this.checkDeviceEventsLoaded().finally(() => {
+      this.pendingDeviceEventsCheck = null;
+    });
+    return this.pendingDeviceEventsCheck;
+  }
+
+  private async checkDeviceEventsLoaded(): Promise<Result<boolean>> {
+    const read = await this.client.query("SELECT reloaded FROM device_events_reloaded");
+    if (read.isFailure()) {
+      this.logger.warn({
+        msg: "Device events check failed; device pages read from the warehouse",
+        operation: "hasDeviceEventsLoaded",
+        errorCode: read.error.code,
+      });
+      this.deviceEventsCheck = {
+        result: read,
+        expiresAt: Date.now() + ServingStoreAdapter.DEVICE_EVENTS_PAUSE_MS,
+      };
+      return read;
+    }
+
+    const result = success(read.value.rows.length > 0);
+    this.deviceEventsCheck = {
+      result,
+      expiresAt: Date.now() + ServingStoreAdapter.DEVICE_EVENTS_CHECK_TTL_MS,
+    };
+    return result;
   }
 
   holdsTable(tableName: string): boolean {
@@ -432,6 +495,276 @@ export class ServingStoreAdapter implements ServingStorePort, MetricsServingStor
     return success(result.value.rows.flatMap(([id]) => (typeof id === "string" ? [id] : [])));
   }
 
+  async getDeviceLastActivity(
+    thingName: string,
+    experimentIds: string[],
+  ): Promise<Result<{ lastDataAt: string | null }>> {
+    const device = this.deviceArgument(thingName);
+    const experiments = `experiments = ${this.experimentList(experimentIds)}`;
+    const result = await this.client.query(
+      `SELECT last_data_at FROM device_last_activity(${device}, ${experiments})`,
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const lastDataAt = result.value.rows.at(0)?.at(0);
+    return success({ lastDataAt: CellValues.text(lastDataAt, "TIMESTAMP") });
+  }
+
+  async getDeviceExperimentIds(
+    thingName: string,
+    window?: DeviceWindow,
+  ): Promise<Result<string[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT experiment_id",
+        `FROM device_experiment_ids(${this.deviceWindowArguments(thingName, window ?? WHOLE_HISTORY)})`,
+        "ORDER BY experiment_id",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(result.value.rows.flatMap(([id]) => (typeof id === "string" ? [id] : [])));
+  }
+
+  async getDeviceLifecycleEvents(
+    thingName: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceLifecycleEventRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT event_type, event_timestamp, disconnect_reason, session_identifier",
+        `FROM device_lifecycle_events(${this.deviceArgument(thingName)})`,
+        `WHERE ${this.window("event_timestamp", from, to)}`,
+        "ORDER BY event_timestamp ASC",
+        `LIMIT ${limit}`,
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([eventType, eventTimestamp, disconnectReason, sessionIdentifier]) => ({
+        eventType: CellValues.textOrNull(eventType),
+        eventTimestamp: CellValues.text(eventTimestamp, "TIMESTAMP"),
+        disconnectReason: CellValues.textOrNull(disconnectReason),
+        sessionIdentifier: CellValues.textOrNull(sessionIdentifier),
+      })),
+    );
+  }
+
+  async getDeviceThroughput(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceThroughputRow[]>> {
+    const result = await this.client.query(
+      [
+        `SELECT ${this.timeBucket(bucket)} AS bucket_start, experiment_id, count()`,
+        `FROM device_measurements(${this.deviceWindowArguments(thingName, { from, to })})`,
+        `WHERE ${this.window("timestamp", from, to)} AND ${this.experimentRows(experimentIds)}`,
+        "GROUP BY bucket_start, experiment_id",
+        "ORDER BY bucket_start ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([bucketStart, experimentId, count]) => ({
+        bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
+        experimentId: CellValues.textOrNull(experimentId),
+        count: Number(count),
+      })),
+    );
+  }
+
+  /** avg skips nulls, so a bucket without a reported battery is null. */
+  async getDeviceBatterySeries(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceBatteryRow[]>> {
+    const result = await this.client.query(
+      [
+        `SELECT ${this.timeBucket(bucket)} AS bucket_start, avg(device_battery)`,
+        `FROM device_measurements(${this.deviceWindowArguments(thingName, { from, to })})`,
+        `WHERE ${this.window("timestamp", from, to)} AND ${this.experimentRows(experimentIds)}`,
+        "GROUP BY bucket_start",
+        "ORDER BY bucket_start ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([bucketStart, averageBattery]) => ({
+        bucketStart: CellValues.text(bucketStart, "TIMESTAMP"),
+        averageBattery: CellValues.numberOrNull(averageBattery),
+      })),
+    );
+  }
+
+  /** count of a column skips nulls, which is what makes the coverage counts work. */
+  async getDevicePayloadBreakdown(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+  ): Promise<Result<DevicePayloadBreakdownRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT device_version, protocol_id, workbook_version_id, workbook_run_id, count(),",
+        "  count(latitude), count(device_battery)",
+        `FROM device_measurements(${this.deviceWindowArguments(thingName, { from, to })})`,
+        `WHERE ${this.window("timestamp", from, to)} AND ${this.experimentRows(experimentIds)}`,
+        "GROUP BY device_version, protocol_id, workbook_version_id, workbook_run_id",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(
+        ([version, protocolId, workbookVersionId, workbookRunId, count, withGps, withBattery]) => ({
+          deviceVersion: CellValues.textOrNull(version),
+          protocolId: CellValues.textOrNull(protocolId),
+          workbookVersionId: CellValues.textOrNull(workbookVersionId),
+          workbookRunId: CellValues.textOrNull(workbookRunId),
+          count: Number(count),
+          withGps: Number(withGps),
+          withBattery: Number(withBattery),
+        }),
+      ),
+    );
+  }
+
+  /** A measurement can carry several macros, so counts can exceed the measurement total. */
+  async getDeviceMacroBreakdown(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+  ): Promise<Result<DeviceMacroRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT tupleElement(macro, 'id') AS macro_id, count()",
+        `FROM device_measurements(${this.deviceWindowArguments(thingName, { from, to })})`,
+        "ARRAY JOIN macros AS macro",
+        `WHERE ${this.window("timestamp", from, to)} AND ${this.experimentRows(experimentIds)}`,
+        "GROUP BY macro_id",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([macroId, count]) => ({
+        macroId: CellValues.textOrNull(macroId),
+        count: Number(count),
+      })),
+    );
+  }
+
+  /** Per (time bucket, version): by version alone a rollback would read as two overlapping runs. */
+  async getDeviceFirmwareHistory(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<DeviceFirmwareVersionRow[]>> {
+    const result = await this.client.query(
+      [
+        "SELECT device_version, min(timestamp) AS first_seen, max(timestamp), count()",
+        `FROM device_measurements(${this.deviceWindowArguments(thingName, { from, to })})`,
+        `WHERE ${this.window("timestamp", from, to)} AND ${this.experimentRows(experimentIds)}`,
+        `GROUP BY ${this.timeBucket(bucket)}, device_version`,
+        "ORDER BY first_seen ASC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(([version, firstSeen, lastSeen, count]) => ({
+        version: CellValues.textOrNull(version),
+        firstSeen: CellValues.text(firstSeen, "TIMESTAMP"),
+        lastSeen: CellValues.text(lastSeen, "TIMESTAMP"),
+        count: Number(count),
+      })),
+    );
+  }
+
+  /** Newest first, each payload as gold's text: keys sorted, NaN as null. */
+  async getDeviceRecentMeasurements(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<DeviceMeasurementRow[]>> {
+    const builder = new StoreQueryBuilder();
+    const result = await this.client.query(
+      [
+        "SELECT timestamp, experiment_id, protocol_id, workbook_version_id, device_version,",
+        "  device_battery, latitude, longitude, data",
+        "FROM device_newest_measurements(",
+        `  device = ${builder.escapeValue(thingName)},`,
+        `  experiments = ${this.experimentList(experimentIds)},`,
+        `  from = ${this.time(from)},`,
+        `  to = ${this.time(to)},`,
+        `  rows = ${limit}`,
+        ")",
+        "ORDER BY timestamp DESC, id DESC",
+      ].join("\n"),
+    );
+    if (result.isFailure()) {
+      return result;
+    }
+
+    return success(
+      result.value.rows.map(
+        ([
+          timestamp,
+          experimentId,
+          protocolId,
+          workbookVersionId,
+          deviceVersion,
+          battery,
+          latitude,
+          longitude,
+          sample,
+        ]) => ({
+          timestamp: CellValues.text(timestamp, "TIMESTAMP"),
+          experimentId: CellValues.textOrNull(experimentId),
+          protocolId: CellValues.textOrNull(protocolId),
+          workbookVersionId: CellValues.textOrNull(workbookVersionId),
+          deviceVersion: CellValues.textOrNull(deviceVersion),
+          battery: CellValues.numberOrNull(battery),
+          latitude: CellValues.numberOrNull(latitude),
+          longitude: CellValues.numberOrNull(longitude),
+          sample: CellValues.textOrNull(sample),
+        }),
+      ),
+    );
+  }
+
   async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
     const columns = [
       "total_measurements",
@@ -663,6 +996,39 @@ export class ServingStoreAdapter implements ServingStorePort, MetricsServingStor
 
   private experimentArgument(experimentId: string): string {
     return `experiment = ${new StoreQueryBuilder().escapeValue(experimentId)}`;
+  }
+
+  private deviceArgument(clientId: string): string {
+    return `devices = [${new StoreQueryBuilder().escapeValue(clientId)}]`;
+  }
+
+  /** A device view looks the device's rows up in the window before it reads them. */
+  private deviceWindowArguments(clientId: string, { from, to }: DeviceWindow): string {
+    return `${this.deviceArgument(clientId)}, from = ${this.time(from)}, to = ${this.time(to)}`;
+  }
+
+  /** The store keeps no row without an experiment, so the given experiments bound a read. */
+  private experimentRows(experimentIds: string[]): string {
+    return `has(CAST(${this.experimentList(experimentIds)} AS Array(String)), experiment_id)`;
+  }
+
+  private experimentList(experimentIds: string[]): string {
+    const builder = new StoreQueryBuilder();
+    return `[${experimentIds.map((id) => builder.escapeValue(id)).join(", ")}]`;
+  }
+
+  /** As charts truncate: toStartOfHour would wrap a time before 1970 into DateTime's range. */
+  private timeBucket(bucket: "hour" | "day"): string {
+    return new StoreQueryBuilder().buildTimeBucketExpression("timestamp", bucket).sql;
+  }
+
+  private window(column: string, from: string, to: string): string {
+    return `${column} BETWEEN ${this.time(from)} AND ${this.time(to)}`;
+  }
+
+  /** The store's plain parser reads no zone, so it refuses an ISO time's Z. */
+  private time(iso: string): string {
+    return `parseDateTime64BestEffort(${new StoreQueryBuilder().escapeValue(iso)}, 6, 'UTC')`;
   }
 
   private mergedSchemas(rows: unknown[][]): Map<string, string | null> {
