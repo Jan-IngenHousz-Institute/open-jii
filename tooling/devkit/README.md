@@ -29,6 +29,7 @@ linked worktree serves only that worktree.
 | `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API                 |
 | `pnpm round:read`                         | Writes the daily round's reading of one environment         |
 | `pnpm cms:models`                         | Diffs, pulls and applies Contentful content types           |
+| `pnpm cms:lab-navigation`                 | Adds the openJII Lab link to the public navbar and footer   |
 | `pnpm status:fixtures`                    | Serves a sample status file to the status page's dev server |
 | `pnpm status:incident`                    | Drafts, previews and publishes status page incidents        |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest      |
@@ -395,6 +396,27 @@ live type and writes nothing, so it needs credentials but no `--environment`. It
 type's request bodies as they would be sent, and of the editor interface only the Date controls
 `apply` would set. `apply` reads the live editor interface when it runs and merges them into it,
 keeping its other controls, sidebar and help text.
+
+## The openJII Lab link in the public navigation
+
+The public navbar shows the published footer entry's `navigationButtons`, and the footer menu shows
+its `menuButtons`. `pnpm cms:lab-navigation` adds one `componentButton`, labelled openJII Lab and
+pointing at `https://lab.openjii.org`, to both lists. It reads the same Contentful settings as
+`pnpm cms:models`.
+
+```bash
+pnpm cms:lab-navigation preflight                     # which settings are present, as booleans
+pnpm cms:lab-navigation inspect                       # the footer entries, with their versions
+pnpm cms:lab-navigation inspect --footer-id <id>      # what apply would change, read only
+pnpm cms:lab-navigation apply --footer-id <id> --footer-version <n> --environment <name>
+```
+
+`inspect` refuses a footer that is unpublished, archived or has unpublished edits, because publishing
+it would also publish someone else's draft. It reuses a published button that already points at Lab
+and refuses when more than one does. `apply` writes only when the footer is still at the version you
+reviewed and the named environment is the configured one. It creates and publishes the button if
+needed, appends it to the lists that lack it and publishes the footer. A second run changes nothing.
+Every write lands in `.claude/contentful-writes.log`.
 
 ## A local session without a browser
 

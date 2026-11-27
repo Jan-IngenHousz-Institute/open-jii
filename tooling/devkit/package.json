@@ -12,6 +12,7 @@
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "cms:lab-navigation": "tsx src/commands/cms-lab-navigation.ts",
     "cms:models": "tsx src/commands/cms-models.ts",
     "env:generate": "tsx src/generate-env.ts",
     "grafana:auth": "tsx src/commands/grafana-auth.ts",
