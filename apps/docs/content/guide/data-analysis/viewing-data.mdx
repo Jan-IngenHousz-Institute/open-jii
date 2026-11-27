@@ -265,7 +265,9 @@ Horizontal bar series always use Axis 1 and share the horizontal value scale.
 **Horizontal** orientation is available when every series is a bar. Bar charts
 with other series types render vertically.
 In **Group** mode, bars for the same category appear side by side, including
-when their series use different Y axes.
+when their series use different Y axes. For grouped bars on different Y axes
+with a linear X scale, the visible X values set the bar spacing. Hiding a
+series leaves its slot open in the group.
 
 Axes 1 and 2 sit on the left and right. Axes 3 and 5 sit farther left. Axes 4
 and 6 sit farther right. The plot narrows to leave room for their labels. When
@@ -291,6 +293,13 @@ column of panels shows X labels on its lowest populated panel, including a
 panel above an empty grid cell. Box and violin plots keep their categories
 aligned across panels; multiple series keep the same grouped positions in
 each panel.
+
+For grouped bars on multiple Y axes with a linear X scale, sharing the X scale
+reserves the same slots in each panel, even for a category missing from that
+panel. With independent X scales, each panel reserves slots for its own
+categories. When a series has multiple bars at the same X value, those bars
+stack in its slot. A panel with stacked bars can still set the spacing for
+other panels that share its X scale.
 
 ### Colour a scatter chart by a column
 
