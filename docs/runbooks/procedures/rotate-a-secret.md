@@ -30,6 +30,8 @@ someone who could read it leaves, or when it may have leaked.
    webhook, which is a single value with no key. The command prints which keys of that secret still have
    no value. In the AWS console, edit the secret's JSON and change only that key.
 3. **Restart what reads it**, from the table: a service reads a secret when it starts, not after.
+   When the commit's backend image is already in ECR, the backend's deploy reuses it instead of
+   building, so a restart needs nothing new merged or released.
    - dev: dispatch the app's deploy workflow (`deploy-backend.yml`, `deploy-nextjs-opennext.yml`) on
      `main`.
    - prod: start the PROD Release Workflow from the current `release/*` branch with the app in
