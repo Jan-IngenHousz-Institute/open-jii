@@ -30,10 +30,23 @@ someone who could read it leaves, or when it may have leaked.
    webhook, which is a single value with no key. The command prints which keys of that secret still have
    no value. In the AWS console, edit the secret's JSON and change only that key.
 3. **Restart what reads it**, from the table: a service reads a secret when it starts, not after.
+
    - dev: dispatch the app's deploy workflow (`deploy-backend.yml`, `deploy-nextjs-opennext.yml`) on
-     `main`.
+     `main`. When that commit's backend image is already in ECR, the deploy reuses it instead of
+     building, so the restart works with nothing new merged.
    - prod: start the PROD Release Workflow from the current `release/*` branch with the app in
      `deploy_app` and `deploy_infrastructure` off. It passes the `prod-approval` gate like any release.
+   - If the backend's deploy fails before it reaches ECS, restart the service on the image it already
+     runs. New tasks read every secret again when they start:
+
+     ```bash
+     aws ecs update-service --cluster backend-cluster-<env> --service backend-<env> --force-new-deployment
+     aws ecs wait services-stable --cluster backend-cluster-<env> --services backend-<env>
+     ```
+
+     In prod that is a change outside the release workflow, so agree it with the release's approver
+     first, and note it in the ticket in place of the run.
+
 4. **Check** the restarted app works with the new value: it now reads nothing else, so this is the
    proof that the new value is right. For Contentful, see below: a page that renders proves little,
    because cached content keeps it rendering after a bad token.

@@ -107,8 +107,26 @@ jobs:
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
 
+      # The repository's tags are immutable, so a commit that already has an image can't push another.
+      # Redeploying it, for example to restart on rotated secrets, reuses the image scanned when it was
+      # pushed. BatchGetImage is the lookup the deploy role is allowed in both accounts.
+      - name: Look for this commit's image
+        id: image
+        run: |
+          set -euo pipefail
+          found=$(aws ecr batch-get-image --repository-name "$ECR_REPOSITORY" \
+            --image-ids "imageTag=$IMAGE_TAG" --query 'length(images)' --output text)
+          if [[ "$found" -gt 0 ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$ECR_REPOSITORY:$IMAGE_TAG is already in ECR; deploying it without a rebuild"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Build Docker image
         id: build-image
+        if: steps.image.outputs.exists != 'true'
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.get-sha.outputs.sha }}
@@ -118,6 +136,7 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Scan image with Trivy
+        if: steps.image.outputs.exists != 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ steps.build-image.outputs.image }}
@@ -129,6 +148,7 @@ jobs:
           trivyignores: .trivyignore.docker-images.yaml
 
       - name: Push image to Amazon ECR
+        if: steps.image.outputs.exists != 'true'
         run: docker push ${{ steps.build-image.outputs.image }}
 
       - name: Resolve task definition JSON from ARN
@@ -169,7 +189,7 @@ jobs:
         with:
           task-definition: ${{ env.ECS_TASK_DEFINITION }}
           container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+          image: ${{ steps.image.outputs.image }}
 
       - name: Deploy to Amazon ECS
         id: deploy-ecs
