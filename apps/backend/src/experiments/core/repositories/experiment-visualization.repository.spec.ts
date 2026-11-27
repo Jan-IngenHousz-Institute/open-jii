@@ -335,7 +335,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "table1", dataSources: [] },
+        dataConfig: {
+          tableName: "table1",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createDto2: CreateExperimentVisualizationDto = {
@@ -344,7 +347,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: {} },
-        dataConfig: { tableName: "table2", dataSources: [] },
+        dataConfig: {
+          tableName: "table2",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Create visualizations
@@ -380,7 +386,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Create multiple visualizations with different names
@@ -434,7 +443,10 @@ describe("ExperimentVisualizationRepository", () => {
           chartFamily: "basic",
           chartType: "bar",
           config: {},
-          dataConfig: {},
+          dataConfig: {
+            tableName: "test_table",
+            dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+          },
         })
         .returning({ id: experimentVisualizations.id });
       await testApp.database.delete(profiles).where(eq(profiles.userId, testUserId));
@@ -510,6 +522,40 @@ describe("ExperimentVisualizationRepository", () => {
     });
   });
 
+  it("scopes chart existence, update, and delete to the experiment", async () => {
+    const chart = await repository.create(
+      testExperimentId,
+      {
+        name: "Original chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        config: { chartType: "bar", config: {} },
+        dataConfig: { tableName: "test_table", dataSources: [] },
+      },
+      testUserId,
+    );
+    assertSuccess(chart);
+    const [original] = chart.value;
+
+    const exists = await repository.existsInExperiment(anotherExperimentId, original.id);
+    assertSuccess(exists);
+    expect(exists.value).toBe(false);
+
+    const updated = await repository.update(anotherExperimentId, original.id, {
+      name: "Renamed chart",
+      dataConfig: original.dataConfig,
+    });
+    assertSuccess(updated);
+    expect(updated.value).toEqual([]);
+
+    const deleted = await repository.delete(anotherExperimentId, original.id);
+    assertSuccess(deleted);
+
+    const unchanged = await repository.findById(original.id);
+    assertSuccess(unchanged);
+    expect(unchanged.value).toEqual(original);
+  });
+
   describe("update", () => {
     it("returns the updated visualization when its creator has no profile", async () => {
       const [visualization] = await testApp.database
@@ -531,9 +577,12 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "renamed_table", dataSources: [] },
+        dataConfig: {
+          tableName: "renamed_table",
+          dataSources: [{ tableName: "renamed_table", columnName: "value", role: "y" }],
+        },
       };
-      const updated = await repository.update(visualization.id, updateDto);
+      const updated = await repository.update(testExperimentId, visualization.id, updateDto);
       assertSuccess(updated);
       expect(updated.value).toEqual([
         expect.objectContaining({
@@ -552,7 +601,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "original_table", dataSources: [] },
+        dataConfig: {
+          tableName: "original_table",
+          dataSources: [{ tableName: "original_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -565,11 +617,14 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: { nbins: 20 } },
-        dataConfig: { tableName: "updated_table", dataSources: [] },
+        dataConfig: {
+          tableName: "updated_table",
+          dataSources: [{ tableName: "updated_table", columnName: "value", role: "y" }],
+        },
       };
 
       // Act
-      const result = await repository.update(visualization.id, updateDto);
+      const result = await repository.update(testExperimentId, visualization.id, updateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -616,7 +671,7 @@ describe("ExperimentVisualizationRepository", () => {
       };
 
       // Act
-      const result = await repository.update(nonExistentId, updateDto);
+      const result = await repository.update(testExperimentId, nonExistentId, updateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -632,7 +687,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "original_table", dataSources: [] },
+        dataConfig: {
+          tableName: "original_table",
+          dataSources: [{ tableName: "original_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -644,7 +702,7 @@ describe("ExperimentVisualizationRepository", () => {
       } as UpdateExperimentVisualizationDto;
 
       // Act
-      const result = await repository.update(visualization.id, partialUpdateDto);
+      const result = await repository.update(testExperimentId, visualization.id, partialUpdateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -669,7 +727,7 @@ describe("ExperimentVisualizationRepository", () => {
       };
 
       // Act
-      const result = await repository.update(invalidId, updateDto);
+      const result = await repository.update(testExperimentId, invalidId, updateDto);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -687,7 +745,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -700,7 +761,7 @@ describe("ExperimentVisualizationRepository", () => {
       expect(findBeforeResult.value).not.toBeNull();
 
       // Act
-      const result = await repository.delete(visualization.id);
+      const result = await repository.delete(testExperimentId, visualization.id);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -723,7 +784,7 @@ describe("ExperimentVisualizationRepository", () => {
       const nonExistentId = faker.string.uuid();
 
       // Act
-      const result = await repository.delete(nonExistentId);
+      const result = await repository.delete(testExperimentId, nonExistentId);
 
       // Assert - Should succeed even though nothing was deleted
       expect(result.isSuccess()).toBe(true);
@@ -736,7 +797,7 @@ describe("ExperimentVisualizationRepository", () => {
       const invalidId = "not-a-valid-uuid";
 
       // Act
-      const result = await repository.delete(invalidId);
+      const result = await repository.delete(testExperimentId, invalidId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -754,7 +815,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, testUserId);
@@ -782,10 +846,13 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "statistical",
         chartType: "histogram",
         config: { chartType: "histogram", config: { nbins: 30 } },
-        dataConfig: { tableName: "updated_table", dataSources: [] },
+        dataConfig: {
+          tableName: "updated_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
-      const updateResult = await repository.update(visualization.id, updateDto);
+      const updateResult = await repository.update(testExperimentId, visualization.id, updateDto);
       assertSuccess(updateResult);
       expect(updateResult.value[0]).toMatchObject({
         name: updateDto.name,
@@ -803,7 +870,7 @@ describe("ExperimentVisualizationRepository", () => {
       });
 
       // Delete
-      const deleteResult = await repository.delete(visualization.id);
+      const deleteResult = await repository.delete(testExperimentId, visualization.id);
       assertSuccess(deleteResult);
 
       // Verify deletion
@@ -826,7 +893,10 @@ describe("ExperimentVisualizationRepository", () => {
           chartFamily: "basic",
           chartType: "bar",
           config: { chartType: "bar", config: { index: i } },
-          dataConfig: { tableName: `table_${i}`, dataSources: [] },
+          dataConfig: {
+            tableName: `table_${i}`,
+            dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+          },
         };
 
         const result = await repository.create(testExperimentId, createDto, testUserId);
@@ -840,13 +910,13 @@ describe("ExperimentVisualizationRepository", () => {
       expect(listResult.value).toHaveLength(3);
 
       // Update middle one
-      const updateResult = await repository.update(visualizations[1].id, {
+      const updateResult = await repository.update(testExperimentId, visualizations[1].id, {
         name: "Updated Middle Visualization",
       } as UpdateExperimentVisualizationDto);
       assertSuccess(updateResult);
 
       // Delete first one
-      const deleteResult = await repository.delete(visualizations[0].id);
+      const deleteResult = await repository.delete(testExperimentId, visualizations[0].id);
       assertSuccess(deleteResult);
 
       // Verify final state
@@ -874,7 +944,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, activeUserId);
@@ -907,7 +980,10 @@ describe("ExperimentVisualizationRepository", () => {
         chartFamily: "basic",
         chartType: "bar",
         config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
+        dataConfig: {
+          tableName: "test_table",
+          dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+        },
       };
 
       const createResult = await repository.create(testExperimentId, createDto, inactiveUserId);
@@ -926,7 +1002,7 @@ describe("ExperimentVisualizationRepository", () => {
       expect(findResult.value?.createdByName).toBe("Unknown User");
 
       // Test update (should still show anonymized name)
-      const updateResult = await repository.update(visualization.id, {
+      const updateResult = await repository.update(testExperimentId, visualization.id, {
         name: "Updated Visualization Name",
       } as UpdateExperimentVisualizationDto);
       assertSuccess(updateResult);

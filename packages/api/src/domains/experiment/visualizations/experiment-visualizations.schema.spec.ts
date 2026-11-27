@@ -7,6 +7,7 @@ import {
   zExperimentChartType,
   zExperimentDataSourceConfig,
   zExperimentRole,
+  zExperimentSeriesAxis,
   zExperimentVisualization,
   zExperimentVisualizationPathParam,
   zListExperimentVisualizationsQuery,
@@ -279,5 +280,47 @@ describe("saved charts exceeding ad-hoc read limits", () => {
       },
     };
     expect(zExperimentVisualization.safeParse(chart).success).toBe(true);
+  });
+});
+
+describe("Y-axis persistence", () => {
+  const legacy = {
+    name: "Sensor readings",
+    chartFamily: "basic",
+    chartType: "line",
+    config: { yAxisTitle: "Fluorescence", y2AxisTitle: "Temperature", y2AxisType: "log" },
+    dataConfig: {
+      tableName: "readings",
+      dataSources: [
+        { tableName: "readings", columnName: "fluorescence", role: "y" },
+        { tableName: "readings", columnName: "temperature", role: "y", axis: "secondary" },
+      ],
+    },
+  };
+
+  it("round-trips legacy secondary-axis charts without changing their options", () => {
+    expect(zCreateExperimentVisualizationBody.parse(legacy)).toEqual(legacy);
+  });
+
+  it.each(["primary", "secondary", "y3", "y4", "y5", "y6"])(
+    "round-trips %s alongside the legacy axis",
+    (axis) => {
+      const input = {
+        ...legacy,
+        config: { ...legacy.config, y6AxisTitle: "Pressure", y6AxisType: "linear" },
+        dataConfig: {
+          ...legacy.dataConfig,
+          dataSources: [
+            ...legacy.dataConfig.dataSources,
+            { tableName: "readings", columnName: "pressure", role: "y", axis },
+          ],
+        },
+      };
+      expect(zCreateExperimentVisualizationBody.parse(input)).toEqual(input);
+    },
+  );
+
+  it("rejects unsupported axes", () => {
+    expect(zExperimentSeriesAxis.safeParse("y7").success).toBe(false);
   });
 });

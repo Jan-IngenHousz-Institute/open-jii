@@ -71,13 +71,15 @@ pickers show the same tag.
 ## New rows arrive on their own
 
 You do not need to reload the page to see new measurements. While the browser
-tab is visible, the Data page checks for new rows every 30 seconds and refreshes
-the table when the dataset in front of you changes. After ten minutes without
-mouse, keyboard or scroll input it stops checking and the line says **Paused**;
-the next input catches up at once. A row from a measurement received since the
-last check is tinted for a moment so you can spot it. A row that only moved onto
-your page, such as one pushed down from the page before, is not, and neither are
-uploaded rows. Your sort, filters, page and selected rows stay where they were.
+tab is visible, the Data page refreshes the table when the dataset in front of
+you changes. New rows usually appear within seconds of being stored, and so do
+rows that changed, such as a re-uploaded file's. Otherwise the page checks for
+them every 30 seconds. After ten minutes without mouse, keyboard or scroll input
+the page stops checking and the line says **Paused**; the next input catches up
+at once. A row from a measurement received since the table was last read is
+tinted for a moment so you can spot it. A row that only moved onto your page,
+such as one pushed down from the page before, is not, and neither are uploaded
+rows. Your sort, filters, page and selected rows stay where they were.
 
 The line under the page description says **Live** and when the newest data in
 the dataset was received. For a macro dataset, that is when the measurement the
@@ -119,6 +121,8 @@ Open the experiment's **Analysis** area and choose **Visualizations**. Anyone
 with **Can edit** can create a visualization, select a data table and columns,
 choose a chart type, and configure its style. Saved visualizations can also be
 placed on experiment dashboards.
+If a saved chart can no longer be read, it is left out of the visualization
+list, and any dashboard widget using it shows that the chart is missing.
 
 ### Sort the visualization and dashboard lists
 
@@ -253,6 +257,36 @@ not mean the latest non-empty value. If several rows tie for the latest or
 earliest ordering value, the row ID breaks the tie when available. Without a row
 ID, any of the tied rows' Y values may be returned.
 
+### Plot several units on one chart
+
+Line, scatter, bar, area and bubble charts support up to six Y axes. Open a
+series' **Axis** picker to assign it to **Axis 1** through **Axis 6**. The first
+series stays on Axis 1. In the **Y axis** section, set a title and choose a
+**Linear** or **Logarithmic** scale for each axis in use.
+Horizontal bar series always use Axis 1 and share the horizontal value scale.
+**Horizontal** orientation is available when every series is a bar. Bar charts
+with other series types render vertically.
+In **Group** mode, bars for the same category appear side by side, including
+when their series use different Y axes. For grouped bars on different Y axes
+with a linear X scale, the visible X values set the bar spacing. Hiding a
+series leaves its slot open in the group.
+
+Axes 1 and 2 sit on the left and right. Axes 3 and 5 sit farther left. Axes 4
+and 6 sit farther right. The plot narrows to leave room for their labels. When
+any of axes 3 through 6 are in use, a side legend moves below the plot.
+An inside legend also moves below the plot if it is too wide to fit between the axes.
+When several axes are visible, an axis used by one series takes that series'
+colour. In a narrow chart, the axis closest to the plot on each side keeps its
+scale labels. Axes farther out may show fewer labels to leave room for the
+plot. Click a legend entry to hide its series. When every series on an axis is
+hidden, the axis disappears and the plot widens. Click the entry again to
+bring it back. This visibility choice lasts only while the chart is open.
+
+With a **Facet** column set, charts support axes 1 and 2. Series saved on axes
+3 through 6 use Axis 2 while the chart is faceted. Removing the facet restores
+their original assignments. Existing charts with a secondary axis keep using
+Axis 2 and can still be edited and saved.
+
 ### Split a chart into panels
 
 In the visualization editor's **Data** tab, set **Facet (small multiples)**
@@ -261,6 +295,13 @@ column of panels shows X labels on its lowest populated panel, including a
 panel above an empty grid cell. Box and violin plots keep their categories
 aligned across panels; multiple series keep the same grouped positions in
 each panel.
+
+For grouped bars on multiple Y axes with a linear X scale, sharing the X scale
+reserves the same slots in each panel, even for a category missing from that
+panel. With independent X scales, each panel reserves slots for its own
+categories. When a series has multiple bars at the same X value, those bars
+stack in its slot. A panel with stacked bars can still set the spacing for
+other panels that share its X scale.
 
 ### Colour a scatter chart by a column
 
@@ -282,14 +323,14 @@ says _Continuous gradient needs a numeric or temporal column._
 ### Read legends and circular charts
 
 An outside legend has its own space beside the chart's labels and colour bar.
-Cartesian charts with a secondary axis or colour bar wrap long right legend names.
+Cartesian charts with Axis 2 or a colour bar wrap long right legend names.
 If those names leave too little room for the plot, the legend moves below it.
-When a scatter or bubble chart has both a secondary Y axis and a visible
+When a scatter or bubble chart has both Axis 2 and a visible
 colour bar, the bar sits beyond the right axis and a right legend moves below
 the plot. A left legend also moves below when a shared Y title needs that
 space or the two sides leave too little room. Inside legends on these faceted
 charts move below when the plot is too narrow for their entries. Long names
-wrap in the legend. Panels stacked on a shared secondary Y scale show the
+wrap in the legend. Panels stacked with a shared scale for Axis 2 show the
 title once and keep ticks on each panel. Panels with independent scales also
 show the title once when the repeated titles would overlap. Their ranges
 and ticks stay independent. A top legend also scrolls within its own space

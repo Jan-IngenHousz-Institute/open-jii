@@ -2,7 +2,6 @@ import { faker } from "@faker-js/faker";
 
 import { assertFailure, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
-import type { ExperimentVisualizationDto } from "../../../core/models/experiment-visualizations.model";
 import { ExperimentVisualizationRepository } from "../../../core/repositories/experiment-visualization.repository";
 import { DeleteExperimentVisualizationUseCase } from "./delete-experiment-visualization";
 
@@ -40,28 +39,14 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       });
 
       // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId, // Now this will have the correct value
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -71,7 +56,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
 
     it("should fail when visualization does not exist", async () => {
       // Arrange
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
         failure({
           message: "Visualization not found",
           code: "NOT_FOUND",
@@ -81,48 +66,12 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(faker.string.uuid(), visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toBe("Visualization not found");
-    });
-
-    it("should allow any experiment member to delete a visualization even if not the creator", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      const differentUserVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: faker.string.uuid(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(differentUserVisualization),
-      );
-
-      vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
-
-      // Act
-      const result = await useCase.execute(visualizationId, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toBeUndefined();
     });
 
     it("should fail when repository delete operation fails", async () => {
@@ -132,22 +81,8 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       });
 
       // Arrange
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId, // User is the owner
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(
@@ -160,7 +95,7 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -171,26 +106,12 @@ describe("DeleteExperimentVisualizationUseCase", () => {
     it("should fail when visualization belongs to non-existent experiment", async () => {
       // Arrange
       const nonExistentExperimentId = faker.string.uuid();
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: nonExistentExperimentId,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(nonExistentExperimentId, visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -198,49 +119,13 @@ describe("DeleteExperimentVisualizationUseCase", () => {
       expect(result.error.message).toBe(`Experiment with ID ${nonExistentExperimentId} not found`);
     });
 
-    it("should allow any experiment member to delete visualization even if not creator", async () => {
-      const { experiment } = await testApp.createExperiment({
-        name: "Test Experiment",
-        userId: testUserId,
-      });
-
-      // Arrange
-      const otherUserId = faker.string.uuid();
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: otherUserId, // Different user created it
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+    it("should return not found when no chart matches the experiment", async () => {
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(false),
       );
 
-      vi.spyOn(experimentVisualizationRepository, "delete").mockResolvedValue(success(undefined));
-
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-      expect(result.value).toBeUndefined();
-    });
-
-    it("should fail when visualization findById returns success with null", async () => {
-      // Arrange - Mock findById to return success with null (instead of failure)
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(success(null));
-
-      // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(faker.string.uuid(), visualizationId, testUserId);
 
       // Assert
       expect(result.isSuccess()).toBe(false);
@@ -256,26 +141,12 @@ describe("DeleteExperimentVisualizationUseCase", () => {
         userId: testUserId,
       });
 
-      const mockVisualization: ExperimentVisualizationDto = {
-        id: visualizationId,
-        experimentId: experiment.id,
-        name: "Test Visualization",
-        description: null,
-        chartFamily: "basic",
-        chartType: "bar",
-        config: { chartType: "bar", config: {} },
-        dataConfig: { tableName: "test_table", dataSources: [] },
-        createdBy: testUserId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      vi.spyOn(experimentVisualizationRepository, "findById").mockResolvedValue(
-        success(mockVisualization),
+      vi.spyOn(experimentVisualizationRepository, "existsInExperiment").mockResolvedValue(
+        success(true),
       );
 
       // Act
-      const result = await useCase.execute(visualizationId, testUserId);
+      const result = await useCase.execute(experiment.id, visualizationId, testUserId);
 
       // Assert
       expect(result.isFailure()).toBe(true);

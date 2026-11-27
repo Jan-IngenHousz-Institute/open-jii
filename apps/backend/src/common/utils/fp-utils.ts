@@ -256,6 +256,22 @@ export class AppError extends Error {
   static timeout(message = "Request timed out", code = "TIMEOUT", details?: unknown): AppError {
     return new AppError(message, code, StatusCodes.GATEWAY_TIMEOUT, details);
   }
+
+  static tooManyRequests(
+    message = "Too many requests",
+    code = "TOO_MANY_REQUESTS",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.TOO_MANY_REQUESTS, details);
+  }
+
+  static unavailable(
+    message = "Service unavailable",
+    code = "SERVICE_UNAVAILABLE",
+    details?: unknown,
+  ): AppError {
+    return new AppError(message, code, StatusCodes.SERVICE_UNAVAILABLE, details);
+  }
 }
 
 /**

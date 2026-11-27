@@ -52,6 +52,19 @@ export interface StoreMetadataSheet {
   version: string;
 }
 
+/** What moves when an experiment's tables listing may have, read without counting its rows. */
+export interface StoreChangeMark {
+  /** The time the mark counts arrivals from, which the next mark asks from to compare with this. */
+  since: string;
+  /** Moves with every row that arrives from then on, and with the payload schemas and sheets. */
+  revision: string;
+  /**
+   * The same mark counted from a later start, trailing the store's clock by more than any insert
+   * takes, read with this one so a caller can move its start without reading the move as a change.
+   */
+  next: { since: string; revision: string };
+}
+
 export interface StoreQueryParams extends ExperimentQueryParams {
   /** Ids in the order a sort on a contributor's name or a device's registry id wants, since names
    *  stay out. Ids that tie share a group, so the row id orders their rows as the warehouse does. */
@@ -72,6 +85,15 @@ export interface ServingStorePort {
   holdsTable(tableName: string): boolean;
 
   getExperimentTableMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>>;
+
+  /**
+   * The experiment's change mark, counting the rows that arrived from `since`, a start an earlier
+   * mark gave, or from its next start without one.
+   */
+  getExperimentChangeMark(
+    experimentId: string,
+    since: string | null,
+  ): Promise<Result<StoreChangeMark>>;
 
   /** Whether the experiment's metadata sheets match the table's rows; an upload's they never do. */
   takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean;

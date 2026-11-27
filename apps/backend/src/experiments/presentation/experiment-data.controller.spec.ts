@@ -1,15 +1,33 @@
 import { expect } from "vitest";
 
+import { apiKeys, eq } from "@repo/database";
+
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
+import { UserRepository } from "../../users/core/repositories/user.repository";
 import { ExperimentDataSourceService } from "../application/services/experiment-data-source.service";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
+import { WatchExperimentTablesUseCase } from "../application/use-cases/experiment-data/watch-experiment-tables";
+import type {
+  ExperimentTableMetadata,
+  ExperimentTablesChange,
+} from "../core/models/experiment-data.model";
+import { ExperimentDataRepository } from "../core/repositories/experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
+
+const RAW_LISTED: ExperimentTableMetadata = {
+  identifier: "raw_data",
+  tableType: "static",
+  displayName: null,
+  rowCount: 3,
+  latestRowAt: null,
+  schemaRevision: null,
+};
 
 describe("ExperimentDataController", () => {
   const testApp = TestHarness.App;
@@ -19,6 +37,7 @@ describe("ExperimentDataController", () => {
   let getExperimentTablesUseCase: GetExperimentTablesUseCase;
   let getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase;
   let getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase;
+  let watchExperimentTablesUseCase: WatchExperimentTablesUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -36,6 +55,7 @@ describe("ExperimentDataController", () => {
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
     getDistinctColumnValuesUseCase = testApp.module.get(GetDistinctColumnValuesUseCase);
     getExperimentTableColumnsUseCase = testApp.module.get(GetExperimentTableColumnsUseCase);
+    watchExperimentTablesUseCase = testApp.module.get(WatchExperimentTablesUseCase);
   });
 
   afterEach(() => {
@@ -68,11 +88,27 @@ describe("ExperimentDataController", () => {
         .expect(200);
 
       expect(response.body).toEqual(mockTables);
+      expect(response.headers["x-data-source"]).toBe("warehouse");
       expect(getExperimentTablesUseCase.execute).toHaveBeenCalledWith(
         experimentId,
         testUserId,
         "warehouse",
       );
+    });
+
+    it("names the store in its header when the store answered", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      vi.spyOn(getExperimentTablesUseCase, "execute").mockResolvedValue(success([]));
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(200);
+
+      expect(response.body).toEqual([]);
+      expect(response.headers["x-data-source"]).toBe("store");
     });
 
     it("should map a use-case failure to its HTTP status", async () => {
@@ -83,6 +119,159 @@ describe("ExperimentDataController", () => {
 
       await testApp
         .get(`/api/v1/experiments/${experimentId}/tables`)
+        .withAuth(testUserId)
+        .expect(404);
+    });
+  });
+
+  describe("watchExperimentTables", () => {
+    it("streams the table changes to a store reader", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      const tables = [
+        {
+          identifier: "raw_data",
+          displayName: null,
+          totalRows: 3,
+          latestRowAt: null,
+          schemaRevision: null,
+          contentRevision: null,
+        },
+      ];
+      async function* changes(): AsyncGenerator<ExperimentTablesChange, void> {
+        await Promise.resolve();
+        yield { type: "changed", tables };
+      }
+      const execute = vi
+        .spyOn(watchExperimentTablesUseCase, "execute")
+        .mockReturnValue(success(changes()));
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
+        .withAuth(testUserId)
+        .expect(200);
+
+      expect(response.headers["content-type"]).toContain("text/event-stream");
+      const sent = response.text
+        .split("\n")
+        .filter((line) => line.startsWith("data: "))
+        .map((line): unknown => JSON.parse(line.slice("data: ".length)));
+      expect(sent).toContainEqual({ type: "changed", tables });
+      expect(execute).toHaveBeenCalledWith(
+        readableExperimentId,
+        testUserId,
+        "store",
+        expect.objectContaining({ id: `session-${testUserId}` }),
+        expect.any(AbortSignal),
+      );
+    });
+
+    it("ends an open stream without sending once the session that opened it is revoked", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      const raw: ExperimentTableMetadata = {
+        identifier: "raw_data",
+        tableType: "static",
+        displayName: null,
+        rowCount: 3,
+        latestRowAt: null,
+        schemaRevision: null,
+      };
+      const getSession = testApp.sessionLookup;
+      vi.spyOn(testApp.module.get(ExperimentDataRepository), "listTablesAfresh").mockImplementation(
+        () => {
+          getSession.mockResolvedValue(null);
+          return Promise.resolve(success([raw]));
+        },
+      );
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
+        .withAuth(testUserId)
+        .expect(200);
+
+      expect(response.text).not.toContain("changed");
+      expect(getSession).toHaveBeenLastCalledWith(
+        expect.objectContaining({ query: { disableCookieCache: true, disableRefresh: true } }),
+      );
+    });
+
+    /** The path of a stream whose reader loses access during its first listing, after the guard. */
+    async function streamLosingAccess() {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      const owner = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({ name: "Shared", userId: owner });
+      const grant = await testApp.addExperimentCollaborator(experiment.id, testUserId);
+      vi.spyOn(testApp.module.get(ExperimentDataRepository), "listTablesAfresh").mockImplementation(
+        async () => {
+          await testApp.removeResourceGrant(grant.id);
+          return success([RAW_LISTED]);
+        },
+      );
+      return `/api/v1/experiments/${experiment.id}/tables/changes`;
+    }
+
+    /** The guards read the session on every request; only a recheck reads past the cookie's cache. */
+    function sessionRechecksSince(reads: number) {
+      return testApp.sessionLookup.mock.calls
+        .slice(reads)
+        .filter(([lookup]) => lookup?.query?.disableCookieCache === true);
+    }
+
+    it("rechecks a cookie stream's session and access before it sends", async () => {
+      const path = await streamLosingAccess();
+      const can = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+      const reads = testApp.sessionLookup.mock.calls.length;
+
+      const response = await testApp.get(path).withAuth(testUserId).expect(200);
+
+      expect(response.text).not.toContain("changed");
+      expect(sessionRechecksSince(reads)).toHaveLength(1);
+      expect(can).toHaveBeenCalledTimes(2);
+    });
+
+    it("rechecks an API key stream's key from its own row, never its metered session, and its access", async () => {
+      const path = await streamLosingAccess();
+      const key = await testApp.createApiKey(testUserId);
+      const keyReads = vi.spyOn(testApp.module.get(UserRepository), "findApiKeyState");
+      const can = vi.spyOn(testApp.module.get(AuthorizationService), "can");
+      const reads = testApp.sessionLookup.mock.calls.length;
+
+      const response = await testApp.get(path).withApiKey(testUserId, key).expect(200);
+
+      expect(response.text).not.toContain("changed");
+      expect(sessionRechecksSince(reads)).toHaveLength(0);
+      expect(keyReads).toHaveBeenCalledWith(key.id);
+      expect(can).toHaveBeenCalledTimes(2);
+    });
+
+    it("ends an API key's open stream once the key is revoked", async () => {
+      vi.spyOn(testApp.module.get(ExperimentDataSourceService), "sourceFor").mockResolvedValue(
+        "store",
+      );
+      const key = await testApp.createApiKey(testUserId);
+      vi.spyOn(testApp.module.get(ExperimentDataRepository), "listTablesAfresh").mockImplementation(
+        async () => {
+          await testApp.database.delete(apiKeys).where(eq(apiKeys.id, key.id));
+          return success([RAW_LISTED]);
+        },
+      );
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
+        .withApiKey(testUserId, key)
+        .expect(200);
+
+      expect(response.text).not.toContain("changed");
+    });
+
+    it("gives a warehouse reader no stream", async () => {
+      await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/tables/changes`)
         .withAuth(testUserId)
         .expect(404);
     });
@@ -277,6 +466,11 @@ describe("ExperimentDataController", () => {
         name: "get experiment tables",
         request: (experimentId: string, userId: string) =>
           testApp.get(`/api/v1/experiments/${experimentId}/tables`).withAuth(userId),
+      },
+      {
+        name: "watch experiment tables",
+        request: (experimentId: string, userId: string) =>
+          testApp.get(`/api/v1/experiments/${experimentId}/tables/changes`).withAuth(userId),
       },
       {
         name: "get experiment data",

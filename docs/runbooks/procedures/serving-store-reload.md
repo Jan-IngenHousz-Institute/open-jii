@@ -17,8 +17,10 @@ holds now.** The feed only sends rows gold inserts or updates, so the store need
 The job `Serving-Store-Reload-<ENV>` reads each gold table's latest version, V, and inserts every
 row gold holds at V as a commit at V, with the payload schemas of those rows. Gold only appends,
 so a recomputed row stands beside the one it replaced; of each store key the load sends the copy
-gold processed last, by `processed_timestamp`. Copies with one processing time, and copies of an
-upload row, which carry none, send any one of them. Then it deletes the store's rows and schemas from versions before V, so a field
+gold processed last, by `processed_timestamp`, then the first client's, then the one whose fields
+hash lowest. The feed instead keeps the copy of the newest commit, which the reload cannot see, so a
+reload can keep a different copy of a capture than the feed did when gold committed copies out of
+their processing order; data and device pages then both show the reload's. Then it deletes the store's rows and schemas from versions before V, so a field
 only removed rows had leaves the page, unless a feed batch that spanned V also carried it: a batch's
 schema takes its newest commit, so a second reload clears that field. The store keeps each row's newest commit, so an experiment
 reads whole throughout. Rows the live feed writes meanwhile carry later versions and stay. Sending a
@@ -37,6 +39,10 @@ experiments:
 - The store holds rows from before V. A delete only reaches rows already in the store, so these came
   from a feed still catching up on commits before V. They are rows gold no longer holds.
 
+A reload of `all` that passes all three checks, one that found no rows included, then records its
+table and V in `store.completed_reloads`. A run that fails, or that runs out of attempts to send its
+rows, records nothing. Device pages wait for these records ("Before device pages read the store").
+
 A reloaded row says it arrived when gold committed V (`inserted_at`), so the feed's delivery metrics
 and alerts, which read the last five minutes of arrivals, see only the rows the feed sends. When gold
 committed V less than five minutes before the load, its rows count in those metrics until then, at a
@@ -45,12 +51,21 @@ delivery time near zero.
 After its delete it removes the contributor and client ids that no row names any longer, such as an
 erased contributor's, from the id tables the page sorts use.
 
+`measurements_by_device`, the copy of measurements by device that device pages read, fills from
+measurements as rows land, so a reload of measurements fills it too, and its delete takes the copy's
+older rows with measurements'. Of a capture sent through two clients, measurements keeps one row and
+the copy keeps both. Once each chunk lands, the writer, the reload's as much as the feed's, rewrites
+every client's row of the chunk's captures from the row measurements keeps, its fields included, and
+marks the other clients' rows replaced, so the copy's reads show what measurements shows.
+`device_events` comes from silver's `clean_device_lifecycle_events`, not from gold. Its rows belong to no experiment, so it reloads only for `all` and counts its rows per device.
+
 It connects as `openjii_reloader`, which may read in `store`, insert into the tables it reloads (the
-three row tables, `payload_schemas` and the two id tables) and into `feed_rejects`, and delete from
-the tables it reloads. It cannot update their values, delete from `feed_rejects`, or write to any
-other table, such as the migration ledger or the metrics views. Its right to delete also lets
-it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would; ClickHouse has
-no narrower grant for a delete.
+four row tables, the device copy, `payload_schemas` and the two id tables), into `feed_rejects` and
+`completed_reloads`, and delete from the tables it reloads. It cannot update their values, delete
+from `feed_rejects` or `completed_reloads`, or write to any other table, such as the migration
+ledger or the metrics views. Its right to delete
+also lets it drop or detach those tables' partitions, which empties a table as `TRUNCATE` would;
+ClickHouse has no narrower grant for a delete.
 
 ## Running it
 
@@ -58,17 +73,22 @@ Run it once the feed is on and has caught up. A quiet `store-feed-latency` does 
 a stopped feed sends nothing to measure. Check it instead: the store's newest version must be at
 least gold's newest commit that added rows. As the admin, `SELECT max(_commit_version) FROM
 store.<table>`; in the Databricks SQL editor, `DESCRIBE HISTORY <catalog>.centrum.<gold table>`
-(`experiment_raw_data`, `experiment_macro_data` or `experiment_uploaded_data`) and the newest version whose `operationMetrics` show `numOutputRows` above 0. A feed batch writes the commits
-it carries in parallel, so the store's newest version can reach gold's while that batch still
-writes older ones. So also check that batch has finished. `SELECT max(inserted_at) FROM
-store.<table> WHERE _commit_version = <gold's newest version>` gives when the feed landed that
-commit's rows, and the pipeline's driver log must show a `[serving store] <table> batch <n>: ...
-inserted` line written after that time. A batch logs it only once all its rows are in, and batches
-run one at a time, so a line after that time cannot be an earlier batch's. A `writing the batch
-again` line instead means the batch is still writing, so wait for the `inserted` one.
-Then the feed has sent every commit before the reload's, and a feed that stopped cannot later send
-rows from before it, such as an experiment the reload removes. For a new store, as on prod's first
-rollout, switch the feed on first and reload `all` once it has caught up.
+(`experiment_raw_data`, `experiment_macro_data`, `experiment_uploaded_data` or, for device events,
+silver's `clean_device_lifecycle_events`) and the newest version whose `operationMetrics` show
+`numOutputRows` above 0. A feed batch writes the commits it carries in parallel, so the store's
+newest version can reach gold's while that batch still writes older ones. So also check that batch
+has finished. `SELECT max(inserted_at) FROM store.<table> WHERE _commit_version = <gold's newest
+version>` gives when the feed landed that commit's rows, and the pipeline's driver log must show a
+`[serving store] <table> batch <n>: ... inserted` line written after that time. A batch logs it only
+once all its rows are in, and batches run one at a time, so a line after that time cannot be an
+earlier batch's. A `writing the batch again` line instead means the batch is still writing, so wait
+for the `inserted` one. Then the feed has sent every commit before the reload's, and a feed that
+stopped cannot later send rows from before it, such as an experiment the reload removes. For a new
+store, as on prod's first rollout, switch the feed on first and reload `all` once it has caught up,
+then `device_events` as "Before device pages read the store" describes.
+Before the first load of `device_events`, silver may have added no events since the sink's start
+version, and then this check has nothing to wait for; see
+[Before device pages read the store](#before-device-pages-read-the-store).
 
 Never run it while gold's table is being refreshed. A full refresh rewrites the table over many
 commits, so at any one of them gold holds part of it, and a reload then deletes the rest from the
@@ -80,9 +100,12 @@ the feed does, so run that when the app's reads can wait. The rows it deletes st
 merges drop them, so a whole table needs about its own size free again (`store-disk`). Its delete and
 its count may each take up to an hour; a run that times out is safe to run again.
 
-Give the experiment's id, or `all`, and one table (`measurements`, `macro_results`, `uploads`), or
-`all`. A run without an experiment fails rather than reloading everything. In the Databricks UI,
-open the job and choose "Run now with different parameters". From a terminal:
+Give the experiment's id, or `all`, and one table (`measurements`, `macro_results`, `uploads`,
+`device_events`), or `all`, which takes the three experiment tables. A run without an experiment
+fails rather than reloading everything. Device events reload only when `TABLE` names them, and only
+with `EXPERIMENT_ID` set to `all`, since they belong to no experiment: reloaded before their sink
+runs, they would let device pages read events the feed never adds to.
+In the Databricks UI, open the job and choose "Run now with different parameters". From a terminal:
 
 ```bash
 databricks jobs list --name Serving-Store-Reload-<ENV>
@@ -95,7 +118,7 @@ only when those rows should go, as for an experiment gold has dropped, and only 
 
 The cluster takes a few minutes to start. Each table's result is one line of the task's output:
 
-`[serving store] Reloaded <table> at gold version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in gold and <n> in the store over <n> experiments, <n> of them written by the feed since`
+`[serving store] Reloaded <table> at <source table> version <V>: <n> rows sent, <n> refused (in feed_rejects); <n> rows in <source table> and <n> in the store over <n> <experiments or devices>, <n> of them written by the feed since`
 
 ## After a migration the feed fills
 
@@ -118,6 +141,102 @@ in this order, and compare the read paths or widen a store flag only at the end:
 An environment whose feed is off, as prod's is before its first rollout, needs only its first
 reload of `all`, then the merge and the refresh.
 
+0011 fills `measurements_by_device` from the rows measurements already holds, as it applies. Those
+rows keep the firmware and battery they arrived with, which gold left empty on the rows it wrote
+before it carried them, and only a reload of `measurements` fills them from silver. Its
+`device_events` starts empty, and only a reload brings it the events from before its sink's start
+version. The next section covers both.
+
+## Before device pages read the store
+
+Device pages need two reloads before they read the store: `measurements`, for the firmware and
+battery of older rows, and `device_events`, for the connects and disconnects from before its sink
+started. Where the store's first reload of `all` runs after 0011, as on prod's first rollout, that
+reload is the `measurements` one. Device pages read the store only once a reload of `all` has passed
+for both, as `store.completed_reloads` records; the `device_events_reloaded` view returns a row from
+then on, and none before.
+
+1. Note an experiment whose older rows the store holds without firmware. As the admin:
+
+   ```sql
+   SELECT experiment_id, count() - count(device_version) AS without_firmware
+   FROM store.measurements
+   GROUP BY experiment_id
+   ORDER BY without_firmware DESC
+   LIMIT 5;
+   ```
+
+   Then reload `measurements` for `all`, once the feed has caught up as "Running it" describes. Gold
+   carries firmware and battery only on the rows it wrote after it began to, so until this reload a
+   device page shows neither for any older row. The reload takes both from silver where gold has
+   none. Merge what it wrote once and refresh the metrics views, as "After a full or large reload"
+   and "Refreshing the metrics views" describe.
+
+2. Check that the experiment's rows now carry firmware and battery as silver's do. On the store, as
+   the admin:
+
+   ```sql
+   SELECT count() AS captures, count(device_version) AS with_firmware, count(device_battery) AS with_battery
+   FROM store.measurements FINAL
+   WHERE experiment_id = '<experiment id>';
+   ```
+
+   In the Databricks SQL editor, counting each capture once, as the store keeps it:
+
+   ```sql
+   SELECT count(*) AS captures, count(device_version) AS with_firmware, count(device_battery) AS with_battery
+   FROM (
+     SELECT device_version, device_battery,
+       row_number() OVER (PARTITION BY timestamp, id, coalesce(device_id, '') ORDER BY processed_timestamp DESC) AS copy
+     FROM <catalog>.centrum.clean_data
+     WHERE experiment_id = '<experiment id>'
+   )
+   WHERE copy = 1;
+   ```
+
+   For an experiment that has received no rows since the reload, the three counts match. If
+   `with_firmware` or `with_battery` is lower on the store, its device pages would show those rows
+   without them: reload `measurements` for that experiment and check again.
+
+3. Start the device events sink. Silver's `clean_device_lifecycle_events` keeps a change feed only
+   from the commit that switched it on. The sink starts at that version or a later one, so every
+   event silver held before it reaches the store only through a reload. Once Centrum has run an
+   update with the bundle that sets `delta.enableChangeDataFeed` on that table, set `device_events`
+   in `serving_store_feed_start_versions` to silver's latest version (`store-feed-stalled`) and
+   apply. In Centrum's event log, the flow `serving_store_device_events_changes` is then RUNNING,
+   with no FAILED event since the update that added it.
+4. Check whether silver has added events since the start version. Run
+   `DESCRIBE HISTORY <catalog>.centrum.clean_device_lifecycle_events` and read every version from
+   the start version to the newest. If one shows `numOutputRows` above 0, wait until the feed has
+   landed it, as "Running it" describes. If none does, as on a quiet environment where no device
+   has connected since, the store stays empty and that check has no version or insert time to wait
+   for. The sink is then past its start version with nothing to send, since no version up to
+   silver's newest holds a row. An event silver adds later lands at a newer version than the
+   reload's, which the reload leaves alone, so there is no need to wait for a device to connect.
+5. Reload `device_events`, with `TABLE` set to `device_events` and `EXPERIMENT_ID` to `all`. It sends
+   every event silver holds at its newest version, which includes the history from before the start
+   version. A run that succeeds has the store holding at least as many events per device as silver,
+   and its result line gives both counts.
+6. Check that both reloads recorded themselves. As the admin:
+
+   ```sql
+   SELECT table_name, version, completed_at FROM store.completed_reloads ORDER BY completed_at;
+   ```
+
+   It lists `measurements` and `device_events`. A table missing from it has had no reload of `all`
+   that passed: its run's result line and error say why, and the next run that passes records it.
+
+7. Device pages of the users `store-experiment-reads` targets then move to the store on their own;
+   every other user's stay on the warehouse whatever the reloads do. Until `store.completed_reloads`
+   records a reload of `all` that passed for both `measurements` and `device_events`, the backend
+   reads every device page from the warehouse, targeted users' too, so the backend deploy need not
+   wait for these loads. Each backend task asks the store once a minute (the
+   `device_events_reloaded` view), so targeted users' pages move within a minute of the second
+   reload passing, and not before, since a reload that runs or fails records nothing. A task whose
+   check fails keeps its pages on the warehouse and asks again 10 seconds later. Once both have
+   passed, targeted users' pages stay on the store: they read it during a later reload, which
+   inserts before it deletes, and a later reload that fails leaves them there.
+
 ## After a full or large reload
 
 A reload of `all`, or of an experiment with millions of rows, leaves each month it wrote in many
@@ -126,16 +245,19 @@ rollout. Every read through the views then merges those parts as it reads, and C
 background merges can leave them that way for a day or more. On dev, a 37M-row experiment's count
 took 1.5 to 2.9 s in that state and 0.4 s once merged; its pages took up to twice as long.
 
-When the run has finished, merge the three tables once, as the admin, starting `clickhouse-client`
-with `--receive_timeout=3600`. A merge writes each month's new part beside the old ones before it
-drops them, so first check the store's disk has about the table's size free (`store-disk`, or
+When the run has finished, merge the tables it wrote once, as the admin, starting
+`clickhouse-client` with `--receive_timeout=3600`. A merge writes each month's new part beside the
+old ones before it drops them, so first check the store's disk has about the table's size free
+(`store-disk`, or
 `SELECT formatReadableSize(sum(bytes_on_disk)) FROM system.parts WHERE database = 'store' AND table = 'measurements' AND active`
 against `SELECT formatReadableSize(free_space) FROM system.disks`):
 
 ```sql
 OPTIMIZE TABLE store.measurements FINAL;
+OPTIMIZE TABLE store.measurements_by_device FINAL;
 OPTIMIZE TABLE store.macro_results FINAL;
 OPTIMIZE TABLE store.uploads FINAL;
+OPTIMIZE TABLE store.device_events FINAL;
 ```
 
 Dev's measurements took about five minutes. Without the longer timeout the client gives up after
@@ -146,7 +268,8 @@ own merges handle. This lists what is left:
 
 ```sql
 SELECT table, partition, count() AS parts FROM system.parts
-WHERE database = 'store' AND active AND table IN ('measurements', 'macro_results', 'uploads')
+WHERE database = 'store' AND active
+  AND table IN ('measurements', 'measurements_by_device', 'macro_results', 'uploads', 'device_events')
   AND partition < toString(toYYYYMM(now()))
 GROUP BY table, partition HAVING parts > 1;
 ```
@@ -215,7 +338,7 @@ editing either block.
 
 ## Metadata sheets
 
-The reload copies gold only. The store's `metadata_rows` and `metadata_sheets` come from the
+The reload copies gold and silver only. The store's `metadata_rows` and `metadata_sheets` come from the
 lakehouse's copy of the sheets, `centrum.experiment_custom_metadata`, which the backend's outbox keeps
 to Postgres: the Centrum feed reads that table's change feed and sends each sheet's rows, and the
 identifiers an edit dropped or a deletion removed as deleted rows, then the sheet itself with the
@@ -265,10 +388,17 @@ no copy of annotations: a read filtered by flags takes the flagged rows from Pos
   again for the same experiments; the new delete takes them.
 - **The store holds a version newer than gold's.** Gold's table was recreated and its versions
   restarted, so the load's rows and schemas would lose to the old ones. As the admin, empty the store
-  table and `store.payload_schemas` with `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says
-  why). Then set the feed's start version to gold's latest and reset its checkpoint as
-  `store-feed-stalled` describes, and once the feed has caught up, reload every table for `all`, since
-  `payload_schemas` held every table's schemas.
+  table, for measurements also `store.measurements_by_device`, and `store.payload_schemas` with
+  `TRUNCATE TABLE` (never `DELETE`; `store-feed-stalled` says why). Then set the feed's start version
+  to gold's latest and reset its checkpoint as `store-feed-stalled` describes, and once the feed has
+  caught up, reload every table for `all`, since `payload_schemas` held every table's schemas. For
+  `device_events`, which has no payload schemas, empty only `store.device_events`, set its start
+  version to silver's latest and reset its checkpoint, and once the feed has caught up, reload
+  `device_events` for `all`. For measurements or device events, run
+  `DELETE FROM store.completed_reloads WHERE table_name = '<table>'` before the `TRUNCATE` and wait
+  two minutes, since the backend holds its readiness answer for 60 seconds after it asks and a page
+  read can take 30 seconds more, so device pages go back to the warehouse before the table empties
+  and stay there until the new reload passes.
 - **Neither gold nor the store holds the experiment.** The run succeeds and says so. Unless the
   experiment was deleted, check its id.
 - **Rows not sent after six attempts.** The store could not take the load; `store-answers` and

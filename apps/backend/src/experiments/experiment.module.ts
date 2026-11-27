@@ -34,6 +34,7 @@ import { ExperimentDataOutboxMetricsService } from "./application/services/exper
 import { ExperimentDataOutboxWorker } from "./application/services/experiment-data-outbox.worker";
 import { ExperimentDataSourceService } from "./application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "./application/services/experiment-store-reads.service";
+import { ExperimentTableChangesService } from "./application/services/experiment-table-changes.service";
 import { ExperimentWarehouseReadsService } from "./application/services/experiment-warehouse-reads.service";
 import { ExportRunReconcilerService } from "./application/services/export-run-reconciler.service";
 import { MetadataSheetsOutboxService } from "./application/services/metadata-sheets-outbox.service";
@@ -62,6 +63,7 @@ import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experime
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTableColumnsUseCase } from "./application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
+import { WatchExperimentTablesUseCase } from "./application/use-cases/experiment-data/watch-experiment-tables";
 import { CreateJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/create-join-code";
 import { GetJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/get-join-code";
 import { RedeemJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/redeem-join-code";
@@ -206,10 +208,11 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     },
     {
       provide: CACHE_PORT,
-      // Table metadata is read before every warehouse statement and polled by
-      // open experiment pages. Past fifteen seconds the last snapshot is
-      // served while a fresh one loads behind it, so a poll sees new rows one
-      // interval later, but no read waits seconds on the metadata statement.
+      // Table metadata is read before every statement and polled by open
+      // experiment pages. Past fifteen seconds the last snapshot is served
+      // while a fresh one loads behind it, so a poll of the warehouse sees new
+      // rows one interval later, but no read waits seconds on the metadata
+      // statement. A store listing reloads the snapshot instead.
       useFactory: (cache: Cache) =>
         new CacheAdapter(cache, {
           prefix: "experiment:",
@@ -271,6 +274,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     CustomMetadataService,
     ExperimentWarehouseReadsService,
     ExperimentStoreReadsService,
+    ExperimentTableChangesService,
     MultipartUploadService,
     UploadRunReconcilerService,
 
@@ -286,6 +290,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Experiment data use cases
     GetExperimentDataUseCase,
     GetExperimentTablesUseCase,
+    WatchExperimentTablesUseCase,
     GetDistinctColumnValuesUseCase,
     GetExperimentTableColumnsUseCase,
     UploadDataUseCase,

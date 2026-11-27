@@ -2283,10 +2283,10 @@ resource "grafana_rule_group" "serving_store_health" {
 
 # Serving store feed alerts, only where the pipelines feed the store
 locals {
-  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows"])
+  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows", "device_events"])
 
-  # The heartbeat metric counting the gold rows each table is fed from. Uploads have none, so a stall
-  # there shows only as a slow feed once rows arrive.
+  # The heartbeat metric counting the gold rows each table is fed from. Uploads, the sheets' rows and
+  # silver's device events have none, so a stall there shows only as a slow feed once rows arrive.
   serving_store_feed_gold_rows = {
     measurements  = "ExperimentRows"
     macro_results = "MacroResultRows"
@@ -2380,7 +2380,7 @@ resource "grafana_rule_group" "serving_store_feed" {
       for            = "5m"
 
       annotations = {
-        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from gold."
+        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from its source table's commit."
         summary          = "Serving store feed slow: ${rule.key}"
         runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-latency.md"
         __dashboardUid__ = local.heartbeat_daily_uid

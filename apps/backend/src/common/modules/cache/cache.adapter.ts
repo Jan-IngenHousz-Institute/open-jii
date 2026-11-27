@@ -43,11 +43,11 @@ interface Envelope<T> {
  */
 /**
  * One promise per key, so the map cannot carry each key's value type. What it
- * holds under a key is always that key's load, whose result is `T | null` by
- * construction in `tryCache`; nothing else writes to it.
+ * holds under a key is always that key's load, which every caller of the key
+ * fetches the same way; nothing else writes to it.
  */
-function sharedLoad<T>(running: Promise<unknown>): Promise<T | null> {
-  return running as Promise<T | null>;
+function sharedLoad<R>(running: Promise<unknown>): Promise<R> {
+  return running as Promise<R>;
 }
 
 export class CacheAdapter implements MacroCachePort, MetricsCachePort, ExperimentCachePort {
@@ -79,7 +79,16 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
       return entry.value;
     }
 
+    const isNewLoad = !this.inFlight.has(cacheKey);
     const load = this.startLoad(cacheKey, fetchFn, isComplete);
+
+    // A caller served stale, or one that stops waiting, leaves nobody to observe a rejection.
+    const isUnobserved = entry !== null || this.namespace.waitMs !== undefined;
+    if (isNewLoad && isUnobserved) {
+      load.catch((error: unknown) => {
+        this.logger.warn({ msg: "Background cache load failed", cacheKey, error });
+      });
+    }
 
     // A stale value is served at once; the load refreshes it behind the reply.
     // Waiting here is what turned a slow source into an empty page.
@@ -90,19 +99,23 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     return this.awaitWithin(load, this.namespace.waitMs);
   }
 
+  refresh<T>(key: string, fetchFn: () => Promise<T>): Promise<T> {
+    return this.startLoad(`${this.namespace.prefix}${key}`, fetchFn);
+  }
+
   /**
    * One load per key at a time, outliving the caller that started it. A read
    * behind a short TTL is otherwise repeated by every caller that arrives
    * while the first one runs, and abandoned when that caller stops waiting.
    */
-  private startLoad<T>(
+  private startLoad<R>(
     cacheKey: string,
-    fetchFn: () => Promise<T | null>,
-    isComplete: ((value: T) => boolean) | undefined,
-  ): Promise<T | null> {
+    fetchFn: () => Promise<R>,
+    isComplete?: (value: NonNullable<R>) => boolean,
+  ): Promise<R> {
     const running = this.inFlight.get(cacheKey);
     if (running !== undefined) {
-      return sharedLoad<T>(running);
+      return sharedLoad<R>(running);
     }
 
     const generation = this.generations.get(cacheKey) ?? 0;
@@ -113,11 +126,6 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
       }
     });
     this.inFlight.set(cacheKey, load);
-
-    // A caller that stopped waiting leaves nobody to observe a rejection.
-    load.catch((error: unknown) => {
-      this.logger.warn({ msg: "Background cache load failed", cacheKey, error });
-    });
 
     return load;
   }
@@ -161,13 +169,13 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
     }
   }
 
-  private async fetchAndStore<T>(
+  private async fetchAndStore<R>(
     cacheKey: string,
-    fetchFn: () => Promise<T | null>,
+    fetchFn: () => Promise<R>,
     generation: number,
-    isComplete: ((value: T) => boolean) | undefined,
-  ): Promise<T | null> {
-    const value = await fetchFn();
+    isComplete: ((value: NonNullable<R>) => boolean) | undefined,
+  ): Promise<R> {
+    const value: R = await fetchFn();
 
     const mayStore =
       value !== null && value !== undefined && (await this.mayReplace(cacheKey, value, isComplete));

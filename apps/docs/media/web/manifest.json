@@ -514,10 +514,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 52238,
-      "sha256": "ce877def8662c60c46617abd090cb6f4bd1bb02b9969b1c220dce197db36401f",
+      "bytes": 51456,
+      "sha256": "87c03b84f632af2cc6aad21c2f7b7e7e600599839c367f4bb8ebee413ee1643e",
       "disposition": "published",
-      "scope": "Row number ordered by report time per synthetic sensor; local seeded app and synthetic FixtureWarehouse readings"
+      "scope": "Row number ordered by report time per synthetic sensor. Recaptured on 2026-11-26 to show Y-axis title and Y-axis scale, with the seed identity and synthetic FixtureWarehouse readings. Approved before publication."
     }
   ],
   "unmetCaptures": [

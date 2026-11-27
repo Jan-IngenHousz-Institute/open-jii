@@ -64,6 +64,18 @@ function mountTablesAndData(tableNames: string[] = ["readings"]) {
 }
 
 describe("VisualizationWorkspace", () => {
+  it("follows the store's table changes when the store answers its listing", async () => {
+    mountTablesAndData();
+    server.mount(contract.experiments.getExperimentTables, {
+      body: [createExperimentTable({ identifier: "readings", displayName: "readings" })],
+      headers: { "x-data-source": "store" },
+    });
+    const changes = server.mount(contract.experiments.watchExperimentTables, { status: 404 });
+    render(<Harness />);
+
+    await waitFor(() => expect(changes.called).toBe(true));
+  });
+
   it("renders the chart-type picker, the canvas area, and the inspector by default", async () => {
     mountTablesAndData();
     render(<Harness />);

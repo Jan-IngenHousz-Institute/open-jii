@@ -18,7 +18,7 @@ import { useDrawTurn } from "./draw-queue";
 import { PlotlyErrorBoundary } from "./plotly-error-boundary";
 import { loadPlotlyRuntime, loadedPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
 import { PlotlyTraceGate } from "./plotly-trace-gate";
-import { withBrandedPngExport } from "./png-export";
+import { withBrandedPngExport, type PreparePngLayout } from "./png-export";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -102,6 +102,7 @@ const useIsClient = () =>
   );
 
 export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
+  preparePngLayout?: PreparePngLayout;
   className?: string;
   loading?: boolean;
   error?: string;
@@ -335,7 +336,21 @@ const validatePlotlyData = (data: Data[] | undefined): PlotData[] => {
  * with WebGL context management and dimension validation
  */
 export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
-  ({ className, loading, error, data, layout, config, onRelayout, ...plotProps }, ref) => {
+  (
+    {
+      className,
+      loading,
+      error,
+      data,
+      layout,
+      config,
+      onRelayout,
+      onRestyle,
+      preparePngLayout,
+      ...plotProps
+    },
+    ref,
+  ) => {
     const isClient = useIsClient();
     const [isWebGLEnabled, setIsWebGLEnabled] = useState(true);
     const [isContextAvailable, setIsContextAvailable] = useState(false);
@@ -420,12 +435,13 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     }, []);
 
     // react-plotly binds an event prop once per instance and does not notice when a remount's
-    // purge drops it (React's strict and offscreen remounts reuse the instance), so the relayout
-    // listener is attached here each time a graph is initialised.
+    // purge drops it (React's strict and offscreen remounts reuse the instance).
     const onRelayoutRef = useRef(onRelayout);
+    const onRestyleRef = useRef(onRestyle);
     useEffect(() => {
       onRelayoutRef.current = onRelayout;
-    }, [onRelayout]);
+      onRestyleRef.current = onRestyle;
+    }, [onRelayout, onRestyle]);
 
     const { onInitialized, onPurge, onWebGlContextLost } = plotProps;
     const Plot = loadedPlotlyRuntime()?.Plot ?? LazyPlot;
@@ -439,6 +455,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         graphDivRef.current = graphDiv;
         if (isPlotlyElement(graphDiv)) {
           graphDiv.on("plotly_relayout", (event) => onRelayoutRef.current?.(event));
+          graphDiv.on("plotly_restyle", (event) => onRestyleRef.current?.(event));
         }
         onDrawn();
         onInitialized?.(figure, graphDiv);
@@ -613,9 +630,14 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatedLayout;
     }, [layout]);
 
-    // Prepare safe config
+    const preparePngLayoutRef = useRef(preparePngLayout);
+    useEffect(() => {
+      preparePngLayoutRef.current = preparePngLayout;
+    }, [preparePngLayout]);
+
+    // Plotly compares modebar handlers as part of the figure configuration.
     const safeConfig = React.useMemo(() => {
-      return withBrandedPngExport(createSafeConfig(config));
+      return withBrandedPngExport(createSafeConfig(config), () => preparePngLayoutRef.current);
     }, [config]);
 
     // Handle errors

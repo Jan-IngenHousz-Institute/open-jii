@@ -77,12 +77,17 @@ export interface PlotlyChartConfig extends Partial<Config> {
   yAxisType?: "linear" | "log" | "date" | "category" | "multicategory";
   zAxisType?: "linear" | "log" | "date" | "category";
 
-  // Secondary Y-axis (twin axis on the right, overlaying the primary X).
-  // Only takes effect when at least one series in the chart targets it
-  // (`axis: "secondary"` on the corresponding cartesian series). Independent
-  // of the primary axis type so log-on-right + linear-on-left combos work.
+  // Independent Y axes for cartesian series. Axis 2 keeps its saved option names.
   y2AxisTitle?: string;
   y2AxisType?: "linear" | "log" | "date" | "category";
+  y3AxisTitle?: string;
+  y3AxisType?: "linear" | "log";
+  y4AxisTitle?: string;
+  y4AxisType?: "linear" | "log";
+  y5AxisTitle?: string;
+  y5AxisType?: "linear" | "log";
+  y6AxisTitle?: string;
+  y6AxisType?: "linear" | "log";
 
   // Bar-layout fields. Plotly ignores them when no bar traces are present,
   // so they live alongside the rest of the chart-level config. Per-series

@@ -1,5 +1,6 @@
 import type {
   ExperimentDataSourceConfig,
+  ExperimentSeriesAxis,
   ExperimentSeriesTraceType,
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
@@ -17,6 +18,7 @@ import { aggregateAliasForSource } from "../data/aggregation";
 import { coerceCell, toBucketKey } from "../data/cell-coercion";
 import type { IndexedDataSource } from "../data/data-sources";
 import { dataSourcesByRole } from "../data/data-sources";
+import { canUseHorizontalBars, effectiveSeriesAxis, effectiveSeriesTraceType } from "./series-axis";
 
 export interface CartesianTransformOptions {
   defaultTraceType: ExperimentSeriesTraceType;
@@ -63,6 +65,11 @@ export function transformCartesianData(
   const facetColumn = dataSourcesByRole(dataSources, "facet")[0]?.source.columnName;
 
   const { effectiveYEntries, useIndexForX } = resolveSeries(yEntries, xColumn);
+  const horizontalBars =
+    chartConfig.orientation === "h" && canUseHorizontalBars(effectiveYEntries, defaultTraceType);
+  const axes = effectiveYEntries.map(({ source }, index) =>
+    effectiveSeriesAxis(source.axis, index, Boolean(facetColumn), horizontalBars),
+  );
 
   if (effectiveYEntries.length === 0) {
     return { chartSeries: [], subplots: undefined, useIndexForX };
@@ -167,9 +174,7 @@ export function transformCartesianData(
   // cell. The grid uses primary indices 1..N (y, y2, ..., yN); secondary
   // overlays live above that range (y[N+cell+1]) so they never collide.
   const totalCells = facetGroups.length;
-  const hasSecondaryAxis = effectiveYEntries.some(
-    ({ source }, seriesOrdinal) => seriesOrdinal !== 0 && source.axis === "secondary",
-  );
+  const hasSecondaryAxis = axes.includes("secondary");
   const secondaryYaxisIdFor = (cellIndex: number): string | undefined =>
     facetColumn && hasSecondaryAxis ? `y${totalCells + cellIndex + 1}` : undefined;
 
@@ -200,6 +205,8 @@ export function transformCartesianData(
         source,
         defaultTraceType,
         seriesOrdinal,
+        horizontalBars,
+        axis: axes[seriesOrdinal],
         fallbackColor: pickFallbackColor(seriesOrdinal),
         continuousColorValues: colorValues,
         sizeContext: sizeCtx,
@@ -229,6 +236,8 @@ export function transformCartesianData(
         source,
         defaultTraceType,
         seriesOrdinal,
+        horizontalBars,
+        axis: axes[seriesOrdinal],
         fallbackColor: pickFallbackColor(seriesOrdinal),
         sizeContext: sizeCtx,
         name: source.alias ?? source.columnName,
@@ -309,6 +318,8 @@ export function transformCartesianData(
           source,
           defaultTraceType,
           seriesOrdinal,
+          horizontalBars,
+          axis: axes[seriesOrdinal],
           fallbackColor: getCategoryColor(
             catIndex + seriesOrdinal * globalCategoryLabels.length,
             colorMap,
@@ -347,15 +358,14 @@ export function transformCartesianData(
           ? buildPlainCellSeries(cellRows, xaxisId, yaxisId, undefined)
           : buildCategoricalColorCellSeries(cellRows, xaxisId, yaxisId, undefined);
 
-    // Route this cell's secondary-axis traces onto the cell's overlay axis;
-    // the builders above pinned every trace to the primary yaxis.
+    if (!facetColumn) return cellSeries;
     const secondaryYaxisId = secondaryYaxisIdFor(cellIndex);
-    if (!secondaryYaxisId) {
-      return cellSeries;
-    }
-    return cellSeries.map((s) =>
-      s.axis === "secondary" ? { ...s, yaxisId: secondaryYaxisId } : s,
-    );
+    // The legend shows one entry for each series across all panels.
+    return cellSeries.map((series, index) => ({
+      ...series,
+      yaxisId: series.axis === "secondary" ? secondaryYaxisId : yaxisId,
+      legendgroup: `facet-series-${index}`,
+    }));
   };
 
   const allSeries: CartesianSeries[] = [];
@@ -426,11 +436,12 @@ function applyManualStacking(
   if (stackMode === undefined || stackMode === "none") return series;
   const groups = new Map<string, number[]>();
   for (let i = 0; i < series.length; i++) {
-    const sg = series[i]?.stackgroup;
-    if (!sg) continue;
-    const list = groups.get(sg) ?? [];
+    const trace = series[i];
+    if (!trace.stackgroup) continue;
+    const key = `${trace.yaxisId ?? "y"}:${trace.stackgroup}`;
+    const list = groups.get(key) ?? [];
     list.push(i);
-    groups.set(sg, list);
+    groups.set(key, list);
   }
   if (groups.size === 0) return series;
 
@@ -488,11 +499,12 @@ interface BuildSeriesArgs {
     columnName: string;
     alias?: string;
     traceType?: ExperimentSeriesTraceType;
-    axis?: "primary" | "secondary";
   };
   errorValues?: number[];
   defaultTraceType: ExperimentSeriesTraceType;
   seriesOrdinal: number;
+  horizontalBars: boolean;
+  axis: ExperimentSeriesAxis;
   fallbackColor: string | undefined;
   continuousColorValues?: number[];
   sizeContext?: SizeContext | null;
@@ -675,6 +687,8 @@ function buildSeries({
   source,
   defaultTraceType,
   seriesOrdinal,
+  horizontalBars,
+  axis,
   fallbackColor,
   continuousColorValues,
   sizeContext,
@@ -694,10 +708,8 @@ function buildSeries({
         color: fallbackColor,
       }
     : chartConfig.error_y;
-  const isFirstSeries = seriesOrdinal === 0;
-  const traceType = isFirstSeries ? defaultTraceType : (source.traceType ?? defaultTraceType);
-  const axis = isFirstSeries ? "primary" : (source.axis ?? "primary");
-  const orientation = traceType === "bar" ? (chartConfig.orientation ?? "v") : undefined;
+  const traceType = effectiveSeriesTraceType(source.traceType, seriesOrdinal, defaultTraceType);
+  const orientation = traceType === "bar" ? (horizontalBars ? "h" : "v") : undefined;
   const isScatter = traceType === "scatter";
   const markerStyle = chartConfig.marker;
   const marker = isScatter

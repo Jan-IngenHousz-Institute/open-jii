@@ -296,7 +296,8 @@ def first_refreshes(admin: _Store) -> list[dict]:
         "FROM system.query_log "
         f"WHERE type = 'QueryFinish' AND query_kind = 'Insert' AND user = '' AND has(databases, '{_DATABASE}') "
         f"AND event_time >= (SELECT min(metadata_modification_time) FROM system.tables WHERE database = '{_DATABASE}') "
-        "ORDER BY query_start_time_microseconds"
+        # A refresh that ran again on the hour is not when the migrations made the view.
+        "ORDER BY query_start_time_microseconds LIMIT 1 BY view"
     )
 
 

@@ -3136,6 +3136,11 @@ module "backend_waf" {
   environment        = var.environment
   rate_limit         = 500
   log_retention_days = 365
+  # A live experiment page repeats its table listing, rows, columns and change stream reads.
+  read_rate_limit = {
+    limit      = 2500
+    path_regex = "^/api/v1/experiments/[0-9a-fA-F-]{36}/(?:tables(?:/changes)?|data(?:/columns|/distinct)?)$"
+  }
   enable_bot_control = true
 
   large_body_bypass_routes = [

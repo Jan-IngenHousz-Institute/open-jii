@@ -1,10 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { DeviceFirmwareVersion, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 /**
  * Firmware runs over a range, oldest first: consecutive buckets of one
@@ -13,18 +13,19 @@ import type { DatabricksPort } from "../../../core/ports/databricks.port";
  */
 @Injectable()
 export class GetDeviceFirmwareHistoryUseCase {
-  constructor(
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
-  ) {}
+  constructor(private readonly dataSource: DeviceDataSourceService) {}
 
   async execute(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: MonitoringBucket,
+    source: DeviceDataSource,
   ): Promise<Result<DeviceFirmwareVersion[]>> {
-    const result = await this.databricksPort.getDeviceFirmwareHistory(thingName, from, to, bucket);
+    const result = await this.dataSource
+      .readsFor(source)
+      .getDeviceFirmwareHistory(thingName, experimentIds, from, to, bucket);
     if (result.isFailure()) {
       return failure(result.error);
     }

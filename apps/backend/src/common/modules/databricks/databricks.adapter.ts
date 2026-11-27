@@ -14,12 +14,6 @@ import type {
 import type { DatabricksPort as HealthDatabricksPort } from "../../../health/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
-  DeviceBatteryRow,
-  DeviceFirmwareVersionRow,
-  DeviceMacroRow,
-  DeviceMeasurementRow,
-  DevicePayloadBreakdownRow,
-  DeviceThroughputRow,
   ExperimentDeviceSeriesRow,
   ExperimentDeviceStatsRow,
   ExperimentPublisherRow,
@@ -29,6 +23,15 @@ import type {
   GroupThroughputRow,
   MonitoringReadOptions,
 } from "../../../iot/core/ports/databricks.port";
+import type {
+  DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
+  DeviceMeasurementRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+  DeviceWindow,
+} from "../../../iot/core/ports/device-reads.port";
 import { MetricsTable } from "../../../metrics/core/models/metrics-table.model";
 import type {
   ActivityWindowsRow,
@@ -159,12 +162,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     return this.jobsService.triggerJob(jobId, jobParams, input.exportId);
   }
 
-  /** Last data arrival from gold device_last_activity; lags by pipeline cadence. */
-  async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
+  /**
+   * Last data arrival in the given experiments; lags by pipeline cadence. Read from clean_data, as
+   * gold's device_last_activity is, because that view keeps no experiment to scope it by.
+   */
+  async getDeviceLastActivity(
+    thingName: string,
+    experimentIds: string[],
+  ): Promise<Result<{ lastDataAt: string | null }>> {
     const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
-      whereConditions: [["client_id", thingName]],
-      limit: 1,
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereClause: this.deviceRows(thingName, experimentIds),
+      aggregation: {
+        functions: [{ column: "timestamp", function: "max", alias: "last_data_at" }],
+      },
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -529,9 +540,37 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     );
   }
 
+  async getDeviceExperimentIds(
+    thingName: string,
+    window?: DeviceWindow,
+  ): Promise<Result<string[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      columns: ["experiment_id"],
+      distinct: true,
+      whereConditions: [["client_id", thingName]],
+      filters:
+        window === undefined
+          ? []
+          : [{ column: "timestamp", operator: "between", value: [window.from, window.to] }],
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.flatMap((row) => {
+        const experimentId = row[index.experiment_id] ?? null;
+        return experimentId === null ? [] : [experimentId];
+      }),
+    );
+  }
+
   /** Measurement counts per time bucket and experiment. */
   async getDeviceThroughput(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
@@ -539,7 +578,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
@@ -564,6 +603,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   /** Average reported battery per bucket; AVG skips nulls, so a battery-less bucket is null. */
   async getDeviceBatterySeries(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
@@ -571,7 +611,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [{ column: "timestamp", timeBucket: bucket }],
@@ -601,12 +641,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async getDevicePayloadBreakdown(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
   ): Promise<Result<DevicePayloadBreakdownRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [
@@ -646,12 +687,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async getDeviceMacroBreakdown(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
   ): Promise<Result<DeviceMacroRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         explode: { column: "macros", alias: "macro" },
@@ -678,13 +720,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async getDeviceFirmwareHistory(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
   ): Promise<Result<DeviceFirmwareVersionRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "device_version" }],
@@ -714,6 +757,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   /** Most recent measurements in a range, newest first. */
   async getDeviceRecentMeasurements(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     limit: number,
@@ -731,7 +775,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         "longitude",
         "sample",
       ],
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       ordering: { column: "timestamp", direction: "DESC" },
       limit,
@@ -755,6 +799,18 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         sample: row[index.sample] ?? null,
       })),
     );
+  }
+
+  /** The device's rows of the given experiments, and those no experiment claims: the device's own. */
+  private deviceRows(thingName: string, experimentIds: string[]): string {
+    const builder = this.queryBuilder.query();
+    const device = builder.buildWhereClause([["client_id", thingName]]);
+    if (experimentIds.length === 0) {
+      return `${device} AND experiment_id IS NULL`;
+    }
+
+    const experiments = experimentIds.map((id) => builder.escapeValue(id)).join(", ");
+    return `${device} AND (experiment_id IS NULL OR experiment_id IN (${experiments}))`;
   }
 
   private toNumberOrNull(raw: string | null | undefined): number | null {

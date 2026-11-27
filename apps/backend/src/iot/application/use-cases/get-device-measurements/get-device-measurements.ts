@@ -1,10 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import type { DeviceMeasurement } from "@repo/api/domains/iot/iot.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
-import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
+import { DeviceDataSourceService } from "../../services/device-data-source.service";
 
 // Row-level evidence, not a data export: enough to see what is arriving.
 const RECENT_MEASUREMENT_LIMIT = 50;
@@ -14,18 +14,18 @@ const RECENT_MEASUREMENT_LIMIT = 50;
  */
 @Injectable()
 export class GetDeviceMeasurementsUseCase {
-  constructor(
-    @Inject(IOT_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
-  ) {}
+  constructor(private readonly dataSource: DeviceDataSourceService) {}
 
-  async execute(thingName: string, from: string, to: string): Promise<Result<DeviceMeasurement[]>> {
-    const result = await this.databricksPort.getDeviceRecentMeasurements(
-      thingName,
-      from,
-      to,
-      RECENT_MEASUREMENT_LIMIT,
-    );
+  async execute(
+    thingName: string,
+    experimentIds: string[],
+    from: string,
+    to: string,
+    source: DeviceDataSource,
+  ): Promise<Result<DeviceMeasurement[]>> {
+    const result = await this.dataSource
+      .readsFor(source)
+      .getDeviceRecentMeasurements(thingName, experimentIds, from, to, RECENT_MEASUREMENT_LIMIT);
     if (result.isFailure()) {
       return failure(result.error);
     }
