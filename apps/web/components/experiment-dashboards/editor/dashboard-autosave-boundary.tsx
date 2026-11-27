@@ -258,12 +258,13 @@ export function DashboardAutosaveBoundary({
       dismiss = toast({
         title: failureTitle,
         variant: "destructive",
-        description:
-          links.length > 0 ? <div className="mt-1 flex flex-wrap gap-1">{links}</div> : undefined,
         action: (
-          <ToastAction altText={retryLabel} onClick={retry}>
-            {retryLabel}
-          </ToastAction>
+          <div className="flex flex-wrap gap-1">
+            {links}
+            <ToastAction altText={retryLabel} onClick={retry}>
+              {retryLabel}
+            </ToastAction>
+          </div>
         ),
       }).dismiss;
     });
