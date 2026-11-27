@@ -126,6 +126,10 @@ export function useDashboardAutosave({
       void settledDashboard.then(clear, clear);
     };
   }, [dashboardId, experimentId, flushIfPending, queryClient, sessionId, userId]);
-  useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
+  useReportAutosaveStatus({
+    status: enabled ? autosave.status : null,
+    error: autosave.error,
+    hasUnsavedChanges: enabled && stringifyDashboard(values) !== autosave.savedKey,
+  });
   return { ...autosave, inFlightWidgetIds };
 }
