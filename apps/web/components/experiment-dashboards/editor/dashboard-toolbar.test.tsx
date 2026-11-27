@@ -110,14 +110,16 @@ describe("DashboardToolbar", () => {
     );
     expect(screen.getByTestId("table-widget-strip")).toBeInTheDocument();
   });
-  it("selects a same-size chart copy below the original and saves the compacted dashboard", async () => {
+  it.each(["kept", "cleared"])("saves a chart copy with selection %s", async (selection) => {
     const user = userEvent.setup();
     const original = createVisualization({ id: "source", name: "Growth" });
     const created = createVisualization({ id: "copy", name: "Growth (copy)" });
     server.mount(contract.experiments.getExperimentVisualization, { body: original });
     server.mount(contract.experiments.listExperimentVisualizations, { body: [original] });
+    const { promise, resolve } = Promise.withResolvers<void>();
     const create = server.mount(contract.experiments.createExperimentVisualization, {
       body: created,
+      unblock: promise,
     });
     const save = server.mount(contract.experiments.updateExperimentDashboard, {
       body: createExperimentDashboard({ id: "dash-1" }),
@@ -136,7 +138,9 @@ describe("DashboardToolbar", () => {
       return (
         <>
           <button onClick={() => selectWidget(chart.id)}>select chart</button>
+          <button onClick={() => selectWidget(null)}>clear selection</button>
           <output>{JSON.stringify({ widgets, selectedWidgetId })}</output>
+          {selectedWidgetId && <DashboardToolbar visible experimentId="exp-1" />}
         </>
       );
     }
@@ -144,15 +148,26 @@ describe("DashboardToolbar", () => {
       <AutosaveStatusProvider>
         <Harness initialWidgets={[chart, below, beside, belowBeside]}>
           <State />
-          <DashboardToolbar visible experimentId="exp-1" />
         </Harness>
       </AutosaveStatusProvider>,
     );
     await user.click(screen.getByRole("button", { name: "select chart" }));
     await user.click(screen.getByRole("button", { name: "editor.inspector.more" }));
     await user.click(screen.getByRole("menuitem", { name: "editor.inspector.duplicate" }));
-    await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent('"visualizationId":"copy"'),
+    try {
+      await waitFor(() => expect(create.called).toBe(true));
+      if (selection === "cleared") {
+        await user.click(screen.getByRole("button", { name: "clear selection" }));
+        expect(
+          screen.queryByRole("button", { name: "editor.inspector.more" }),
+        ).not.toBeInTheDocument();
+      }
+    } finally {
+      resolve();
+    }
+    await waitFor(
+      () => expect(screen.getByRole("status")).toHaveTextContent('"visualizationId":"copy"'),
+      { timeout: 2_000 },
     );
     const state = JSON.parse(screen.getByRole("status").textContent) as {
       widgets: ExperimentDashboardWidget[];
