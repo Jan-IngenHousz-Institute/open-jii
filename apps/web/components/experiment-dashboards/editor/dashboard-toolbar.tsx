@@ -74,7 +74,7 @@ const SECTIONS_BY_WIDGET: Record<ExperimentDashboardWidget["type"], InspectorSec
 // Default-exported for next/dynamic: strips drag-import Plotly.
 export default function DashboardToolbar({ visible, experimentId }: DashboardToolbarProps) {
   const { t } = useTranslation("experimentDashboards");
-  const { selectedWidgetId, selectWidget, chartDuplicatePending, runChartDuplicate } =
+  const { selectedWidgetId, selectWidget, chartDuplicatePending, runChartDuplicate, isMounted } =
     useDashboardEditor();
   const form = useFormContext<DashboardFormValues>();
   const widgets = useWatch({ control: form.control, name: "widgets" });
@@ -120,7 +120,7 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
     if (widget?.type !== "visualization" || !sourceChartId) return;
     const sourceWidgetId = widget.id;
     const created = await duplicate();
-    if (!created) return;
+    if (!created || !isMounted()) return;
     const current = form.getValues("widgets");
     const source = current.find((candidate) => candidate.id === sourceWidgetId);
     if (source?.type !== "visualization" || source.config.visualizationId !== sourceChartId) return;
