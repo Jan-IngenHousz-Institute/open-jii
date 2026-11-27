@@ -31,8 +31,8 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { AutosaveStatusProvider } from "../../shared/autosave/autosave-status-context";
 import type { DashboardFormValues } from "../dashboard-form-shell";
-import { DashboardAutosaveBoundary } from "./context/dashboard-copy-save-context";
 import { DashboardEditorProvider, useDashboardEditor } from "./context/dashboard-editor-context";
+import { DashboardAutosaveBoundary } from "./dashboard-autosave-boundary";
 import DashboardToolbar from "./dashboard-toolbar";
 import { useDeselectOnOutsideClick } from "./hooks/use-deselect-on-outside-click";
 
