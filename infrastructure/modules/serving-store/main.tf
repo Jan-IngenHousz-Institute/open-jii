@@ -45,15 +45,20 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
-  # The reader reads experiment data through the views, which name one experiment per read
-  # (packages/database/clickhouse/migrations), and from the base tables below, under its row
+  # The reader reads measurement data through the views, which name one experiment or devices per
+  # read (packages/database/clickhouse/migrations), and from the base tables below, under its row
   # policy. A reload replaces rows of the reloaded tables or removes ids from them.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
     "experiment_metadata_rows", "experiment_metadata_sheets",
+    "device_measurements", "device_experiment_ids", "device_newest_measurements", "device_lifecycle_events",
+    "device_last_activity", "device_events_reloaded",
   ]
-  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
+  reloaded_tables = [
+    "measurements", "measurements_by_device", "macro_results", "uploads", "device_events", "payload_schemas",
+    "contributor_ids", "client_ids",
+  ]
 
   # The tables under the experiment views, which a chart reads to name only the payload paths it
   # plots; through a view the store reads every payload whole. The reader's row policy on each keeps
@@ -95,7 +100,7 @@ locals {
       profile = "ingest"
       grants = concat(
         ["GRANT SELECT ON store.*"],
-        [for table in concat(local.reloaded_tables, ["feed_rejects"]) : "GRANT INSERT ON store.${table}"],
+        [for table in concat(local.reloaded_tables, ["feed_rejects", "completed_reloads"]) : "GRANT INSERT ON store.${table}"],
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
       )
       row_filters = {}

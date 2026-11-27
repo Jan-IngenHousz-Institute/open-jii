@@ -30,8 +30,11 @@ locals {
 
   # The gold version each feed sink starts at when its checkpoint is new. Gold keeps old versions'
   # files for seven days, so read these on the day the feed first ships, and again before any
-  # checkpoint reset (docs/runbooks/store-feed-stalled.md). Empty switches the feed off, and with it
-  # the feed's alerts.
+  # checkpoint reset (docs/runbooks/store-feed-stalled.md). With every one empty the feed and its
+  # alerts are off. Only device_events may be empty while others hold a version, which keeps its sink
+  # off. Any other empty one fails its own pipeline at start: Centrum for measurements, uploads and
+  # metadata_rows, the macro pipeline for macro_results. device_events is silver's lifecycle events,
+  # whose change feed starts at the version that switched it on.
   serving_store_feed_start_versions = {
     measurements  = "58430"
     uploads       = "44"
@@ -39,17 +42,18 @@ locals {
     # The sheets' copy needs no history: the first load owes every sheet to it once
     # (docs/runbooks/procedures/serving-store-reload.md).
     metadata_rows = "latest"
+    device_events = ""
   }
-  serving_store_feed = length(local.serving_store_feed_start_versions) > 0
+  serving_store_feed_settings = {
+    for table, version in local.serving_store_feed_start_versions :
+    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
+  }
+  serving_store_feed = length(local.serving_store_feed_settings) > 0
 
   # Only while the feed is on do the pipelines carry it: a settings change starts a pipeline
   # before a release has deployed the notebook.
   centrum_feed_notebooks = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/serving_store_feed"] : []
   macro_feed_notebooks   = local.serving_store_feed ? ["/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/serving_store_feed"] : []
-  serving_store_feed_settings = {
-    for table, version in local.serving_store_feed_start_versions :
-    "SERVING_STORE_FEED_START_${upper(table)}" => version if version != ""
-  }
 
   # Needs the centrum pipeline that drops health checks from raw_data to be running here.
   ingest_healthcheck_publishing = true

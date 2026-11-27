@@ -4,11 +4,14 @@
 of them in 105 minutes, or the store's feed timer has sent nothing for five minutes.** Until the
 feed moves again, the store holds data that stops at the stall.
 
-The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Centrum also sends the metadata sheets and their rows, from
-the backend's copy of the sheets rather than from gold. Each pipeline's sinks exist only while the feed is switched
-on. A timer on the store's instance counts the rows each table took every minute and reports zero
-when none arrived, so its silence is the timer or ClickHouse stopping, not a quiet night.
+The feed's sinks run inside the pipelines that write gold: measurements, uploads and silver's device
+lifecycle events in Centrum, macro results in the macro pipeline. Centrum also sends the metadata
+sheets and their rows, from the backend's copy of the sheets rather than from gold. Each sink
+exists only while the feed is switched on and its own start version is set. A timer on the store's
+instance counts the rows each table took every minute and reports zero when none arrived, so its
+silence is the timer or ClickHouse stopping, not a quiet night. Device events have no stall alert,
+since no heartbeat counts silver's events: a stall there shows only as `store-feed-latency` once
+events arrive again.
 
 The pipelines' logs are in `/Volumes/<catalog>/centrum/pipeline-logs/<centrum|macro>/<cluster id>/`,
 the driver's under `driver/` and the executors' under `executor/`. Every line the feed writes starts
@@ -77,12 +80,16 @@ Rows the store could not read never stall the feed: they go to `store.feed_rejec
 ## Switching the feed off and on
 
 The feed is on in an environment when `local.serving_store_feed_start_versions` in
-`infrastructure/env/<env>/locals.tf` holds a start version for each table, and off when it is empty;
-the pipelines carry the feed's notebook and settings only while it is on. Changing it and applying
-restarts both pipelines, and the feed's alerts go with the switch. When minutes matter more than a
-pull request, remove the `serving_store_feed` notebook from each pipeline's source code in the
-Databricks UI. That restarts the pipeline at once (3 to 7 minutes waiting for nodes) and the next
-apply reverts it, so follow up in code.
+`infrastructure/env/<env>/locals.tf` holds a start version for each table, and off when it holds
+none; the pipelines carry the feed's notebook and settings only while it is on. Only `device_events`
+may be left empty while others hold a version, which keeps its own sink off. Every other table needs
+its start version once the feed is on: one left empty fails the pipeline whose sink reads it at
+start, ingestion included, which is Centrum for `measurements`, `uploads` and `metadata_rows` and
+the macro pipeline for `macro_results`. Changing it and applying restarts both pipelines, and the
+feed's alerts go with the switch. When minutes matter more than a pull request, remove the
+`serving_store_feed` notebook from each pipeline's source code in the Databricks UI. That restarts
+the pipeline at once (3 to 7 minutes waiting for nodes) and the next apply reverts it, so follow up
+in code.
 
 A start version is the gold version a sink starts at when its checkpoint is new: the first time the
 feed runs in an environment, and after a checkpoint reset or a full refresh of the whole pipeline.
@@ -98,26 +105,36 @@ DESCRIBE HISTORY open_jii_<env>.centrum.experiment_raw_data LIMIT 1
 Repeat for `experiment_uploaded_data` and `experiment_macro_data`, and set `measurements`,
 `uploads` and `macro_results` in the map to those versions. `metadata_rows` starts at `latest`:
 the sheets' rows are filled by owing every sheet to the lakehouse once
-([reload](procedures/serving-store-reload.md#metadata-sheets)). After switching on, watch the first
-batches in each pipeline's driver log (`[serving store] measurements batch 0: ... inserted`). A
-first batch numbered 0 means the sink started at its start version, and rows gold gained while the
-feed was off stay missing until a [reload](procedures/serving-store-reload.md); a higher number
-means it resumed from its checkpoint. For `metadata_rows`, a batch 0 after the feed was off means
-the deletions made meanwhile were skipped, so [reset the sheets' sink](#resetting-the-sheets-sink)
-instead of only owing the sheets. In the first two hours the stall alert can fire once if gold's
-newest half hour gained rows before the start versions; it clears as soon as new rows arrive.
+([reload](procedures/serving-store-reload.md#metadata-sheets)). Device events read silver's
+`clean_device_lifecycle_events`, whose change feed starts at the version that switched it on, so set
+`device_events` in the map to that table's latest version, never one before it. Left empty, it keeps
+the device events sink off. After switching on, watch the first batches in each pipeline's driver
+log (`[serving store] measurements batch 0: ... inserted`). A first batch numbered 0 means the sink
+started at its start version, and rows gold gained while the feed was off stay missing until a
+[reload](procedures/serving-store-reload.md); a higher number means it resumed from its checkpoint.
+For `metadata_rows`, a batch 0 after the feed was off means the deletions made meanwhile were
+skipped, so [reset the sheets' sink](#resetting-the-sheets-sink) instead of only owing the sheets.
+In the first two hours the stall alert can fire once if gold's newest half hour gained rows before
+the start versions; it clears as soon as new rows arrive.
 
 ## Resetting a sink's checkpoint
 
 Needed when the feed was off for more than seven days, or when a gold table was recreated. Its
-versions then restart, so first empty the store table with `TRUNCATE TABLE store.<table>` as the
-admin, and `TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left
-behind, either keeps a reload from running. Empty a store table only with `TRUNCATE`: after a
-`DELETE` the store still holds the dedup tokens of the deleted rows' inserts, and drops those rows
-when the feed sends them again. `payload_schemas` holds every table's schemas, so once the feed has
-caught up, [reload](procedures/serving-store-reload.md) every table for `all`; that also brings back
-the rows gold gained before the new start version. This clears neither of the sheets' tables, so
-reset `metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead.
+versions then restart. For measurements or device events, first run
+`DELETE FROM store.completed_reloads WHERE table_name = '<table>'` as the admin and wait two
+minutes: the backend holds its readiness answer for 60 seconds after it asks, and a page read can
+take 30 seconds more. Device pages then read the warehouse until a new reload of the table passes,
+rather than an emptied table. Then empty the store table with `TRUNCATE TABLE store.<table>` as the
+admin, for measurements also `store.measurements_by_device`, which holds the same versions, and
+`TRUNCATE TABLE store.payload_schemas`, whose schemas carry the same versions. Left behind, either
+keeps a reload from running. Empty a store table only with `TRUNCATE`: after a `DELETE` the store
+still holds the dedup tokens of the deleted rows' inserts, and drops those rows when the feed sends
+them again. `payload_schemas` holds every table's schemas, so once the feed has caught up,
+[reload](procedures/serving-store-reload.md) every table for `all`; that also brings back the rows
+gold gained before the new start version. This clears neither of the sheets' tables, so reset
+`metadata_rows` as in [Resetting the sheets' sink](#resetting-the-sheets-sink) instead. For
+`device_events`, which has no payload schemas, empty only `store.device_events`, set its start
+version to silver's latest, and once the feed has caught up, reload `device_events` for `all`.
 
 1. Put the new start version in the map and apply. The pipelines restart; the old checkpoint still
    wins.

@@ -148,5 +148,24 @@ def store_migrations() -> list[str]:
 
 
 @pytest.fixture(scope="session")
+def store_migration_files() -> dict[str, list[str]]:
+    """Each of the serving store's migrations, by file name in the order the runner applies them, as
+    the statements it runs one at a time, a statement ending at a line that ends with a semicolon."""
+    files = {}
+    for migration in sorted(_STORE_MIGRATIONS.glob("*.sql")):
+        statements = []
+        lines: list[str] = []
+        for line in migration.read_text().splitlines():
+            lines.append(line)
+            if line.rstrip().endswith(";"):
+                statements.append("\n".join(lines).rstrip().removesuffix(";"))
+                lines = []
+        if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
+            statements.append("\n".join(lines))
+        files[migration.name] = statements
+    return files
+
+
+@pytest.fixture(scope="session")
 def store_module() -> ServingStoreModule:
     return ServingStoreModule.read()
