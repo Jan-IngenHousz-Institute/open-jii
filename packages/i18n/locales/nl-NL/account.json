@@ -36,6 +36,16 @@
       "institutionPlaceholder": "Vul je instelling of organisatie in",
       "emptyInstitution": "Geen instelling toegevoegd"
     },
+    "OrcidIdCard": {
+      "title": "ORCID iD",
+      "connectedDescription": "De iD van het ORCID-account dat aan je openJII-account is gekoppeld.",
+      "help": "Deze komt van je ORCID-inlog en kun je hier niet bewerken. Als je ORCID ontkoppelt, verdwijnt de iD.",
+      "manageInSecurity": "Beheren onder Beveiliging",
+      "notConnectedDescription": "Koppel je ORCID-account om je ORCID iD op je account te tonen.",
+      "notConnectedHelp": "ORCID koppel je onder Beveiliging, als manier om in te loggen.",
+      "connect": "ORCID koppelen",
+      "iconLabel": "ORCID iD"
+    },
     "NewsletterSubscriptionCard": {
       "title": "Nieuwsbrief",
       "description": "Beheer je abonnement op de openJII-communitynieuwsbrief.",
@@ -247,7 +257,7 @@
     "githubConnectedAs": "Gekoppeld als {{login}}",
     "githubConnected": "Gekoppeld",
     "notConnected": "Niet gekoppeld",
-    "orcidNotConnected": "Niet gekoppeld. Zodra je het koppelt, staat je iD op je profiel zodra dat beschikbaar is.",
+    "orcidNotConnected": "Niet gekoppeld. Zodra je het koppelt, staat je ORCID iD op je account.",
     "connect": "Koppelen",
     "disconnect": "Ontkoppelen",
     "onlyWayIn": "Dit is je enige manier om in te loggen. Voeg eerst een passkey toe of koppel {{provider}}.",
@@ -260,7 +270,7 @@
     "connectedGithubTitle": "GitHub gekoppeld.",
     "connectedGithubBody": "Je kunt nu met GitHub bij dit account inloggen.",
     "connectedOrcidTitle": "ORCID gekoppeld.",
-    "connectedOrcidBody": "Je iD staat op je profiel zodra dat beschikbaar is.",
+    "connectedOrcidBody": "Je ORCID iD staat nu op je account, onder Algemeen.",
     "nothingChanged": "Er is niets veranderd.",
     "connectCancelled": "Inloggen met {{provider}} is geannuleerd voordat het gekoppeld was.",
     "connectAlreadyLinked": "Dat {{provider}}-account is al gekoppeld aan een ander openJII-account.",

@@ -207,6 +207,23 @@ export class UserRepository {
   }
 
   /**
+   * The iD of the person's connected ORCID account, or null. Nothing stops a second ORCID
+   * account through a hand-made link request, so the oldest one answers.
+   */
+  async findOrcidId(userId: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ accountId: accounts.accountId })
+        .from(accounts)
+        .where(and(eq(accounts.userId, userId), eq(accounts.providerId, "orcid")))
+        .orderBy(asc(accounts.createdAt), asc(accounts.id))
+        .limit(1);
+
+      return rows[0]?.accountId ?? null;
+    });
+  }
+
+  /**
    * Pending, unexpired organization invitations for an address, compared lowercased, that
    * the user has no notification row for yet. Runs on every sign-in, so already-notified
    * invitations are filtered here rather than by a no-op insert each. Lives here rather

@@ -16,7 +16,7 @@ import {
   zUserIdPathParam,
   zUserMetadataWebhookPayload,
   zUserMetadataWebhookResponse,
-  zUserProfile,
+  zUserProfileResponse,
   zUserSearchResultList,
   zWhatsNewSeenResponse,
 } from "./user.schema";
@@ -37,7 +37,7 @@ export const userContract = {
   getUserProfile: oc
     .route({ method: "GET", path: "/api/v1/users/{id}/profile", successStatus: 200 })
     .input(zUserIdPathParam)
-    .output(zUserProfile.omit({ userId: true, email: true })),
+    .output(zUserProfileResponse),
   deleteUser: oc
     .route({ method: "DELETE", path: "/api/v1/users/{id}", successStatus: 204 })
     .input(zUserIdPathParam)

@@ -49,6 +49,8 @@ export type UserDto = z.infer<typeof selectUserSchema>;
 export type CreateUserProfileDto = z.infer<typeof createUserProfileSchema>;
 export type UserProfileDto = z.infer<typeof selectUserProfileSchema>;
 export type UserSearchResultDto = UserProfileDto & { matchedEmail: boolean };
+// `orcidId` is filled only when the reader is the profile's owner.
+export type UserProfileWithOrcidIdDto = UserProfileDto & { orcidId: string | null };
 export type UserProfileMetadata = z.infer<typeof userProfileMetadataSchema>;
 
 // Define search parameters type

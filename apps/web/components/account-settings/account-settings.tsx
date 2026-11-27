@@ -14,6 +14,7 @@ import { ErrorDisplay } from "../error-display";
 import { AccountIdentityCard } from "./account-identity-card";
 import { DangerZoneCard } from "./danger-zone/danger-zone-card";
 import { NewsletterSubscriptionCard } from "./newsletter-subscription-card";
+import { OrcidIdCard } from "./orcid-id-card";
 import { ProfileInformationCard } from "./profile-information-card";
 
 export function AccountSettings({ user }: { user: User | null }) {
@@ -54,6 +55,7 @@ export function AccountSettings({ user }: { user: User | null }) {
       initialValues={initialValues}
       userId={user?.id ?? ""}
       email={user?.email ?? null}
+      orcidId={userProfile?.orcidId ?? null}
     />
   );
 }
@@ -62,10 +64,12 @@ function AccountSettingsContent({
   initialValues,
   userId,
   email,
+  orcidId,
 }: {
   initialValues: CreateUserProfileBody;
   userId: string;
   email?: string | null;
+  orcidId: string | null;
 }) {
   const { t } = useTranslation("account");
   const [profile, setProfile] = useState(initialValues);
@@ -123,6 +127,7 @@ function AccountSettingsContent({
         isPending={isPending}
       />
       <ProfileInformationCard profile={profile} onSaveBio={saveBio} isPending={isPending} />
+      <OrcidIdCard orcidId={orcidId} />
       <NewsletterSubscriptionCard />
       <DangerZoneCard profile={profile} userId={userId} />
     </div>

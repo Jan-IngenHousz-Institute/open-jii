@@ -121,9 +121,9 @@ export class UserController {
   }
 
   @Implement(userContract.getUserProfile)
-  getUserProfile() {
+  getUserProfile(@Session() session: UserSession) {
     return implement(userContract.getUserProfile).handler(async ({ input }) => {
-      const result = await this.getUserProfileUseCase.execute(input.id);
+      const result = await this.getUserProfileUseCase.execute(input.id, session.user.id);
       if (result.isSuccess()) {
         return result.value;
       }

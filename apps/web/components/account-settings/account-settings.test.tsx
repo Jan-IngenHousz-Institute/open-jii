@@ -1,6 +1,13 @@
 import { createSession, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import {
+  createTestQueryClient,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -63,6 +70,12 @@ vi.mock("./profile-information-card", () => ({
         save-bio
       </button>
     </div>
+  ),
+}));
+
+vi.mock("./orcid-id-card", () => ({
+  OrcidIdCard: ({ orcidId }: { orcidId: string | null }) => (
+    <div data-testid="orcid-id-card">{orcidId ?? "none"}</div>
   ),
 }));
 
@@ -197,6 +210,34 @@ describe("<AccountSettings />", () => {
       firstName: "Ada",
       lastName: "Lovelace",
       bio: "Updated bio",
+    });
+  });
+
+  describe("ORCID iD card", () => {
+    it("receives the iD from the profile", async () => {
+      mountGetProfile({ body: { ...profile, orcidId: "0000-0002-1825-0097" } });
+      render(<AccountSettings user={signedInUser} />);
+
+      expect(await screen.findByTestId("orcid-id-card")).toHaveTextContent("0000-0002-1825-0097");
+    });
+
+    it("receives null when the profile has no iD", async () => {
+      mountGetProfile({ body: { ...profile, orcidId: null } });
+      render(<AccountSettings user={signedInUser} />);
+
+      expect(await screen.findByTestId("orcid-id-card")).toHaveTextContent("none");
+    });
+
+    it("follows the profile query when the iD goes away", async () => {
+      const queryClient = createTestQueryClient();
+      mountGetProfile({ body: { ...profile, orcidId: "0000-0002-1825-0097" } });
+      render(<AccountSettings user={signedInUser} />, { queryClient });
+      expect(await screen.findByTestId("orcid-id-card")).toHaveTextContent("0000-0002-1825-0097");
+
+      mountGetProfile({ body: { ...profile, orcidId: null } });
+      await queryClient.invalidateQueries();
+
+      await waitFor(() => expect(screen.getByTestId("orcid-id-card")).toHaveTextContent("none"));
     });
   });
 });

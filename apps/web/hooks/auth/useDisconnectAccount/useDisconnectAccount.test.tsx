@@ -1,6 +1,12 @@
+import { useGetUserProfile } from "@/hooks/profile/useGetUserProfile/useGetUserProfile";
+import { createUserProfile } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import { FRESH_FOR_MS } from "~/providers/QueryProvider";
 
+import { contract } from "@repo/api/contract";
 import { authClient } from "@repo/auth/client";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -28,6 +34,29 @@ describe("useDisconnectAccount", () => {
     expect(authClient.unlinkAccount).toHaveBeenCalledWith({ accountId: "row-1" });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["auth", "accounts"] });
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("refetches the profile, which a fresh query would otherwise keep showing", async () => {
+    vi.mocked(authClient.unlinkAccount).mockResolvedValue({
+      data: { status: true },
+      error: null,
+    });
+    const profile = { ...createUserProfile({ userId: "u-1" }), orcidId: "0000-0002-1825-0097" };
+    server.mount(contract.users.getUserProfile, { body: profile });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { staleTime: FRESH_FOR_MS, retry: false } },
+    });
+
+    const { result } = renderHook(
+      () => ({ profile: useGetUserProfile("u-1"), disconnect: useDisconnectAccount() }),
+      { queryClient },
+    );
+    await waitFor(() => expect(result.current.profile.data?.orcidId).toBe("0000-0002-1825-0097"));
+
+    server.mount(contract.users.getUserProfile, { body: { ...profile, orcidId: null } });
+    await result.current.disconnect.mutateAsync({ accountId: "row-1", provider: "orcid" });
+
+    await waitFor(() => expect(result.current.profile.data?.orcidId).toBeNull());
   });
 
   it("offers a fresh sign-in when the session is too old", async () => {

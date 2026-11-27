@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthClientError, unwrapAuthResult } from "@/hooks/organization/auth-organization-result";
+import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LINKED_ACCOUNTS_KEY } from "~/hooks/auth/useLinkedAccounts/useLinkedAccounts";
 import { useSignInAgainToast } from "~/hooks/auth/useSignInAgainToast/useSignInAgainToast";
@@ -25,6 +26,8 @@ export function useDisconnectAccount() {
       unwrapAuthResult(await authClient.unlinkAccount({ accountId: input.accountId })),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: LINKED_ACCOUNTS_KEY });
+      // General reads the ORCID iD from the profile.
+      await queryClient.invalidateQueries({ queryKey: orpc.users.getUserProfile.key() });
     },
     onError: (error, { provider }) => {
       const code = error instanceof AuthClientError ? error.code : undefined;

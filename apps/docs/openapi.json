@@ -38893,13 +38893,25 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "orcidId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "iD of the connected ORCID account; null when none is connected or when the profile is not the caller's own"
                     }
                   },
                   "required": [
                     "firstName",
                     "lastName",
                     "bio",
-                    "activated"
+                    "activated",
+                    "orcidId"
                   ]
                 }
               }

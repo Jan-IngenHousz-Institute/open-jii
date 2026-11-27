@@ -7,9 +7,10 @@ import type {
   UserSearchResultList,
   User,
   DeletionBlockersResponse,
+  UserProfileResponse,
 } from "@repo/api/domains/user/user.schema";
 import type { ErrorResponse } from "@repo/api/shared/errors";
-import { eq, users } from "@repo/database";
+import { accounts, eq, users } from "@repo/database";
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
@@ -425,16 +426,86 @@ describe("UserController", () => {
       const path = testApp.resolveOrpcPath(contract.users.getUserProfile, { id: userId });
 
       // Act
-      const res = await testApp
-        .get(path)
-        .withAuth(userId) // any authenticated user is fine due to your guard
-        .expect(StatusCodes.OK);
+      const res = await testApp.get(path).withAuth(userId).expect(StatusCodes.OK);
 
-      // Assert (shape only — adapt if your profile has more fields)
       expect(res.body).toMatchObject({
         firstName: "Ada",
         lastName: "Lovelace",
         bio: "Math enjoyer",
+      });
+    });
+
+    describe("the ORCID iD", () => {
+      const orcidId = "0000-0002-1825-0097";
+
+      const createProfile = (userId: string, body: Record<string, unknown> = {}) =>
+        testApp
+          .post(testApp.resolveOrpcPath(contract.users.createUserProfile))
+          .withAuth(userId)
+          .send({ firstName: "Amara", lastName: "Okafor", bio: "Plant physiologist", ...body })
+          .expect(StatusCodes.CREATED);
+
+      const connectOrcid = async (userId: string) => {
+        const [row] = await testApp.database
+          .insert(accounts)
+          .values({ userId, providerId: "orcid", accountId: orcidId })
+          .returning({ id: accounts.id });
+        return row.id;
+      };
+
+      const readProfile = async (profileId: string, viewerId: string) => {
+        const res: SuperTestResponse<UserProfileResponse> = await testApp
+          .get(testApp.resolveOrpcPath(contract.users.getUserProfile, { id: profileId }))
+          .withAuth(viewerId)
+          .expect(StatusCodes.OK);
+        return res.body;
+      };
+
+      it("reads the owner's exact iD", async () => {
+        await createProfile(testUserId);
+        await connectOrcid(testUserId);
+
+        expect((await readProfile(testUserId, testUserId)).orcidId).toBe(orcidId);
+      });
+
+      it("reads null for an owner without ORCID", async () => {
+        await createProfile(testUserId);
+
+        expect((await readProfile(testUserId, testUserId)).orcidId).toBeNull();
+      });
+
+      it("reads null for another signed-in person while the owner is connected", async () => {
+        await createProfile(testUserId);
+        await connectOrcid(testUserId);
+        const viewerId = await testApp.createTestUser({});
+
+        expect(await readProfile(testUserId, viewerId)).toMatchObject({
+          firstName: "Amara",
+          lastName: "Okafor",
+          bio: "Plant physiologist",
+          orcidId: null,
+        });
+      });
+
+      it("reads null once the ORCID account is removed", async () => {
+        await createProfile(testUserId);
+        const accountId = await connectOrcid(testUserId);
+        expect((await readProfile(testUserId, testUserId)).orcidId).toBe(orcidId);
+
+        await testApp.database.delete(accounts).where(eq(accounts.id, accountId));
+
+        expect((await readProfile(testUserId, testUserId)).orcidId).toBeNull();
+      });
+
+      it("stores nothing when a profile save carries an iD", async () => {
+        await createProfile(testUserId, { orcidId });
+
+        expect((await readProfile(testUserId, testUserId)).orcidId).toBeNull();
+        const rows = await testApp.database
+          .select({ id: accounts.id })
+          .from(accounts)
+          .where(eq(accounts.userId, testUserId));
+        expect(rows).toEqual([]);
       });
     });
 
