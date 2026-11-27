@@ -7,11 +7,14 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IOT_SERVING_STORE_PORT } from "../../../core/ports/serving-store.port";
+import type { ServingStorePort } from "../../../core/ports/serving-store.port";
 import { GetDeviceMeasurementsUseCase } from "./get-device-measurements";
 
 const THING = "AMBYTE_A";
 const FROM = "2026-08-13T00:00:00.000Z";
 const TO = "2026-08-13T12:00:00.000Z";
+const EXPERIMENT_IDS = ["33333333-3333-4333-8333-333333333333"];
 
 function row(timestamp: string | null) {
   return {
@@ -31,6 +34,7 @@ describe("GetDeviceMeasurementsUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetDeviceMeasurementsUseCase;
   let databricksAdapter: DatabricksAdapter;
+  let servingStore: ServingStorePort;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -40,6 +44,7 @@ describe("GetDeviceMeasurementsUseCase", () => {
     await testApp.beforeEach();
     useCase = testApp.module.get(GetDeviceMeasurementsUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
+    servingStore = testApp.module.get(IOT_SERVING_STORE_PORT);
   });
 
   afterEach(() => {
@@ -56,13 +61,13 @@ describe("GetDeviceMeasurementsUseCase", () => {
       .spyOn(databricksAdapter, "getDeviceRecentMeasurements")
       .mockResolvedValue(success([row("2026-08-13T09:00:00.000Z")]));
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value).toHaveLength(1);
     expect(result.value[0].timestamp).toBe("2026-08-13T09:00:00.000Z");
     // Row-level evidence, not an export: the read stays capped.
-    expect(getRecent).toHaveBeenCalledWith(THING, FROM, TO, 50);
+    expect(getRecent).toHaveBeenCalledWith(THING, EXPERIMENT_IDS, FROM, TO, 50);
   });
 
   it("drops a row whose timestamp did not parse, since it cannot be placed in time", async () => {
@@ -70,7 +75,7 @@ describe("GetDeviceMeasurementsUseCase", () => {
       success([row(null), row("2026-08-13T09:00:00.000Z")]),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, "warehouse");
 
     assertSuccess(result);
     expect(result.value).toHaveLength(1);
@@ -81,8 +86,28 @@ describe("GetDeviceMeasurementsUseCase", () => {
       failure(AppError.internal("warehouse down")),
     );
 
-    const result = await useCase.execute(THING, FROM, TO);
+    const result = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, "warehouse");
 
     assertFailure(result);
+  });
+
+  it("reads the store, not the warehouse, when the source is the store", async () => {
+    const rows = [row("2026-08-13T09:00:00.000Z"), row(null)];
+    const warehouse = vi
+      .spyOn(databricksAdapter, "getDeviceRecentMeasurements")
+      .mockResolvedValue(success(rows));
+    const store = vi
+      .spyOn(servingStore, "getDeviceRecentMeasurements")
+      .mockResolvedValue(success(rows));
+
+    const fromWarehouse = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, "warehouse");
+    const fromStore = await useCase.execute(THING, EXPERIMENT_IDS, FROM, TO, "store");
+
+    assertSuccess(fromWarehouse);
+    assertSuccess(fromStore);
+    expect(fromStore.value).toEqual(fromWarehouse.value);
+    expect(warehouse).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledOnce();
+    expect(store).toHaveBeenCalledWith(THING, EXPERIMENT_IDS, FROM, TO, 50);
   });
 });

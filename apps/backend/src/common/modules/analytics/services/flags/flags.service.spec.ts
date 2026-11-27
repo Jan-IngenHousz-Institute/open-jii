@@ -550,6 +550,76 @@ describe("FlagsService", () => {
     });
   });
 
+  describe("isFeatureFlagEnabledOrStale", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const flagKey = FEATURE_FLAGS.STORE_EXPERIMENT_READS;
+
+    it("answers a lapsed key from its held answer at once, and from the refresh after it", async () => {
+      let answerRefresh: (value: boolean) => void = () => undefined;
+      const mockClient = {
+        isFeatureEnabled: vi
+          .fn()
+          .mockResolvedValueOnce(true)
+          .mockImplementationOnce(
+            () =>
+              new Promise<boolean>((resolve) => {
+                answerRefresh = resolve;
+              }),
+          ),
+        on: vi.fn(() => () => undefined),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+      const read = () => service.isFeatureFlagEnabledOrStale(flagKey, "environment-reader");
+
+      // Nothing held yet, so the first read waits for PostHog's answer.
+      await expect(read()).resolves.toBe(true);
+      vi.setSystemTime(Date.now() + 60_001);
+
+      // The refresh is still waiting on PostHog; the read does not.
+      await expect(read()).resolves.toBe(true);
+      await expect(read()).resolves.toBe(true);
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(2);
+
+      // A caller that needs a fresh answer still waits for the refresh.
+      const fresh = service.isFeatureFlagEnabled(flagKey, "environment-reader");
+      answerRefresh(false);
+
+      await expect(fresh).resolves.toBe(false);
+      await expect(read()).resolves.toBe(false);
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps the held answer when the refresh fails", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi
+          .fn()
+          .mockResolvedValueOnce(true)
+          .mockRejectedValueOnce(new Error("timeout")),
+        on: vi.fn(() => () => undefined),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+      const read = () => service.isFeatureFlagEnabledOrStale(flagKey, "environment-reader");
+
+      await read();
+      vi.setSystemTime(Date.now() + 60_001);
+      await read();
+      await vi.waitFor(() => expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(2));
+
+      // The failure pauses evaluations and answers the default, but this key keeps its own.
+      await expect(read()).resolves.toBe(true);
+      expect(FEATURE_FLAG_DEFAULTS[flagKey]).toBe(false);
+    });
+  });
+
   describe("isInitialized", () => {
     it("should return a boolean value", () => {
       const result = service.isInitialized();

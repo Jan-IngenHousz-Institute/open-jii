@@ -16,6 +16,7 @@ import {
 } from "@repo/api/transforms/column-type-utils";
 import { isJoinMatchColumn, joinedColumns } from "@repo/api/transforms/joined-columns";
 
+import { keepsEveryRow } from "../../../common/modules/databricks/services/query-builder/expressions/aggregation";
 import type {
   AggregationSpec,
   FilterCondition,
@@ -28,8 +29,8 @@ import { ErrorCodes } from "../../../common/utils/error-codes";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { AnnotationMergerService } from "../../application/services/annotation-merger.service";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
+import { ExperimentDataSourceService } from "../../application/services/experiment-data-source.service";
 import { ExperimentStoreReadsService } from "../../application/services/experiment-store-reads.service";
-import { ExperimentWarehouseReadsService } from "../../application/services/experiment-warehouse-reads.service";
 import {
   MACRO_TABLE_CONFIG,
   PAGE_TOO_LARGE_MESSAGE,
@@ -54,6 +55,7 @@ import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 import type { ExperimentTableReads, TableQuery } from "../ports/experiment-table-reads.port";
+import { STORE_QUERY_TOO_LARGE } from "../ports/serving-store.port";
 
 type ReadMode =
   | "aggregation"
@@ -86,6 +88,19 @@ interface PageQuery {
   offset: number;
 }
 
+/** A chart's read of a table: what it reads of the table, its sort, and where it stops. */
+interface ChartRead {
+  experimentId: string;
+  tableName: string;
+  experiment: ExperimentDto;
+  join?: ExperimentDataJoin;
+  shape: TableShape;
+  read: ReadTrace;
+  query: Pick<ExperimentQueryParams, "columns" | "filters" | "aggregation">;
+  ordering?: QueryOrdering;
+  ceiling: number;
+}
+
 /** A read's filters and sort once an anonymized experiment's contributors are behind pseudonyms. */
 interface AnonymizedQuery {
   filters?: FilterCondition[];
@@ -98,6 +113,12 @@ interface AnonymizedQuery {
  * its LIMIT, which costs more than that on tables of a few hundred thousand rows.
  */
 const LATE_PAYLOAD_MIN_ROWS = 200_000;
+
+/** The codes a store read fails with for its size alone, which the warehouse can still answer. */
+const STORE_REFUSALS: ReadonlySet<string> = new Set([
+  STORE_QUERY_TOO_LARGE,
+  ErrorCodes.PAGE_TOO_LARGE,
+]);
 
 /** The row id every payload view carries. */
 const ROW_ID = "id";
@@ -141,7 +162,7 @@ export class ExperimentDataRepository {
     @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
     private readonly annotationMerger: AnnotationMergerService,
-    private readonly warehouseReads: ExperimentWarehouseReadsService,
+    private readonly dataSource: ExperimentDataSourceService,
     private readonly storeReads: ExperimentStoreReadsService,
   ) {}
 
@@ -156,8 +177,7 @@ export class ExperimentDataRepository {
    *   - none of the above: plain paginated read using the cached row count.
    *
    * The two one-page reads stop at `limit`, or `DATA_QUERY_MAX_LIMIT` when it is omitted, and
-   * say when they stopped short. They feed charts, which read from the warehouse until the store
-   * aggregates, whatever `source` says, as does a read joined to a second table.
+   * say when they stopped short.
    */
   async getTableData(params: {
     experimentId: string;
@@ -199,34 +219,33 @@ export class ExperimentDataRepository {
     const hasColumns = join !== undefined || (columns?.length ?? 0) > 0;
     const hasPaging = page !== undefined && pageSize !== undefined;
     const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
-    const isChartRead = hasAggregation || ((hasFilters || hasColumns) && !hasPaging);
-    const readSource = isChartRead || join !== undefined ? "warehouse" : source;
+    const isUnflaggedChart =
+      flagged === undefined && (hasAggregation || ((hasFilters || hasColumns) && !hasPaging));
 
-    // Charts, joined reads and tables the store does not hold read from the warehouse, and only
-    // the store's read builds the flag filter.
+    // Only the store's read builds the flag filter, so a read of a table, or a joined table, the
+    // store does not hold is refused before any metadata is read.
+    const readsInStore = (table: string) =>
+      source === "store" && this.dataSource.readsFor(source).readsTable(table);
     const isFlaggedReadUnsupported =
       flagged !== undefined &&
-      (readSource !== "store" || !this.sourceReads(readSource).readsTable(tableName));
+      (!readsInStore(tableName) || (join !== undefined && !readsInStore(join.tableName)));
     if (isFlaggedReadUnsupported) {
-      return failure(
-        AppError.badRequest(
-          "Rows can be filtered by flags only on a page of a table the serving store holds",
-          "FLAGGED_READ_UNSUPPORTED",
-        ),
-      );
+      return this.flaggedReadUnsupported();
     }
 
     const read: ReadTrace = {
       experimentId,
       tableName,
-      source: readSource,
+      source,
       mode: "page",
       startedAt: performance.now(),
       metadataMs: 0,
     };
 
     const [shapeResult, metadataMs] = await this.measure(() =>
-      this.tableShape(experimentId, tableName, readSource),
+      isUnflaggedChart || join !== undefined
+        ? this.listedShape(experimentId, tableName, source, join)
+        : this.tableShape(experimentId, tableName, source),
     );
     read.metadataMs = metadataMs;
 
@@ -235,11 +254,25 @@ export class ExperimentDataRepository {
     }
 
     let shape = shapeResult.value;
-    read.source = shape.source;
     if (join) {
       const joined = await this.joinedShape(experimentId, tableName, shape, join);
       if (joined.isFailure()) return joined;
       shape = joined.value;
+    }
+    const isStoreRawByDevice =
+      shape.source === "store" && this.groupsEveryRowByDevice(shape, aggregation);
+    const isPastCap = shape.metadata.rowCount > ceiling;
+    if (isStoreRawByDevice && isPastCap) {
+      const warehouse = await this.warehouseShape(experimentId, tableName, join);
+      if (warehouse.isFailure()) {
+        return warehouse;
+      }
+      shape = warehouse.value;
+    }
+    read.source = shape.source;
+    // A chart that moved to the warehouse above reads no flags there.
+    if (flagged !== undefined && shape.source !== "store") {
+      return this.flaggedReadUnsupported();
     }
     if (flagged !== undefined) {
       const flaggedRows = await this.storeReads.flaggedRows(
@@ -270,31 +303,16 @@ export class ExperimentDataRepository {
     // Aggregation summary: page/pageSize ignored.
     if (hasAggregation) {
       read.mode = "aggregation";
-      const queryResult = await this.buildQuery(experimentId, shape, {
-        columns,
-        filters: effectiveFilters,
-        aggregation,
-        ordering,
-        limit: ceiling + 1,
-      });
-      if (queryResult.isFailure()) {
-        return queryResult;
-      }
-      const countSubqueryResult = await this.buildQuery(experimentId, shape, {
-        filters: effectiveFilters,
-        aggregation,
-      });
-      if (countSubqueryResult.isFailure()) {
-        return countSubqueryResult;
-      }
-      return this.getFullTableData({
+      return this.chartRead({
+        experimentId,
         tableName,
         experiment,
+        join,
         shape,
-        query: queryResult.value,
-        countQuery: this.reads(shape).countQuery(countSubqueryResult.value),
-        ceiling,
         read,
+        query: { columns, filters: effectiveFilters, aggregation },
+        ordering,
+        ceiling,
       });
     }
 
@@ -355,30 +373,16 @@ export class ExperimentDataRepository {
 
       // Chart-style: all matching rows in one page.
       read.mode = "filtered-all";
-      const queryResult = await this.buildQuery(experimentId, shape, {
-        columns,
-        filters: effectiveFilters,
-        ordering,
-        limit: ceiling + 1,
-      });
-      if (queryResult.isFailure()) {
-        return queryResult;
-      }
-      const countSubqueryResult = await this.buildQuery(experimentId, shape, {
-        columns,
-        filters: effectiveFilters,
-      });
-      if (countSubqueryResult.isFailure()) {
-        return countSubqueryResult;
-      }
-      return this.getFullTableData({
+      return this.chartRead({
+        experimentId,
         tableName,
         experiment,
+        join,
         shape,
-        query: queryResult.value,
-        countQuery: this.reads(shape).countQuery(countSubqueryResult.value),
-        ceiling,
         read,
+        query: { columns, filters: effectiveFilters },
+        ordering,
+        ceiling,
       });
     }
 
@@ -430,7 +434,7 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, experiment, tableName, column, limit, offset, source } = params;
 
-    const shapeResult = await this.tableShape(experimentId, tableName, source);
+    const shapeResult = await this.listedShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
@@ -511,14 +515,14 @@ export class ExperimentDataRepository {
   }): Promise<Result<SchemaDataDto["columns"]>> {
     const { experimentId, tableName, join, source } = params;
     if (join) {
-      const shape = await this.tableShape(experimentId, tableName, "warehouse");
+      const shape = await this.listedShape(experimentId, tableName, source, join);
       if (shape.isFailure()) return shape;
       const joined = await this.joinedShape(experimentId, tableName, shape.value, join);
       if (joined.isFailure()) return joined;
       return success(joined.value.columns);
     }
 
-    const shapeResult = await this.tableShape(experimentId, tableName, source);
+    const shapeResult = await this.listedShape(experimentId, tableName, source);
     if (shapeResult.isFailure()) {
       return shapeResult;
     }
@@ -544,29 +548,80 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Schemas, row count and newest row of every table in an experiment, as one
-   * cached snapshot. Reads build their SQL from it and the tables listing
-   * serves it, so a count the page has seen is the count its next read uses.
-   * A failed lookup is thrown through the cache so it is never stored, and
-   * callers sharing the in-flight load all see the failure.
+   * Schemas, row count and newest row of every table in an experiment, as one snapshot cached on
+   * this task that reads build their SQL from. A failed lookup is never stored, and callers sharing
+   * the in-flight load all see the failure.
    */
   tablesMetadata(
     experimentId: string,
     source: ExperimentDataSource,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     return tryCatch(async () => {
-      const rows = await this.cachePort.tryCache(
-        `table-metadata:${source}:${experimentId}`,
-        async () => {
-          const result = await this.sourceReads(source).tablesMetadata(experimentId);
-          if (result.isFailure()) {
-            throw result.error;
-          }
-          return result.value;
-        },
+      const rows = await this.cachePort.tryCache(this.tablesMetadataKey(experimentId, source), () =>
+        this.loadTablesMetadata(experimentId, source),
       );
       return rows ?? [];
     });
+  }
+
+  /** The snapshot the tables listing serves, reloaded on each call if the source lists cheaply. */
+  listedTablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    if (!this.dataSource.readsFor(source).listsTablesAfresh) {
+      return this.tablesMetadata(experimentId, source);
+    }
+
+    return tryCatch(() =>
+      this.cachePort.refresh(this.tablesMetadataKey(experimentId, source), () =>
+        this.loadTablesMetadata(experimentId, source),
+      ),
+    );
+  }
+
+  /**
+   * The listing from a read that began after this call. A read already running may have taken its
+   * snapshot before the change the caller saw, so a call that joined one reads once more after it.
+   */
+  async listTablesAfresh(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    if (!this.dataSource.readsFor(source).listsTablesAfresh) {
+      return this.tablesMetadata(experimentId, source);
+    }
+
+    const key = this.tablesMetadataKey(experimentId, source);
+    const ownRead = { hasStarted: false };
+    const listing = await tryCatch(() =>
+      this.cachePort.refresh(key, () => {
+        ownRead.hasStarted = true;
+        return this.loadTablesMetadata(experimentId, source);
+      }),
+    );
+    if (ownRead.hasStarted) {
+      return listing;
+    }
+
+    return tryCatch(() =>
+      this.cachePort.refresh(key, () => this.loadTablesMetadata(experimentId, source)),
+    );
+  }
+
+  private tablesMetadataKey(experimentId: string, source: ExperimentDataSource): string {
+    return `table-metadata:${source}:${experimentId}`;
+  }
+
+  private async loadTablesMetadata(
+    experimentId: string,
+    source: ExperimentDataSource,
+  ): Promise<ExperimentTableMetadata[]> {
+    const result = await this.dataSource.readsFor(source).tablesMetadata(experimentId);
+    if (result.isFailure()) {
+      throw result.error;
+    }
+    return result.value;
   }
 
   private async tableMetadata(
@@ -726,7 +781,7 @@ export class ExperimentDataRepository {
     tableName: string,
     requestedSource: ExperimentDataSource,
   ): Promise<Result<TableShape>> {
-    const source = this.sourceReads(requestedSource).readsTable(tableName)
+    const source = this.dataSource.readsFor(requestedSource).readsTable(tableName)
       ? requestedSource
       : "warehouse";
     const metadataResult = await this.tableMetadata(experimentId, tableName, source);
@@ -848,6 +903,32 @@ export class ExperimentDataRepository {
     });
   }
 
+  /**
+   * A table's shape where the store has not received it, or the table it matches by time, such as
+   * an upload the feed has not delivered: from the warehouse rather than no table. A chart, a joined
+   * read, a column lookup and a column's distinct values read so; a page of one table keeps to its
+   * source's listing.
+   */
+  private async listedShape(
+    experimentId: string,
+    tableName: string,
+    source: ExperimentDataSource,
+    join?: ExperimentDataJoin,
+  ): Promise<Result<TableShape>> {
+    if (source !== "store") {
+      return this.tableShape(experimentId, tableName, source);
+    }
+    const listing = await this.tablesMetadata(experimentId, source);
+    if (listing.isFailure()) {
+      return listing;
+    }
+
+    const listed = new Set(listing.value.map(({ identifier }) => identifier));
+    const tables = join === undefined ? [tableName] : [tableName, join.tableName];
+    const isEveryTableListed = tables.every((table) => listed.has(table));
+    return this.tableShape(experimentId, tableName, isEveryTableListed ? source : "warehouse");
+  }
+
   /** A view's columns change only when it is redefined, so they come from the long-lived cache. */
   private viewColumns(
     source: ExperimentDataSource,
@@ -860,7 +941,7 @@ export class ExperimentDataRepository {
       const columns = await this.schemaCache.tryCache(
         `view-columns:${source}:${view}`,
         async () => {
-          const result = await this.sourceReads(source).viewColumns(tableType, identifier);
+          const result = await this.dataSource.readsFor(source).viewColumns(tableType, identifier);
           if (result.isFailure()) {
             throw result.error;
           }
@@ -879,18 +960,24 @@ export class ExperimentDataRepository {
   ): Promise<Result<TableShape & { columns: SchemaDataDto["columns"] }>> {
     if (join.tableName === tableName)
       return failure(AppError.badRequest("Choose a different second table"));
-    const secondary = await this.tableShape(experimentId, join.tableName, "warehouse");
+    // Both tables read from one source; a table the store lacks takes the join to the warehouse.
+    const secondary = await this.tableShape(experimentId, join.tableName, shape.source);
     if (secondary.isFailure()) return secondary;
+    if (secondary.value.source !== shape.source) {
+      const warehouse = await this.tableShape(experimentId, tableName, "warehouse");
+      if (warehouse.isFailure()) return warehouse;
+      return this.joinedShape(experimentId, tableName, warehouse.value, join);
+    }
     const primaryColumns = await this.getTableColumns({
       experimentId,
       tableName,
-      source: "warehouse",
+      source: shape.source,
     });
     if (primaryColumns.isFailure()) return primaryColumns;
     const secondaryColumns = await this.getTableColumns({
       experimentId,
       tableName: join.tableName,
-      source: "warehouse",
+      source: shape.source,
     });
     if (secondaryColumns.isFailure()) return secondaryColumns;
     const left = primaryColumns.value;
@@ -943,12 +1030,104 @@ export class ExperimentDataRepository {
     });
   }
 
-  private reads(shape: TableShape): ExperimentTableReads {
-    return this.sourceReads(shape.source);
+  /**
+   * Whether a chart groups by a whole device, its own table's or a matched table's, and a raw x,
+   * which leaves about one group per row. The store takes past 10 s on that over tens of millions
+   * of rows, so a table past the cap reads it from the warehouse.
+   */
+  private groupsEveryRowByDevice(shape: TableShape, aggregation?: AggregationSpec): boolean {
+    const isDevice = (column: string) => {
+      if (column === "device") {
+        return shape.metadata.tableType !== "upload";
+      }
+      const matched = shape.columns?.find(({ name }) => name === column)?.sourceTable;
+      return matched?.columnName === "device" && shape.join?.secondary.tableType !== "upload";
+    };
+    const groups = aggregation?.groupBy ?? [];
+    const hasDevice = groups.some(({ column }) => isDevice(column));
+    const hasRawX = groups.some(
+      ({ column, timeBucket, widthBucket }) =>
+        !isDevice(column) && timeBucket === undefined && widthBucket === undefined,
+    );
+    return hasDevice && hasRawX;
   }
 
-  private sourceReads(source: ExperimentDataSource): ExperimentTableReads {
-    return source === "store" ? this.storeReads : this.warehouseReads;
+  /**
+   * A chart's rows, from the warehouse where its statement or its count would pass the store's
+   * limit on a query's size, as one that lists thousands of registered devices can, or where its
+   * rows would pass the store's guard on a result, which the store holds whole before it sends any
+   * row. The warehouse sends the rows that fit its own limit and counts the rest.
+   */
+  private async chartRead(chart: ChartRead): Promise<Result<TableDataDto[]>> {
+    const result = await this.chartData(chart);
+    // Only the store reads flags, so a flagged chart keeps the store's refusal.
+    const isTooLargeForStore =
+      result.isFailure() &&
+      chart.shape.source === "store" &&
+      chart.shape.flagged === undefined &&
+      STORE_REFUSALS.has(result.error.code);
+    if (!isTooLargeForStore) {
+      return result;
+    }
+
+    const warehouse = await this.warehouseShape(chart.experimentId, chart.tableName, chart.join);
+    if (warehouse.isFailure()) {
+      return warehouse;
+    }
+    chart.read.source = warehouse.value.source;
+    return this.chartData({ ...chart, shape: warehouse.value });
+  }
+
+  /** The rows up to the ceiling, and where they pass it their count, which reads the same rows. */
+  private async chartData({
+    experimentId,
+    tableName,
+    experiment,
+    shape,
+    read,
+    query,
+    ordering,
+    ceiling,
+  }: ChartRead): Promise<Result<TableDataDto[]>> {
+    const queryResult = await this.buildQuery(experimentId, shape, {
+      ...query,
+      ordering,
+      limit: ceiling + 1,
+      isChartRead: true,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    // Windows alone keep every row they read, and a running total cannot run without the sort a
+    // count leaves out, so the rows it reads are counted instead.
+    const isRowCount = query.aggregation !== undefined && keepsEveryRow(query.aggregation);
+    const counted = isRowCount ? { columns: query.columns, filters: query.filters } : query;
+    return this.getFullTableData({
+      tableName,
+      experiment,
+      shape,
+      query: queryResult.value,
+      countQuery: () => this.countQuery(experimentId, shape, { ...counted, isChartRead: true }),
+      ceiling,
+      read,
+    });
+  }
+
+  private async warehouseShape(
+    experimentId: string,
+    tableName: string,
+    join?: ExperimentDataJoin,
+  ): Promise<Result<TableShape>> {
+    const shape = await this.tableShape(experimentId, tableName, "warehouse");
+    if (shape.isFailure() || join === undefined) {
+      return shape;
+    }
+    return this.joinedShape(experimentId, tableName, shape.value, join);
+  }
+
+  private reads(shape: TableShape): ExperimentTableReads {
+    return this.dataSource.readsFor(shape.source);
   }
 
   private async buildQuery(
@@ -956,10 +1135,17 @@ export class ExperimentDataRepository {
     shape: TableShape,
     options: Pick<
       ExperimentQueryParams,
-      "columns" | "filters" | "aggregation" | "distinct" | "ordering" | "limit" | "offset"
+      | "columns"
+      | "filters"
+      | "aggregation"
+      | "distinct"
+      | "ordering"
+      | "limit"
+      | "offset"
+      | "isChartRead"
     > = {},
   ): Promise<Result<TableQuery>> {
-    const { filters, aggregation, distinct, ordering, limit, offset } = options;
+    const { filters, aggregation, distinct, ordering, limit, offset, isChartRead } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
     // Only a read of rows is merged, so only it needs the phone's annotations beside the column.
     const readsRows = !distinct && aggregation === undefined;
@@ -1028,6 +1214,7 @@ export class ExperimentDataRepository {
       limit,
       offset,
       flagged: shape.flagged,
+      isChartRead,
     });
   }
 
@@ -1088,14 +1275,14 @@ export class ExperimentDataRepository {
   /**
    * One page of every matching row, up to `ceiling`. The query asks for one row more than the
    * ceiling, so an extra row means the read stopped short, as does a result the warehouse cut at
-   * its byte limit. Only then is the full count read.
+   * its byte limit. Only then is the full count built and read.
    */
   private async getFullTableData(params: {
     tableName: string;
     experiment: ExperimentDto;
     shape: TableShape;
     query: TableQuery;
-    countQuery: TableQuery;
+    countQuery: () => Promise<Result<TableQuery>>;
     ceiling: number;
     read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
@@ -1152,12 +1339,25 @@ export class ExperimentDataRepository {
     return success(this.reads(shape).deviceLabelsQuery(projected.value, limit + 1, offset));
   }
 
+  private async countQuery(
+    experimentId: string,
+    shape: TableShape,
+    options: Pick<ExperimentQueryParams, "columns" | "filters" | "aggregation" | "isChartRead">,
+  ): Promise<Result<TableQuery>> {
+    const subquery = await this.buildQuery(experimentId, shape, options);
+    return subquery.isFailure() ? subquery : success(this.reads(shape).countQuery(subquery.value));
+  }
+
   private async countRows(
     shape: TableShape,
-    countQuery: TableQuery,
+    countQuery: () => Promise<Result<TableQuery>>,
     read: ReadTrace,
   ): Promise<Result<number>> {
-    const [countResult, countMs] = await this.measure(() => this.executeQuery(shape, countQuery));
+    const query = await countQuery();
+    if (query.isFailure()) {
+      return query;
+    }
+    const [countResult, countMs] = await this.measure(() => this.executeQuery(shape, query.value));
     read.countMs = countMs;
     if (countResult.isFailure()) {
       return countResult;
@@ -1271,6 +1471,15 @@ export class ExperimentDataRepository {
   /** A page the warehouse cut at its byte limit would come back short, and paging on would skip rows. */
   private pageTooLarge(): Result<TableDataDto[]> {
     return failure(AppError.badRequest(PAGE_TOO_LARGE_MESSAGE, ErrorCodes.PAGE_TOO_LARGE));
+  }
+
+  private flaggedReadUnsupported(): Result<TableDataDto[]> {
+    return failure(
+      AppError.badRequest(
+        "Rows can be filtered by flags only in a read the serving store answers",
+        "FLAGGED_READ_UNSUPPORTED",
+      ),
+    );
   }
 
   private tablePage(params: {

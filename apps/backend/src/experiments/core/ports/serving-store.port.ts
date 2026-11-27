@@ -8,6 +8,12 @@ import type {
 
 export const SERVING_STORE_PORT = Symbol("SERVING_STORE_PORT");
 
+/**
+ * The code a chart's read fails with when its statement or its count would pass the store's limit
+ * on a query's size; its reader answers it from the warehouse instead.
+ */
+export const STORE_QUERY_TOO_LARGE = "STORE_QUERY_TOO_LARGE";
+
 export interface StoreQueryColumn {
   name: string;
   type: string;
@@ -21,11 +27,18 @@ export interface StoreQueryColumn {
    * `key`, or the whole payload without one. The first column read from a text carries it.
    */
   text?: { column: string; key?: string };
+  /** An as-of read's second device, which comes as its pair's JSON text, or null without a match. */
+  isPairText?: boolean;
 }
 
 export interface StoreQuery {
   sql: string;
   columns: StoreQueryColumn[];
+  /**
+   * The experiment a read of the tables sends to their row policy; a read of views alone sends
+   * none.
+   */
+  experiment?: string;
 }
 
 /** A metadata sheet as the store holds it, from the lakehouse's copy of the sheets. */
@@ -39,13 +52,26 @@ export interface StoreMetadataSheet {
   version: string;
 }
 
-export interface StoreQueryParams extends Omit<ExperimentQueryParams, "aggregation" | "join"> {
+/** What moves when an experiment's tables listing may have, read without counting its rows. */
+export interface StoreChangeMark {
+  /** The time the mark counts arrivals from, which the next mark asks from to compare with this. */
+  since: string;
+  /** Moves with every row that arrives from then on, and with the payload schemas and sheets. */
+  revision: string;
+  /**
+   * The same mark counted from a later start, trailing the store's clock by more than any insert
+   * takes, read with this one so a caller can move its start without reading the move as a change.
+   */
+  next: { since: string; revision: string };
+}
+
+export interface StoreQueryParams extends ExperimentQueryParams {
   /** Ids in the order a sort on a contributor's name or a device's registry id wants, since names
    *  stay out. Ids that tie share a group, so the row id orders their rows as the warehouse does. */
   orderByIds?: string[][];
-  /** Each client id whose device has a serial number to show, with it, for the labels a read
-   *  filters, sorts or lists by. */
-  deviceSerials?: [string, string][];
+  /** Each registered device's client id with the serial number its label shows, or none, for the
+   *  labels a read filters, sorts, lists or groups by. */
+  deviceSerials?: [string, string | null][];
   /** The experiment's metadata sheets, oldest first, so a later one wins a key both hold. */
   metadataSheets?: StoreMetadataSheet[];
 }
@@ -59,6 +85,15 @@ export interface ServingStorePort {
   holdsTable(tableName: string): boolean;
 
   getExperimentTableMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>>;
+
+  /**
+   * The experiment's change mark, counting the rows that arrived from `since`, a start an earlier
+   * mark gave, or from its next start without one.
+   */
+  getExperimentChangeMark(
+    experimentId: string,
+    since: string | null,
+  ): Promise<Result<StoreChangeMark>>;
 
   /** Whether the experiment's metadata sheets match the table's rows; an upload's they never do. */
   takesCustomMetadata(tableType: ExperimentTableType, tableName: string): boolean;

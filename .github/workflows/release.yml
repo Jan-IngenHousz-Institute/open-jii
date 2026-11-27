@@ -32,11 +32,6 @@ jobs:
           fetch-depth: 0 # Full history needed for semantic versioning
           persist-credentials: false
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "24"
-
       - name: Detect Affected Packages
         id: detect
         uses: ./.github/actions/detect-affected-packages
@@ -68,7 +63,7 @@ jobs:
       # apps/data builds through uv; only provision it when that app is affected.
       - name: Setup uv
         if: contains(fromJSON(needs.detect.outputs.affected_apps), 'data')
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
         with:
           enable-cache: true
           # Only apps/data uses uv. Without this, the cache key scan walks the

@@ -16,14 +16,15 @@ import requests
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 
-from openjii.serving_store.tables import FLOAT64_COLUMNS
+from openjii.serving_store.tables import FLOAT64_COLUMNS, SENSOR_READINGS, SETTLES, Settle
 
 # One chunk is one insert block, so it lands whole or not at all.
 CHUNK_ROWS = 5_000
 CHUNK_BYTES = 8_000_000
 
-# Partitions hashed by line and sorted by partition time, then line: a replay builds the same chunks,
-# and so the same dedup tokens, on any cluster size, and a chunk's insert writes few monthly parts.
+# Partitions hashed by line and sorted by month, experiment, time, then line: a replay builds the same
+# chunks, and so the same dedup tokens, on any cluster size, a chunk's insert writes few monthly parts,
+# and its settle looks up one stretch of an experiment rather than a slice of every one.
 WRITE_PARTITIONS = 4
 
 # Waits between an executor's attempts at an insert the store answered with an error. After the last,
@@ -42,6 +43,8 @@ _UNKNOWN_FIELD = "Unknown field found"
 # been silent for a minute is not about to answer.
 INSERT_TIMEOUT = (5, 60)
 CHECK_TIMEOUT = (5, 10)
+# The longest the store runs a settle, half of INSERT_TIMEOUT's wait for an answer.
+SETTLE_SECONDS = 30
 # A reload's delete waits until every part holding the table's older rows is marked.
 QUERY_TIMEOUT = (5, 3600)
 
@@ -60,25 +63,35 @@ SCHEMAS_NOT_SENT = 0
 _REJECT_ROW_CHARS = 16_000_000
 
 
-# The store's Float64 columns, which each line holds first. Written as Spark writes them (51.986383,
-# 1.0E-7), the store reads about one value in a hundred onto the neighbouring double; written as 17
-# significant digits without an exponent, it reads every one exactly. Measured on 25.8 from 1e-13 up,
-# where precise_float_parsing changes nothing for an insert. Its JSON columns read numbers exactly,
-# so only the line's leading fields are rewritten, never a payload's own.
-_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":(-?\d[\d.eE+-]*),')
+# The store's Float64 columns, which each line holds first, then its arrays of them. Written as Spark
+# writes them (51.986383, 1.0E-7), the store reads about one value in a hundred onto the neighbouring
+# double, in an array too; written as 17 significant digits without an exponent, it reads every one
+# exactly. Measured on 25.8 from 1e-13 up, where precise_float_parsing changes nothing for an insert.
+# Its JSON columns read numbers exactly, so only the line's leading fields are rewritten, never a
+# payload's own. Spark writes NaN and Infinity as strings, which stay as they are.
+_NUMBER = re.compile(r"-?\d[\d.eE+-]*")
+_LEADING_FLOAT64 = re.compile(rf'"({"|".join(FLOAT64_COLUMNS)})":({_NUMBER.pattern}|"(?:NaN|-?Infinity)"),')
+_LEADING_FLOAT64_ARRAY = re.compile(rf'"({"|".join(SENSOR_READINGS)})":\[([^\]]*)\],')
 
 
 def exact_doubles(line: str) -> str:
-    """The line with the Float64 fields it starts with written so the store reads them exactly."""
+    """The line with the Float64 fields it starts with, and the arrays of them that follow, written
+    so the store reads them exactly."""
     position = 1
     fields = []
     while match := _LEADING_FLOAT64.match(line, position):
         fields.append(f'"{match[1]}":{_exact_digits(match[2])},')
         position = match.end()
+    while match := _LEADING_FLOAT64_ARRAY.match(line, position):
+        values = ",".join(_exact_digits(value) for value in match[2].split(",")) if match[2] else ""
+        fields.append(f'"{match[1]}":[{values}],')
+        position = match.end()
     return "{" + "".join(fields) + line[position:] if fields else line
 
 
 def _exact_digits(text: str) -> str:
+    if not _NUMBER.fullmatch(text):
+        return text
     value = float(text)
     if not 1e-13 <= abs(value) < 1e15:
         return text
@@ -175,9 +188,39 @@ class StoreWriter:
         """Runs one statement as this user, with each ``{name:Type}`` in it bound to the parameter of
         that name, and returns the rows it answers with."""
         params = {"query": statement, **{f"param_{name}": str(value) for name, value in parameters.items()}}
+        response = self._post(params, timeout=QUERY_TIMEOUT)
+        return [json.loads(line) for line in response.text.splitlines()]
+
+    def _settle(self, settle: Settle, chunk: list[str]) -> None:
+        """Runs ``settle`` over the chunk's lines, sent with it as the table ``chunk``, stamped with
+        the store's time read before it, so the stamp never follows the settle's own read."""
+        stamp = self._post({"query": "SELECT toUnixTimestamp64Nano(now64(9))"}, timeout=CHECK_TIMEOUT)
+        params = {
+            "query": settle.statement.format(database=self.database),
+            "param_stamp": stamp.text.strip(),
+            # The store ends a settle well before the writer stops waiting, so a settle the writer
+            # gave up on never lands after its retry, or after a reload that followed it.
+            "max_execution_time": str(SETTLE_SECONDS),
+            "chunk_structure": settle.structure,
+            "chunk_format": "JSONEachRow",
+            # The lines hold every column, and the settle reads only its own.
+            "input_format_skip_unknown_fields": "1",
+            # A settle repeats an earlier one's marks when a copy wins again, and needs them written.
+            "insert_deduplicate": "0",
+            # As the chunk's own insert: its captures can span any number of months.
+            "throw_on_max_partitions_per_insert_block": "0",
+        }
+        self._post(params, timeout=INSERT_TIMEOUT, files={"chunk": ("chunk", "\n".join(chunk).encode())})
+
+    def _post(
+        self,
+        params: dict[str, str],
+        timeout: tuple[int, int],
+        files: dict[str, tuple[str, bytes]] | None = None,
+    ) -> requests.Response:
         try:
             response = self.session.post(
-                self.url, params=params, headers=self._headers, timeout=QUERY_TIMEOUT
+                self.url, params=params, files=files, headers=self._headers, timeout=timeout
             )
         except requests.RequestException as error:
             raise StoreUnavailable(f"the store did not answer: {type(error).__name__}: {error}") from error
@@ -187,7 +230,7 @@ class StoreWriter:
             raise StoreUnavailable(
                 f"the store answered HTTP {response.status_code}, code {code}: {response.text[:300]}"
             )
-        return [json.loads(line) for line in response.text.splitlines()]
+        return response
 
     def write(self, lines: DataFrame, table: str) -> Written:
         """Inserts ``lines`` (one JSON line per row in column ``line``, with the time the store
@@ -207,7 +250,12 @@ class StoreWriter:
         # Only the lines reach Python: pandas cannot hold the store's earliest and latest times.
         partitioned = (
             lines.repartition(WRITE_PARTITIONS, F.xxhash64("line"))
-            .sortWithinPartitions("partition_time", "line")
+            .sortWithinPartitions(
+                F.date_trunc("month", "partition_time"),
+                F.get_json_object("line", "$.experiment_id"),
+                "partition_time",
+                "line",
+            )
             .select("line")
         )
         [(inserted, rejected, unfinished)] = (
@@ -219,7 +267,8 @@ class StoreWriter:
 
     def insert(self, table: str, lines: Iterable[str]) -> Written:
         """Inserts ``lines`` chunk by chunk as they arrive, so a task holds one chunk however large
-        its share of the batch."""
+        its share of the batch. A chunk whose settle did not run is handed back with the rest: sent
+        again, its insert is dropped and its settle runs."""
         # Exact digits last: storable rewrites a line's numbers in their shortest form.
         chunks = self._chunks(exact_doubles(storable(line)) for line in lines)
         written = Written()
@@ -247,7 +296,7 @@ class StoreWriter:
 
     def _insert_chunk(self, table: str, chunk: list[str]) -> Written:
         """Inserts the chunk, and every row of it the store cannot read into ``feed_rejects`` with
-        one insert."""
+        one insert, then runs the table's settle over the rows that landed."""
         rejects: list[tuple[str, StoreRefusedData]] = []
         inserted = self._insert_or_split(table, chunk, rejects)
         if rejects:
@@ -256,6 +305,12 @@ class StoreWriter:
                 f"[serving store] The store refused {len(rejects)} rows of {table}; they are in feed_rejects",
                 flush=True,
             )
+
+        settle = SETTLES.get(table)
+        if settle is not None and inserted:
+            # A refused row could fail the settle's own read of the lines, for good.
+            refused = {line for line, _ in rejects}
+            self._settle(settle, [line for line in chunk if line not in refused])
         return Written(inserted=inserted, rejected=len(rejects))
 
     def _insert_or_split(
@@ -284,6 +339,8 @@ class StoreWriter:
             "query": f"INSERT INTO {self.database}.{table} FORMAT JSONEachRow",
             # A replayed batch sends the same bodies, and the table drops a token it has seen.
             "insert_deduplication_token": hashlib.sha256(body).hexdigest(),
+            # Otherwise a materialized view still copies a chunk its source table dropped.
+            "deduplicate_blocks_in_dependent_materialized_views": "1",
             # Rows from many months in one insert are normal after an outage.
             "throw_on_max_partitions_per_insert_block": "0",
             # A field the table lacks is refused rather than dropped, and holds the feed back until a

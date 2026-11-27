@@ -10,6 +10,7 @@ import {
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { AggregationSpec } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
+import { ErrorCodes } from "../../../common/utils/error-codes";
 import {
   AppError,
   success,
@@ -17,6 +18,7 @@ import {
   assertSuccess,
   assertFailure,
 } from "../../../common/utils/fp-utils";
+import type { Result } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { AnnotationRecord } from "../models/experiment-data-annotation.model";
@@ -30,7 +32,7 @@ import { CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
-import { SERVING_STORE_PORT } from "../ports/serving-store.port";
+import { SERVING_STORE_PORT, STORE_QUERY_TOO_LARGE } from "../ports/serving-store.port";
 import type { ServingStorePort } from "../ports/serving-store.port";
 import { ExperimentAnnotationsRepository } from "./experiment-annotations.repository";
 import { ExperimentDataRepository } from "./experiment-data.repository";
@@ -1033,6 +1035,7 @@ describe("ExperimentDataRepository", () => {
         ordering: undefined,
         limit: DATA_QUERY_MAX_LIMIT + 1,
         offset: undefined,
+        isChartRead: true,
       });
     });
 
@@ -2572,6 +2575,7 @@ describe("ExperimentDataRepository", () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(empty));
       const result = await repository.getDistinctColumnValues({
         ...params,
+        source: WAREHOUSE,
         tableName: "raw_data",
         column: "q",
         limit: 5,
@@ -3160,16 +3164,23 @@ describe("ExperimentDataRepository", () => {
       }
     });
 
-    it("refuses a flagged read the warehouse would answer before reading any metadata: a chart, or a table the store lacks", async () => {
+    it("refuses a flagged read the warehouse would answer before reading any metadata: a table, or a joined table, the store lacks", async () => {
       const metadata = vi
         .spyOn(databricksPort, "getExperimentTableMetadata")
         .mockResolvedValue(failure(AppError.internal("Warehouse asleep")));
       const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
 
-      const chart = await repository.getTableData({
+      const joinedToDevices = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
+        join: {
+          tableName: "device",
+          matchColumn: "device_id",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
         aggregation: { groupBy: [{ column: "plot" }] },
         flagged: "only",
         source: "store",
@@ -3193,7 +3204,7 @@ describe("ExperimentDataRepository", () => {
         source: "store",
       });
 
-      for (const result of [chart, warehousePage, deviceTable]) {
+      for (const result of [joinedToDevices, warehousePage, deviceTable]) {
         assertFailure(result);
         expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
       }
@@ -3201,25 +3212,87 @@ describe("ExperimentDataRepository", () => {
       expect(warehouse).not.toHaveBeenCalled();
     });
 
-    it("keeps charts' reads on the warehouse until the store aggregates", async () => {
+    it("filters a chart's read in the store by its flags, and counts it the same way", async () => {
+      const execute = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({
+          columns: storeColumns,
+          rows: [
+            ["2", "B2"],
+            ["4", "D4"],
+          ],
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
+      const chart = (limit: number) =>
+        repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          aggregation: { groupBy: [{ column: "plot" }] },
+          flagged: "exclude",
+          limit,
+          source: "store",
+        });
+
+      const result = await chart(100);
+      // A chart past its limit is counted, through the same flag filter.
+      const counted = await chart(1);
+
+      assertSuccess(result);
+      assertSuccess(counted);
+      const statements = execute.mock.calls.map(([query]) => query.sql);
+      expect(statements).toHaveLength(3);
+      for (const sql of statements) {
+        expect(sql).toContain("NOT (toString(id) IN (SELECT arrayJoin(__flagged_row_ids))");
+      }
+    });
+
+    it("refuses a flagged chart the warehouse would read, grouped by device and a raw x past the cap", async () => {
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([largeTable]),
       );
-      const warehouse = vi
-        .spyOn(databricksPort, "executeSqlQuery")
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: {
+          groupBy: [{ column: "timestamp" }, { column: "device" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+        flagged: "only",
+        source: "store",
+      });
+
+      assertFailure(result);
+      expect(result.error.code).toBe("FLAGGED_READ_UNSUPPORTED");
+      expect(warehouse).not.toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
+    });
+
+    it("reads an aggregated and an unpaged read from the store as chart reads", async () => {
+      const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+      const warehouseMetadata = vi.spyOn(databricksPort, "getExperimentTableMetadata");
+      const store = vi
+        .spyOn(servingStore, "executeQuery")
         .mockResolvedValue(
           success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
         );
-      const store = vi.spyOn(servingStore, "executeQuery");
+      const build = vi.spyOn(servingStore, "buildExperimentQuery");
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
 
-      await repository.getTableData({
+      const aggregated = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
         aggregation: { groupBy: [{ column: "plot" }] },
         source: "store",
       });
-      await repository.getTableData({
+      const series = await repository.getTableData({
         experimentId,
         experiment: mockExperiment,
         tableName: "raw_data",
@@ -3227,15 +3300,237 @@ describe("ExperimentDataRepository", () => {
         source: "store",
       });
 
-      expect(warehouse).toHaveBeenCalled();
-      expect(store).not.toHaveBeenCalled();
+      assertSuccess(aggregated);
+      assertSuccess(series);
+      expect(warehouse).not.toHaveBeenCalled();
+      expect(warehouseMetadata).not.toHaveBeenCalled();
+      expect(store.mock.calls[0][0].sql).toContain("GROUP BY `plot`");
+      expect(build.mock.calls.every(([params]) => params.isChartRead === true)).toBe(true);
     });
 
-    it("keeps a read joined to a second table on the warehouse, paged or not", async () => {
+    it.each([
+      ["its rows would pass the store's guard on a result", ErrorCodes.PAGE_TOO_LARGE],
+      ["its statement would pass the store's query size", STORE_QUERY_TOO_LARGE],
+    ])(
+      "answers a flagged chart with the store's refusal where %s, since only the store reads flags",
+      async (_case, code) => {
+        const refusal = failure(AppError.badRequest("Too large for the store", code));
+        vi.spyOn(servingStore, "executeQuery").mockResolvedValue(refusal);
+        const warehouse = vi.spyOn(databricksPort, "executeSqlQuery");
+        const warehouseMetadata = vi.spyOn(databricksPort, "getExperimentTableMetadata");
+
+        const result = await repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          aggregation: { groupBy: [{ column: "plot" }] },
+          flagged: "exclude",
+          source: "store",
+        });
+
+        assertFailure(result);
+        expect(result.error.code).toBe(code);
+        expect(warehouse).not.toHaveBeenCalled();
+        expect(warehouseMetadata).not.toHaveBeenCalled();
+      },
+    );
+
+    it("reads a chart from the warehouse when its statement would pass the store's query size", async () => {
       const store = vi.spyOn(servingStore, "executeQuery");
-      const warehouseMetadata = vi
-        .spyOn(databricksPort, "getExperimentTableMetadata")
-        .mockResolvedValue(success([]));
+      vi.spyOn(servingStore, "buildExperimentQuery").mockReturnValue(
+        failure(AppError.internal("Too large for the store", STORE_QUERY_TOO_LARGE)),
+      );
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+        );
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: { groupBy: [{ column: "plot" }] },
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(store).not.toHaveBeenCalled();
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY `plot`"))).toBe(true);
+    });
+
+    it("reads a chart from the warehouse when its rows would pass the store's guard on a result", async () => {
+      // 100,000 values of 1,200 bytes each, over the store's 100 MiB guard on what it holds.
+      await testApp.store.command({
+        query: `INSERT INTO measurements (experiment_id, id, timestamp, device_name, _commit_version, _commit_timestamp) SELECT '${experimentId}', number, toDateTime64('2026-09-07 00:00:00', 6, 'UTC') + number, repeat(toString(number % 10), 1200), 1, now64(6) FROM numbers(100000)`,
+      });
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: true }),
+        );
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        columns: ["id", "device_name"],
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("`device_name`"))).toBe(true);
+    }, 60_000);
+
+    it.each(["store", WAREHOUSE] satisfies ExperimentDataSource[])(
+      "counts a capped running total past its cap by the rows it keeps: %s",
+      async (source) => {
+        const isCount = (sql: string) => /^SELECT (?:toString\(count\(\)\)|COUNT\(\*\))/.test(sql);
+        const answer = (sql: string) =>
+          Promise.resolve(
+            success(
+              isCount(sql)
+                ? {
+                    columns: [
+                      { name: "total", type_name: "LONG", type_text: "BIGINT", position: 0 },
+                    ],
+                    rows: [["5"]],
+                    totalRows: 1,
+                    truncated: false,
+                  }
+                : {
+                    columns: storeColumns,
+                    rows: [
+                      ["1", "A1"],
+                      ["2", "B2"],
+                    ],
+                    totalRows: 2,
+                    truncated: false,
+                  },
+            ),
+          );
+        vi.spyOn(servingStore, "executeQuery").mockImplementation(({ sql }) => answer(sql));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) =>
+          answer(sql),
+        );
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([largeTable]),
+        );
+
+        const result = await repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          aggregation: { functions: [{ column: "*", function: "cumsum", alias: "running" }] },
+          orderBy: "id",
+          limit: 1,
+          source,
+        });
+
+        assertSuccess(result);
+        expect(result.value[0]).toMatchObject({ totalRows: 5 });
+        expect(result.value[0].data?.rows).toHaveLength(1);
+      },
+    );
+
+    it("reads a chart from the warehouse when the flag sends its reads there", async () => {
+      const store = vi.spyOn(servingStore, "executeQuery");
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+        );
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        aggregation: { groupBy: [{ column: "plot" }] },
+        source: WAREHOUSE,
+      });
+
+      assertSuccess(result);
+      expect(store).not.toHaveBeenCalled();
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY `plot`"))).toBe(true);
+    });
+
+    it("groups a raw x by device in the warehouse once the table passes the cap", async () => {
+      const rows = { columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false };
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success(rows));
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable]),
+      );
+      const store = vi.spyOn(servingStore, "executeQuery").mockResolvedValue(success(rows));
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
+      const read = (groupBy: AggregationSpec["groupBy"], limit?: number) =>
+        repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          aggregation: { groupBy, functions: [{ column: "*", function: "count" }] },
+          limit,
+          source: "store",
+        });
+
+      const pastTheCap = await read([{ column: "timestamp" }, { column: "device" }]);
+      const storeCalls = store.mock.calls.length;
+      const withinTheCap = await read([{ column: "timestamp" }, { column: "device" }], 1_000_000);
+      const byDay = await read([{ column: "timestamp", timeBucket: "day" }, { column: "device" }]);
+
+      assertSuccess(pastTheCap);
+      assertSuccess(withinTheCap);
+      assertSuccess(byDay);
+      expect(storeCalls).toBe(0);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY"))).toBe(true);
+      expect(store.mock.calls.filter(([query]) => query.sql.includes("GROUP BY"))).toHaveLength(2);
+    });
+
+    it("groups a raw x by a matched table's device in the warehouse once the table passes the cap", async () => {
+      const macroTable: ExperimentTableMetadata = {
+        ...largeTable,
+        identifier: "macro_1",
+        tableType: "macro",
+        questionsSchema: null,
+      };
+      vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, macroTable]),
+      );
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, macroTable]),
+      );
+      const tableColumns = [
+        { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 1 },
+        { name: "device_id", type_name: "STRING", type_text: "STRING", position: 2 },
+        {
+          name: "device",
+          type_name: "STRUCT",
+          type_text: WellKnownColumnTypes.DEVICE,
+          position: 3,
+        },
+      ];
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      const store = vi
+        .spyOn(servingStore, "executeQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      vi.spyOn(servingStore, "getExperimentIds").mockResolvedValue(success([]));
 
       const result = await repository.getTableData({
         experimentId,
@@ -3248,15 +3543,229 @@ describe("ExperimentDataRepository", () => {
           secondaryTimeColumn: "timestamp",
           toleranceMinutes: 5,
         },
+        aggregation: {
+          groupBy: [{ column: "timestamp" }, { column: "second__device" }],
+          functions: [{ column: "*", function: "count" }],
+        },
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(store.mock.calls.some(([query]) => query.sql.includes("GROUP BY"))).toBe(false);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY"))).toBe(true);
+    });
+
+    const joinedReads: ExperimentDataSource[] = ["store", WAREHOUSE];
+    const joinableColumns = [
+      { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+      { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 1 },
+      { name: "device_id", type_name: "STRING", type_text: "STRING", position: 2 },
+    ];
+    const macroJoin = {
+      tableName: "macro_1",
+      matchColumn: "device_id",
+      primaryTimeColumn: "timestamp",
+      secondaryTimeColumn: "timestamp",
+      toleranceMinutes: 5,
+    };
+    it.each(joinedReads)(
+      "reads a paged joined table from the read's source: %s",
+      async (source) => {
+        const macroTable: ExperimentTableMetadata = {
+          ...largeTable,
+          identifier: "macro_1",
+          tableType: "macro",
+          questionsSchema: null,
+        };
+        vi.spyOn(servingStore, "getExperimentTableMetadata").mockResolvedValue(
+          success([largeTable, macroTable]),
+        );
+        const warehouseMetadata = vi
+          .spyOn(databricksPort, "getExperimentTableMetadata")
+          .mockResolvedValue(success([largeTable, macroTable]));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({ columns: joinableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+        vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+          success({ columns: joinableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+
+        const result = await repository.getTableData({
+          experimentId,
+          experiment: mockExperiment,
+          tableName: "raw_data",
+          join: macroJoin,
+          page: 1,
+          pageSize: 10,
+          source,
+        });
+
+        assertSuccess(result);
+        const isStore = source === "store";
+        const listed = isStore ? servingStore.getExperimentTableMetadata : warehouseMetadata;
+        const skipped = isStore ? warehouseMetadata : servingStore.getExperimentTableMetadata;
+        expect(listed).toHaveBeenCalled();
+        expect(skipped).not.toHaveBeenCalled();
+      },
+    );
+
+    it("reads a paged joined table from the warehouse when the store has not received the second", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, { ...largeTable, identifier: "macro_1", tableType: "macro" }]),
+      );
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: joinableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join: macroJoin,
         page: 1,
         pageSize: 10,
         source: "store",
       });
 
-      assertFailure(result);
-      expect(warehouseMetadata).toHaveBeenCalled();
-      expect(servingStore.getExperimentTableMetadata).not.toHaveBeenCalled();
+      assertSuccess(result);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("joined_data"))).toBe(true);
       expect(store).not.toHaveBeenCalled();
+    });
+
+    it("lists a table's columns, joined or alone, from the warehouse when the store has not received it", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, { ...largeTable, identifier: "upload_1", tableType: "upload" }]),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({ columns: joinableColumns, rows: [], totalRows: 0, truncated: false }),
+      );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const joined = await repository.getTableColumns({
+        experimentId,
+        tableName: "raw_data",
+        join: { ...macroJoin, tableName: "upload_1" },
+        source: "store",
+      });
+      const alone = await repository.getTableColumns({
+        experimentId,
+        tableName: "upload_1",
+        source: "store",
+      });
+
+      assertSuccess(joined);
+      assertSuccess(alone);
+      expect(joined.value.map(({ name }) => name)).toContain("device_id");
+      expect(alone.value.map(({ name }) => name)).toEqual(["id", "timestamp", "device_id"]);
+      expect(store).not.toHaveBeenCalled();
+    });
+
+    it("takes a join to the warehouse when the store does not hold its second table", async () => {
+      const deviceTable: ExperimentTableMetadata = {
+        ...largeTable,
+        identifier: "device",
+        rowCount: 2,
+        questionsSchema: null,
+      };
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, deviceTable]),
+      );
+      const tableColumns = [
+        { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 1 },
+        { name: "device_id", type_name: "STRING", type_text: "STRING", position: 2 },
+      ];
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join: {
+          tableName: "device",
+          matchColumn: "device_id",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
+        columns: ["id"],
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("joined_data"))).toBe(true);
+      expect(store).not.toHaveBeenCalled();
+    });
+
+    it("reads a chart of a table the store has not received, or matched to one, from the warehouse", async () => {
+      const upload: ExperimentTableMetadata = {
+        ...largeTable,
+        identifier: "upload_1",
+        tableType: "upload",
+        rowCount: 2,
+        questionsSchema: null,
+      };
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, upload]),
+      );
+      const tableColumns = [
+        { name: "id", type_name: "LONG", type_text: "BIGINT", position: 0 },
+        { name: "timestamp", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 1 },
+        { name: "device_id", type_name: "STRING", type_text: "STRING", position: 2 },
+      ];
+      const warehouse = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(
+          success({ columns: tableColumns, rows: [], totalRows: 0, truncated: false }),
+        );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const chart = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "upload_1",
+        aggregation: { groupBy: [{ column: "id" }] },
+        source: "store",
+      });
+      const matched = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        join: {
+          tableName: "upload_1",
+          matchColumn: "device_id",
+          primaryTimeColumn: "timestamp",
+          secondaryTimeColumn: "timestamp",
+          toleranceMinutes: 5,
+        },
+        columns: ["id"],
+        source: "store",
+      });
+      const page = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "upload_1",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(chart);
+      assertSuccess(matched);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("GROUP BY `id`"))).toBe(true);
+      expect(warehouse.mock.calls.some(([, sql]) => sql.includes("joined_data"))).toBe(true);
+      expect(store).not.toHaveBeenCalled();
+      // A page lists only the tables its source holds, so it still finds none.
+      assertFailure(page);
+      expect(page.error.statusCode).toBe(404);
     });
 
     it("reads a table the store does not hold from the warehouse", async () => {
@@ -3322,6 +3831,34 @@ describe("ExperimentDataRepository", () => {
       expect(sql).toContain(
         "ORDER BY lowerUTF8(`device.serial_number`) ASC, `device.serial_number` ASC\nLIMIT 4\nOFFSET 200",
       );
+    });
+
+    it("lists a column's distinct values from the warehouse when the store has not received its table", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([largeTable, { ...largeTable, identifier: "upload_1", tableType: "upload" }]),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [{ name: "plot", type_name: "STRING", type_text: "STRING", position: 0 }],
+          rows: [["A1"], ["B2"]],
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      const store = vi.spyOn(servingStore, "executeQuery");
+
+      const result = await repository.getDistinctColumnValues({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "upload_1",
+        column: "plot",
+        limit: 3,
+        source: "store",
+      });
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: ["A1", "B2"], truncated: false });
+      expect(store).not.toHaveBeenCalled();
     });
 
     it("keeps non-device distinct reads on the store", async () => {
@@ -3446,6 +3983,110 @@ describe("ExperimentDataRepository", () => {
       assertSuccess(fromWarehouse);
       expect(fromStore.value[0].rowCount).toBe(1_000_000);
       expect(fromWarehouse.value[0].rowCount).toBe(5);
+      expect(warehouseListing).toHaveBeenCalledTimes(1);
+    });
+
+    it("lists the store's tables as it holds them now, and reads with the count it listed", async () => {
+      const storeListing = vi
+        .spyOn(servingStore, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([largeTable]))
+        .mockResolvedValue(success([{ ...largeTable, rowCount: 1_000_001 }]));
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+      );
+
+      const cached = await repository.tablesMetadata(experimentId, "store");
+      const listed = await repository.listedTablesMetadata(experimentId, "store");
+      const page = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(cached);
+      assertSuccess(listed);
+      assertSuccess(page);
+      expect(cached.value[0].rowCount).toBe(1_000_000);
+      expect(listed.value[0].rowCount).toBe(1_000_001);
+      expect(page.value[0].totalRows).toBe(1_000_001);
+      expect(storeListing).toHaveBeenCalledTimes(2);
+    });
+
+    it("lists afresh after joining a listing that began before the change its caller saw", async () => {
+      let answerPageListing: (listing: Result<ExperimentTableMetadata[]>) => void = () => undefined;
+      const storeListing = vi
+        .spyOn(servingStore, "getExperimentTableMetadata")
+        .mockReturnValueOnce(
+          new Promise((resolve) => {
+            answerPageListing = resolve;
+          }),
+        )
+        .mockResolvedValue(success([{ ...largeTable, rowCount: 1_000_001 }]));
+
+      // A page's listing has read its count when a row arrives and a watch sees its mark move.
+      const page = repository.listedTablesMetadata(experimentId, "store");
+      const watch = repository.listTablesAfresh(experimentId, "store");
+      answerPageListing(success([largeTable]));
+      const [pageListing, watchListing] = await Promise.all([page, watch]);
+
+      assertSuccess(pageListing);
+      assertSuccess(watchListing);
+      expect(pageListing.value[0].rowCount).toBe(1_000_000);
+      expect(watchListing.value[0].rowCount).toBe(1_000_001);
+      expect(storeListing).toHaveBeenCalledTimes(2);
+    });
+
+    it("lists once when no listing was running to join", async () => {
+      const storeListing = vi
+        .spyOn(servingStore, "getExperimentTableMetadata")
+        .mockResolvedValue(success([largeTable]));
+
+      const listing = await repository.listTablesAfresh(experimentId, "store");
+
+      assertSuccess(listing);
+      expect(storeListing).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the last snapshot for page reads when a store listing fails", async () => {
+      vi.spyOn(servingStore, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([largeTable]))
+        .mockResolvedValue(failure(AppError.internal("store unreachable")));
+      vi.spyOn(servingStore, "executeQuery").mockResolvedValue(
+        success({ columns: storeColumns, rows: [["1", "A1"]], totalRows: 1, truncated: false }),
+      );
+
+      const listed = await repository.listedTablesMetadata(experimentId, "store");
+      const failed = await repository.listedTablesMetadata(experimentId, "store");
+      const page = await repository.getTableData({
+        experimentId,
+        experiment: mockExperiment,
+        tableName: "raw_data",
+        page: 1,
+        pageSize: 10,
+        source: "store",
+      });
+
+      assertSuccess(listed);
+      assertFailure(failed);
+      assertSuccess(page);
+      expect(page.value[0].totalRows).toBe(1_000_000);
+    });
+
+    it("lists the warehouse's tables from the cached snapshot", async () => {
+      const warehouseListing = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(success([{ ...largeTable, rowCount: 5 }]))
+        .mockResolvedValue(success([{ ...largeTable, rowCount: 6 }]));
+
+      const cached = await repository.tablesMetadata(experimentId, "warehouse");
+      const listed = await repository.listedTablesMetadata(experimentId, "warehouse");
+
+      assertSuccess(cached);
+      assertSuccess(listed);
+      expect(listed.value[0].rowCount).toBe(5);
       expect(warehouseListing).toHaveBeenCalledTimes(1);
     });
   });

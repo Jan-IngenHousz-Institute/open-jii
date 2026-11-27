@@ -6,11 +6,12 @@ each row's gold commit (`_commit_timestamp`) to its insert (`inserted_at`). Rows
 the store holds data that is minutes old rather than missing. If rows stopped arriving altogether,
 `store-feed-stalled` fires instead.
 
-The feed's sinks run inside the pipelines that write gold: measurements and uploads in Centrum,
-macro results in the macro pipeline. Centrum also sends the metadata sheets and their rows, from
-the backend's copy of the sheets rather than from gold. Before each attempt at a batch the driver checks that the
-store answers, so while it does not, the executors get no work from the feed at all. When the store
-answers inserts with errors, the executors retry for about half a minute, then hand the batch back;
+The feed's sinks run inside the pipelines that write gold: measurements, uploads and silver's device
+lifecycle events in Centrum, macro results in the macro pipeline. Device events measure from
+silver's commit rather than gold's. Centrum also sends the metadata sheets and their rows, from the
+backend's copy of the sheets rather than from gold. Before each attempt at a batch the driver checks
+that the store answers, so while it does not, the executors get no work from the feed at all. When
+the store answers inserts with errors, the executors retry for about half a minute, then hand the batch back;
 a missing table or column they hand back at once.
 Either way the sink waits on the pipeline's driver and writes the batch again, so a slow feed is
 either a store taking inserts slowly or a pipeline reaching its sink late.
@@ -59,7 +60,8 @@ answer the driver's check, in the driver's:
   the part counts and `SELECT table, elapsed, progress FROM system.merges` what is merging. A refresh
   catch-up spreads inserts over many months; it settles once the catch-up ends.
 - Code 516 in the driver's check is a wrong writer password: the Databricks secret scope and the
-  store disagree, which a deploy fixes.
+  store disagree. A deploy no longer writes the password, so pass the writer's stored password to
+  the scope and the store again, as `store-feed-stalled` describes.
 - A timeout or connection error with `store-answers` firing means the store is down; work that
   runbook.
 

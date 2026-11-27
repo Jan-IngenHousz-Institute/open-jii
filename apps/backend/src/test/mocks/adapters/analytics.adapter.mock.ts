@@ -9,6 +9,10 @@ export class MockAnalyticsAdapter {
     return Promise.resolve(this.flags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey]);
   }
 
+  isEnvironmentFeatureFlagEnabled(flagKey: FeatureFlagKey): Promise<boolean> {
+    return Promise.resolve(this.flags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey]);
+  }
+
   reportError(error: unknown, properties: Record<string, unknown>): void {
     this.reportedErrors.push({ error, properties });
   }

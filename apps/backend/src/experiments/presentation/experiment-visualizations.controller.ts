@@ -85,8 +85,9 @@ export class ExperimentVisualizationsController {
   updateVisualization(@Session() session: UserSession) {
     return implement(experimentVisualizationsContract.updateExperimentVisualization).handler(
       async ({ input }) => {
-        const { id: _id, visualizationId, ...body } = input;
+        const { id, visualizationId, ...body } = input;
         const result = await this.updateExperimentVisualizationUseCase.execute(
+          id,
           visualizationId,
           body,
           session.user.id,
@@ -105,6 +106,7 @@ export class ExperimentVisualizationsController {
     return implement(experimentVisualizationsContract.deleteExperimentVisualization).handler(
       async ({ input }) => {
         const result = await this.deleteExperimentVisualizationUseCase.execute(
+          input.id,
           input.visualizationId,
           session.user.id,
         );

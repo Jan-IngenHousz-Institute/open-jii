@@ -1,13 +1,18 @@
 import { createClient } from "@clickhouse/client";
 import type { ClickHouseClient } from "@clickhouse/client";
+import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
-import { resolve } from "path";
+import { z } from "zod";
 
 import { PAGE_BYTE_LIMIT } from "../../../experiments/core/models/experiment-data.model";
+import { STORE_QUERY_TOO_LARGE } from "../../../experiments/core/ports/serving-store.port";
 import type { StoreQueryParams } from "../../../experiments/core/ports/serving-store.port";
+import { emptyStore, storeSetting, testStoreAdmin } from "../../../test/store-admin";
+import { storeMigrationStatements, storeRefreshedViews } from "../../../test/store-migrations";
+import { STORE_READER_ACCESS, STORE_READER_PROFILE } from "../../../test/store-reader";
 import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
+import type { Result } from "../../utils/fp-utils";
 import type { FilterCondition } from "../databricks/services/query-builder/query-builder.types";
 import { VariantSchema } from "../databricks/services/query-builder/schema/variant-schema";
 import { ServingStoreClientService } from "./services/client/client.service";
@@ -18,7 +23,7 @@ import {
   MEASUREMENTS_TABLE,
   UPLOADS_TABLE,
 } from "./services/query-builder/store-tables";
-import { ServingStoreAdapter } from "./serving-store.adapter";
+import { EXPERIMENT_SETTING, ServingStoreAdapter } from "./serving-store.adapter";
 
 describe("ServingStoreAdapter", () => {
   let client: ServingStoreClientService;
@@ -33,7 +38,7 @@ describe("ServingStoreAdapter", () => {
    *  counts the rows it handed over. */
   function storeSends(rows: unknown[][]) {
     const sent = { handed: 0 };
-    vi.spyOn(client, "stream").mockImplementation((_sql, take) => {
+    vi.spyOn(client, "stream").mockImplementation((_sql, _settings, take) => {
       const isComplete = rows.every((row) => {
         sent.handed += 1;
         return take(row);
@@ -47,15 +52,15 @@ describe("ServingStoreAdapter", () => {
     expect(adapter.isConfigured()).toBe(false);
   });
 
-  it("lists each table with its count and newest row, merging the schemas of its batches", async () => {
+  it("lists each table with its count, newest row and content revision, merging the schemas of its batches", async () => {
     const query = vi
       .spyOn(client, "query")
       .mockResolvedValueOnce(
         success({
           rows: [
-            ["static", "raw_data", null, 3, "2026-09-14 17:06:42.965000"],
-            ["macro", "m1", null, "2", null],
-            ["upload", "t1", "plots", 1, "2026-09-01 10:00:00.000000"],
+            ["static", "raw_data", null, 3, "2026-09-14 17:06:42.965000", "4761194200204079042"],
+            ["macro", "m1", null, "2", null, "12"],
+            ["upload", "t1", "plots", 1, "2026-09-01 10:00:00.000000", null],
           ],
         }),
       )
@@ -73,7 +78,9 @@ describe("ServingStoreAdapter", () => {
     const result = await adapter.getExperimentTableMetadata("e1");
 
     assertSuccess(result);
+    expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[0][0]).toContain("FROM experiment_measurements(experiment = 'e1')");
+    expect(query.mock.calls[0][0]).toContain("sum(cityHash64(_commit_version, arrived_at))");
     expect(query.mock.calls[1][0]).toContain("FROM experiment_payload_schemas(experiment = 'e1')");
     const macroSchema = "OBJECT<a: DOUBLE, b: STRING>";
     expect(result.value).toEqual([
@@ -82,6 +89,7 @@ describe("ServingStoreAdapter", () => {
         tableType: "static",
         rowCount: 3,
         latestRowAt: "2026-09-14T17:06:42.965Z",
+        contentRevision: "4761194200204079042",
         questionsSchema: "OBJECT<plot: STRING>",
         macroSchema: null,
       }),
@@ -98,6 +106,7 @@ describe("ServingStoreAdapter", () => {
         identifier: "t1",
         tableType: "upload",
         displayName: "plots",
+        contentRevision: null,
         uploadSchema: "OBJECT<h: DOUBLE>",
       }),
     ]);
@@ -259,23 +268,157 @@ describe("ServingStoreAdapter", () => {
     expect(sent.handed).toBe(2);
   });
 
-  it("refuses a flagged read whose ids would pass the store's query size, before it reaches the store", () => {
-    const flaggedRead = (rows: number) =>
+  it.each([
+    ["page", { columns: ["id"] }],
+    [
+      "chart",
+      {
+        isChartRead: true,
+        aggregation: { functions: [{ column: "*", function: "count" as const }] },
+      },
+    ],
+  ])(
+    "refuses a flagged %s whose ids would pass the store's query size, before it reaches the store",
+    (_, read: Partial<StoreQueryParams>) => {
+      const flaggedRead = (rows: number) =>
+        adapter.buildExperimentQuery({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId: "e1",
+          ...read,
+          flagged: {
+            kind: "only",
+            addedRowIds: Array.from({ length: rows }, (_, index) => `${"r".repeat(58)}${index}`),
+          },
+        });
+
+      assertSuccess(flaggedRead(1_000));
+      const refused = flaggedRead(20_000);
+      assertFailure(refused);
+      expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+    },
+  );
+
+  it("fails a chart past the store's query size with the code its reader takes to the warehouse", () => {
+    const devices = Array.from({ length: 20_000 }, (_, index): [string, string] => [
+      `${"c".repeat(40)}${index}`,
+      `serial-${index}`,
+    ]);
+    const byDevice = (registered: number) =>
       adapter.buildExperimentQuery({
         tableName: "raw_data",
         tableType: "static",
         experimentId: "e1",
-        columns: ["id"],
-        flagged: {
-          kind: "only",
-          addedRowIds: Array.from({ length: rows }, (_, index) => `${"r".repeat(58)}${index}`),
+        isChartRead: true,
+        aggregation: {
+          groupBy: [{ column: "device" }],
+          functions: [{ column: "*", function: "count" }],
         },
+        deviceSerials: devices.slice(0, registered),
       });
 
-    assertSuccess(flaggedRead(1_000));
-    const refused = flaggedRead(20_000);
+    assertSuccess(byDevice(1_000));
+    const refused = byDevice(20_000);
     assertFailure(refused);
-    expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
+    expect(refused.error.code).toBe(STORE_QUERY_TOO_LARGE);
+  });
+
+  it("sends the experiment setting with every read of a table and never with a read of views alone", async () => {
+    const stream = vi.spyOn(client, "stream").mockResolvedValue(success({ complete: true }));
+    const read: StoreQueryParams = {
+      tableName: "raw_data",
+      tableType: "static",
+      experimentId: "e1",
+    };
+    const page = adapter.buildExperimentQuery({ ...read, limit: 10 });
+    const chart = adapter.buildExperimentQuery({ ...read, isChartRead: true });
+    const joinedPage = adapter.buildExperimentQuery({
+      ...read,
+      limit: 10,
+      join: {
+        matchColumn: "device_id",
+        toleranceMinutes: 60,
+        secondary: { tableName: "m2", tableType: "macro" },
+        primaryColumns: ["id", "device_id", "timestamp"],
+        secondaryColumns: [{ name: "id", alias: "matched_id" }],
+        primaryTimeColumn: "timestamp",
+        primaryTimeType: "TIMESTAMP",
+        secondaryTimeColumn: "timestamp",
+        secondaryTimeType: "TIMESTAMP",
+      },
+    });
+    assertSuccess(page);
+    assertSuccess(chart);
+    assertSuccess(joinedPage);
+
+    await adapter.executeQuery(page.value);
+    await adapter.executeQuery(adapter.countQuery(page.value));
+    await adapter.executeQuery(chart.value);
+    await adapter.executeQuery(joinedPage.value);
+    await adapter.executeQuery(adapter.countQuery(joinedPage.value));
+
+    const [pageCall, countCall, chartCall, joinedCall, joinedCountCall] = stream.mock.calls;
+    expect(pageCall[0]).not.toContain(EXPERIMENT_SETTING);
+    expect(pageCall[1]).toEqual({});
+    expect(countCall[1]).toEqual({});
+    expect(chartCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
+    expect(joinedCall[0]).toContain("macro_results FINAL");
+    expect(joinedCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
+    expect(joinedCountCall[1]).toEqual({ [EXPERIMENT_SETTING]: "e1" });
+  });
+
+  it("sends the experiment as the setting the module's row policies read", () => {
+    expect(STORE_READER_ACCESS.rowFilter).toBe(
+      `experiment_id = getSetting('${EXPERIMENT_SETTING}')`,
+    );
+  });
+
+  it("sends the second table only the columns the read names", () => {
+    const query = adapter.buildExperimentQuery({
+      tableName: "m1",
+      tableType: "macro",
+      experimentId: "e1",
+      columns: ["id", "w"],
+      isChartRead: true,
+      join: {
+        matchColumn: "device_id",
+        toleranceMinutes: 60,
+        secondary: {
+          tableName: "m2",
+          tableType: "macro",
+          variants: [{ columnName: "macro_output", schema: "OBJECT<w: DOUBLE>", suffix: "output" }],
+        },
+        primaryColumns: ["id", "device_id", "timestamp"],
+        secondaryColumns: [
+          { name: "contributor", alias: "second__contributor" },
+          { name: "device", alias: "second__device" },
+          { name: "w", alias: "w" },
+        ],
+        primaryTimeColumn: "timestamp",
+        primaryTimeType: "TIMESTAMP",
+        secondaryTimeColumn: "timestamp",
+        secondaryTimeType: "TIMESTAMP",
+      },
+    });
+
+    assertSuccess(query);
+    expect(query.value.sql).not.toContain("second__contributor");
+    expect(query.value.sql).not.toContain("second__device");
+  });
+
+  it("sorts a payload read whole by its typed value, never its JSON", () => {
+    const query = adapter.buildExperimentQuery({
+      tableName: "mac3",
+      tableType: "macro",
+      experimentId: "e1",
+      variants: [{ columnName: "macro_output", schema: "DOUBLE", suffix: "output" }],
+      ordering: { column: "macro_output", direction: "ASC" },
+      limit: 10,
+    });
+
+    assertSuccess(query);
+    expect(query.value.sql).toContain("ORDER BY isNaN(");
+    expect(query.value.sql).not.toMatch(/isNaN\(macro_output\)|ORDER BY macro_output /);
   });
 
   it("counts a read as text", () => {
@@ -302,24 +445,401 @@ describe("ServingStoreAdapter", () => {
       "SELECT client_id FROM experiment_client_ids(experiment = 'e1')",
     );
   });
+
+  describe("a device's reads", () => {
+    const from = "2026-10-19T00:00:00.000Z";
+    const to = "2026-10-19T23:59:59Z";
+    const EXPERIMENTS = ["e1", "it's-e2"];
+
+    it("reads only through the device views, naming the one device quoted", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+      const thing = "it's-1";
+
+      await adapter.getDeviceLastActivity(thing, EXPERIMENTS);
+      await adapter.getDeviceExperimentIds(thing, { from, to });
+      await adapter.getDeviceLifecycleEvents(thing, from, to, 1001);
+      await adapter.getDeviceThroughput(thing, EXPERIMENTS, from, to, "hour");
+      await adapter.getDeviceBatterySeries(thing, EXPERIMENTS, from, to, "day");
+      await adapter.getDevicePayloadBreakdown(thing, EXPERIMENTS, from, to);
+      await adapter.getDeviceMacroBreakdown(thing, EXPERIMENTS, from, to);
+      await adapter.getDeviceFirmwareHistory(thing, EXPERIMENTS, from, to, "hour");
+      await adapter.getDeviceRecentMeasurements(thing, EXPERIMENTS, from, to, 50);
+
+      const statements = query.mock.calls.map(([sql]) => sql);
+      const views = statements.map((sql) => /FROM (\w+)\(/.exec(sql)?.[1]);
+      expect(views).toEqual([
+        "device_last_activity",
+        "device_experiment_ids",
+        "device_lifecycle_events",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_measurements",
+        "device_newest_measurements",
+      ]);
+      for (const sql of statements.slice(0, -1)) {
+        expect(sql).toContain("(devices = ['it\\'s-1']");
+      }
+      expect(statements.at(-1)).toContain("device = 'it\\'s-1'");
+      expect(statements.at(-1)).toContain("rows = 50");
+    });
+
+    it("reads a device's rows only in the experiments it is given, before grouping or the newest rows' cut", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+      const experiments = "['e1', 'it\\'s-e2']";
+      const scope = `has(CAST(${experiments} AS Array(String)), experiment_id)`;
+
+      await adapter.getDeviceThroughput("thing-1", EXPERIMENTS, from, to, "hour");
+      await adapter.getDeviceBatterySeries("thing-1", EXPERIMENTS, from, to, "day");
+      await adapter.getDevicePayloadBreakdown("thing-1", EXPERIMENTS, from, to);
+      await adapter.getDeviceMacroBreakdown("thing-1", EXPERIMENTS, from, to);
+      await adapter.getDeviceFirmwareHistory("thing-1", EXPERIMENTS, from, to, "hour");
+      await adapter.getDeviceRecentMeasurements("thing-1", EXPERIMENTS, from, to, 50);
+
+      const statements = query.mock.calls.map(([sql]) => sql);
+      for (const sql of statements.slice(0, -1)) {
+        expect(sql).toContain(`AND ${scope}`);
+        expect(sql.indexOf(scope)).toBeLessThan(sql.indexOf("GROUP BY"));
+      }
+      expect(statements.at(-1)).toContain(`experiments = ${experiments},`);
+    });
+
+    it("reads no experiment's rows when given none", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      await adapter.getDeviceThroughput("thing-1", [], from, to, "day");
+      await adapter.getDeviceRecentMeasurements("thing-1", [], from, to, 50);
+
+      expect(query.mock.calls[0][0]).toContain("has(CAST([] AS Array(String)), experiment_id)");
+      expect(query.mock.calls[1][0]).toContain("experiments = [],");
+    });
+
+    it("lists the experiments the device's rows in the window claim", async () => {
+      const query = vi
+        .spyOn(client, "query")
+        .mockResolvedValue(success({ rows: [["e1"], ["e2"]] }));
+
+      const result = await adapter.getDeviceExperimentIds("thing-1", { from, to });
+
+      assertSuccess(result);
+      expect(result.value).toEqual(["e1", "e2"]);
+      expect(query.mock.calls[0][0]).toContain(
+        `device_experiment_ids(devices = ['thing-1'], from = parseDateTime64BestEffort('${from}', 6, 'UTC'), to = parseDateTime64BestEffort('${to}', 6, 'UTC'))`,
+      );
+    });
+
+    it("lists the experiments every row of the device claims when given no window", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      await adapter.getDeviceExperimentIds("thing-1");
+
+      expect(query.mock.calls[0][0]).toContain(
+        "from = parseDateTime64BestEffort('1900-01-01T00:00:00Z', 6, 'UTC'), to = parseDateTime64BestEffort('2299-12-31T23:59:59.999999Z', 6, 'UTC')",
+      );
+    });
+
+    it("dates a device's last data only by the experiments it is given", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      await adapter.getDeviceLastActivity("thing-1", EXPERIMENTS);
+
+      expect(query.mock.calls[0][0]).toContain(
+        "device_last_activity(devices = ['thing-1'], experiments = ['e1', 'it\\'s-e2'])",
+      );
+    });
+
+    describe("whether device events are loaded", () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ now: new Date("2026-10-21T12:00:00Z"), toFake: ["Date"] });
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it("asks the store once a minute, one check for reads that ask together", async () => {
+        const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [[1]] }));
+
+        const together = await Promise.all([
+          adapter.hasDeviceEventsLoaded(),
+          adapter.hasDeviceEventsLoaded(),
+          adapter.hasDeviceEventsLoaded(),
+        ]);
+        vi.setSystemTime(new Date("2026-10-21T12:00:59Z"));
+        const withinTheMinute = await adapter.hasDeviceEventsLoaded();
+        vi.setSystemTime(new Date("2026-10-21T12:01:01Z"));
+        const afterIt = await adapter.hasDeviceEventsLoaded();
+
+        for (const result of [...together, withinTheMinute, afterIt]) {
+          assertSuccess(result);
+          expect(result.value).toBe(true);
+        }
+        expect(query.mock.calls.map(([sql]) => sql)).toEqual([
+          "SELECT reloaded FROM device_events_reloaded",
+          "SELECT reloaded FROM device_events_reloaded",
+        ]);
+      });
+
+      it("reads them as not loaded while the view returns no row", async () => {
+        vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+        const result = await adapter.hasDeviceEventsLoaded();
+
+        assertSuccess(result);
+        expect(result.value).toBe(false);
+      });
+
+      it("answers with a failed check for ten seconds before asking again", async () => {
+        const query = vi
+          .spyOn(client, "query")
+          .mockResolvedValueOnce(failure(AppError.internal("store timed out")))
+          .mockResolvedValueOnce(success({ rows: [[1]] }));
+
+        const failed = await adapter.hasDeviceEventsLoaded();
+        vi.setSystemTime(new Date("2026-10-21T12:00:09Z"));
+        const paused = await adapter.hasDeviceEventsLoaded();
+        vi.setSystemTime(new Date("2026-10-21T12:00:11Z"));
+        const recovered = await adapter.hasDeviceEventsLoaded();
+
+        assertFailure(failed);
+        assertFailure(paused);
+        expect(paused.error.message).toBe("store timed out");
+        assertSuccess(recovered);
+        expect(recovered.value).toBe(true);
+        expect(query).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("bounds each read by the window, parsed as UTC", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      await adapter.getDeviceThroughput("thing-1", EXPERIMENTS, from, to, "hour");
+
+      expect(query.mock.calls[0][0]).toContain(
+        "timestamp BETWEEN parseDateTime64BestEffort('2026-10-19T00:00:00.000Z', 6, 'UTC') AND parseDateTime64BestEffort('2026-10-19T23:59:59Z', 6, 'UTC')",
+      );
+    });
+
+    it("writes the store's times, counts and missing values as the warehouse's reads do", async () => {
+      vi.spyOn(client, "query")
+        .mockResolvedValueOnce(success({ rows: [["2026-10-19 10:00:00", "e1", 12]] }))
+        .mockResolvedValueOnce(
+          success({
+            rows: [
+              [
+                "2026-10-19 13:30:00.000000",
+                "e2",
+                null,
+                null,
+                "2.1",
+                "nan",
+                52.3,
+                5.3,
+                '{"par":150,"phi2":null}',
+              ],
+            ],
+          }),
+        );
+
+      const throughput = await adapter.getDeviceThroughput(
+        "thing-1",
+        EXPERIMENTS,
+        from,
+        to,
+        "hour",
+      );
+      const measurements = await adapter.getDeviceRecentMeasurements(
+        "thing-1",
+        EXPERIMENTS,
+        from,
+        to,
+        50,
+      );
+
+      assertSuccess(throughput);
+      assertSuccess(measurements);
+      expect(throughput.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", experimentId: "e1", count: 12 },
+      ]);
+      expect(measurements.value).toEqual([
+        {
+          timestamp: "2026-10-19T13:30:00.000Z",
+          experimentId: "e2",
+          protocolId: null,
+          workbookVersionId: null,
+          deviceVersion: "2.1",
+          battery: null,
+          latitude: 52.3,
+          longitude: 5.3,
+          sample: '{"par":150,"phi2":null}',
+        },
+      ]);
+    });
+
+    it("answers a device without rows as one with no last data", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+
+      const result = await adapter.getDeviceLastActivity("thing-1", EXPERIMENTS);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ lastDataAt: null });
+    });
+
+    it("passes on a failed read", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(failure(AppError.internal("store down")));
+
+      const result = await adapter.getDeviceFirmwareHistory(
+        "thing-1",
+        EXPERIMENTS,
+        from,
+        to,
+        "day",
+      );
+
+      assertFailure(result);
+      expect(result.error.message).toBe("store down");
+    });
+  });
+
+  describe("platform metrics", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function storeQuery() {
+      return vi.spyOn(client, "query").mockResolvedValue(success({ rows: [] }));
+    }
+
+    it("reads the newest days of the daily view and gives them oldest first", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["2026-08-28", 120, 1000, 2400],
+            ["2026-08-27", 80, 880, 1600],
+          ],
+        }),
+      );
+
+      const result = await adapter.getPublicDailyActivity(366);
+
+      assertSuccess(result);
+      expect(result.value.map(({ date }) => date)).toEqual(["2026-08-27", "2026-08-28"]);
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT date, measurements, cumulative_measurements, volume_bytes FROM metrics_daily_activity ORDER BY date DESC LIMIT 366",
+      );
+    });
+
+    it("bounds the experiment and resource days as the warehouse reads do, today included", async () => {
+      vi.useFakeTimers({ now: new Date("2026-08-28T12:00:00Z"), toFake: ["Date"] });
+      const query = storeQuery();
+
+      await adapter.getScopedDailyActivity(60);
+      await adapter.getResourceDailyActivity("workbook_version", 30);
+
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT date, experiment_id, measurements FROM metrics_daily_activity_by_experiment WHERE date BETWEEN '2026-06-30' AND '2026-08-28' ORDER BY date ASC",
+      );
+      expect(query.mock.calls[1][0]).toBe(
+        "SELECT date, resource_type, resource_id, measurements FROM metrics_daily_activity_by_resource WHERE resource_type = 'workbook_version' AND date BETWEEN '2026-07-30' AND '2026-08-28' ORDER BY date ASC",
+      );
+    });
+
+    it("reads the whole category, which the rows' order cannot decide a tie in", async () => {
+      const query = vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["", "", 0, "nan"],
+            ["humidity", "Relative humidity", 12, 55],
+          ],
+        }),
+      );
+
+      const result = await adapter.getTopParameter("sensor");
+
+      assertSuccess(result);
+      expect(result.value?.name).toBe("humidity");
+      expect(query.mock.calls[0][0]).toBe(
+        "SELECT parameter, label, observations, median_value FROM metrics_parameter_stats WHERE category = 'sensor'",
+      );
+    });
+
+    it("reads a refreshed category where no parameter qualified as no parameter", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(success({ rows: [["", "", 0, "nan"]] }));
+
+      const result = await adapter.getTopParameter("derived");
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+
+    it("fails a category the view has not refreshed yet, rather than reading it as none", async () => {
+      storeQuery();
+
+      const result = await adapter.getTopParameter("derived");
+
+      assertFailure(result);
+    });
+
+    it("reads a client without an id as no client", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["thing-1", 500],
+            [null, 15],
+          ],
+        }),
+      );
+
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "thing-1", measurements: 500 },
+        { clientId: null, measurements: 15 },
+      ]);
+    });
+
+    it("leaves out a client whose total is no number, rather than counting it as NaN", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        success({
+          rows: [
+            ["thing-1", "500"],
+            ["thing-2", "nan"],
+            ["thing-3", null],
+          ],
+        }),
+      );
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      const result = await adapter.getClientTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([{ clientId: "thing-1", measurements: 500 }]);
+      expect(warn).toHaveBeenCalledWith({
+        msg: "Skipped malformed metrics rows",
+        operation: "readMetricsView",
+        view: "metrics_client_totals",
+        dropped: 2,
+      });
+    });
+
+    it("passes a failed read through", async () => {
+      vi.spyOn(client, "query").mockResolvedValue(
+        failure(AppError.internal("The serving store could not answer the read")),
+      );
+
+      assertFailure(await adapter.getPoolFacts());
+      assertFailure(await adapter.getClientTotals());
+    });
+  });
 });
 
-/**
- * The adapter's reads against a real store of the version the store runs, through the migrations'
- * views. It rebuilds the `store` database, so it runs only against a throwaway store, and skips
- * without one:
- *
- *   docker run -d --name feed-test-clickhouse -p 127.0.0.1:18123:8123 \
- *     -e CLICKHOUSE_USER=admin -e CLICKHOUSE_PASSWORD=local -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
- *     clickhouse/clickhouse-server:25.8.33.6
- *   CLICKHOUSE_TEST_URL=http://127.0.0.1:18123 CLICKHOUSE_TEST_USER=admin CLICKHOUSE_TEST_PASSWORD=local \
- *     pnpm --filter backend exec vitest run src/common/modules/serving-store
- */
-const STORE_URL = process.env.CLICKHOUSE_TEST_URL;
-const STORE_USER = process.env.CLICKHOUSE_TEST_USER ?? "default";
-const STORE_PASSWORD = process.env.CLICKHOUSE_TEST_PASSWORD ?? "";
-
-const MIGRATIONS = resolve(__dirname, "../../../../../../packages/database/clickhouse/migrations");
+// The test store `pnpm test` starts and migrates. These specs seed and empty it as its admin, and
+// read it as the reader the backend reads as, with the grants and profile production's has.
+const STORE_URL = storeSetting("SERVING_STORE_URL");
+const READER_USER = storeSetting("SERVING_STORE_USERNAME");
+const READER_PASSWORD = storeSetting("SERVING_STORE_PASSWORD");
 
 const EXPERIMENT = "e1";
 const ADA = "0b5c5c9e-5f7a-4d0e-9a51-6b0e3c3a1f01";
@@ -471,28 +991,14 @@ const PAYLOAD_SCHEMAS = [
   _commit_version: 1,
 }));
 
-describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", () => {
+describe("ServingStoreAdapter against a store", () => {
   let admin: ClickHouseClient;
   let client: ServingStoreClientService;
   let adapter: ServingStoreAdapter;
 
   beforeAll(async () => {
-    const url = STORE_URL ?? "";
-    const server = createClient({ url, username: STORE_USER, password: STORE_PASSWORD });
-    await server.command({ query: "DROP DATABASE IF EXISTS store SYNC" });
-    await server.command({ query: "CREATE DATABASE store" });
-    await server.close();
-
-    admin = createClient({
-      url,
-      username: STORE_USER,
-      password: STORE_PASSWORD,
-      database: "store",
-      clickhouse_settings: { json_type_escape_dots_in_keys: 1 },
-    });
-    for (const statement of migrationStatements()) {
-      await admin.command({ query: statement });
-    }
+    admin = testStoreAdmin({ json_type_escape_dots_in_keys: 1 });
+    await emptyStore(admin);
     await admin.insert({ table: "measurements", values: MEASUREMENTS, format: "JSONEachRow" });
     await admin.insert({ table: "macro_results", values: MACRO_RESULTS, format: "JSONEachRow" });
     await admin.insert({ table: "uploads", values: UPLOADS, format: "JSONEachRow" });
@@ -503,7 +1009,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     const config = new ConfigService({
-      servingStore: { url, username: STORE_USER, password: STORE_PASSWORD },
+      servingStore: { url: STORE_URL, username: READER_USER, password: READER_PASSWORD },
     });
     client = new ServingStoreClientService(new ServingStoreConfigService(config));
     adapter = new ServingStoreAdapter(client);
@@ -511,6 +1017,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
   afterAll(async () => {
     await client.onModuleDestroy();
+    await emptyStore(admin);
     await admin.close();
   });
 
@@ -521,6 +1028,26 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     assertSuccess(data);
     return data.value;
   }
+
+  it.each(["measurements", "macro_results", "uploads"])(
+    "refuses a user's read of the %s table that names no experiment",
+    async (table) => {
+      const reader = createClient({
+        url: STORE_URL,
+        username: READER_USER,
+        password: READER_PASSWORD,
+        database: "store",
+      });
+
+      const refusal = await reader.query({ query: `SELECT count() FROM ${table}` }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      await reader.close();
+
+      expect(refusal).toMatchObject({ type: "UNKNOWN_SETTING" });
+    },
+  );
 
   it("answers a failed read without its statement or the values in it", async () => {
     const result = await client.query(
@@ -558,6 +1085,224 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       displayName: "renamed",
       rowCount: 2,
       latestRowAt: "2026-09-02T10:00:00.000Z",
+    });
+  });
+
+  it("moves a table's content revision for a row replaced in place, though its count, newest row and schema hold", async () => {
+    const experiment = "content-revision";
+    const upload = { ...UPLOADS[1], experiment_id: experiment };
+    await admin.insert({ table: "uploads", values: [upload], format: "JSONEachRow" });
+    const before = await adapter.getExperimentTableMetadata(experiment);
+    const edited = {
+      ...upload,
+      uploaded_data: { "Plot no.": 8, h: 999 },
+      uploaded_data_text: '{"Plot no.":8,"h":999}',
+      _commit_version: 2,
+    };
+    await admin.insert({ table: "uploads", values: [edited], format: "JSONEachRow" });
+    const after = await adapter.getExperimentTableMetadata(experiment);
+    await admin.command({ query: `DELETE FROM uploads WHERE experiment_id = '${experiment}'` });
+
+    assertSuccess(before);
+    assertSuccess(after);
+    const held = before.value.at(0);
+    const replaced = after.value.at(0);
+    expect(replaced).toMatchObject({
+      rowCount: 1,
+      latestRowAt: held?.latestRowAt,
+      schemaRevision: held?.schemaRevision,
+    });
+    expect(held?.contentRevision).toEqual(expect.any(String));
+    expect(replaced?.contentRevision).not.toBe(held?.contentRevision);
+  });
+
+  it("moves a table's content revision for a winning replacement stamped before the row it replaces", async () => {
+    // A large insert stamped first can become visible after a small one stamped later.
+    const experiment = "content-revision-order";
+    const upload = {
+      ...UPLOADS[1],
+      experiment_id: experiment,
+      uploaded_data: { "Plot no.": 1, h: 20 },
+      uploaded_data_text: '{"Plot no.":1,"h":20}',
+      arrived_at: "2026-11-25 10:00:01.000000",
+    };
+    await admin.insert({ table: "uploads", values: [upload], format: "JSONEachRow" });
+    const before = await adapter.getExperimentTableMetadata(experiment);
+    const replacement = {
+      ...upload,
+      uploaded_data: { "Plot no.": 2, h: 20 },
+      uploaded_data_text: '{"Plot no.":2,"h":20}',
+      _commit_version: 2,
+      arrived_at: "2026-11-25 10:00:00.000000",
+    };
+    await admin.insert({ table: "uploads", values: [replacement], format: "JSONEachRow" });
+    const after = await adapter.getExperimentTableMetadata(experiment);
+    await admin.command({ query: `DELETE FROM uploads WHERE experiment_id = '${experiment}'` });
+
+    assertSuccess(before);
+    assertSuccess(after);
+    const held = before.value.at(0);
+    const replaced = after.value.at(0);
+    expect(replaced).toMatchObject({
+      rowCount: 1,
+      displayName: held?.displayName,
+      latestRowAt: held?.latestRowAt,
+      schemaRevision: held?.schemaRevision,
+    });
+    expect(replaced?.contentRevision).not.toBe(held?.contentRevision);
+  });
+
+  describe("an experiment's change mark", () => {
+    // Silver's commit time, which a reload writes as a row's insert time, so its rows land older.
+    const COMMITTED_AT = "2026-09-14 17:07:00";
+    // Its own month, so a merge forced here folds no other test's rows.
+    const MARKED_AT = "2025-01-15 12:00:00";
+
+    function rowOf(experiment: string, row: Record<string, unknown>) {
+      return {
+        ...MEASUREMENTS[0],
+        experiment_id: experiment,
+        timestamp: MARKED_AT,
+        inserted_at: COMMITTED_AT,
+        ...row,
+      };
+    }
+
+    async function insert(experiment: string, rows: Record<string, unknown>[]) {
+      await admin.insert({
+        table: "measurements",
+        values: rows.map((row) => rowOf(experiment, row)),
+        format: "JSONEachRow",
+      });
+    }
+
+    /** The rows the store read for the latest mark of the experiment, as its query log has it. */
+    async function rowsLastMarkRead(experiment: string) {
+      await admin.command({ query: "SYSTEM FLUSH LOGS" });
+      const logged = await admin.query({
+        query: `SELECT read_rows FROM system.query_log WHERE type = 'QueryFinish' AND user = {user:String} AND query LIKE {experiment:String} ORDER BY event_time_microseconds DESC LIMIT 1`,
+        query_params: { user: READER_USER, experiment: `%'${experiment}'%` },
+        format: "JSONEachRow",
+      });
+      const [{ read_rows: readRows }] = z
+        .array(z.object({ read_rows: z.coerce.number() }))
+        .parse(await logged.json());
+      return readRows;
+    }
+
+    async function markOf(experiment: string, since: string | null) {
+      const mark = await adapter.getExperimentChangeMark(experiment, since);
+      assertSuccess(mark);
+      return mark.value;
+    }
+
+    it("holds still while nothing arrives, counting from where it began", async () => {
+      await insert("e-mark-quiet", [{ id: 1 }]);
+      const first = await markOf("e-mark-quiet", null);
+
+      expect(await markOf("e-mark-quiet", first.since)).toMatchObject({
+        since: first.since,
+        revision: first.revision,
+      });
+    });
+
+    it("moves its next start up the store's clock, reading no rows that arrived before it", async () => {
+      const experiment = "e-mark-cutoff";
+      // Stamped long before the next start, as migration 0012 stamps every row already held.
+      const anHourAgo = new Date(Date.now() - 60 * 60_000)
+        .toISOString()
+        .replace("T", " ")
+        .replace("Z", "");
+      await insert(
+        experiment,
+        Array.from({ length: 20_000 }, (_, id) => ({ id, arrived_at: anHourAgo })),
+      );
+
+      const wide = await markOf(experiment, "2020-01-01 00:00:00.000000");
+      const narrow = await markOf(experiment, wide.next.since);
+
+      expect(wide.next.since > wide.since).toBe(true);
+      expect(wide.revision).not.toBe(wide.next.revision);
+      expect(narrow).toMatchObject({ since: wide.next.since, revision: wide.next.revision });
+      expect(await rowsLastMarkRead(experiment)).toBeLessThan(20_000);
+    });
+
+    it("counts from a start it gives in UTC, whatever the session's time zone", async () => {
+      const experiment = "e-mark-zone";
+      const zoned = new ServingStoreClientService(
+        new ServingStoreConfigService(
+          new ConfigService({
+            servingStore: { url: STORE_URL, username: READER_USER, password: READER_PASSWORD },
+          }),
+        ),
+      );
+      vi.spyOn(client, "stream").mockImplementation((sql, settings, take) =>
+        zoned.stream(sql, { ...settings, session_timezone: "Europe/Amsterdam" }, take),
+      );
+      const before = await markOf(experiment, null);
+
+      await insert(experiment, [{ id: 1 }]);
+      const after = await markOf(experiment, before.since);
+      await zoned.onModuleDestroy();
+
+      expect(after.revision).not.toBe(before.revision);
+    });
+
+    it("counts both of its starts in one read of the rows", async () => {
+      const experiment = "e-mark-one-pass";
+      await insert(
+        experiment,
+        Array.from({ length: 20_000 }, (_, id) => ({ id })),
+      );
+
+      const mark = await markOf(experiment, "2020-01-01 00:00:00.000000");
+
+      expect(mark.revision.startsWith("20000:")).toBe(true);
+      expect(mark.next.revision.startsWith("20000:")).toBe(true);
+      expect(await rowsLastMarkRead(experiment)).toBeLessThan(2 * 20_000);
+    });
+
+    it("moves for a row that arrives with an older insert time than the rows held, as a reload sends", async () => {
+      await insert("e-mark-late", [{ id: 1, inserted_at: "2026-11-24 10:00:00" }]);
+      const before = await markOf("e-mark-late", null);
+
+      await insert("e-mark-late", [{ id: 2, inserted_at: COMMITTED_AT }]);
+      const after = await markOf("e-mark-late", before.since);
+
+      expect(after.since).toBe(before.since);
+      expect(after.revision).not.toBe(before.revision);
+    });
+
+    it("moves for a distinct row that arrives with the insert time the newest row has", async () => {
+      await insert("e-mark-tied", [{ id: 1 }]);
+      const before = await markOf("e-mark-tied", null);
+
+      await insert("e-mark-tied", [{ id: 2 }]);
+
+      expect((await markOf("e-mark-tied", before.since)).revision).not.toBe(before.revision);
+    });
+
+    it("moves for a winning replacement with the same insert time, after a merge folded it in", async () => {
+      await insert("e-mark-replaced", [{ id: 1, _commit_version: 1 }]);
+      const before = await markOf("e-mark-replaced", null);
+
+      await insert("e-mark-replaced", [{ id: 1, _commit_version: 2, data: '{"a":2}' }]);
+      await admin.command({ query: "OPTIMIZE TABLE measurements PARTITION 202501 FINAL" });
+
+      expect((await markOf("e-mark-replaced", before.since)).revision).not.toBe(before.revision);
+    });
+
+    it("moves when only the experiment's payload schemas do", async () => {
+      await insert("e-mark-schema", [{ id: 1 }]);
+      const before = await markOf("e-mark-schema", null);
+
+      await admin.insert({
+        table: "payload_schemas",
+        values: [{ ...PAYLOAD_SCHEMAS[0], experiment_id: "e-mark-schema" }],
+        format: "JSONEachRow",
+      });
+
+      expect((await markOf("e-mark-schema", before.since)).revision).not.toBe(before.revision);
     });
   });
 
@@ -797,6 +1542,39 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     });
 
     expect(data.rows).toEqual([["1.5E-4", "1.2345678E7"]]);
+  });
+
+  it("sorts a page by a payload read whole as numbers", async () => {
+    const values = [2.5, 10, 1.5];
+    await admin.insert({
+      table: "macro_results",
+      values: values.map((value, index) => ({
+        experiment_id: "whole",
+        id: 40 + index,
+        raw_id: 40 + index,
+        timestamp: "2026-09-14 16:56:31.972123",
+        macro_id: "mac3",
+        macro_output: { _value: value },
+        macro_output_text: String(value),
+        questions_data: {},
+        annotations: [],
+        _commit_version: 1,
+        _commit_timestamp: "2026-09-14 17:07:00",
+      })),
+      format: "JSONEachRow",
+    });
+
+    const data = await rowsOf({
+      tableName: "mac3",
+      tableType: "macro",
+      experimentId: "whole",
+      variants: [{ columnName: "macro_output", schema: "DOUBLE", suffix: "output" }],
+      columns: ["id"],
+      ordering: { column: "macro_output", direction: "ASC" },
+      limit: 10,
+    });
+
+    expect(data.rows).toEqual([["42"], ["40"], ["41"]]);
   });
 
   it("reads a payload that is no object whole", async () => {
@@ -1386,7 +2164,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(data.rows).toHaveLength(800_000);
     expect(data.truncated).toBe(false);
     expect(Buffer.byteLength(JSON.stringify(data.rows))).toBeLessThan(PAGE_BYTE_LIMIT);
-  });
+  }, 30_000);
 
   it("stops reading a page before the row that takes its cells past the read limit", async () => {
     // Rows of a million bytes each, 40 MB in all and well under the store's own guard.
@@ -1406,7 +2184,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     // 26 rows of 1,000,004 bytes and their separators fit 25 MiB; the 27th passes it.
     expect(data.truncated).toBe(true);
     expect(data.rows).toHaveLength(26);
-  });
+  }, 30_000);
 
   it("counts a read and lists the experiment's ids", async () => {
     const query = adapter.buildExperimentQuery({
@@ -1520,7 +2298,7 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
     expect(refused.error.code).toBe("FLAGGED_READ_TOO_LARGE");
     // One byte more, sent anyway, is a statement the store refuses too.
     assertFailure(await client.query(countSql.replace("SELECT ", "SELECT  ")));
-  });
+  }, 30_000);
 
   describe("custom metadata on a page", () => {
     const experiment = "metadata-e";
@@ -2051,13 +2829,11 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       }
 
       beforeAll(async () => {
-        // The reader profile's per-query memory and time, and the dev store's two cores.
-        await admin.command({
-          query: `CREATE USER IF NOT EXISTS capped_reader IDENTIFIED BY ${new StoreQueryBuilder().escapeValue(STORE_PASSWORD)} SETTINGS max_memory_usage = 4294967296, max_execution_time = 30, max_threads = 2`,
-        });
-        await admin.command({ query: "GRANT SELECT ON store.* TO capped_reader" });
+        // The reader on the dev store's two cores; the client adds a URL's settings to its own.
+        const url = new URL(STORE_URL);
+        url.searchParams.set("clickhouse_setting_max_threads", "2");
         const config = new ConfigService({
-          servingStore: { url: STORE_URL, username: "capped_reader", password: STORE_PASSWORD },
+          servingStore: { url: url.href, username: READER_USER, password: READER_PASSWORD },
         });
         capped = new ServingStoreClientService(new ServingStoreConfigService(config));
         cappedAdapter = new ServingStoreAdapter(capped);
@@ -2089,7 +2865,6 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
 
       afterAll(async () => {
         await capped.onModuleDestroy();
-        await admin.command({ query: "DROP USER IF EXISTS capped_reader" });
       });
 
       it("sorts and filters a page by a metadata field", async () => {
@@ -2128,6 +2903,943 @@ describe.skipIf(STORE_URL === undefined)("ServingStoreAdapter against a store", 
       }, 60_000);
     });
   });
+
+  describe("a device's reads", () => {
+    const from = "2026-10-19T00:00:00.000Z";
+    const to = "2026-10-19T23:59:59.000Z";
+    const first = "device-e1";
+    const second = "device-e2";
+
+    // dev-1 runs 2.2 for one row and rolls back, reports no battery at 12:10 and has a row after the
+    // window; dev-2 has one row; dev-3 only connects.
+    const measurement = (
+      id: number,
+      experimentId: string,
+      clientId: string,
+      timestamp: string,
+      fields: Record<string, unknown>,
+    ) => ({
+      experiment_id: experimentId,
+      id,
+      device_id: `sensor-${clientId}`,
+      client_id: clientId,
+      timestamp,
+      questions_data: {},
+      annotations: [],
+      macros: [],
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-21 09:00:00",
+      ...fields,
+    });
+
+    const p1 = { protocol_id: "p1", workbook_version_id: "wv1", workbook_run_id: "wr1" };
+    const deviceMeasurements = [
+      measurement(1, first, "dev-1", "2026-10-19 10:05:00.250", {
+        ...p1,
+        device_version: "2.1",
+        device_battery: 80,
+        latitude: 52.1,
+        longitude: 5.1,
+        macros: [{ id: "m1", name: "m1", filename: "m1.js" }],
+        data: '{"PAR":120.5,"protocol_id":7,"time":1}',
+      }),
+      measurement(2, first, "dev-1", "2026-10-19 12:10:00", {
+        ...p1,
+        device_version: "2.1",
+        macros: [
+          { id: "m1", name: "m1", filename: "m1.js" },
+          { id: "m2", name: "m2", filename: "m2.js" },
+        ],
+        data: '[{"set":[{"temperature":19.5}]},{"note":null}]',
+      }),
+      measurement(3, second, "dev-1", "2026-10-19 11:10:00", {
+        protocol_id: "p2",
+        device_version: "2.2",
+        device_battery: 70,
+        latitude: 52.2,
+        longitude: 5.2,
+        data: '{"par":130}',
+      }),
+      measurement(4, second, "dev-1", "2026-10-19 13:00:00", {
+        protocol_id: "p2",
+        device_version: "2.1",
+        device_battery: 60.5,
+        macros: [{ id: "m2", name: "m2", filename: "m2.js" }],
+      }),
+      measurement(5, second, "dev-1", "2026-10-19 13:30:00", {
+        protocol_id: "p2",
+        workbook_run_id: "wr2",
+        device_version: "2.1",
+        device_battery: 61,
+        latitude: 52.3,
+        longitude: 5.3,
+        macros: [{ id: "m2", name: "m2", filename: "m2.js" }],
+        data: '{"par":150,"phi2":null}',
+      }),
+      measurement(6, first, "dev-1", "2026-10-20 09:00:00", { device_version: "2.2" }),
+      measurement(7, first, "dev-2", "2026-10-19 10:30:00", { device_version: "1.0" }),
+    ];
+
+    const deviceEvents = [
+      ["dev-1", "connected", "2026-10-19 09:59:00.125", "s1", null],
+      ["dev-1", "disconnected", "2026-10-19 12:00:00", "s1", "CONNECTION_LOST"],
+      ["dev-1", "connected", "2026-10-19 12:01:00", "s2", null],
+      ["dev-1", "disconnected", "2026-10-21 08:00:00", "s2", "CLIENT_INITIATED_DISCONNECT"],
+      ["dev-3", "connected", "2026-10-19 07:00:00", null, null],
+    ].map(([client_id, event_type, event_timestamp, session_identifier, disconnect_reason]) => ({
+      client_id,
+      event_type,
+      event_timestamp,
+      session_identifier,
+      disconnect_reason,
+      _commit_version: 1,
+      _commit_timestamp: "2026-10-21 09:00:00",
+    }));
+
+    beforeAll(async () => {
+      await admin.insert({
+        table: "measurements",
+        values: deviceMeasurements,
+        format: "JSONEachRow",
+      });
+      // The feed sends id 3 again; the store counts the capture once, at its newest commit.
+      await admin.insert({
+        table: "measurements",
+        values: [{ ...deviceMeasurements[2], device_battery: 71, _commit_version: 2 }],
+        format: "JSONEachRow",
+      });
+      await admin.insert({
+        table: "device_events",
+        values: deviceEvents,
+        format: "JSONEachRow",
+      });
+    });
+
+    it("counts a device's rows per hour and experiment, each capture once", async () => {
+      const result = await adapter.getDeviceThroughput("dev-1", [first, second], from, to, "hour");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", experimentId: first, count: 1 },
+        { bucketStart: "2026-10-19T11:00:00.000Z", experimentId: second, count: 1 },
+        { bucketStart: "2026-10-19T12:00:00.000Z", experimentId: first, count: 1 },
+        { bucketStart: "2026-10-19T13:00:00.000Z", experimentId: second, count: 2 },
+      ]);
+    });
+
+    it("buckets a capture before 1970 into its own hour and day", async () => {
+      await admin.insert({
+        table: "measurements",
+        values: [measurement(8, first, "dev-4", "1969-12-31 12:30:00", { device_version: "1.0" })],
+        format: "JSONEachRow",
+      });
+      const dayStart = "1969-12-31T00:00:00.000Z";
+      const dayEnd = "1970-01-01T00:00:00.000Z";
+
+      const [hours, days] = await Promise.all([
+        adapter.getDeviceThroughput("dev-4", [first], dayStart, dayEnd, "hour"),
+        adapter.getDeviceThroughput("dev-4", [first], dayStart, dayEnd, "day"),
+      ]);
+
+      assertSuccess(hours);
+      assertSuccess(days);
+      expect(hours.value).toEqual([
+        { bucketStart: "1969-12-31T12:00:00.000Z", experimentId: first, count: 1 },
+      ]);
+      expect(days.value).toEqual([
+        { bucketStart: "1969-12-31T00:00:00.000Z", experimentId: first, count: 1 },
+      ]);
+    });
+
+    it("counts a device's rows per day", async () => {
+      const result = await adapter.getDeviceThroughput("dev-1", [first, second], from, to, "day");
+
+      assertSuccess(result);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { bucketStart: "2026-10-19T00:00:00.000Z", experimentId: first, count: 2 },
+          { bucketStart: "2026-10-19T00:00:00.000Z", experimentId: second, count: 3 },
+        ]),
+      );
+      expect(result.value).toHaveLength(2);
+    });
+
+    it("averages the battery per hour, null where none was reported", async () => {
+      const result = await adapter.getDeviceBatterySeries(
+        "dev-1",
+        [first, second],
+        from,
+        to,
+        "hour",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", averageBattery: 80 },
+        { bucketStart: "2026-10-19T11:00:00.000Z", averageBattery: 71 },
+        { bucketStart: "2026-10-19T12:00:00.000Z", averageBattery: null },
+        { bucketStart: "2026-10-19T13:00:00.000Z", averageBattery: 60.75 },
+      ]);
+    });
+
+    it("groups the payload profile and counts what each group carries", async () => {
+      const result = await adapter.getDevicePayloadBreakdown("dev-1", [first, second], from, to);
+
+      assertSuccess(result);
+      const row = (deviceVersion: string, protocolId: string, workbookRunId: string | null) => ({
+        deviceVersion,
+        protocolId,
+        workbookVersionId: protocolId === "p1" ? "wv1" : null,
+        workbookRunId,
+      });
+      expect(result.value).toHaveLength(4);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { ...row("2.1", "p1", "wr1"), count: 2, withGps: 1, withBattery: 1 },
+          { ...row("2.2", "p2", null), count: 1, withGps: 1, withBattery: 1 },
+          { ...row("2.1", "p2", null), count: 1, withGps: 0, withBattery: 1 },
+          { ...row("2.1", "p2", "wr2"), count: 1, withGps: 1, withBattery: 1 },
+        ]),
+      );
+    });
+
+    it("counts each macro a row carries", async () => {
+      const result = await adapter.getDeviceMacroBreakdown("dev-1", [first, second], from, to);
+
+      assertSuccess(result);
+      expect(result.value).toHaveLength(2);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          { macroId: "m1", count: 2 },
+          { macroId: "m2", count: 3 },
+        ]),
+      );
+    });
+
+    it("reads firmware per hour and version, so the rollback shows", async () => {
+      const result = await adapter.getDeviceFirmwareHistory(
+        "dev-1",
+        [first, second],
+        from,
+        to,
+        "hour",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          version: "2.1",
+          firstSeen: "2026-10-19T10:05:00.250Z",
+          lastSeen: "2026-10-19T10:05:00.250Z",
+          count: 1,
+        },
+        {
+          version: "2.2",
+          firstSeen: "2026-10-19T11:10:00.000Z",
+          lastSeen: "2026-10-19T11:10:00.000Z",
+          count: 1,
+        },
+        {
+          version: "2.1",
+          firstSeen: "2026-10-19T12:10:00.000Z",
+          lastSeen: "2026-10-19T12:10:00.000Z",
+          count: 1,
+        },
+        {
+          version: "2.1",
+          firstSeen: "2026-10-19T13:00:00.000Z",
+          lastSeen: "2026-10-19T13:30:00.000Z",
+          count: 2,
+        },
+      ]);
+    });
+
+    it("reads a device's connects and disconnects in the window, oldest first, up to the limit", async () => {
+      const all = await adapter.getDeviceLifecycleEvents("dev-1", from, to, 10);
+      const capped = await adapter.getDeviceLifecycleEvents("dev-1", from, to, 2);
+
+      assertSuccess(all);
+      assertSuccess(capped);
+      expect(all.value).toEqual([
+        {
+          eventType: "connected",
+          eventTimestamp: "2026-10-19T09:59:00.125Z",
+          disconnectReason: null,
+          sessionIdentifier: "s1",
+        },
+        {
+          eventType: "disconnected",
+          eventTimestamp: "2026-10-19T12:00:00.000Z",
+          disconnectReason: "CONNECTION_LOST",
+          sessionIdentifier: "s1",
+        },
+        {
+          eventType: "connected",
+          eventTimestamp: "2026-10-19T12:01:00.000Z",
+          disconnectReason: null,
+          sessionIdentifier: "s2",
+        },
+      ]);
+      expect(capped.value).toEqual(all.value.slice(0, 2));
+    });
+
+    it("reads a device's newest rows in the window with their payloads, newest first", async () => {
+      const result = await adapter.getDeviceRecentMeasurements(
+        "dev-1",
+        [first, second],
+        from,
+        to,
+        3,
+      );
+
+      assertSuccess(result);
+      expect(result.value.map(({ timestamp }) => timestamp)).toEqual([
+        "2026-10-19T13:30:00.000Z",
+        "2026-10-19T13:00:00.000Z",
+        "2026-10-19T12:10:00.000Z",
+      ]);
+      expect(result.value[0]).toEqual({
+        timestamp: "2026-10-19T13:30:00.000Z",
+        experimentId: second,
+        protocolId: "p2",
+        workbookVersionId: null,
+        deviceVersion: "2.1",
+        battery: 61,
+        latitude: 52.3,
+        longitude: 5.3,
+        sample: '{"par":150,"phi2":null}',
+      });
+      expect(result.value.map(({ sample }) => sample)).toEqual([
+        '{"par":150,"phi2":null}',
+        null,
+        '[{"set":[{"temperature":19.5}]},{"note":null}]',
+      ]);
+    });
+
+    it("lists the experiments a device's rows in the window claim", async () => {
+      const result = await adapter.getDeviceExperimentIds("dev-1", { from, to });
+
+      assertSuccess(result);
+      expect(result.value.toSorted()).toEqual([first, second]);
+    });
+
+    it("reads only the given experiments' rows, before grouping them or cutting the newest", async () => {
+      const [battery, newest, none] = await Promise.all([
+        adapter.getDeviceBatterySeries("dev-1", [first], from, to, "hour"),
+        adapter.getDeviceRecentMeasurements("dev-1", [first], from, to, 1),
+        adapter.getDeviceThroughput("dev-1", [], from, to, "hour"),
+      ]);
+
+      assertSuccess(battery);
+      assertSuccess(newest);
+      assertSuccess(none);
+      expect(battery.value).toEqual([
+        { bucketStart: "2026-10-19T10:00:00.000Z", averageBattery: 80 },
+        { bucketStart: "2026-10-19T12:00:00.000Z", averageBattery: null },
+      ]);
+      expect(newest.value.map(({ timestamp }) => timestamp)).toEqual(["2026-10-19T12:10:00.000Z"]);
+      expect(none.value).toEqual([]);
+    });
+
+    it("reads a device's last data from every row, and none for one that only connected", async () => {
+      const [withRows, onlyEvents, unseen] = await Promise.all([
+        adapter.getDeviceLastActivity("dev-1", [first, second]),
+        adapter.getDeviceLastActivity("dev-3", [first, second]),
+        adapter.getDeviceLastActivity("dev-9", [first, second]),
+      ]);
+
+      assertSuccess(withRows);
+      assertSuccess(onlyEvents);
+      assertSuccess(unseen);
+      expect(withRows.value).toEqual({ lastDataAt: "2026-10-20T09:00:00.000Z" });
+      expect(onlyEvents.value).toEqual({ lastDataAt: null });
+      expect(unseen.value).toEqual({ lastDataAt: null });
+    });
+
+    it("dates a device's last data by the given experiments' rows alone, and lists them all", async () => {
+      const [ofSecond, ofNone, claimed] = await Promise.all([
+        adapter.getDeviceLastActivity("dev-1", [second]),
+        adapter.getDeviceLastActivity("dev-1", []),
+        adapter.getDeviceExperimentIds("dev-1"),
+      ]);
+
+      assertSuccess(ofSecond);
+      assertSuccess(ofNone);
+      assertSuccess(claimed);
+      expect(ofSecond.value).toEqual({ lastDataAt: "2026-10-19T13:30:00.000Z" });
+      expect(ofNone.value).toEqual({ lastDataAt: null });
+      expect(claimed.value.toSorted()).toEqual([first, second]);
+    });
+
+    describe("as the backend's reader", () => {
+      let readerClient: ServingStoreClientService;
+      let readerAdapter: ServingStoreAdapter;
+      let adminClient: ServingStoreClientService;
+      let adminAdapter: ServingStoreAdapter;
+
+      const clientAs = (username: string, password: string) =>
+        new ServingStoreClientService(
+          new ServingStoreConfigService(
+            new ConfigService({ servingStore: { url: STORE_URL, username, password } }),
+          ),
+        );
+
+      beforeAll(() => {
+        readerClient = clientAs(
+          storeSetting("SERVING_STORE_USERNAME"),
+          storeSetting("SERVING_STORE_PASSWORD"),
+        );
+        readerAdapter = new ServingStoreAdapter(readerClient);
+        adminClient = clientAs(
+          storeSetting("CLICKHOUSE_TEST_USER"),
+          storeSetting("CLICKHOUSE_TEST_PASSWORD"),
+        );
+        adminAdapter = new ServingStoreAdapter(adminClient);
+      });
+
+      afterAll(async () => {
+        await readerClient.onModuleDestroy();
+        await adminClient.onModuleDestroy();
+      });
+
+      function answers(results: Result<unknown>[]): unknown[] {
+        return results.map((result) => {
+          assertSuccess(result);
+          return result.value;
+        });
+      }
+
+      it("answers every device read through its grants and profile as the admin does", async () => {
+        const experiments = [first, second];
+        const readAll = (reader: ServingStoreAdapter) =>
+          Promise.all([
+            reader.getDeviceLastActivity("dev-1", experiments),
+            reader.getDeviceExperimentIds("dev-1", { from, to }),
+            reader.getDeviceLifecycleEvents("dev-1", from, to, 10),
+            reader.getDeviceThroughput("dev-1", experiments, from, to, "hour"),
+            reader.getDeviceBatterySeries("dev-1", experiments, from, to, "hour"),
+            reader.getDevicePayloadBreakdown("dev-1", experiments, from, to),
+            reader.getDeviceMacroBreakdown("dev-1", experiments, from, to),
+            reader.getDeviceFirmwareHistory("dev-1", experiments, from, to, "hour"),
+            reader.getDeviceRecentMeasurements("dev-1", experiments, from, to, 3),
+          ]);
+
+        const [asAdmin, asReader] = await Promise.all([
+          readAll(adminAdapter),
+          readAll(readerAdapter),
+        ]);
+
+        expect(answers(asReader)).toEqual(answers(asAdmin));
+      });
+
+      it("tells through its grants whether both full reloads have passed", async () => {
+        const passed = (tableName: string) =>
+          admin.insert({
+            table: "completed_reloads",
+            values: [{ table_name: tableName, version: 1 }],
+            format: "JSONEachRow",
+          });
+        // A fresh adapter is a task that has not asked yet.
+        const ask = () => new ServingStoreAdapter(readerClient).hasDeviceEventsLoaded();
+
+        const none = await ask();
+        await passed("measurements");
+        const one = await ask();
+        await passed("device_events");
+        const both = await ask();
+
+        expect([none, one, both]).toEqual([success(false), success(false), success(true)]);
+      });
+    });
+  });
+
+  describe("the reader's row policies", () => {
+    let readerClient: ServingStoreClientService;
+    let readerAdapter: ServingStoreAdapter;
+    const chartRead: StoreQueryParams = {
+      tableName: "mac1",
+      tableType: "macro",
+      experimentId: EXPERIMENT,
+      columns: ["id"],
+      isChartRead: true,
+    };
+
+    beforeAll(async () => {
+      await createReader(admin);
+      const config = new ConfigService({
+        servingStore: { url: STORE_URL, username: POLICY_READER, password: POLICY_READER_PASSWORD },
+      });
+      readerClient = new ServingStoreClientService(new ServingStoreConfigService(config));
+      readerAdapter = new ServingStoreAdapter(readerClient);
+    });
+
+    afterAll(async () => {
+      await readerClient.onModuleDestroy();
+      await dropReader(admin);
+    });
+
+    it("fail a chart read that sends no experiment, which reads with it", async () => {
+      const query = readerAdapter.buildExperimentQuery(chartRead);
+      assertSuccess(query);
+      const reader = createClient({
+        url: STORE_URL,
+        username: POLICY_READER,
+        password: POLICY_READER_PASSWORD,
+        database: "store",
+      });
+
+      const refusal = await reader
+        .query({ query: query.value.sql, format: "JSONCompactEachRow" })
+        .then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+      await reader.close();
+      const rows: unknown[][] = [];
+      const read = await readerClient.stream(
+        query.value.sql,
+        { [EXPERIMENT_SETTING]: EXPERIMENT },
+        (row) => rows.push(row) > 0,
+      );
+
+      expect(refusal).toMatchObject({ type: "UNKNOWN_SETTING" });
+      assertSuccess(read);
+      expect(rows).toHaveLength(2);
+    });
+
+    it("leave a read of the views open without the setting, as pages read", async () => {
+      const rows: unknown[][] = [];
+      const read = await readerClient.stream(
+        `SELECT count() FROM experiment_macro_results(experiment = '${EXPERIMENT}') WHERE macro_id = 'mac1'`,
+        {},
+        (row) => rows.push(row) > 0,
+      );
+
+      assertSuccess(read);
+      expect(rows).toEqual([[2]]);
+    });
+
+    it("keep a read to the experiment it sends, whatever its statement names", async () => {
+      const rows: unknown[][] = [];
+      const read = await readerClient.stream(
+        "SELECT DISTINCT experiment_id FROM macro_results FINAL",
+        { [EXPERIMENT_SETTING]: EXPERIMENT },
+        (row) => rows.push(row) > 0,
+      );
+      assertSuccess(read);
+      expect(rows).toEqual([[EXPERIMENT]]);
+
+      const query = readerAdapter.buildExperimentQuery(chartRead);
+      assertSuccess(query);
+      const crossed = await readerAdapter.executeQuery({ ...query.value, experiment: "whole" });
+      assertSuccess(crossed);
+      expect(crossed.value.rows).toEqual([]);
+    });
+
+    it("read a joined page's second table under the policy too", async () => {
+      const query = readerAdapter.buildExperimentQuery({
+        tableName: "mac1",
+        tableType: "macro",
+        experimentId: EXPERIMENT,
+        columns: ["id", "matched_id"],
+        ordering: { column: "id" },
+        limit: 10,
+        offset: 0,
+        join: {
+          matchColumn: "raw_id",
+          toleranceMinutes: 60,
+          secondary: { tableName: "mac2", tableType: "macro" },
+          primaryColumns: ["id", "raw_id", "timestamp"],
+          secondaryColumns: [{ name: "id", alias: "matched_id" }],
+          primaryTimeColumn: "timestamp",
+          primaryTimeType: "TIMESTAMP",
+          secondaryTimeColumn: "timestamp",
+          secondaryTimeType: "TIMESTAMP",
+        },
+      });
+      assertSuccess(query);
+      const data = await readerAdapter.executeQuery(query.value);
+
+      assertSuccess(data);
+      expect(data.value.rows).toEqual([
+        ["11", "13"],
+        ["12", null],
+      ]);
+    });
+
+    it("leave the reader no table or view the module does not grant it", async () => {
+      const grants = await admin.query({
+        query: `SELECT DISTINCT table FROM system.grants WHERE user_name = '${POLICY_READER}' AND database = 'store'`,
+        format: "JSONEachRow",
+      });
+      const granted = new Set(
+        z
+          .array(z.object({ table: z.string() }))
+          .parse(await grants.json())
+          .map(({ table }) => table),
+      );
+      expect([...granted].sort()).toEqual(
+        [...STORE_READER_ACCESS.views, ...STORE_READER_ACCESS.tables].sort(),
+      );
+      const listed = await admin.query({
+        query: "SELECT name FROM system.tables WHERE database = 'store' ORDER BY name",
+        format: "JSONEachRow",
+      });
+      const names = z.array(z.object({ name: z.string() })).parse(await listed.json());
+      const others = names.map(({ name }) => name).filter((name) => !granted.has(name));
+      expect(others.length).toBeGreaterThan(0);
+
+      for (const name of others) {
+        const read = await readerClient.stream(
+          `SELECT 1 FROM \`${name}\` LIMIT 1`,
+          { [EXPERIMENT_SETTING]: EXPERIMENT },
+          () => true,
+        );
+        expect({ name, refused: read.isFailure() }).toEqual({ name, refused: true });
+      }
+    });
+  });
+});
+
+/** Waits out the refresh each view runs when it is made, which would miss rows inserted during it. */
+async function firstRefreshes(admin: ClickHouseClient): Promise<void> {
+  const views = storeRefreshedViews().length;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const result = await admin.query({
+      query:
+        "SELECT countIf(last_success_time IS NOT NULL) AS refreshed FROM system.view_refreshes WHERE database = 'store'",
+      format: "JSONEachRow",
+    });
+    const [{ refreshed }] = await result.json<{ refreshed: number }>();
+    if (Number(refreshed) === views) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("The metrics views never finished their first refresh");
+}
+
+/** A time as the store takes and gives it, in UTC. */
+function storeTime(time: Date): string {
+  return time.toISOString().replace("T", " ").replace("Z", "");
+}
+
+const METRICS_READER = "metrics_backend_test_reader";
+const METRICS_READER_PASSWORD = "metrics-backend-test";
+const METRICS_READER_PROFILE = "metrics_backend_test_profile";
+
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+/**
+ * The platform metrics, read as a login granted only the metrics views, with the reader's profile.
+ */
+describe("ServingStoreAdapter's platform metrics against a store", () => {
+  // Far enough apart that their dates differ wherever the clock is.
+  const now = Date.now();
+  const recent = new Date(now - HOUR);
+  const earlier = new Date(now - 3 * DAY);
+  const older = new Date(now - 40 * DAY);
+  const dateOf = (time: Date) => time.toISOString().slice(0, 10);
+
+  let admin: ClickHouseClient;
+  let client: ServingStoreClientService;
+  let adapter: ServingStoreAdapter;
+
+  beforeAll(async () => {
+    const url = STORE_URL;
+    admin = testStoreAdmin({ json_type_escape_dots_in_keys: 1 });
+    await admin.command({ query: `DROP USER IF EXISTS ${METRICS_READER}` });
+    await admin.command({ query: `DROP SETTINGS PROFILE IF EXISTS ${METRICS_READER_PROFILE}` });
+    await emptyStore(admin);
+    await firstRefreshes(admin);
+
+    const committed = { _commit_version: 1, _commit_timestamp: storeTime(new Date(now)) };
+    const unannotated = { questions_data: {}, annotations: [] };
+    await admin.insert({
+      table: "measurements",
+      format: "JSONEachRow",
+      values: [
+        {
+          ...committed,
+          ...unannotated,
+          experiment_id: "e1",
+          id: 1,
+          device_id: "d1",
+          client_id: "c1",
+          user_id: "u1",
+          timestamp: storeTime(recent),
+          timezone: "Europe/Amsterdam",
+          hour_local: 14,
+          protocol_id: "p1",
+          workbook_run_id: "r1",
+          data: '{"a":1}',
+          par_readings: [150, 160],
+        },
+        {
+          ...committed,
+          ...unannotated,
+          experiment_id: "e1",
+          id: 2,
+          device_id: "d2",
+          client_id: "c2",
+          user_id: "u2",
+          timestamp: storeTime(earlier),
+          timezone: "UTC",
+          hour_local: 3,
+          protocol_id: "p1",
+          workbook_run_id: "r1",
+          data: '{"bb":22}',
+          temperature_readings: [21.5],
+        },
+        {
+          ...committed,
+          ...unannotated,
+          experiment_id: "e2",
+          id: 3,
+          device_id: "d1",
+          timestamp: storeTime(older),
+          timezone: "UTC",
+          hour_local: 3,
+        },
+      ],
+    });
+    await admin.insert({
+      table: "macro_results",
+      format: "JSONEachRow",
+      values: [
+        { id: 11, rawId: 1, time: recent, phi2: 0.7 },
+        { id: 12, rawId: 2, time: earlier, phi2: 0.5 },
+        { id: 13, rawId: 3, time: older, phi2: 0.6 },
+      ].map(({ id, rawId, time, phi2 }) => ({
+        ...committed,
+        ...unannotated,
+        experiment_id: "e1",
+        id,
+        raw_id: rawId,
+        macro_id: "mac1",
+        timestamp: storeTime(time),
+        macro_output: { Phi2: phi2 },
+      })),
+    });
+    await admin.insert({
+      table: "uploads",
+      format: "JSONEachRow",
+      values: [
+        {
+          ...committed,
+          experiment_id: "e1",
+          id: 21,
+          upload_table_id: "t1",
+          uploaded_at: storeTime(recent),
+          uploaded_data: { h: 1 },
+        },
+      ],
+    });
+
+    for (const view of storeRefreshedViews()) {
+      await admin.command({ query: `SYSTEM REFRESH VIEW ${view}` });
+      await admin.command({ query: `SYSTEM WAIT VIEW ${view}` });
+    }
+
+    await admin.command({
+      query: `CREATE SETTINGS PROFILE ${METRICS_READER_PROFILE} SETTINGS ${STORE_READER_PROFILE}`,
+    });
+    await admin.command({
+      query: `CREATE USER ${METRICS_READER} IDENTIFIED BY '${METRICS_READER_PASSWORD}' SETTINGS PROFILE '${METRICS_READER_PROFILE}'`,
+    });
+    for (const view of storeRefreshedViews()) {
+      await admin.command({ query: `GRANT SELECT ON store.${view} TO ${METRICS_READER}` });
+    }
+
+    const config = new ConfigService({
+      servingStore: { url, username: METRICS_READER, password: METRICS_READER_PASSWORD },
+    });
+    client = new ServingStoreClientService(new ServingStoreConfigService(config));
+    adapter = new ServingStoreAdapter(client);
+  });
+
+  afterAll(async () => {
+    await client.onModuleDestroy();
+    await admin.command({ query: `DROP USER IF EXISTS ${METRICS_READER}` });
+    await admin.command({ query: `DROP SETTINGS PROFILE IF EXISTS ${METRICS_READER_PROFILE}` });
+    await emptyStore(admin);
+    await admin.close();
+  });
+
+  it.each([
+    ["the measurements", "SELECT count() FROM measurements"],
+    ["the macro results", "SELECT count() FROM macro_results"],
+    ["the views' refresh state", "SELECT count() FROM system.view_refreshes"],
+    ["a longer time limit than its profile's", "SELECT 1 SETTINGS max_execution_time = 60"],
+  ])("is refused %s", async (_name, sql) => {
+    assertFailure(await client.query(sql));
+  });
+
+  it("reads the platform totals", async () => {
+    const result = await adapter.getPublicPlatformTotals();
+
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      totalMeasurements: 3,
+      totalVolumeBytes: 16,
+      totalUploadedRows: 1,
+      totalMacroExecutions: 3,
+      devicesAllTime: 2,
+      experimentsWithData: 2,
+      firstMeasurementAt: older.toISOString(),
+      lastMeasurementAt: recent.toISOString(),
+    });
+    expect(result.value?.computedAt).not.toBeNull();
+  });
+
+  it("reads the daily activity oldest first", async () => {
+    const result = await adapter.getPublicDailyActivity(366);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      { date: dateOf(older), measurements: 1, cumulativeMeasurements: 1, volumeBytes: 0 },
+      { date: dateOf(earlier), measurements: 1, cumulativeMeasurements: 2, volumeBytes: 9 },
+      { date: dateOf(recent), measurements: 1, cumulativeMeasurements: 3, volumeBytes: 7 },
+    ]);
+  });
+
+  it("reads each client's total", async () => {
+    const result = await adapter.getClientTotals();
+
+    assertSuccess(result);
+    expect(result.value).toEqual(
+      expect.arrayContaining([
+        { clientId: "c1", measurements: 1 },
+        { clientId: "c2", measurements: 1 },
+        { clientId: null, measurements: 1 },
+      ]),
+    );
+    expect(result.value).toHaveLength(3);
+  });
+
+  it("reads the activity windows", async () => {
+    const result = await adapter.getActivityWindows();
+
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      measurements24h: 1,
+      measurements30d: 2,
+      experiments30d: 1,
+      contributors30d: 2,
+      devices30d: 2,
+      lastMeasurementAt: recent.toISOString(),
+    });
+  });
+
+  it("reads the measurements by their local hour", async () => {
+    const result = await adapter.getHourlyActivity();
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      { hourLocal: 3, measurements: 2 },
+      { hourLocal: 14, measurements: 1 },
+    ]);
+  });
+
+  it("reads the most observed parameter of each category", async () => {
+    const derived = await adapter.getTopParameter("derived");
+    const sensor = await adapter.getTopParameter("sensor");
+
+    assertSuccess(derived);
+    assertSuccess(sensor);
+    expect(derived.value).toEqual({
+      label: "Photosystem II efficiency (Phi2)",
+      name: "Phi2",
+      observations: 3,
+      median: 0.6,
+    });
+    expect(sensor.value).toEqual({
+      label: "Light intensity, PAR",
+      name: "par",
+      observations: 2,
+      median: 150,
+    });
+  });
+
+  it("writes each category a row without a parameter on every refresh, beside the counted ones", async () => {
+    const result = await client.query(
+      "SELECT category, observations FROM metrics_parameter_stats WHERE parameter = '' ORDER BY category",
+    );
+
+    assertSuccess(result);
+    expect(result.value.rows).toEqual([
+      ["derived", 0],
+      ["sensor", 0],
+    ]);
+  });
+
+  it("reads the pool facts", async () => {
+    const result = await adapter.getPoolFacts();
+
+    assertSuccess(result);
+    expect(result.value).toMatchObject({
+      sessionMedianMeasurements: 2,
+      currentStreakDays: 1,
+      deviceEnduranceDays: 1,
+      simultaneityPeakDevices: 1,
+      timezonesAllTime: 2,
+      timezonesPeakDay: 1,
+    });
+    expect(result.value?.meanArrivalGapSeconds).toBeCloseTo(
+      (recent.getTime() - earlier.getTime()) / 1000,
+      3,
+    );
+  });
+
+  it("reads an experiment's days within the window", async () => {
+    const result = await adapter.getScopedDailyActivity(60);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([
+      { date: dateOf(older), experimentId: "e2", measurements: 1 },
+      { date: dateOf(earlier), experimentId: "e1", measurements: 1 },
+      { date: dateOf(recent), experimentId: "e1", measurements: 1 },
+    ]);
+  });
+
+  it("reads one kind of resource's days within the window", async () => {
+    const protocols = await adapter.getResourceDailyActivity("protocol", 60);
+    const macros = await adapter.getResourceDailyActivity("macro", 30);
+
+    assertSuccess(protocols);
+    assertSuccess(macros);
+    expect(protocols.value).toEqual([
+      { date: dateOf(earlier), resourceType: "protocol", resourceId: "p1", measurements: 1 },
+      { date: dateOf(recent), resourceType: "protocol", resourceId: "p1", measurements: 1 },
+    ]);
+    expect(macros.value).toEqual([
+      { date: dateOf(earlier), resourceType: "macro", resourceId: "mac1", measurements: 1 },
+      { date: dateOf(recent), resourceType: "macro", resourceId: "mac1", measurements: 1 },
+    ]);
+  });
+
+  it("reads the last 30 days' contributors and publishers per experiment", async () => {
+    const contributors = await adapter.getContributorPairs();
+    const devices = await adapter.getDevicePairs();
+
+    assertSuccess(contributors);
+    assertSuccess(devices);
+    expect(contributors.value).toEqual(
+      expect.arrayContaining([
+        { experimentId: "e1", userId: "u1" },
+        { experimentId: "e1", userId: "u2" },
+      ]),
+    );
+    expect(contributors.value).toHaveLength(2);
+    expect(devices.value).toEqual(
+      expect.arrayContaining([
+        { experimentId: "e1", clientId: "c1" },
+        { experimentId: "e1", clientId: "c2" },
+      ]),
+    );
+    expect(devices.value).toHaveLength(2);
+  });
 });
 
 describe("StoreTables against the migrations", () => {
@@ -2141,13 +3853,28 @@ describe("StoreTables against the migrations", () => {
     "%s is read by its migration's sorting key, which holds its partition's time",
     (name, table) => {
       const create =
-        migrationStatements().find((statement) =>
+        storeMigrationStatements().find((statement) =>
           statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
         ) ?? "";
 
       expect(create).toContain(`ORDER BY (${["experiment_id", ...table.key].join(", ")})`);
       const partitionTime = /PARTITION BY toYYYYMM\((\w+)\)/.exec(create)?.[1];
       expect(table.key).toContain(partitionTime);
+    },
+  );
+
+  it.each(["measurements_by_device", "device_events"])(
+    "%s, which the device views fold, holds its partition's time in its sorting key",
+    (name) => {
+      const create =
+        storeMigrationStatements().find((statement) =>
+          statement.includes(`CREATE TABLE IF NOT EXISTS ${name}\n`),
+        ) ?? "";
+
+      const partitionTime = /PARTITION BY toYYYYMM\((\w+)\)/.exec(create)?.[1] ?? "";
+      const sortingKey = /^ORDER BY \((.*)\)$/m.exec(create)?.[1].split(", ") ?? [];
+      expect(partitionTime).not.toBe("");
+      expect(sortingKey).toContain(partitionTime);
     },
   );
 
@@ -2160,27 +3887,32 @@ describe("StoreTables against the migrations", () => {
     expect(texts).toHaveLength(1);
     for (const text of texts) {
       const added = `ALTER TABLE ${name} ADD COLUMN IF NOT EXISTS ${text} Nullable(String)`;
-      expect(migrationStatements().some((statement) => statement.includes(added))).toBe(true);
+      expect(storeMigrationStatements().some((statement) => statement.includes(added))).toBe(true);
     }
   });
 });
 
-/** The migrations as their runner applies them, one statement at a time. */
-function migrationStatements(): string[] {
-  const files = readdirSync(MIGRATIONS)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-  return files.flatMap((file) => {
-    const statements: string[] = [];
-    let lines: string[] = [];
-    for (const line of readFileSync(resolve(MIGRATIONS, file), "utf-8").split("\n")) {
-      lines.push(line);
-      if (line.trimEnd().endsWith(";")) {
-        statements.push(lines.join("\n").trimEnd().replace(/;$/, ""));
-        lines = [];
-      }
-    }
-    const rest = lines.filter((line) => line.trim() !== "" && !line.trim().startsWith("--"));
-    return rest.length > 0 ? [...statements, lines.join("\n")] : statements;
+/** A reader of this spec's own, given the grants and row policy the module gives the store's. */
+const POLICY_READER = "adapter_spec_reader";
+const POLICY_READER_PASSWORD = "adapter-spec";
+const READER_POLICY = "adapter_spec_reader_policy";
+
+async function createReader(admin: ClickHouseClient): Promise<void> {
+  await dropReader(admin);
+  await admin.command({
+    query: `CREATE USER ${POLICY_READER} IDENTIFIED BY '${POLICY_READER_PASSWORD}'`,
   });
+  for (const name of [...STORE_READER_ACCESS.views, ...STORE_READER_ACCESS.tables]) {
+    await admin.command({ query: `GRANT SELECT ON store.${name} TO ${POLICY_READER}` });
+  }
+  const tables = STORE_READER_ACCESS.tables.map((table) => `store.${table}`).join(", ");
+  await admin.command({
+    query: `CREATE ROW POLICY ${READER_POLICY} ON ${tables} USING ${STORE_READER_ACCESS.rowFilter} TO ${POLICY_READER}`,
+  });
+}
+
+async function dropReader(admin: ClickHouseClient): Promise<void> {
+  const tables = STORE_READER_ACCESS.tables.map((table) => `store.${table}`).join(", ");
+  await admin.command({ query: `DROP ROW POLICY IF EXISTS ${READER_POLICY} ON ${tables}` });
+  await admin.command({ query: `DROP USER IF EXISTS ${POLICY_READER}` });
 }

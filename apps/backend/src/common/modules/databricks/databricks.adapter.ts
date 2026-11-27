@@ -14,12 +14,6 @@ import type {
 import type { DatabricksPort as HealthDatabricksPort } from "../../../health/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
-  DeviceBatteryRow,
-  DeviceFirmwareVersionRow,
-  DeviceMacroRow,
-  DeviceMeasurementRow,
-  DevicePayloadBreakdownRow,
-  DeviceThroughputRow,
   ExperimentDeviceSeriesRow,
   ExperimentDeviceStatsRow,
   ExperimentPublisherRow,
@@ -29,6 +23,16 @@ import type {
   GroupThroughputRow,
   MonitoringReadOptions,
 } from "../../../iot/core/ports/databricks.port";
+import type {
+  DeviceBatteryRow,
+  DeviceFirmwareVersionRow,
+  DeviceMacroRow,
+  DeviceMeasurementRow,
+  DevicePayloadBreakdownRow,
+  DeviceThroughputRow,
+  DeviceWindow,
+} from "../../../iot/core/ports/device-reads.port";
+import { MetricsTable } from "../../../metrics/core/models/metrics-table.model";
 import type {
   ActivityWindowsRow,
   ContributorPairRow,
@@ -42,7 +46,7 @@ import type {
   PlatformTotalsRow,
   PoolFactsRow,
   ScopedDailyRow,
-} from "../../../metrics/core/ports/databricks.port";
+} from "../../../metrics/core/ports/metrics-reads.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -58,7 +62,6 @@ import type {
   QueryParams,
   QueryOrdering,
 } from "./services/query-builder/query-builder.types";
-import { cellNumber, cellString, cellUtcIso } from "./services/sql/cell-values";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, StatementParameter } from "./services/sql/sql.types";
 
@@ -159,12 +162,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     return this.jobsService.triggerJob(jobId, jobParams, input.exportId);
   }
 
-  /** Last data arrival from gold device_last_activity; lags by pipeline cadence. */
-  async getDeviceLastActivity(thingName: string): Promise<Result<{ lastDataAt: string | null }>> {
+  /**
+   * Last data arrival in the given experiments; lags by pipeline cadence. Read from clean_data, as
+   * gold's device_last_activity is, because that view keeps no experiment to scope it by.
+   */
+  async getDeviceLastActivity(
+    thingName: string,
+    experimentIds: string[],
+  ): Promise<Result<{ lastDataAt: string | null }>> {
     const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.device_last_activity`,
-      whereConditions: [["client_id", thingName]],
-      limit: 1,
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereClause: this.deviceRows(thingName, experimentIds),
+      aggregation: {
+        functions: [{ column: "timestamp", function: "max", alias: "last_data_at" }],
+      },
     });
     if (result.isFailure()) {
       return failure(result.error);
@@ -529,9 +540,37 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     );
   }
 
+  async getDeviceExperimentIds(
+    thingName: string,
+    window?: DeviceWindow,
+  ): Promise<Result<string[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      columns: ["experiment_id"],
+      distinct: true,
+      whereConditions: [["client_id", thingName]],
+      filters:
+        window === undefined
+          ? []
+          : [{ column: "timestamp", operator: "between", value: [window.from, window.to] }],
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.flatMap((row) => {
+        const experimentId = row[index.experiment_id] ?? null;
+        return experimentId === null ? [] : [experimentId];
+      }),
+    );
+  }
+
   /** Measurement counts per time bucket and experiment. */
   async getDeviceThroughput(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
@@ -539,7 +578,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "experiment_id" }],
@@ -564,6 +603,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   /** Average reported battery per bucket; AVG skips nulls, so a battery-less bucket is null. */
   async getDeviceBatterySeries(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
@@ -571,7 +611,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
     const bucketAlias = `timestamp_${bucket}`;
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [{ column: "timestamp", timeBucket: bucket }],
@@ -601,12 +641,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async getDevicePayloadBreakdown(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
   ): Promise<Result<DevicePayloadBreakdownRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [
@@ -646,12 +687,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async getDeviceMacroBreakdown(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
   ): Promise<Result<DeviceMacroRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         explode: { column: "macros", alias: "macro" },
@@ -678,13 +720,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
    */
   async getDeviceFirmwareHistory(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     bucket: "hour" | "day",
   ): Promise<Result<DeviceFirmwareVersionRow[]>> {
     const result = await this.runMonitoringQuery({
       table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       aggregation: {
         groupBy: [{ column: "timestamp", timeBucket: bucket }, { column: "device_version" }],
@@ -714,6 +757,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
   /** Most recent measurements in a range, newest first. */
   async getDeviceRecentMeasurements(
     thingName: string,
+    experimentIds: string[],
     from: string,
     to: string,
     limit: number,
@@ -731,7 +775,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         "longitude",
         "sample",
       ],
-      whereConditions: [["client_id", thingName]],
+      whereClause: this.deviceRows(thingName, experimentIds),
       filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
       ordering: { column: "timestamp", direction: "DESC" },
       limit,
@@ -755,6 +799,18 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
         sample: row[index.sample] ?? null,
       })),
     );
+  }
+
+  /** The device's rows of the given experiments, and those no experiment claims: the device's own. */
+  private deviceRows(thingName: string, experimentIds: string[]): string {
+    const builder = this.queryBuilder.query();
+    const device = builder.buildWhereClause([["client_id", thingName]]);
+    if (experimentIds.length === 0) {
+      return `${device} AND experiment_id IS NULL`;
+    }
+
+    const experiments = experimentIds.map((id) => builder.escapeValue(id)).join(", ");
+    return `${device} AND (experiment_id IS NULL OR experiment_id IN (${experiments}))`;
   }
 
   private toNumberOrNull(raw: string | null | undefined): number | null {
@@ -1043,7 +1099,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       filters?: FilterCondition[];
       aggregation?: AggregationSpec;
     } = {},
-  ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {
+  ): Promise<Result<MetricsTable>> {
     const queryResult = this.queryBuilder.buildQuery({
       table: this.metricsTable(tableName),
       ...options,
@@ -1062,37 +1118,12 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return failure(AppError.internal(`Metrics read of ${tableName} was truncated`));
     }
 
-    return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
+    return success(new MetricsTable(result.value.rows, this.columnIndex(result.value.columns)));
   }
 
   async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
     const result = await this.readMetricsTable("platform_totals", { limit: 1 });
-    if (result.isFailure()) {
-      return result;
-    }
-
-    const { rows, index } = result.value;
-    if (rows.length === 0) {
-      return success(null);
-    }
-
-    const row = rows[0];
-    const totalMeasurements = cellNumber(row[index.total_measurements]);
-    if (totalMeasurements === null) {
-      return success(null);
-    }
-
-    return success({
-      totalMeasurements,
-      totalVolumeBytes: cellNumber(row[index.total_volume_bytes]) ?? 0,
-      totalUploadedRows: cellNumber(row[index.total_uploaded_rows]) ?? 0,
-      totalMacroExecutions: cellNumber(row[index.total_macro_executions]) ?? 0,
-      devicesAllTime: cellNumber(row[index.devices_all_time]) ?? 0,
-      experimentsWithData: cellNumber(row[index.experiments_with_data]) ?? 0,
-      firstMeasurementAt: cellUtcIso(row[index.first_measurement_at]),
-      lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
-      computedAt: cellUtcIso(row[index.computed_at]),
-    });
+    return result.isFailure() ? result : success(result.value.platformTotals());
   }
 
   async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
@@ -1104,23 +1135,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        date: cellString(row[index.date]),
-        measurements: cellNumber(row[index.measurements]),
-        cumulativeMeasurements: cellNumber(row[index.cumulative_measurements]),
-        volumeBytes: cellNumber(row[index.volume_bytes]),
-      }))
-      .filter(
-        (row): row is DailyActivityRow =>
-          row.date !== null &&
-          row.measurements !== null &&
-          row.cumulativeMeasurements !== null &&
-          row.volumeBytes !== null,
-      );
-
-    this.warnDroppedMetricsRows("daily_activity", rows.length - mapped.length);
+    const mapped = result.value.dailyActivity();
+    this.warnDroppedMetricsRows("daily_activity", result.value.rows.length - mapped.length);
     return success(mapped.reverse());
   }
 
@@ -1132,52 +1148,14 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        family: cellString(row[index.family]),
-        measurements: cellNumber(row[index.total_measurements]),
-      }))
-      .filter((row): row is FamilyTotalsRow => row.family !== null && row.measurements !== null);
-
-    this.warnDroppedMetricsRows("family_totals", rows.length - mapped.length);
+    const mapped = result.value.familyTotals();
+    this.warnDroppedMetricsRows("family_totals", result.value.rows.length - mapped.length);
     return success(mapped);
   }
 
   async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {
     const result = await this.readMetricsTable("activity_windows", { limit: 1 });
-    if (result.isFailure()) {
-      return result;
-    }
-
-    const { rows, index } = result.value;
-    if (rows.length === 0) {
-      return success(null);
-    }
-
-    const row = rows[0];
-    const measurements24h = cellNumber(row[index.measurements_24h]);
-    const measurements30d = cellNumber(row[index.measurements_30d]);
-    const experiments30d = cellNumber(row[index.experiments_30d]);
-    const contributors30d = cellNumber(row[index.contributors_30d]);
-    if (
-      measurements24h === null ||
-      measurements30d === null ||
-      experiments30d === null ||
-      contributors30d === null
-    ) {
-      return success(null);
-    }
-
-    return success({
-      measurements24h,
-      measurements30d,
-      experiments30d,
-      contributors30d,
-      devices30d: cellNumber(row[index.devices_30d]) ?? 0,
-      lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
-      computedAt: cellUtcIso(row[index.computed_at]),
-    });
+    return result.isFailure() ? result : success(result.value.activityWindows());
   }
 
   async getHourlyActivity(): Promise<Result<HourlyActivityRow[]>> {
@@ -1188,73 +1166,21 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        hourLocal: cellNumber(row[index.hour_local]),
-        measurements: cellNumber(row[index.measurements]),
-      }))
-      .filter(
-        (row): row is HourlyActivityRow =>
-          row.hourLocal !== null &&
-          Number.isInteger(row.hourLocal) &&
-          row.hourLocal >= 0 &&
-          row.hourLocal <= 23 &&
-          row.measurements !== null,
-      );
-
-    this.warnDroppedMetricsRows("hourly_activity", rows.length - mapped.length);
+    const mapped = result.value.hourlyActivity();
+    this.warnDroppedMetricsRows("hourly_activity", result.value.rows.length - mapped.length);
     return success(mapped);
   }
 
   async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
     const result = await this.readMetricsTable("parameter_stats", {
       filters: [{ column: "category", operator: "equals", value: category }],
-      ordering: { column: "observations", direction: "DESC" },
-      limit: 1,
     });
-    if (result.isFailure()) {
-      return result;
-    }
-
-    const { rows, index } = result.value;
-    if (rows.length === 0) {
-      return success(null);
-    }
-
-    const row = rows[0];
-    const name = cellString(row[index.parameter]);
-    const label = cellString(row[index.label]) ?? name;
-    const observations = cellNumber(row[index.observations]);
-    const median = cellNumber(row[index.median_value]);
-    if (name === null || observations === null || median === null) {
-      return success(null);
-    }
-
-    return success({ label: label ?? name, name, observations, median });
+    return result.isFailure() ? result : success(result.value.topParameter());
   }
 
   async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
     const result = await this.readMetricsTable("pool_facts", { limit: 1 });
-    if (result.isFailure()) {
-      return result;
-    }
-
-    const { rows, index } = result.value;
-    if (rows.length === 0) {
-      return success(null);
-    }
-
-    const row = rows[0];
-    return success({
-      sessionMedianMeasurements: cellNumber(row[index.session_median_measurements]),
-      meanArrivalGapSeconds: cellNumber(row[index.mean_arrival_gap_seconds]),
-      currentStreakDays: cellNumber(row[index.current_streak_days]),
-      deviceEnduranceDays: cellNumber(row[index.device_endurance_days]),
-      simultaneityPeakDevices: cellNumber(row[index.simultaneity_peak_devices]),
-      timezonesAllTime: cellNumber(row[index.timezones_all_time]),
-      timezonesPeakDay: cellNumber(row[index.timezones_peak_day]),
-    });
+    return result.isFailure() ? result : success(result.value.poolFacts());
   }
 
   async getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>> {
@@ -1271,19 +1197,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        date: cellString(row[index.date]),
-        experimentId: cellString(row[index.experiment_id]),
-        measurements: cellNumber(row[index.measurements]),
-      }))
-      .filter(
-        (row): row is ScopedDailyRow =>
-          row.date !== null && row.experimentId !== null && row.measurements !== null,
-      );
-
-    this.warnDroppedMetricsRows("daily_activity_by_experiment", rows.length - mapped.length);
+    const mapped = result.value.scopedDaily();
+    this.warnDroppedMetricsRows(
+      "daily_activity_by_experiment",
+      result.value.rows.length - mapped.length,
+    );
     return success(mapped);
   }
 
@@ -1306,23 +1224,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        date: cellString(row[index.date]),
-        resourceType: cellString(row[index.resource_type]),
-        resourceId: cellString(row[index.resource_id]),
-        measurements: cellNumber(row[index.measurements]),
-      }))
-      .filter(
-        (row): row is ResourceDailyRow =>
-          row.date !== null &&
-          row.resourceType !== null &&
-          row.resourceId !== null &&
-          row.measurements !== null,
-      );
-
-    this.warnDroppedMetricsRows("daily_activity_by_resource", rows.length - mapped.length);
+    const mapped = result.value.resourceDaily();
+    this.warnDroppedMetricsRows(
+      "daily_activity_by_resource",
+      result.value.rows.length - mapped.length,
+    );
     return success(mapped);
   }
 
@@ -1332,15 +1238,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        experimentId: cellString(row[index.experiment_id]),
-        userId: cellString(row[index.user_id]),
-      }))
-      .filter((row): row is ContributorPairRow => row.experimentId !== null && row.userId !== null);
-
-    this.warnDroppedMetricsRows("experiment_contributors_window", rows.length - mapped.length);
+    const mapped = result.value.contributorPairs();
+    this.warnDroppedMetricsRows(
+      "experiment_contributors_window",
+      result.value.rows.length - mapped.length,
+    );
     return success(mapped);
   }
 
@@ -1350,15 +1252,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabr
       return result;
     }
 
-    const { rows, index } = result.value;
-    const mapped = rows
-      .map((row) => ({
-        experimentId: cellString(row[index.experiment_id]),
-        clientId: cellString(row[index.client_id]),
-      }))
-      .filter((row): row is DevicePairRow => row.experimentId !== null && row.clientId !== null);
-
-    this.warnDroppedMetricsRows("experiment_devices_window", rows.length - mapped.length);
+    const mapped = result.value.devicePairs();
+    this.warnDroppedMetricsRows(
+      "experiment_devices_window",
+      result.value.rows.length - mapped.length,
+    );
     return success(mapped);
   }
 

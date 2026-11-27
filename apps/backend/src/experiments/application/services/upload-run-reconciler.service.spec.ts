@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
 import { readFileSync } from "fs";
-import { resolve } from "path";
 import { z } from "zod";
 
 import { eq, experimentUploads, notifications } from "@repo/database";
@@ -16,6 +15,7 @@ import {
 import { AppError, assertSuccess, failure, success } from "../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
 import { NotificationRepository } from "../../../notifications/core/repositories/notification.repository";
+import { dataFixture } from "../../../test/data-fixtures";
 import { queuedDeliveriesFor } from "../../../test/notification-deliveries";
 import { TestHarness } from "../../../test/test-harness";
 import { uploadOutcomeSchema } from "../../core/models/experiment-data-uploads.model";
@@ -48,10 +48,7 @@ function run(
 const succeededRun = () => run(JobLifecycleState.TERMINATED, JobResultState.SUCCESS);
 
 // Written by the upload job's own tests, so both sides read one set of exit values.
-const OUTCOME_FIXTURES = resolve(
-  __dirname,
-  "../../../../../data/tests/fixtures/upload_outcomes.json",
-);
+const OUTCOME_FIXTURES = dataFixture("upload_outcomes.json");
 
 const zOutcomeFixtures = z.array(z.object({ case: z.string(), outcome: z.unknown() }));
 

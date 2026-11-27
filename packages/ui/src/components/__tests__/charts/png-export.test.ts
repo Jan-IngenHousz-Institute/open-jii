@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { toast } from "../../../hooks/use-toast";
 import { downloadBrandedPng, withBrandedPngExport } from "../../charts/png-export";
+import type { PreparePngLayout } from "../../charts/png-export";
 import { createPlotlyConfig } from "../../charts/utils";
 
 const { toImage } = vi.hoisted(() => ({ toImage: vi.fn() }));
@@ -104,6 +105,23 @@ describe("branded PNG export", () => {
     expect(document.querySelector("a[download]")).toBeNull();
   });
 
+  it("passes a resized figure to Plotly without replacing the live layout", async () => {
+    const live = Object.assign(graph, {
+      layout: { xaxis: { domain: [0.3, 0.7] } },
+      data: [{ y: [1, 2] }],
+    });
+    await downloadBrandedPng(live, { width: 1200, height: 800 }, (layout, width) => ({
+      ...layout,
+      xaxis: { domain: [0.1, 0.9] },
+      width,
+    }));
+    expect(toImage).toHaveBeenCalledWith(
+      { data: live.data, layout: { xaxis: { domain: [0.1, 0.9] }, width: 1200 } },
+      { format: "png", width: 1200, height: 800, scale: 1 },
+    );
+    expect(live.layout.xaxis.domain).toEqual([0.3, 0.7]);
+  });
+
   it("continues the chart's own background under the footer instead of a white band", async () => {
     cornerPixel = [17, 24, 39, 255];
 
@@ -147,6 +165,24 @@ describe("branded PNG export", () => {
     expect(downloaded).toBeUndefined();
     await button.click(graph, new MouseEvent("click"));
     expect(downloaded?.name).toBe("plot.png");
+  });
+
+  it("reads the current layout preparation each time the same button is clicked", async () => {
+    let prepare: PreparePngLayout | undefined;
+    const config = withBrandedPngExport(
+      { toImageButtonOptions: { width: 1200, height: 800 } },
+      () => prepare,
+    );
+    const button = config.modeBarButtonsToAdd?.[0] as ModeBarButton;
+    await button.click(graph, new MouseEvent("click"));
+    expect(toImage).toHaveBeenLastCalledWith(graph, expect.anything());
+
+    prepare = (layout, width) => ({ ...layout, width });
+    await button.click(graph, new MouseEvent("click"));
+    expect(toImage).toHaveBeenLastCalledWith(
+      expect.objectContaining({ layout: expect.objectContaining({ width: 1200 }) }),
+      expect.anything(),
+    );
   });
 
   it("preserves other modebar controls when branding is applied again", () => {

@@ -38,12 +38,15 @@ disagree, usually a column whose type changed in gold without a matching store m
 before more rows pile up, and switch the feed off (`store-feed-stalled`) if it will take a while. A
 table or column the store lacks never lands here: the feed waits for the migration instead.
 
-**3. Send them again once the store can take them.** As the admin, whose password is in the Secrets
-Manager secret `openjii-serving-store-<env>-admin`. Paste it at the `read` prompt, which neither
-echoes it nor keeps it in the shell's history, and hand it to each command through the environment
-rather than its arguments, which every process on the instance can list. A session starts in
-`/usr/bin`, where it cannot write, so work from its home directory, and insert with the settings the
-feed inserts with:
+**3. Send them again once the store can take them.** For `measurements`, do not insert by hand: the
+feed's writer follows every insert into it with the settle that keeps `measurements_by_device` in
+step, and a hand insert skips it. [Reload](procedures/serving-store-reload.md) their experiments
+instead, then clear the rows as below. Any other table goes back by hand, as the admin, whose
+password is in the Secrets Manager secret `openjii-serving-store-<env>-admin`. Paste it at the
+`read` prompt, which neither echoes it nor keeps it in the shell's history, and hand it to each
+command through the environment rather than its arguments, which every process on the instance can
+list. A session starts in `/usr/bin`, where it cannot write, so work from its home directory, and
+insert with the settings the feed inserts with:
 
 ```bash
 cd ~
@@ -67,8 +70,9 @@ unset ADMIN_PASSWORD
 
 A row that only the feed's normalisation can fix cannot be sent as it is, and neither can one whose
 message says it was cut. Once the feed's code can send them, a
-[reload](procedures/serving-store-reload.md) of their experiments does. A reload leaves the sheets
-alone: a refused `metadata_rows` row goes again once its sheet is owed to the lakehouse, as
+[reload](procedures/serving-store-reload.md) of their experiments does. Device events belong to no
+experiment, so for them reload `device_events` for `all`. A reload leaves the sheets alone: a
+refused `metadata_rows` row goes again once its sheet is owed to the lakehouse, as
 [Metadata sheets](procedures/serving-store-reload.md#metadata-sheets) describes. Owing a sheet
 sends only the rows it holds now, so a refused deletion, `is_deleted` set for an identifier an edit
 dropped or a deleted sheet, never comes back that way. If it cannot be sent as it is,

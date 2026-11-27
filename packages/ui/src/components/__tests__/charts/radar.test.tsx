@@ -18,6 +18,13 @@ vi.mock("../../charts/plotly-chart", () => ({
   )),
 }));
 
+vi.mock("../../charts/use-is-compact", () => ({
+  useChartSizing: () => [
+    { current: null },
+    { height: 425, viewportWidth: 566, width: 560, snug: true, compact: false },
+  ],
+}));
+
 vi.mock("../../charts/utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../charts/utils")>()),
   chartGridColor: vi.fn(() => "#E6E6E6"),
@@ -80,6 +87,58 @@ describe("RadarPlot", () => {
   it("renders without errors", () => {
     render(<RadarPlot {...defaultProps} />);
     expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+  });
+
+  it("keeps every heading and reserves less legend space in a short widget", () => {
+    render(
+      <RadarPlot
+        {...defaultProps}
+        categories={["primary_assay_measurement", "secondary_reference_measurement", "sample_size"]}
+        config={{ height: 229, title: "Assays", legendPosition: "top" }}
+      />,
+    );
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
+    expect(layout.legend.maxheight).toBeLessThan(64);
+    expect(layout.polar.angularaxis.ticktext.join("|").replaceAll("<br>", "")).toBe(
+      "primary_assay_measurement|secondary_reference_measurement|sample_size",
+    );
+  });
+
+  it("plans compact radial ticks for fractional measurements", () => {
+    const categories = ["Category A", "Category B", "Category C"];
+    render(
+      <RadarPlot
+        data={[{ r: [0.2, 0.24, 0.3], theta: categories }]}
+        categories={categories}
+        config={{ height: 190, title: "Assays", legendPosition: "top" }}
+      />,
+    );
+    const layout = JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}");
+    expect(layout.polar.radialaxis.tickvals).toEqual([0, 0.2]);
+  });
+
+  it("wraps centered headings more tightly when a short radar has more spokes", () => {
+    const categories = [
+      "primary_assay_measurement",
+      "secondary_reference_measurement",
+      "continuous_colour",
+      "sample_size",
+      "sample_index",
+      "relative_humidity",
+      "atmospheric_pressure",
+      "solar_radiation",
+    ];
+    const config = { height: 211, title: "Assays", legendPosition: "top" } as const;
+    const { rerender } = render(
+      <RadarPlot {...defaultProps} categories={categories.slice(0, 5)} config={config} />,
+    );
+    const tickText = () =>
+      JSON.parse(screen.getByTestId("plot-layout").textContent ?? "{}").polar.angularaxis.ticktext;
+    const fiveSpokeHeading = tickText()[0];
+    rerender(<RadarPlot {...defaultProps} categories={categories} config={config} />);
+    const headings = tickText();
+    expect(headings[0].split("<br>").length).toBeGreaterThan(fiveSpokeHeading.split("<br>").length);
+    expect(headings.join("|").replaceAll("<br>", "")).toBe(categories.join("|"));
   });
 
   it("passes correct data to PlotlyChart", () => {

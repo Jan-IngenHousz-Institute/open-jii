@@ -2,19 +2,26 @@ import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
 import { contract } from "@repo/api/contract";
+import { eq, experimentVisualizations } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { success, failure, AppError } from "../../common/utils/fp-utils";
+import { assertSuccess, success, failure, AppError } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { CreateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/create-experiment-visualization";
 import { DeleteExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/delete-experiment-visualization";
 import { GetExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/get-experiment-visualization";
 import { ListExperimentVisualizationsUseCase } from "../application/use-cases/experiment-visualizations/list-experiment-visualizations";
 import { UpdateExperimentVisualizationUseCase } from "../application/use-cases/experiment-visualizations/update-experiment-visualization";
-import type { ExperimentVisualizationDto } from "../core/models/experiment-visualizations.model";
+import type {
+  CreateExperimentVisualizationDto,
+  ExperimentVisualizationDto,
+} from "../core/models/experiment-visualizations.model";
+import { ExperimentVisualizationRepository } from "../core/repositories/experiment-visualization.repository";
 
 // Helper function to create test visualization data
-const createTestVisualizationData = (overrides: Partial<any> = {}) => ({
+const createTestVisualizationData = (
+  overrides: Partial<CreateExperimentVisualizationDto> = {},
+): CreateExperimentVisualizationDto => ({
   name: "Test Visualization",
   description: "Test Description",
   chartFamily: "basic" as const,
@@ -109,6 +116,144 @@ describe("ExperimentVisualizationsController", () => {
 
   afterAll(async () => {
     await testApp.teardown();
+  });
+
+  describe("unreadable saved visualizations", () => {
+    async function insertVisualization(
+      dataConfig: unknown,
+      createdAt = new Date(),
+      config: unknown = {},
+    ) {
+      const [row] = await testApp.database
+        .insert(experimentVisualizations)
+        .values({
+          experimentId: readableExperimentId,
+          createdBy: testUserId,
+          name: "Saved chart",
+          chartFamily: "basic",
+          chartType: "bar",
+          config,
+          dataConfig,
+          createdAt,
+        })
+        .returning({ id: experimentVisualizations.id });
+      return row;
+    }
+
+    const validDataConfig = {
+      tableName: "test_table",
+      dataSources: [{ tableName: "test_table", columnName: "value", role: "y" }],
+    };
+    const malformedConfigs = [
+      {
+        ...validDataConfig,
+        filters: [{ column: "school", operator: "equals", value: "" }],
+      },
+      { ...validDataConfig, dataSources: [{ role: "unknown" }] },
+    ];
+
+    it("returns valid charts in order when other saved charts fail validation", async () => {
+      const oldest = await insertVisualization(validDataConfig, new Date("2026-01-01"));
+      for (const dataConfig of malformedConfigs) {
+        await insertVisualization(dataConfig, new Date("2026-01-02"));
+      }
+      const newest = await insertVisualization(validDataConfig, new Date("2026-01-03"));
+
+      const response = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+            id: readableExperimentId,
+          }),
+        )
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({ id: newest.id, createdBy: testUserId }),
+        expect.objectContaining({ id: oldest.id, createdBy: testUserId }),
+      ]);
+    });
+
+    it("returns an empty list when every saved chart fails validation", async () => {
+      for (const dataConfig of malformedConfigs) {
+        await insertVisualization(dataConfig);
+      }
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.experiments.listExperimentVisualizations, {
+            id: readableExperimentId,
+          }),
+        )
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK)
+        .expect([]);
+    });
+
+    it.each(malformedConfigs)(
+      "returns 404 for an unreadable chart and still allows deletion",
+      async (dataConfig) => {
+        const row = await insertVisualization(dataConfig);
+        const path = testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+          id: readableExperimentId,
+          visualizationId: row.id,
+        });
+        await testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+        await testApp.delete(path).withAuth(testUserId).expect(StatusCodes.NO_CONTENT);
+        expect(
+          await testApp.database
+            .select({ id: experimentVisualizations.id })
+            .from(experimentVisualizations)
+            .where(eq(experimentVisualizations.id, row.id)),
+        ).toEqual([]);
+      },
+    );
+
+    it("rejects a rename that leaves an unreadable config and accepts a repair", async () => {
+      const brokenConfig = "unreadable";
+      const brokenDataConfig = malformedConfigs[0];
+      const row = await insertVisualization(brokenDataConfig, new Date(), brokenConfig);
+      const path = testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, {
+        id: readableExperimentId,
+        visualizationId: row.id,
+      });
+      const rename = {
+        name: "Renamed chart",
+        chartFamily: "basic",
+        chartType: "bar",
+        dataConfig: validDataConfig,
+      };
+
+      await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send(rename)
+        .expect(StatusCodes.BAD_REQUEST)
+        .expect((response) => {
+          expect(response.body).toHaveProperty("message", "Invalid saved chart fields: config");
+        });
+      expect(
+        await testApp.database
+          .select()
+          .from(experimentVisualizations)
+          .where(eq(experimentVisualizations.id, row.id)),
+      ).toEqual([
+        expect.objectContaining({
+          name: "Saved chart",
+          config: brokenConfig,
+          dataConfig: brokenDataConfig,
+        }),
+      ]);
+
+      const config = { title: "Repaired chart" };
+      const repaired = await testApp
+        .patch(path)
+        .withAuth(testUserId)
+        .send({ ...rename, config })
+        .expect(StatusCodes.OK);
+      expect(repaired.body).toMatchObject({ id: row.id, ...rename, config });
+      const read = await testApp.get(path).withAuth(testUserId).expect(StatusCodes.OK);
+      expect(read.body).toEqual(repaired.body);
+    });
   });
 
   describe("listVisualizations", () => {
@@ -451,6 +596,143 @@ describe("ExperimentVisualizationsController", () => {
         .expect((response) => {
           expect(response.body).toHaveProperty("message", errorMessage);
         });
+    });
+  });
+
+  describe("experiment ownership", () => {
+    it("returns the same 404 before and after a chart is saved in another experiment", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment: otherExperiment } = await testApp.createExperiment({
+        name: "Private experiment",
+        userId: otherUserId,
+        visibility: "private",
+      });
+      const visualizationId = faker.string.uuid();
+      const path = testApp.resolveOrpcPath(contract.experiments.getExperimentVisualization, {
+        id: readableExperimentId,
+        visualizationId,
+      });
+      const get = () => testApp.get(path).withAuth(testUserId).expect(StatusCodes.NOT_FOUND);
+      const missing = await get();
+
+      const chart = createTestVisualizationData();
+      await testApp.database.insert(experimentVisualizations).values({
+        ...chart,
+        config: chart.config ?? {},
+        id: visualizationId,
+        experimentId: otherExperiment.id,
+        createdBy: otherUserId,
+      });
+
+      const foreign = await get();
+      expect(foreign.body).toEqual(missing.body);
+    });
+
+    it.each(["update", "delete"] as const)(
+      "returns the same 404 for a missing chart and a chart from another experiment on %s",
+      async (action) => {
+        const otherUserId = await testApp.createTestUser({});
+        const { experiment: otherExperiment } = await testApp.createExperiment({
+          name: "Private experiment",
+          userId: otherUserId,
+          visibility: "private",
+        });
+        const authorization = testApp.module.get(AuthorizationService);
+        expect(
+          await authorization.can(testUserId, {
+            resourceType: "experiment",
+            resourceId: readableExperimentId,
+            action: "manage",
+          }),
+        ).toMatchObject({ allow: true });
+        expect(
+          await authorization.can(testUserId, {
+            resourceType: "experiment",
+            resourceId: otherExperiment.id,
+            action: "read",
+          }),
+        ).toMatchObject({ allow: false });
+
+        const repository = testApp.module.get(ExperimentVisualizationRepository);
+        const created = await repository.create(
+          otherExperiment.id,
+          createTestVisualizationData(),
+          otherUserId,
+        );
+        assertSuccess(created);
+        const visualization = created.value[0];
+        const writeSpy = vi.spyOn(repository, action);
+        const sendRequest = (visualizationId: string) => {
+          const params = { id: readableExperimentId, visualizationId };
+          return action === "update"
+            ? testApp
+                .patch(
+                  testApp.resolveOrpcPath(
+                    contract.experiments.updateExperimentVisualization,
+                    params,
+                  ),
+                )
+                .withAuth(testUserId)
+                .send(createTestVisualizationData({ name: "Changed name" }))
+            : testApp
+                .delete(
+                  testApp.resolveOrpcPath(
+                    contract.experiments.deleteExperimentVisualization,
+                    params,
+                  ),
+                )
+                .withAuth(testUserId);
+        };
+
+        const mismatchResponse = await sendRequest(visualization.id).expect(StatusCodes.NOT_FOUND);
+        const missingId = faker.string.uuid();
+        const missingResponse = await sendRequest(missingId).expect(StatusCodes.NOT_FOUND);
+
+        expect(missingResponse.body).toHaveProperty(
+          "message",
+          `Visualization with ID ${missingId} not found`,
+        );
+        expect(mismatchResponse.body).toEqual({
+          ...missingResponse.body,
+          message: `Visualization with ID ${visualization.id} not found`,
+        });
+        expect(writeSpy).not.toHaveBeenCalled();
+        const unchanged = await repository.findById(visualization.id);
+        assertSuccess(unchanged);
+        expect(unchanged.value).toEqual(visualization);
+      },
+    );
+
+    it("lets an experiment admin update and delete another user's chart using an uppercase experiment ID", async () => {
+      const adminId = await testApp.createTestUser({});
+      await testApp.addExperimentAdmin(readableExperimentId, adminId);
+      const repository = testApp.module.get(ExperimentVisualizationRepository);
+      const created = await repository.create(
+        readableExperimentId,
+        createTestVisualizationData(),
+        testUserId,
+      );
+      assertSuccess(created);
+      const visualization = created.value[0];
+      const params = { id: readableExperimentId.toUpperCase(), visualizationId: visualization.id };
+
+      const response = await testApp
+        .patch(testApp.resolveOrpcPath(contract.experiments.updateExperimentVisualization, params))
+        .withAuth(adminId)
+        .send(createTestVisualizationData({ name: "Updated name" }))
+        .expect(StatusCodes.OK);
+      expect(response.body).toMatchObject({ id: visualization.id, name: "Updated name" });
+      const updated = await repository.findById(visualization.id);
+      assertSuccess(updated);
+      expect(updated.value).toMatchObject({ name: "Updated name" });
+
+      await testApp
+        .delete(testApp.resolveOrpcPath(contract.experiments.deleteExperimentVisualization, params))
+        .withAuth(adminId)
+        .expect(StatusCodes.NO_CONTENT);
+      const deleted = await repository.findById(visualization.id);
+      assertSuccess(deleted);
+      expect(deleted.value).toBeNull();
     });
   });
 

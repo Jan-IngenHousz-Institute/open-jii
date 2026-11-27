@@ -13,10 +13,26 @@ export interface StoreColumn {
   expression: string;
   /** A contributor or device the store holds as an id, whose details the backend fills in. */
   idOf?: "contributor" | "device";
+  /** An as-of read's second device, already the JSON text of its client id and label. */
+  isPairText?: boolean;
+  /** That device's client id and label, which its own table computes from its own names. */
+  matchedDevice?: MatchedDevice;
+}
+
+export interface DeviceParts {
+  clientId: string;
+  label: string;
+}
+
+export interface MatchedDevice extends DeviceParts {
+  /** The condition under which a row matched one; the warehouse's device is null where none did. */
+  isMatched: string;
 }
 
 export interface StoreTable {
   view: string;
+  /** The table under the view, which a chart reads under the reader's row policy. */
+  table: string;
   identifierColumn?: string;
   /** The table's ORDER BY columns after experiment_id, exactly as its migration writes them. */
   key: string[];
@@ -80,6 +96,7 @@ const CUSTOM_METADATA: StoreColumn = {
 
 export const MEASUREMENTS_TABLE: StoreTable = {
   view: "experiment_measurements",
+  table: "measurements",
   key: ["timestamp", "id", "ifNull(device_id, '')"],
   phoneAnnotations: "annotations",
   takesCustomMetadata: true,
@@ -107,6 +124,7 @@ export const MEASUREMENTS_TABLE: StoreTable = {
 
 export const MACRO_RESULTS_TABLE: StoreTable = {
   view: "experiment_macro_results",
+  table: "macro_results",
   identifierColumn: "macro_id",
   phoneAnnotations: "annotations",
   takesCustomMetadata: true,
@@ -145,6 +163,7 @@ export const MACRO_RESULTS_TABLE: StoreTable = {
 
 export const UPLOADS_TABLE: StoreTable = {
   view: "experiment_uploads",
+  table: "uploads",
   identifierColumn: "upload_table_id",
   key: ["ifNull(upload_table_id, '')", "uploaded_at", "id"],
   columns: [

@@ -556,6 +556,32 @@ describe("PlotlyChart", () => {
   });
 
   describe("Config Handling", () => {
+    it("keeps the export button stable when points and export preparation change", () => {
+      const config = { displayModeBar: true };
+      const first: Data[] = [{ type: "scatter", x: [1], y: [2] }];
+      const next: Data[] = [{ type: "scatter", x: [1, 2], y: [2, 3] }];
+      const { rerender } = render(
+        <PlotlyChart
+          data={first}
+          layout={{ uirevision: "chart" }}
+          config={config}
+          preparePngLayout={(layout) => layout}
+        />,
+      );
+      const initialConfig = mockPlotComponent.mock.lastCall[0].config;
+
+      rerender(
+        <PlotlyChart
+          data={next}
+          layout={{ uirevision: "chart" }}
+          config={config}
+          preparePngLayout={(layout) => ({ ...layout, width: 800 })}
+        />,
+      );
+
+      expect(mockPlotComponent.mock.lastCall[0].config).toBe(initialConfig);
+    });
+
     it("adds the branded download only in the wrapper and keeps it stable across rerenders", async () => {
       const { createPlotlyConfig } =
         await vi.importActual<typeof import("../../charts/utils")>("../../charts/utils");

@@ -93,9 +93,9 @@ export class ServingStoreClientService implements OnModuleDestroy {
     return Buffer.byteLength(sent) <= ServingStoreClientService.MAX_QUERY_BYTES;
   }
 
-  async query(sql: string): Promise<Result<StoreResult>> {
+  async query(sql: string, settings: Record<string, string> = {}): Promise<Result<StoreResult>> {
     const rows: unknown[][] = [];
-    const read = await this.stream(sql, (row) => {
+    const read = await this.stream(sql, settings, (row) => {
       rows.push(row);
       return true;
     });
@@ -108,6 +108,7 @@ export class ServingStoreClientService implements OnModuleDestroy {
    */
   async stream(
     sql: string,
+    settings: Record<string, string>,
     take: (row: unknown[]) => boolean,
   ): Promise<Result<{ complete: boolean }>> {
     const client = this.client;
@@ -120,6 +121,7 @@ export class ServingStoreClientService implements OnModuleDestroy {
         const resultSet = await client.query({
           query: sql,
           format: ServingStoreClientService.FORMAT,
+          clickhouse_settings: settings,
         });
         for await (const rows of resultSet.stream()) {
           for (const row of rows) {

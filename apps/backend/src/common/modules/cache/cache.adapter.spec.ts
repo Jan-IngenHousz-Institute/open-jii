@@ -1,4 +1,5 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
 import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
@@ -338,6 +339,86 @@ describe("CacheAdapter", () => {
       expect(await cacheManager.get("swr:failing")).toMatchObject({ value: "old" });
     });
 
+    it("keeps a complete value over an incomplete refresh, serving it while stale", async () => {
+      const complete = { figures: "all", isComplete: true };
+      await cacheManager.set(
+        "swr:partial",
+        { value: complete, freshUntil: Date.now() - 1 },
+        60_000,
+      );
+      const fetchFn = vi.fn(() => Promise.resolve({ figures: "some", isComplete: false }));
+
+      const served = await adapter.tryCache("partial", fetchFn, (value) => value.isComplete);
+
+      expect(served).toEqual(complete);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+
+      await settle();
+      expect(await cacheManager.get("swr:partial")).toMatchObject({ value: complete });
+    });
+
+    it("stores an incomplete value where nothing is held", async () => {
+      const incomplete = { figures: "some", isComplete: false };
+      const fetchFn = vi.fn(() => Promise.resolve(incomplete));
+
+      const served = await adapter.tryCache(
+        "cold-incomplete",
+        fetchFn,
+        (value) => value.isComplete,
+      );
+
+      expect(served).toEqual(incomplete);
+      expect(await cacheManager.get("swr:cold-incomplete")).toMatchObject({ value: incomplete });
+    });
+
+    it("replaces an incomplete value with a newer incomplete one", async () => {
+      const older = { figures: "few", isComplete: false };
+      await cacheManager.set(
+        "swr:stale-incomplete",
+        { value: older, freshUntil: Date.now() - 1 },
+        60_000,
+      );
+      const newer = { figures: "some", isComplete: false };
+      const fetchFn = vi.fn(() => Promise.resolve(newer));
+
+      await adapter.tryCache("stale-incomplete", fetchFn, (value) => value.isComplete);
+
+      await settle();
+      expect(await cacheManager.get("swr:stale-incomplete")).toMatchObject({ value: newer });
+    });
+
+    it("keeps an incomplete value fresh only for the shorter window", async () => {
+      const adapter = new CacheAdapter(cacheManager, {
+        ...namespace,
+        ttlMs: 60_000,
+        incompleteTtlMs: 1,
+      });
+      const isComplete = (value: { isComplete: boolean }) => value.isComplete;
+      const partial = vi.fn(() => Promise.resolve({ figures: "some", isComplete: false }));
+      const whole = vi.fn(() => Promise.resolve({ figures: "all", isComplete: true }));
+
+      await adapter.tryCache("short", partial, isComplete);
+      await adapter.tryCache("long", whole, isComplete);
+      await settle();
+      await adapter.tryCache("short", partial, isComplete);
+      await adapter.tryCache("long", whole, isComplete);
+
+      expect(partial).toHaveBeenCalledTimes(2);
+      expect(whole).toHaveBeenCalledTimes(1);
+    });
+
+    it("logs a refresh behind a stale value that fails, since nobody waits on it", async () => {
+      await cacheManager.set("swr:logged", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
+      const warn = vi.spyOn(Logger.prototype, "warn");
+
+      await adapter.tryCache("logged", () => Promise.reject(new Error("warehouse asleep")));
+      await settle();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ msg: "Background cache load failed", cacheKey: "swr:logged" }),
+      );
+    });
+
     it("gives a caller with nothing to serve null after the wait, and finishes the load anyway", async () => {
       // Fresh long enough for the final read to find it fresh, not merely servable.
       const adapter = new CacheAdapter(cacheManager, { ...namespace, ttlMs: 60_000 });
@@ -385,6 +466,44 @@ describe("CacheAdapter", () => {
       expect(await cacheManager.get("swr:edited")).toBeUndefined();
     });
 
+    it("drops the result of a load invalidated while it reads what is held", async () => {
+      // No wait limit, so the caller's answer is the load's own.
+      const adapter = new CacheAdapter(cacheManager, {
+        prefix: "swr:",
+        ttlMs: 60_000,
+        staleMs: 60_000,
+      });
+      const fromBefore = { figures: "from before", isComplete: false };
+      let releaseFetch: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<typeof fromBefore>((resolve) => {
+            releaseFetch = () => resolve(fromBefore);
+          }),
+      );
+
+      const pending = adapter.tryCache("raced", fetchFn, (value) => value.isComplete);
+      await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(1));
+
+      // An incomplete result reads what is held before it may replace it; that read stays open.
+      let releaseRead: (() => void) | undefined;
+      const readHeld = new Promise<void>((resolve) => {
+        releaseRead = resolve;
+      });
+      const heldRead = vi.spyOn(cacheManager, "get").mockImplementationOnce(async () => {
+        await readHeld;
+        return undefined;
+      });
+      releaseFetch?.();
+      await vi.waitFor(() => expect(heldRead).toHaveBeenCalledTimes(1));
+
+      await adapter.invalidate("raced");
+      releaseRead?.();
+
+      expect(await pending).toEqual(fromBefore);
+      expect(await cacheManager.get("swr:raced")).toBeUndefined();
+    });
+
     it("starts a fresh load for a caller arriving after an invalidation", async () => {
       let release: (() => void) | undefined;
       const fetchFn = vi.fn(
@@ -423,6 +542,67 @@ describe("CacheAdapter", () => {
       expect(served).toEqual(["old", "old", "old"]);
       expect(fetchFn).toHaveBeenCalledTimes(1);
       release?.();
+    });
+  });
+
+  describe("refresh", () => {
+    const namespace = { prefix: "refresh:", ttlMs: 60_000, staleMs: 60_000 };
+    let adapter: CacheAdapter;
+
+    beforeEach(() => {
+      adapter = new CacheAdapter(cacheManager, namespace);
+    });
+
+    it("loads past a fresh value and keeps the answer for the next read", async () => {
+      await cacheManager.set("refresh:fresh", { value: "old", freshUntil: Date.now() + 60_000 });
+      const fetchFn = vi.fn().mockResolvedValue("new");
+
+      expect(await adapter.refresh("fresh", fetchFn)).toBe("new");
+      expect(await adapter.tryCache("fresh", fetchFn)).toBe("new");
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("waits for the source on a stale value rather than serving it", async () => {
+      await cacheManager.set("refresh:stale", { value: "old", freshUntil: Date.now() - 1 });
+
+      expect(await adapter.refresh("stale", () => Promise.resolve("new"))).toBe("new");
+    });
+
+    it("leaves a failed load to the caller waiting on it, without logging it", async () => {
+      const warn = vi.spyOn(Logger.prototype, "warn");
+
+      await expect(
+        adapter.refresh("awaited", () => Promise.reject(new Error("store unreachable"))),
+      ).rejects.toThrow("store unreachable");
+
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it("rejects with a failed load and keeps the stored value for the next read", async () => {
+      await cacheManager.set("refresh:kept", { value: "old", freshUntil: Date.now() + 60_000 });
+
+      await expect(
+        adapter.refresh("kept", () => Promise.reject(new Error("store unreachable"))),
+      ).rejects.toThrow("store unreachable");
+      expect(await adapter.tryCache("kept", () => Promise.resolve("new"))).toBe("old");
+    });
+
+    it("joins a load already running for the key", async () => {
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("value");
+          }),
+      );
+
+      const read = adapter.tryCache("running", fetchFn);
+      const refreshed = adapter.refresh("running", fetchFn);
+      await vi.waitFor(() => expect(release).toBeDefined());
+      release?.();
+
+      expect(await Promise.all([read, refreshed])).toEqual(["value", "value"]);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
     });
   });
 });

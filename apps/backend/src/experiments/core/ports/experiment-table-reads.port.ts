@@ -18,12 +18,17 @@ export interface TableQuery {
   distinct: boolean;
   /** A distinct store read's limit, applied once filled devices that read alike are one row. */
   limitAfterDetails?: number;
+  /** The experiment a store read names to the tables' row policy. */
+  experiment?: string;
 }
 
 /** Where experiment data is read from: the warehouse's views, or the serving store. */
 export interface ExperimentTableReads {
   /** Whether a page of a large table is better picked by id before its rows are read in full. */
   readonly picksLargePagesById: boolean;
+
+  /** Whether the tables listing is cheap enough to read afresh on every check an open page makes. */
+  readonly listsTablesAfresh: boolean;
 
   /** Whether the source holds the table at all; a read of one it lacks goes to the warehouse. */
   readsTable(tableName: string): boolean;

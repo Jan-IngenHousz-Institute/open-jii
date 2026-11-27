@@ -319,6 +319,30 @@ describe("transformCartesianData", () => {
     expect(b?.y).toEqual([12, 15]);
   });
 
+  it("keeps a line series out of the percent area stack on the same axis", () => {
+    const sources: ExperimentDataSourceConfig[] = [
+      ds("x", "x"),
+      ds("y", "a"),
+      ds("y", "b"),
+      { ...ds("y", "target"), traceType: "line" },
+    ];
+    const { chartSeries } = transformCartesianData(
+      [
+        { x: 1, a: 5, b: 15, target: 75 },
+        { x: 2, a: 10, b: 10, target: 80 },
+      ],
+      sources,
+      { stackMode: "percent" },
+      { ...baseOptions, defaultTraceType: "area" },
+    );
+
+    expect(chartSeries).toMatchObject([
+      { name: "a", traceType: "area", axis: "primary", y: [25, 50], fill: "tozeroy" },
+      { name: "b", traceType: "area", axis: "primary", y: [100, 100], fill: "tonexty" },
+      { name: "target", traceType: "line", axis: "primary", y: [75, 80] },
+    ]);
+  });
+
   it("normalises to percent when stackMode is 'percent'", () => {
     const rows = [
       { x: 1, v: 25, g: "A" },
@@ -334,6 +358,76 @@ describe("transformCartesianData", () => {
     const b = result.chartSeries.find((s) => s.name === "B");
     expect(a?.y).toEqual([25]);
     expect(b?.y).toEqual([100]);
+  });
+
+  it.each([
+    { stackMode: "stacked", expected: [10, 40, 4, 20, 30, 40, 3, 6] },
+    { stackMode: "percent", expected: [25, 100, 20, 100, 75, 100, 50, 100] },
+  ] as const)(
+    "uses separate $stackMode area stacks per facet and Y axis",
+    ({ stackMode, expected }) => {
+      const sources: ExperimentDataSourceConfig[] = [
+        ds("x", "x"),
+        ds("y", "a"),
+        ds("y", "b"),
+        { ...ds("y", "c"), axis: "y3" },
+        { ...ds("y", "d"), axis: "y4" },
+        ds("facet", "panel"),
+      ];
+      const { chartSeries } = transformCartesianData(
+        [
+          { x: "Sample", a: 10, b: 30, c: 4, d: 16, panel: "A" },
+          { x: "Sample", a: 30, b: 10, c: 3, d: 3, panel: "B" },
+        ],
+        sources,
+        { stackMode },
+        { ...baseOptions, defaultTraceType: "area" },
+      );
+
+      expect(chartSeries.map(({ yaxisId }) => yaxisId)).toEqual([
+        "y",
+        "y",
+        "y3",
+        "y3",
+        "y2",
+        "y2",
+        "y4",
+        "y4",
+      ]);
+      expect(chartSeries.map(({ y }) => y)).toEqual(expected.map((value) => [value]));
+      expect(chartSeries.map(({ fill }) => fill)).toEqual([
+        "tozeroy",
+        "tonexty",
+        "tozeroy",
+        "tonexty",
+        "tozeroy",
+        "tonexty",
+        "tozeroy",
+        "tonexty",
+      ]);
+    },
+  );
+
+  it("groups each series across panels so one legend entry toggles all its traces", () => {
+    const sources = [
+      ds("x", "x"),
+      ds("y", "one"),
+      { ...ds("y", "two"), axis: "secondary" as const },
+      ds("facet", "panel"),
+    ];
+    const data = [
+      { x: 1, one: 2, two: 8, panel: "A" },
+      { x: 2, one: 4, two: 6, panel: "B" },
+    ];
+    const { chartSeries } = transformCartesianData(data, sources, baseConfig, baseOptions);
+    expect(chartSeries).toHaveLength(4);
+    expect(chartSeries[0].legendgroup).toBeTruthy();
+    expect(chartSeries[1].legendgroup).toBeTruthy();
+    expect(chartSeries[0].legendgroup).not.toBe(chartSeries[1].legendgroup);
+    expect(chartSeries[2].legendgroup).toBe(chartSeries[0].legendgroup);
+    expect(chartSeries[3].legendgroup).toBe(chartSeries[1].legendgroup);
+    expect(chartSeries.slice(0, 2).every((series) => series.showlegend !== false)).toBe(true);
+    expect(chartSeries.slice(2).map((series) => series.showlegend)).toEqual([false, false]);
   });
 
   it("routes secondary-axis series onto per-cell overlay axes in facet mode", () => {
@@ -507,4 +601,87 @@ describe("transformCartesianData", () => {
 
     expect(result.chartSeries).toHaveLength(1);
   });
+});
+
+describe("numbered Y axes", () => {
+  it("uses the primary axis for horizontal bars with saved axis assignments", () => {
+    const sources: ExperimentDataSourceConfig[] = [
+      ds("x", "label"),
+      ds("y", "a"),
+      { ...ds("y", "b"), axis: "y3" },
+    ];
+    const { chartSeries } = transformCartesianData(
+      [{ label: "A", a: 10, b: 100 }],
+      sources,
+      { orientation: "h", y3AxisType: "log" },
+      { ...baseOptions, defaultTraceType: "bar" },
+    );
+    expect(chartSeries).toMatchObject([
+      { traceType: "bar", orientation: "h", axis: "primary" },
+      { traceType: "bar", orientation: "h", axis: "primary", x: ["A"], y: [100] },
+    ]);
+    expect(sources[2].axis).toBe("y3");
+  });
+
+  it.each(["secondary", "y3"] as const)(
+    "keeps horizontal bars in their facet's primary axes with a saved %s assignment",
+    (axis) => {
+      const { chartSeries, subplots } = transformCartesianData(
+        [
+          { a: 1, b: 2, panel: "A" },
+          { a: 3, b: 4, panel: "B" },
+        ],
+        [ds("y", "a"), { ...ds("y", "b"), traceType: "bar", axis }, ds("facet", "panel")],
+        { orientation: "h" },
+        { ...baseOptions, defaultTraceType: "bar" },
+      );
+      expect(subplots?.cells.map((cell) => cell.secondaryYaxisId)).toEqual([undefined, undefined]);
+      expect(chartSeries.filter(({ name }) => name === "b")).toMatchObject([
+        { axis: "primary", xaxisId: "x", yaxisId: "y" },
+        { axis: "primary", xaxisId: "x2", yaxisId: "y2" },
+      ]);
+    },
+  );
+
+  it.each(["line", "scatter", "bar", "area"] as const)(
+    "routes all six axes for %s",
+    (defaultTraceType) => {
+      const axes = ["primary", "secondary", "y3", "y4", "y5", "y6"] as const;
+      const sources = axes.map((axis, index) => ({ ...ds("y", `v${index}`), axis }));
+      const { chartSeries } = transformCartesianData(
+        [{ v0: 1, v1: 2, v2: 3, v3: 4, v4: 5, v5: 6 }],
+        sources,
+        {},
+        { ...baseOptions, defaultTraceType },
+      );
+      expect(chartSeries.map((series) => series.axis)).toEqual(axes);
+      expect(chartSeries.map((series) => series.y)).toEqual([[1], [2], [3], [4], [5], [6]]);
+    },
+  );
+
+  it.each(["y3", "y4", "y5", "y6"] as const)(
+    "uses axis 2 for a saved %s assignment with facets",
+    (axis) => {
+      const sources = [ds("y", "a"), { ...ds("y", "b"), axis }, ds("facet", "panel")];
+      const { chartSeries, subplots } = transformCartesianData(
+        [
+          { a: 1, b: 2, panel: "A" },
+          { a: 3, b: 4, panel: "B" },
+        ],
+        sources,
+        {},
+        baseOptions,
+      );
+      expect(subplots?.cells.map((cell) => cell.secondaryYaxisId)).toEqual(["y3", "y4"]);
+      expect(
+        chartSeries
+          .filter((series) => series.name === "b")
+          .map((series) => [series.axis, series.yaxisId]),
+      ).toEqual([
+        ["secondary", "y3"],
+        ["secondary", "y4"],
+      ]);
+      expect(sources[1].axis).toBe(axis);
+    },
+  );
 });

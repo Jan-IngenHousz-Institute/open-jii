@@ -23,6 +23,19 @@ export type ExperimentTableType = "static" | "macro" | "upload";
 /** Where a read of experiment data goes: the warehouse's views, or the serving store. */
 export type ExperimentDataSource = "warehouse" | "store";
 
+export interface ExperimentTableVersion {
+  identifier: string;
+  displayName: string | null;
+  totalRows: number;
+  latestRowAt: string | null;
+  schemaRevision: string | null;
+  contentRevision: string | null;
+}
+
+export type ExperimentTablesChange =
+  | { type: "changed"; tables: ExperimentTableVersion[] }
+  | { type: "heartbeat" };
+
 export const PAGE_TOO_LARGE_MESSAGE =
   "This page holds more data than one read can return. Choose a smaller page size.";
 
@@ -101,6 +114,8 @@ export interface ExperimentTableMetadata {
   latestRowAt: string | null;
   /** Changes whenever any of the table's schemas does. */
   schemaRevision: string | null;
+  /** Changes whenever the rows the table holds do, in whatever order they arrive. Only the store's. */
+  contentRevision?: string | null;
   macroSchema?: string | null;
   questionsSchema?: string | null;
   customMetadataSchema?: string | null;
@@ -155,6 +170,11 @@ export interface ExperimentQueryParams {
   offset?: number;
   /** Only the store reads by flags; a flagged read is refused before it could reach the warehouse. */
   flagged?: FlaggedRows;
+  /**
+   * A chart's read. In the store it reads the tables, with FINAL, under the reader's row policy,
+   * and its payload fields as JSON values, not the text a page shows.
+   */
+  isChartRead?: boolean;
 }
 
 /**

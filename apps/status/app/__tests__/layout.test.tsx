@@ -4,7 +4,7 @@ import en from "@repo/i18n/locales/en-US/status.json";
 
 import { generateMetadata } from "../layout";
 
-vi.mock("next/font/google", () => ({ Inter: () => ({ variable: "font-inter" }) }));
+vi.mock("next/font/local", () => ({ default: () => ({ variable: "font-inter" }) }));
 
 describe("the page metadata", () => {
   it("comes from the status translations", async () => {

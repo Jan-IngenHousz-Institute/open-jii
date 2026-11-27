@@ -2114,14 +2114,179 @@ resource "grafana_rule_group" "serving_store_health" {
       service   = "serving-store"
     }
   }
+
+  # Catalog entry 152. The views refresh hourly in a chain, so a healthy age stays under 70 minutes;
+  # a failed refresh keeps its view's old figures and holds back the views after it.
+  rule {
+    name      = "Serving Store Metrics Stale"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "MetricsRefreshAgeMinutes"
+        statistic  = "Maximum"
+        period     = "60"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 120"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description      = "For ten minutes, one of the serving store's platform metrics views had gone over two hours without a refresh, so the public metrics are stale."
+      summary          = "Serving store metrics stale"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-metrics-age.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-metrics-age"]
+    }
+    labels = {
+      metric_id = "store-metrics-age"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
+
+  # Catalog entry 152 as well. A view that failed or never ran since the store started can show
+  # an age that has not reached the rule above while its figures are older, and the timer counts
+  # every view as failing when it cannot read their state. Silence is a store before 0010.
+  rule {
+    name      = "Serving Store Metrics Refresh Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/ServingStore"
+        metricName = "MetricsRefreshFailures"
+        statistic  = "Maximum"
+        period     = "60"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description      = "For ten minutes, one of the serving store's platform metrics views was missing, had failed its last refresh or had none since the store started, or the store's timer could not read their state, so the public metrics may be stale."
+      summary          = "Serving store metrics refresh failing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-metrics-age.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["store-metrics-age"]
+    }
+    labels = {
+      metric_id = "store-metrics-age"
+      severity  = "warning"
+      service   = "serving-store"
+    }
+  }
 }
 
 # Serving store feed alerts, only where the pipelines feed the store
 locals {
-  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows"])
+  serving_store_feed_tables = toset(["measurements", "macro_results", "uploads", "metadata_rows", "device_events"])
 
-  # The heartbeat metric counting the gold rows each table is fed from. Uploads have none, so a stall
-  # there shows only as a slow feed once rows arrive.
+  # The heartbeat metric counting the gold rows each table is fed from. Uploads, the sheets' rows and
+  # silver's device events have none, so a stall there shows only as a slow feed once rows arrive.
   serving_store_feed_gold_rows = {
     measurements  = "ExperimentRows"
     macro_results = "MacroResultRows"
@@ -2215,7 +2380,7 @@ resource "grafana_rule_group" "serving_store_feed" {
       for            = "5m"
 
       annotations = {
-        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from gold."
+        description      = "For five minutes, the slowest twentieth of the rows reaching the serving store's ${rule.key} took over a minute from its source table's commit."
         summary          = "Serving store feed slow: ${rule.key}"
         runbook_url      = "${var.runbook_base_url}/docs/runbooks/store-feed-latency.md"
         __dashboardUid__ = local.heartbeat_daily_uid

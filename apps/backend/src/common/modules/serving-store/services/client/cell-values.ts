@@ -33,6 +33,15 @@ export class CellValues {
     );
   }
 
+  static textOrNull(value: unknown): string | null {
+    return typeof value === "string" ? value : null;
+  }
+
+  /** NaN and infinities arrive quoted (output_format_json_quote_denormals) and read as no value. */
+  static numberOrNull(value: unknown): number | null {
+    return typeof value === "number" ? value : null;
+  }
+
   /** A payload's JSON text, parsed once for every cell read from it; nothing for a row without. */
   static payload(text: unknown): unknown {
     return typeof text === "string" ? CellValues.parse(text) : undefined;

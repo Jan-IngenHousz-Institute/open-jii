@@ -1,3 +1,4 @@
+import type { ClickHouseClient } from "@clickhouse/client";
 import { faker } from "@faker-js/faker";
 import type { INestApplication, Type } from "@nestjs/common";
 import type { ModuleMetadata } from "@nestjs/common/interfaces";
@@ -7,7 +8,7 @@ import type { AnyContractProcedure } from "@orpc/contract";
 import { config } from "dotenv";
 import nock from "nock";
 import { resolve } from "path";
-import request from "supertest";
+import type request from "supertest";
 import type { Response } from "supertest";
 import type { App } from "supertest/types";
 
@@ -48,6 +49,7 @@ import {
   experimentJoinRequests,
   resourceGrants,
   resourceVisits,
+  apiKeys,
   ensurePersonalOrganization,
   eq,
   verifications,
@@ -59,11 +61,13 @@ import { ExperimentDataOutboxWorker } from "../experiments/application/services/
 import { ExportRunReconcilerService } from "../experiments/application/services/export-run-reconciler.service";
 import { UploadRunReconcilerService } from "../experiments/application/services/upload-run-reconciler.service";
 import { NotificationOutboxWorker } from "../notifications/application/services/notification-outbox.worker";
+import { requestsTo } from "./local-requests";
 import { MockAnalyticsAdapter } from "./mocks/adapters/analytics.adapter.mock";
 import { QuietExperimentDataOutboxWorker } from "./quiet-experiment-data-outbox.worker";
 import { QuietExportRunReconcilerService } from "./quiet-export-run-reconciler";
 import { QuietNotificationOutboxWorker } from "./quiet-notification-outbox.worker";
 import { QuietUploadRunReconcilerService } from "./quiet-upload-run-reconciler";
+import { emptyStore, testStoreAdmin } from "./store-admin";
 
 // Ensure test environment is loaded
 config({ path: resolve(__dirname, "../../.env.test") });
@@ -95,6 +99,8 @@ export class TestHarness {
   private readonly _imports: ModuleMetadata["imports"];
   private _module: TestingModule | null = null;
   private _request: ReturnType<typeof request> | null = null;
+  private _store: ClickHouseClient | null = null;
+  private storeUsed = false;
 
   private constructor(imports: ModuleMetadata["imports"]) {
     this._imports = imports;
@@ -113,8 +119,8 @@ export class TestHarness {
     if (!this.app) {
       // Configure nock to prevent any real HTTP requests during tests
       nock.disableNetConnect();
-      // But allow localhost connections for the test server
-      nock.enableNetConnect("127.0.0.1");
+      // But allow this machine, by either name: the test app, the test store and local fakes
+      nock.enableNetConnect(/^(localhost|127\.0\.0\.1):\d+$/);
 
       const moduleBuilder = Test.createTestingModule({
         imports: this._imports,
@@ -149,8 +155,7 @@ export class TestHarness {
         logger: false,
       });
 
-      await this.app.init();
-      this._request = request(this.app.getHttpServer());
+      this._request = await requestsTo(this.app);
     }
   }
 
@@ -164,6 +169,7 @@ export class TestHarness {
       }
 
       await this.clearDatabase();
+      await this.clearStore();
       this.resetMockAdapters();
     } catch (e) {
       // Fail loudly: a swallowed cleanup error leaves the shared test DB
@@ -178,6 +184,7 @@ export class TestHarness {
    */
   public async teardown() {
     await this.clearDatabase();
+    await this.clearStore();
 
     if (this.app) {
       await this.app.close();
@@ -217,6 +224,26 @@ export class TestHarness {
 
     // Get the database instance from the module
     return this._module.get<DatabaseInstance>("DATABASE");
+  }
+
+  /**
+   * The test store the app reads as its reader, here as its admin, for specs to insert the rows the
+   * feed would.
+   */
+  public get store(): ClickHouseClient {
+    this.storeUsed = true;
+    this._store ??= testStoreAdmin();
+    return this._store;
+  }
+
+  /** Empties the store's tables once a spec has written to it, keeping the migration ledger. */
+  private async clearStore(): Promise<void> {
+    if (!this._store || !this.storeUsed) {
+      return;
+    }
+
+    await emptyStore(this._store);
+    this.storeUsed = false;
   }
 
   private async clearDatabase(): Promise<void> {
@@ -310,6 +337,13 @@ export class TestHarness {
         this.mockUserSession(userId);
         return req;
       },
+      // Signs the user in through one of their API keys, as Better Auth's key plugin does: the
+      // session's id is the key's and its token the key the request sends.
+      withApiKey: (userId: string, key: { id: string; key: string }) => {
+        req.set("x-api-key", key.key);
+        this.mockUserSession(userId, { id: key.id, token: key.key });
+        return req;
+      },
       withoutAuth: () => {
         // Ensure no auth headers
         req.unset("Authorization");
@@ -327,12 +361,18 @@ export class TestHarness {
   };
 
   // Mock the Better Auth session for testing
-  private mockUserSession(userId: string) {
+  private mockUserSession(
+    userId: string,
+    {
+      id = `session-${userId}`,
+      token = `test-token-${userId}`,
+    }: { id?: string; token?: string } = {},
+  ) {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       session: {
-        id: `session-${userId}`,
+        id,
         userId,
-        token: `test-token-${userId}`,
+        token,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         ipAddress: "127.0.0.1",
         userAgent: "test-agent",
@@ -355,6 +395,14 @@ export class TestHarness {
   // Mock no session for unauthorized tests
   private mockNoSession() {
     vi.mocked(auth.api.getSession).mockResolvedValue(null);
+  }
+
+  /**
+   * The session lookup the app calls. Specs share one app, which keeps the mock from the file that
+   * started it, so a spec's own import of `auth` can be another mock.
+   */
+  public get sessionLookup() {
+    return vi.mocked(auth.api.getSession);
   }
 
   // HTTP request methods
@@ -595,6 +643,19 @@ export class TestHarness {
       .returning();
 
     return membership;
+  }
+
+  /** Seed one of the user's API keys, with its row as Better Auth's key plugin keeps it. */
+  public async createApiKey(
+    userId: string,
+    data: { enabled?: boolean; expiresAt?: Date | null } = {},
+  ) {
+    const key = `jii_${faker.string.alphanumeric(64)}`;
+    const [row] = await this.database
+      .insert(apiKeys)
+      .values({ name: "Script", key, referenceId: userId, ...data })
+      .returning();
+    return row;
   }
 
   /** Seed a resource grant. */

@@ -286,6 +286,45 @@ resource "aws_wafv2_web_acl" "main" {
           header_name       = "X-Forwarded-For"
           fallback_behavior = "MATCH" # Use IP from request if header is missing
         }
+
+        # The reads read_rate_limit names are counted by ReadRateLimitRule instead.
+        dynamic "scope_down_statement" {
+          for_each = var.read_rate_limit == null ? [] : [var.read_rate_limit]
+          content {
+            not_statement {
+              statement {
+                and_statement {
+                  statement {
+                    byte_match_statement {
+                      search_string         = "GET"
+                      positional_constraint = "EXACTLY"
+                      field_to_match {
+                        method {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+
+                  statement {
+                    regex_match_statement {
+                      regex_string = scope_down_statement.value.path_regex
+                      field_to_match {
+                        uri_path {}
+                      }
+                      text_transformation {
+                        priority = 0
+                        type     = "NONE"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
 
@@ -293,6 +332,69 @@ resource "aws_wafv2_web_acl" "main" {
       cloudwatch_metrics_enabled = true
       metric_name                = "RateLimitRuleMetric"
       sampled_requests_enabled   = true
+    }
+  }
+
+  # The reads RateLimitRule leaves out, under their own higher limit. Each rate rule blocks only the
+  # requests it counts, so the two never overlap. Its priority is last only because the others are
+  # taken; the allow rule before it takes only the large-body routes, none of them these reads.
+  dynamic "rule" {
+    for_each = var.read_rate_limit == null ? [] : [var.read_rate_limit]
+    content {
+      name     = "ReadRateLimitRule"
+      priority = 8
+
+      action {
+        block {}
+      }
+
+      statement {
+        rate_based_statement {
+          limit              = rule.value.limit
+          aggregate_key_type = "FORWARDED_IP"
+          forwarded_ip_config {
+            header_name       = "X-Forwarded-For"
+            fallback_behavior = "MATCH"
+          }
+
+          scope_down_statement {
+            and_statement {
+              statement {
+                byte_match_statement {
+                  search_string         = "GET"
+                  positional_constraint = "EXACTLY"
+                  field_to_match {
+                    method {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "NONE"
+                  }
+                }
+              }
+
+              statement {
+                regex_match_statement {
+                  regex_string = rule.value.path_regex
+                  field_to_match {
+                    uri_path {}
+                  }
+                  text_transformation {
+                    priority = 0
+                    type     = "NONE"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "ReadRateLimitRuleMetric"
+        sampled_requests_enabled   = true
+      }
     }
   }
 

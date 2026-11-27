@@ -219,6 +219,29 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("findApiKeyState", () => {
+    it("reads what decides whether a key still signs its owner in, and counts no request", async () => {
+      const userId = await testApp.createTestUser({});
+      const expiresAt = new Date("2027-01-01T00:00:00.000Z");
+      const key = await testApp.createApiKey(userId, { enabled: false, expiresAt });
+
+      const result = await repository.findApiKeyState(key.id);
+      const [row] = await testApp.database.select().from(apiKeys).where(eq(apiKeys.id, key.id));
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ referenceId: userId, enabled: false, expiresAt });
+      expect(row.requestCount).toBe(key.requestCount);
+      expect(row.lastRequest).toBe(key.lastRequest);
+    });
+
+    it("reads no state for a key that is gone", async () => {
+      const result = await repository.findApiKeyState(faker.string.uuid());
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
   describe("findSignInMethods", () => {
     async function addPasskey(userId: string) {
       const [row] = await testApp.database

@@ -1,4 +1,4 @@
-import { renderWithForm, screen } from "@/test/test-utils";
+import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { fireEvent } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -44,6 +44,25 @@ describe("BarStylePanel", () => {
     expect(screen.getByText("workspace.style.barmode")).toBeInTheDocument();
     expect(screen.getByText("workspace.style.bargap")).toBeInTheDocument();
     expect(screen.getByText("workspace.style.markerOpacity")).toBeInTheDocument();
+  });
+
+  it("shows vertical orientation and disables horizontal for a saved mix of bars and lines", async () => {
+    const values = defaults({ config: { orientation: "h" } });
+    values.dataConfig.dataSources.push({
+      tableName: "harvest",
+      columnName: "trend",
+      role: "y",
+      traceType: "line",
+    });
+    renderPanel(values);
+    expandSection("workspace.style.barOptions");
+
+    const orientation = screen.getByRole("combobox", { name: "workspace.style.orientation" });
+    expect(orientation).toHaveTextContent("workspace.orientations.vertical");
+    await userEvent.setup().click(orientation);
+    expect(
+      screen.getByRole("option", { name: "workspace.orientations.horizontal" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("hides the normalisation control when bars are grouped (default)", () => {

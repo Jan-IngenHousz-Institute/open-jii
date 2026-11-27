@@ -10,10 +10,7 @@ import {
   takesWindow,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import type {
-  ExperimentSeriesAxis,
-  ExperimentSeriesTraceType,
-} from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { getColumnKind } from "@repo/api/transforms/column-type-utils";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -29,6 +26,7 @@ import {
 } from "@repo/ui/components/select";
 import { cn } from "@repo/ui/lib/utils";
 
+import { availableSeriesAxes, effectiveSeriesAxis } from "../../charts/cartesian/series-axis";
 import type { ChartFormValues } from "../../charts/chart-config";
 import { setDataSourceAggregate } from "../../charts/data/aggregation";
 import { SeriesColorField } from "./series-color-field";
@@ -37,7 +35,6 @@ import { WindowColumnSelect } from "./window-column-select";
 export const AGG_NONE = "__none__";
 export const TRACE_TYPE_DEFAULT = "__default__";
 export const TRACE_TYPE_OPTIONS: ExperimentSeriesTraceType[] = ["line", "bar", "scatter", "area"];
-export const AXIS_OPTIONS: ExperimentSeriesAxis[] = ["primary", "secondary"];
 
 interface AggregateOption {
   value: string;
@@ -50,6 +47,7 @@ export interface YSeriesItemProps {
   form: UseFormReturn<ChartFormValues>;
   dsIndex: number;
   seriesIndex: number;
+  faceted?: boolean;
   seriesColumn: string;
   canRemove: boolean;
   willBeSilentlyDropped: boolean;
@@ -77,6 +75,7 @@ export function YSeriesItem({
   form,
   dsIndex,
   seriesIndex,
+  faceted = false,
   seriesColumn,
   canRemove,
   willBeSilentlyDropped,
@@ -100,6 +99,7 @@ export function YSeriesItem({
   onRemove,
 }: YSeriesItemProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const axisOptions = availableSeriesAxes(faceted);
   const aggregate = form.getValues(`dataConfig.dataSources.${dsIndex}.aggregate`);
   const windowed = aggregate !== undefined && takesWindow(aggregate);
   const rowWindow = aggregate !== undefined && aggregateKind(aggregate) === "rowWindow";
@@ -121,7 +121,7 @@ export function YSeriesItem({
     if (raw === "primary") {
       return undefined;
     }
-    return AXIS_OPTIONS.find((option) => option === raw);
+    return axisOptions.find((option) => option === raw);
   };
 
   return (
@@ -416,7 +416,7 @@ export function YSeriesItem({
                   {t("workspace.shelves.axisAssignment")}
                 </FormLabel>
                 <Select
-                  value={field.value ?? "primary"}
+                  value={effectiveSeriesAxis(field.value, seriesIndex, faceted)}
                   // Persist `undefined` for the default ("primary") so saved config stays clean.
                   onValueChange={(value) => field.onChange(handleAxisChange(value))}
                 >
@@ -426,7 +426,7 @@ export function YSeriesItem({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {AXIS_OPTIONS.map((option) => (
+                    {axisOptions.map((option) => (
                       <SelectItem key={option} value={option}>
                         {t(`workspace.shelves.axis.${option}`)}
                       </SelectItem>

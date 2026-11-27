@@ -85,9 +85,8 @@ export const zExperimentRole = z.enum([
 // shared axes; lollipop/dot-plot/pie remain whole-chart types.
 export const zExperimentSeriesTraceType = z.enum(["line", "bar", "scatter", "area"]);
 
-// Which Y axis a series is plotted against. `secondary` activates a twin Y
-// (Plotly's `yaxis2`) overlaying the primary x-axis on the right side.
-export const zExperimentSeriesAxis = z.enum(["primary", "secondary"]);
+// Keep the original wire values for charts saved before numbered axes.
+export const zExperimentSeriesAxis = z.enum(["primary", "secondary", "y3", "y4", "y5", "y6"]);
 
 // Data source configuration schema. tableName and columnName allow empty
 // strings so a freshly-created visualization can persist in a draft state

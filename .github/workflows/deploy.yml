@@ -162,11 +162,6 @@ jobs:
             echo "foundation_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "24"
-
       - name: Detect Affected Packages
         id: apps
         uses: ./.github/actions/detect-affected-packages

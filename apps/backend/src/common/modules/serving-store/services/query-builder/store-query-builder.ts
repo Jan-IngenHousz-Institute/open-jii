@@ -1,15 +1,21 @@
+import { ORDER_COLUMN_REQUIRED_MESSAGE } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataFlagged } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import type { StoreMetadataSheet } from "../../../../../experiments/core/ports/serving-store.port";
+import type { NamedOutput } from "../../../databricks/services/query-builder/expressions/aggregation";
 import { deviceLabel } from "../../../databricks/services/query-builder/expressions/device-label";
 import { numericStringOrdering } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
 import type { NumericStringKeys } from "../../../databricks/services/query-builder/expressions/numeric-string-order";
+import { buildWindowSpec } from "../../../databricks/services/query-builder/expressions/window";
 import { BaseQueryBuilder } from "../../../databricks/services/query-builder/query-builder.base";
 import type {
+  AggregateExpression,
   FilterCondition,
   FilterValue,
   QueryOrdering,
+  TimeBucketUnit,
+  WidthBucket,
 } from "../../../databricks/services/query-builder/query-builder.types";
 import { QueryBuilderInputError } from "../../../databricks/services/query-builder/query-builder.types";
 import { FlattenedFields } from "../../../databricks/services/query-builder/schema/flattened-fields";
@@ -19,14 +25,30 @@ import type {
 } from "../../../databricks/services/query-builder/schema/flattened-fields";
 import { VariantSchema } from "../../../databricks/services/query-builder/schema/variant-schema";
 import type { VariantField } from "../../../databricks/services/query-builder/schema/variant-schema";
-import type { StoreColumn, StoreTable } from "./store-tables";
+import { SparkDecimal } from "./spark-decimal";
+import { SparkWidthBucket } from "./spark-width-bucket";
+import type { DeviceParts, StoreColumn, StoreTable } from "./store-tables";
 
-export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf"> & {
+export type StoreOutputColumn = Pick<StoreColumn, "name" | "type" | "idOf" | "isPairText"> & {
   text?: { column: string; key?: string };
+  /** An array the store holds as one, not as its JSON text, which it cannot make nullable. */
+  isArray?: boolean;
 };
 
-interface StoreOrdering extends QueryOrdering {
-  idOrder?: string[][];
+/**
+ * The columns the rows first kept are chosen by, each going up as Spark sorts a read, and whether
+ * rows tied with the last are kept too.
+ */
+export interface FirstRows {
+  order: string[];
+  withTies: boolean;
+}
+
+/** The second table of an as-of read, one row per key and time. */
+export interface StoreAsOfSecondary {
+  sql: string;
+  columns: StoreOutputColumn[];
+  readsTable: boolean;
 }
 
 /** The names of the id lists a statement's WITH clause holds, which no payload field may take. */
@@ -46,6 +68,29 @@ const STORE_SCALARS: Record<string, string> = {
   BOOLEAN: "Bool",
 };
 
+/** Spark keeps central moments; the store's plain spreads drift where values sit far from zero. */
+const SAMPLE_SPREADS: Record<"std" | "var", string> = {
+  std: "stddevSampStable",
+  var: "varSampStable",
+};
+
+const INTEGER_TYPES = new Set(["BIGINT", "INT"]);
+
+const OVERFLOW = "ARITHMETIC_OVERFLOW: a sum passes the range of its type";
+const NOT_A_NUMBER = "CAST_INVALID_INPUT: text that holds no number cannot be read as a double";
+const OUT_OF_RANGE = "NUMERIC_VALUE_OUT_OF_RANGE: a mean passes the range of its type";
+
+/** Lag and row numbers count rows, so they see every row before this one, never its peers. */
+const ROWS_SO_FAR = "ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW";
+
+/** The names an as-of read gives its two tables and the second's own columns. */
+const ASOF_PRIMARY = "__asof_primary";
+const ASOF_SECONDARY = "__asof_secondary";
+const ASOF_KEY = "__asof_key";
+const ASOF_TIME = "__asof_time";
+const ASOF_FOUND = "__asof_found";
+const ASOF_LABEL = "__asof_label_";
+
 /**
  * Reads one experiment table from the store's views in the warehouse's shape: the view's columns
  * under its names, and each payload field flattened as the variant builder flattens it. Filters
@@ -64,7 +109,17 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
 
   private experiment = "";
   private fromClause = "";
+  /** The table a chart reads with FINAL, which an alias must come before. */
+  private finalTable?: string;
+  /** An as-of read's second table, joined beside the rows every statement reads. */
+  private asOfJoin?: string;
+  /** The columns its ON clause reads of these rows, which every statement that joins it reads. */
+  private asOfColumns: string[] = [];
+  private joinsTable = false;
+  private firstRows?: FirstRows & { count: number };
   private columns: StoreColumn[] = [];
+  /** The table's own array columns; a matched table's arrive as JSON text. */
+  private arrayColumns = new Set<string>();
   private key: string[] = [];
   private payloadTexts: Partial<Record<string, string>> = {};
   private phoneAnnotations?: string;
@@ -74,34 +129,69 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   private reservedColumns: string[] = [];
   private exceptColumns: string[] = [];
   private whereConditions: string[] = [];
+  private scope: string[] = [];
   private filterColumns: string[] = [];
-  private deviceSerials: [string, string][] = [];
+  private deviceSerials: [string, string | null][] = [];
   private flaggedRowIds?: string[];
   private sheets: (StoreMetadataSheet & {
     fields: ReadonlySet<string>;
     nestsObjects: boolean;
   })[] = [];
-  private ordering?: StoreOrdering;
+  private ordering?: QueryOrdering;
+  private orderIds?: string[][];
   private limitValue?: number;
   private offsetValue?: number;
+  private plotsValues = false;
+  private rowNames = new Set<string>();
+  private rowTypes = new Map<string, string>();
+  private outputTypeOf?: (output: NamedOutput) => string | undefined;
+  private rowIds = new Map<string, "contributor" | "device">();
+  /** The rows' devices held as their key's JSON text, a matched table's. */
+  private rowPairTexts = new Set<string>();
+  private rowArrays = new Set<string>();
   /** Kept until a payload, a reserved name or a sheet changes them. */
   private fields?: Map<string, FlattenedField>;
   private expressions?: Map<string, string>;
 
   read(table: StoreTable, experimentId: string, identifier?: string): this {
+    this.columnsOf(table, experimentId, identifier);
+    return this.from(`${table.view}(experiment = ${this.experiment})`);
+  }
+
+  /**
+   * A chart's read of the table itself, which reads only the payload paths it names where the
+   * view would read whole payloads. The reader's row policy keeps it to the experiment the read
+   * sends as its setting, and FINAL merges each row's copies, as the view does. Payload fields
+   * read as the values a chart plots, not as the text a page shows.
+   */
+  readForChart(table: StoreTable, experimentId: string, identifier?: string): this {
+    this.columnsOf(table, experimentId, identifier);
+    this.scopeTo(`experiment_id = ${this.experiment}`);
+    this.plotsValues = true;
+    this.finalTable = table.table;
+    return this.from(`${table.table} FINAL`);
+  }
+
+  /** Whether the statement names a table rather than a view, which the reader's row policy guards. */
+  readsTables(): boolean {
+    return this.finalTable !== undefined || this.joinsTable;
+  }
+
+  private columnsOf(table: StoreTable, experimentId: string, identifier?: string): void {
     this.experiment = this.escapeValue(experimentId);
     this.columns = table.columns;
+    this.arrayColumns = new Set(
+      table.columns.flatMap(({ name, type }) => (type.startsWith("ARRAY<") ? [name] : [])),
+    );
     this.key = table.key;
     this.payloadTexts = table.payloadTexts ?? {};
     this.phoneAnnotations = table.phoneAnnotations;
     this.takesCustomMetadata = table.takesCustomMetadata ?? false;
     this.reservedColumns.push(...StoreQueryBuilder.reservedNames);
     this.forgetFields();
-    this.from(`${table.view}(experiment = ${this.experiment})`);
     if (table.identifierColumn !== undefined && identifier !== undefined) {
-      this.where(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
+      this.scopeTo(`${table.identifierColumn} = ${this.escapeValue(identifier)}`);
     }
-    return this;
   }
 
   select(columns?: string[]): this {
@@ -133,8 +223,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  /** The registered devices' serial numbers by client id; any other device reads none. */
-  serialNumbers(serials: [string, string][]): this {
+  /** Each registered device's client id with the serial number its label shows, or none; any
+   *  other device reads none. */
+  serialNumbers(serials: [string, string | null][]): this {
     this.deviceSerials = serials;
     return this;
   }
@@ -153,9 +244,83 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
+  /**
+   * Reads only the rows first in `order`, found by their keys over the key and order columns alone,
+   * as a sorted page finds its rows; the rest of each row is read for those rows only.
+   */
+  keepFirst(rows: FirstRows, count: number): this {
+    this.firstRows = { ...rows, count };
+    return this;
+  }
+
+  /** Writes a statement over another's rows, whose contributors and devices are held as ids. */
+  over(columns: StoreOutputColumn[]): this {
+    this.rowNames = new Set(columns.map(({ name }) => name));
+    this.rowTypes = new Map(columns.map(({ name, type }) => [name, type]));
+    this.rowIds = new Map(
+      columns.flatMap(({ name, idOf }) => (idOf === undefined ? [] : [[name, idOf]])),
+    );
+    this.rowPairTexts = new Set(
+      columns.flatMap(({ name, isPairText }) => (isPairText === true ? [name] : [])),
+    );
+    this.rowArrays = new Set(
+      columns.flatMap(({ name, isArray }) => (isArray === true ? [name] : [])),
+    );
+    return this;
+  }
+
+  /** Over another's rows a contributor is its id, and a device the pair of its key and label. */
+  escapeIdentifier(identifier: string): string {
+    const [name, path] = this.structPath(identifier);
+    const idOf = this.rowIdOf(identifier);
+
+    const isContributorId = idOf === "contributor" && path === "id";
+    if (isContributorId) {
+      return this.quoteName(name);
+    }
+    const isSerialNumber = idOf === "device" && path === "serial_number";
+    if (isSerialNumber) {
+      return this.rowDevicePart(name, this.quoteName(name), 2);
+    }
+    return super.escapeIdentifier(identifier);
+  }
+
+  /**
+   * Over another's rows, a path into a contributor or a device as a column of its own: the id or
+   * the label, the only fields the store holds.
+   */
+  rowField(path: string): string {
+    const [, field] = this.structPath(path);
+    const idOf = this.rowIdOf(path);
+    const isHeldField =
+      (idOf === "contributor" && field === "id") ||
+      (idOf === "device" && field === "serial_number");
+    if (!isHeldField) {
+      throw new QueryBuilderInputError(`The store cannot read '${path}'`);
+    }
+    return this.escapeIdentifier(path);
+  }
+
+  /** A row's device key, its first part, or its label, its second, from its tuple or JSON text. */
+  private rowDevicePart(name: string, sql: string, part: 1 | 2): string {
+    return this.rowPairTexts.has(name)
+      ? `JSONExtract(${sql}, ${part}, 'Nullable(String)')`
+      : `tupleElement(${sql}, ${part})`;
+  }
+
   where(condition: string): this {
     this.whereConditions.push(condition);
     return this;
+  }
+
+  /**
+   * A condition every statement that reads the table repeats: its experiment, where it reads the
+   * table itself, and its table among the experiment's. The reader's row policy keeps a read to
+   * its experiment too; the statement does not lean on it.
+   */
+  private scopeTo(condition: string): this {
+    this.scope.push(condition);
+    return this.where(condition);
   }
 
   override filter(condition: FilterCondition): this {
@@ -184,7 +349,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * store logs.
    */
   orderBy(ordering: QueryOrdering, idOrder?: string[][]): this {
-    this.ordering = { ...ordering, idOrder };
+    this.ordering = ordering;
+    return this.idOrder(idOrder);
+  }
+
+  idOrder(ids: string[][] | undefined): this {
+    this.orderIds = ids;
     return this;
   }
 
@@ -216,7 +386,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     }
     const isSerialNumber = base.idOf === "device" && path === "serial_number";
     if (isSerialNumber) {
-      return this.deviceLabelOf(base.expression);
+      return this.devicePartsOf(base).label;
     }
     throw new QueryBuilderInputError(`The store cannot read '${column}'`);
   }
@@ -287,8 +457,12 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   /** The store reads text as a number column's value only as plain digits, with a fraction where
    *  the type holds one. */
   private readsAsNumber(text: string, type: string): boolean {
-    const isInteger = type === "BIGINT" || type === "INT";
-    return isInteger ? /^-?\d+$/.test(text) : /^-?\d+(\.\d+)?$/.test(text);
+    return this.isIntegerType(type) ? /^-?\d+$/.test(text) : /^-?\d+(\.\d+)?$/.test(text);
+  }
+
+  /** Integers leave the store as text, since an id or a sum may pass 2^53. */
+  isIntegerType(type: string): boolean {
+    return INTEGER_TYPES.has(type);
   }
 
   /** A decimal reads as text at its scale, as its cell shows it: 5 at scale 2 is 5.00. */
@@ -304,6 +478,560 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     return `concat('Contributor-', substring(hex(SHA256(concat(${prefix}, ${idSql}))), 1, 6))`;
   }
 
+  /** Spark truncates in its UTC session and gives a time even for a date, a week from Monday. */
+  buildTimeBucketExpression(column: string, unit: TimeBucketUnit): { sql: string; alias: string } {
+    const instant = this.instantOf(this.escapeIdentifier(column));
+    return {
+      sql: `toDateTime64(dateTrunc('${unit}', ${instant}), 6, 'UTC')`,
+      alias: `${column}_${unit}`,
+    };
+  }
+
+  buildWidthBucketExpression(
+    column: string,
+    bucket: WidthBucket,
+    alias?: string,
+  ): { sql: string; alias: string } {
+    const escaped = this.escapeIdentifier(column);
+    const position =
+      bucket.scale === "time" ? `toUnixTimestamp64Milli(${this.instantOf(escaped)})` : escaped;
+    // A contributor's or device's field, which no row type names, is text.
+    const division = new SparkWidthBucket(this.rowTypes.get(column) ?? "STRING", bucket);
+    return { sql: division.sql(position), alias: alias ?? `${column}_bucket` };
+  }
+
+  buildAggregateExpression(agg: AggregateExpression): { sql: string; alias: string } {
+    const alias = this.aggregateAlias(agg);
+    const column = agg.column === "*" ? "*" : this.escapeIdentifier(agg.column);
+    // Over values that may be null an empty input gives null, as Spark's does, not the store's zero.
+    const value = `toNullable(${column})`;
+    const number = agg.column === "*" ? value : `toNullable(${this.numeric(agg.column, column)})`;
+
+    switch (agg.function) {
+      case "sum":
+        return {
+          sql: this.checkedSum(agg.column, `sum(${this.summand(agg.column, column)})`),
+          alias,
+        };
+      case "avg": {
+        const decimal = SparkDecimal.of(this.rowTypes.get(agg.column) ?? "");
+        return {
+          sql:
+            decimal === null ? `avg(${number})` : this.decimalAverage(agg.column, column, decimal),
+          alias,
+        };
+      }
+      case "min":
+      case "max": {
+        const isDouble = this.rowTypes.get(agg.column) === "DOUBLE";
+        return {
+          sql: isDouble ? this.extremeOfDoubles(agg.function, column) : `${agg.function}(${value})`,
+          alias,
+        };
+      }
+      case "count":
+        return { sql: agg.column === "*" ? "count()" : `count(${column})`, alias };
+      case "count_distinct":
+        return { sql: `count(DISTINCT ${this.groupKey(agg.column)})`, alias };
+      case "std":
+      case "var":
+        // Spark's sample spreads are null below two values, where the store's are NaN.
+        return {
+          sql: `if(count(${number}) > 1, ${SAMPLE_SPREADS[agg.function]}(${number}), NULL)`,
+          alias,
+        };
+      case "corr": {
+        if (agg.secondColumn === undefined) {
+          throw new QueryBuilderInputError(
+            "buildAggregateExpression: 'corr' requires a secondColumn",
+          );
+        }
+        const pair = [agg.column, agg.secondColumn].map((name) => ({
+          name,
+          sql: this.numeric(name, this.escapeIdentifier(name)),
+        }));
+        const corr = `corrStable(${pair.map(({ sql }) => `toNullable(${sql})`).join(", ")})`;
+        // Below two pairs or over a constant series there is no correlation, so no value; but a
+        // pair holding NaN or an infinity makes Spark's NaN. Text reads as a double.
+        const doubles = pair.filter(({ name }) =>
+          ["DOUBLE", "STRING"].includes(this.rowTypes.get(name) ?? ""),
+        );
+        if (doubles.length === 0) {
+          return { sql: `if(isFinite(${corr}), ${corr}, NULL)`, alias };
+        }
+        const isUnbounded = doubles.map(({ sql }) => `NOT isFinite(${sql})`).join(" OR ");
+        const isPair = pair.map(({ sql }) => `${sql} IS NOT NULL`).join(" AND ");
+        return {
+          sql: `multiIf(countIf(${isPair} AND (${isUnbounded})) > 0, nan, isFinite(${corr}), ${corr}, NULL)`,
+          alias,
+        };
+      }
+      case "latest":
+      case "earliest": {
+        // The value rides in a tuple, which is never null, so a null value at the newest key is
+        // the answer as it is for Spark's MAX_BY, instead of a row the store skips.
+        const orderColumn = this.orderColumnOf(agg);
+        const order = this.escapeIdentifier(orderColumn);
+        // Spark ranks NaN above every number, where the store's comparison ranks it nowhere.
+        const ranks =
+          this.rowTypes.get(orderColumn) === "DOUBLE" ? [`isNaN(${order})`, order] : [order];
+        const keys = agg.tieBreaker ? [...ranks, this.escapeIdentifier(agg.tieBreaker)] : ranks;
+        const key = keys.length === 1 ? order : `tuple(${keys.join(", ")})`;
+        const pick = agg.function === "latest" ? "argMaxIf" : "argMinIf";
+        const picked = this.nullableValue(agg.column, column);
+        return {
+          sql: `tupleElement(${pick}(tuple(${picked}), ${key}, ${order} IS NOT NULL), 1)`,
+          alias,
+        };
+      }
+      case "cumsum":
+        throw new QueryBuilderInputError(
+          "buildAggregateExpression: cumsum is a window function, route through buildCumsumExpression",
+        );
+      case "previous":
+      case "change_from_previous":
+      case "row_number":
+        throw new QueryBuilderInputError("Row windows must use the window-only query path");
+    }
+  }
+
+  /** A running sum grouped first by device accumulates in the order Spark sorts its struct. */
+  buildCumsumExpression(
+    agg: AggregateExpression,
+    opts: { orderBy: string; orderColumn?: string; grouped: boolean },
+  ): { sql: string; alias: string } {
+    const value = (() => {
+      if (agg.column === "*") {
+        return opts.grouped ? "count()" : "1";
+      }
+      const summand = this.summand(agg.column, this.escapeIdentifier(agg.column));
+      return opts.grouped ? `sum(${summand})` : summand;
+    })();
+    const order =
+      opts.orderColumn === undefined
+        ? `${opts.orderBy} ASC NULLS FIRST`
+        : this.aggregateOrdering(opts.orderBy, { column: opts.orderColumn, direction: "ASC" });
+    const running = `sum(${value}) OVER (ORDER BY ${order})`;
+    return {
+      sql:
+        agg.column === "*"
+          ? running
+          : this.checkedSum(agg.column, running, { addsGroupSums: opts.grouped }),
+      alias: this.aggregateAlias(agg),
+    };
+  }
+
+  buildRowWindowExpression(item: AggregateExpression): { sql: string; alias: string } {
+    const alias = this.aggregateAlias(item);
+    const order = this.escapeIdentifier(this.orderColumnOf(item));
+    const window = `OVER (${buildWindowSpec(item, this)} ${ROWS_SO_FAR})`;
+    const result = (sql: string) => ({
+      sql: `CASE WHEN ${order} IS NULL THEN NULL ELSE ${sql} END`,
+      alias,
+    });
+    if (item.function === "row_number") {
+      return result(`row_number() ${window}`);
+    }
+
+    const column = this.escapeIdentifier(item.column);
+    const previous = `lagInFrame(${this.nullableValue(item.column, column)}) ${window}`;
+    if (item.function === "previous") {
+      return result(previous);
+    }
+    const type = item.valueType?.trim().toUpperCase();
+    if (type === undefined || isNumericType(type)) {
+      return result(`(${column} - ${previous})`);
+    }
+    const isTime = type === "TIMESTAMP" || type === "TIMESTAMP_NTZ" || type === "DATE";
+    if (!isTime) {
+      throw new QueryBuilderInputError(
+        "Change from previous requires a numeric, timestamp or date column",
+      );
+    }
+    const micros = (sql: string) => `toUnixTimestamp64Micro(${sql})`;
+    const instant = this.instantOf(column);
+    const before = `lagInFrame(toNullable(${instant})) ${window}`;
+    return result(`(${micros(instant)} - ${micros(before)}) / 1e6`);
+  }
+
+  /**
+   * Spark sorts a device's struct by its registry id, which only the ids in the order carry, and a
+   * contributor by name in the order of its ids; nulls go first going up and last going down.
+   */
+  aggregateOrdering(
+    target: string,
+    { column, direction = "ASC" }: QueryOrdering,
+    output?: NamedOutput,
+  ): string {
+    const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
+    const idOrder = this.orderIds;
+    const [name, path] = this.structPath(column);
+    const idOf = this.rowIdOf(column);
+
+    const isWholeDevice = idOrder !== undefined && idOf === "device" && path === undefined;
+    if (isWholeDevice) {
+      const key = this.rowDevicePart(name, target, 1);
+      const label = this.rowDevicePart(name, target, 2);
+      return `${this.orderPlace(key)} ${direction} ${nulls}, ${label} ${direction} ${nulls}`;
+    }
+    const isContributorName = idOrder !== undefined && idOf === "contributor" && path === "name";
+    if (isContributorName) {
+      return `${this.orderPlace(this.quoteName(name))} ${direction} ${nulls}`;
+    }
+    const type = output === undefined ? this.rowTypes.get(column) : this.outputTypeOf?.(output);
+    return this.nanApart(target, type, `${direction} ${nulls}`);
+  }
+
+  /**
+   * Under prefer_column_name_to_alias the store reads a name in the aggregate's own ORDER BY as a
+   * column of the rows it reads, where they hold one, before the aggregate's output of that name.
+   * Around the aggregate only its outputs have names, so it sorts and pages there.
+   */
+  sortedAggregate(statement: string, clauses: string): string {
+    return clauses === "" ? statement : `SELECT * FROM (${statement})${clauses}`;
+  }
+
+  /** Spark groups and counts every NaN as one value, and -0.0 as 0.0. */
+  groupKey(column: string): string {
+    const key = this.escapeIdentifier(column);
+    return this.rowTypes.get(column) === "DOUBLE" ? this.sameDoubles(key) : key;
+  }
+
+  /**
+   * A double as one value for each value Spark tells apart: every NaN, and -0.0 as 0.0. The store's
+   * hashes, which group and join by, tell their bits apart.
+   */
+  private sameDoubles(sql: string): string {
+    return `multiIf(isNaN(${sql}), nan, ${sql} = 0, 0.0, ${sql})`;
+  }
+
+  /** The key an as-of read matches by, a double's as Spark joins on it. */
+  private matchKey(column: string): string {
+    const key = this.columnExpression(column);
+    return this.typeOf(column) === "DOUBLE" ? this.sameDoubles(key) : key;
+  }
+
+  /** The type each output of a statement over these rows takes, which its sort depends on. */
+  outputTypes(typeOf: (output: NamedOutput) => string | undefined): this {
+    this.outputTypeOf = typeOf;
+    return this;
+  }
+
+  /**
+   * A value a pick or a lag can leave null, as Spark's do. The store cannot make a device's tuple
+   * or an array nullable, so those travel as their JSON text, a device as a matched one does.
+   */
+  private nullableValue(name: string, sql: string): string {
+    const isDeviceTuple = this.rowIds.get(name) === "device" && !this.rowPairTexts.has(name);
+    const isText = isDeviceTuple || this.rowArrays.has(name);
+    return isText ? `toNullable(toJSONString(${sql}))` : `toNullable(${sql})`;
+  }
+
+  /**
+   * What a sum adds up: a whole number as an Int128 and a decimal in the store's widest decimal,
+   * which hold any sum past Spark's type, so the store never wraps before Spark fails.
+   */
+  private summand(name: string, sql: string): string {
+    const type = this.rowTypes.get(name) ?? "";
+    const decimal = SparkDecimal.of(type);
+    if (decimal !== null) {
+      return `toNullable(toDecimal256(${sql}, ${decimal.scale}))`;
+    }
+    const number = this.numeric(name, sql);
+    return this.isIntegerType(type) ? `toNullable(toInt128(${number}))` : `toNullable(${number})`;
+  }
+
+  /**
+   * What arithmetic reads of a column: text as Spark casts it to a double. Spark's ANSI mode fails
+   * the read on text that holds no number, CAST_INVALID_INPUT, and so does the read here.
+   */
+  private numeric(name: string, sql: string): string {
+    if (this.rowTypes.get(name) !== "STRING") {
+      return sql;
+    }
+    const number = this.textAsDouble(sql);
+    return this.unless(`${sql} IS NOT NULL AND ${number} IS NULL`, number, NOT_A_NUMBER);
+  }
+
+  /**
+   * A sum in Spark's type, a BIGINT or a decimal ten digits wider than its column, twenty for a
+   * running sum of groups' sums. Spark's ANSI mode fails a sum that passes it with
+   * ARITHMETIC_OVERFLOW, and so does the read here.
+   */
+  private checkedSum(name: string, total: string, { addsGroupSums = false } = {}): string {
+    const type = this.rowTypes.get(name) ?? "";
+    const decimal = SparkDecimal.of(type);
+    if (decimal !== null) {
+      const sum = addsGroupSums ? decimal.sum().sum() : decimal.sum();
+      const isPastType = `ifNull(abs(${total}) >= toDecimal256('${sum.overflow}', 0), 0)`;
+      return this.unless(isPastType, total, OVERFLOW);
+    }
+    if (!this.isIntegerType(type)) {
+      return total;
+    }
+    const long = `accurateCastOrNull(${total}, 'Int64')`;
+    return this.unless(`${total} IS NOT NULL AND ${long} IS NULL`, long, OVERFLOW);
+  }
+
+  /** The value, or the store's throwIf, which fails the read with `error`, where `isFailed` holds. */
+  private unless(isFailed: string, value: string, error: string): string {
+    return `if(throwIf(${isFailed}, ${this.escapeValue(error)}) = 0, ${value}, NULL)`;
+  }
+
+  /**
+   * Spark averages a decimal exactly: its sum divided by the count once, rounded half up at AVG's
+   * scale, and its ANSI mode fails a mean that AVG's type cannot hold. The store's avg would go
+   * through a double. Its division cuts at the dividend's scale, so it divides at one digit more,
+   * which rounds the same.
+   */
+  private decimalAverage(name: string, column: string, decimal: SparkDecimal): string {
+    const average = decimal.average();
+    const count = `count(${column})`;
+    const total = this.checkedSum(name, `sum(${this.summand(name, column)})`);
+    const sum = `toDecimal256(${total}, ${average.scale + 1})`;
+    const divided = `divide(${sum}, toDecimal256(greatest(${count}, 1), 0))`;
+    const mean = `round(${divided}, ${average.scale})`;
+    const isPastType = `ifNull(abs(${mean}) >= toDecimal256('${average.overflow}', 0), 0)`;
+    return `if(${count} = 0, NULL, ${this.unless(isPastType, mean, OUT_OF_RANGE)})`;
+  }
+
+  /**
+   * Spark ranks NaN above every number, so a max over any NaN is NaN and a min is NaN only where
+   * every value is; the store's own would depend on the order the rows come in.
+   */
+  private extremeOfDoubles(fn: "min" | "max", column: string): string {
+    const numbers = `${fn}If(toNullable(${column}), NOT isNaN(${column}))`;
+    const hasNaN = `countIf(isNaN(${column})) > 0`;
+    return fn === "max"
+      ? `if(${hasNaN}, nan, ${numbers})`
+      : `ifNull(${numbers}, if(${hasNaN}, nan, NULL))`;
+  }
+
+  /** Spark sorts NaN above every number; the store would put it beside the nulls. */
+  private nanApart(target: string, type: string | undefined, order: string): string {
+    return type === "DOUBLE"
+      ? `isNaN(${target}) ${order}, ${target} ${order}`
+      : `${target} ${order}`;
+  }
+
+  buildOver(statement: string): string {
+    return this.joinClauses([this.withClause(), statement]);
+  }
+
+  /**
+   * The rows as values a statement over them computes with, every filter applied: numbers as
+   * numbers, a payload field from its JSON, a contributor as its id, and a device as the key the
+   * warehouse groups its struct by.
+   */
+  buildValues(): string {
+    const outputs = this.outputColumns();
+    const projection = outputs
+      .map((column) => `${this.valueOf(column)} AS ${this.quoteName(column.name)}`)
+      .join(", ");
+    const where =
+      this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
+    const first = this.firstRows;
+    const isMetadataPicked = this.readsMetadata([
+      ...this.filterColumns,
+      ...(first?.order ?? []),
+      ...this.asOfColumns,
+    ]);
+    const isMetadataRead = isMetadataPicked || this.readsMetadata(outputs.map(({ name }) => name));
+    if (first === undefined) {
+      return this.joinClauses([
+        this.withClause(),
+        `SELECT ${projection}`,
+        `FROM ${this.rowsFrom(isMetadataRead)}`,
+        where,
+      ]);
+    }
+
+    const key = this.key.join(", ");
+    const order = first.order
+      .map((column) =>
+        this.nanApart(
+          this.projectedExpression(column),
+          this.outputColumn(column).type,
+          "ASC NULLS FIRST",
+        ),
+      )
+      .join(", ");
+    const firstKeys = this.joinClauses([
+      `SELECT ${key}`,
+      `FROM ${this.rowsFrom(isMetadataPicked)}`,
+      where,
+      first.withTies ? `ORDER BY ${order}` : `ORDER BY ${order}, ${key}`,
+      first.withTies ? `LIMIT ${first.count} WITH TIES` : `LIMIT ${first.count}`,
+    ]);
+    const conditions = [...this.whereConditions, `(${key}) IN (${firstKeys})`];
+    return this.joinClauses([
+      this.withClause(),
+      `SELECT ${projection}`,
+      `FROM ${this.rowsFrom(isMetadataRead)}`,
+      `WHERE ${conditions.join(" AND ")}`,
+    ]);
+  }
+
+  /**
+   * These rows as an as-of read's second table: per key and time the one with the lowest id, as
+   * the warehouse breaks a tie. A device and an array come as JSON text, since no match nulls them.
+   */
+  buildAsOfSecondary(match: {
+    column: string;
+    time: string;
+    columns: { name: string; alias: string }[];
+  }): StoreAsOfSecondary {
+    const key = this.matchKey(match.column);
+    const at = this.instantOf(this.columnExpression(match.time));
+    const values = match.columns.map(({ name, alias }) => {
+      const { type, idOf } = this.outputColumn(name);
+      return { name, column: { name: alias, type, idOf } };
+    });
+
+    const projection = [
+      `${key} AS ${ASOF_KEY}`,
+      `${at} AS ${ASOF_TIME}`,
+      `1 AS ${ASOF_FOUND}`,
+      ...values.flatMap(({ name, column }) => this.secondaryValuesOf(name, column)),
+    ];
+    const where = [...this.whereConditions, `${key} IS NOT NULL`, `${at} IS NOT NULL`];
+    const isMetadataRead = this.readsMetadata([
+      match.column,
+      match.time,
+      ...match.columns.map(({ name }) => name),
+    ]);
+    const sql = this.joinClauses([
+      this.withClause(),
+      `SELECT ${projection.join(", ")}`,
+      `FROM ${this.rowsFrom(isMetadataRead)}`,
+      `WHERE ${where.join(" AND ")}`,
+      `ORDER BY ${ASOF_KEY}, ${ASOF_TIME}, ${this.columnExpression("id")} ASC`,
+      `LIMIT 1 BY ${ASOF_KEY}, ${ASOF_TIME}`,
+    ]);
+
+    return {
+      sql,
+      columns: values.map(({ column }) => column),
+      readsTable: this.finalTable !== undefined,
+    };
+  }
+
+  /**
+   * Adds another table's columns, each from its latest row with the same key at or before this
+   * row's time, and null where there is none or it is older than the tolerance.
+   */
+  joinAsOf(
+    secondary: StoreAsOfSecondary,
+    match: { column: string; time: string; toleranceMinutes: number },
+  ): this {
+    const key = this.matchKey(match.column);
+    const at = this.instantOf(this.columnExpression(match.time));
+    const isRecent = `${ASOF_SECONDARY}.${ASOF_FOUND} = 1 AND ${ASOF_SECONDARY}.${ASOF_TIME} >= ${at} - INTERVAL ${match.toleranceMinutes} MINUTE`;
+    const on = `${key} = ${ASOF_SECONDARY}.${ASOF_KEY} AND ${at} >= ${ASOF_SECONDARY}.${ASOF_TIME}`;
+    this.asOfJoin = `ASOF LEFT JOIN (${secondary.sql}) AS ${ASOF_SECONDARY} ON ${on}`;
+    this.asOfColumns = [match.column, match.time];
+    this.joinsTable = secondary.readsTable;
+    this.columns = [
+      ...this.columns,
+      ...secondary.columns.map(({ name, type, idOf }) => {
+        const matched = (sql: string) => `if(${isRecent}, ${ASOF_SECONDARY}.${sql}, NULL)`;
+        if (idOf !== "device") {
+          return { name, type, idOf, expression: matched(this.quoteName(name)) };
+        }
+
+        const device = {
+          clientId: matched(this.quoteName(name)),
+          label: matched(this.quoteName(this.matchedLabelName(name))),
+        };
+        return {
+          name,
+          type,
+          idOf,
+          isPairText: true,
+          expression: `if(${isRecent}, toJSONString(tuple(${device.clientId}, ${device.label})), NULL)`,
+          matchedDevice: { ...device, isMatched: isRecent },
+        };
+      }),
+    ];
+
+    return this;
+  }
+
+  private secondaryValuesOf(name: string, column: StoreOutputColumn): string[] {
+    const expression = this.projectedExpression(name);
+    const quoted = this.quoteName(column.name);
+    if (column.idOf === "device") {
+      const { label } = this.devicePartsOf(this.baseColumn(name));
+      return [
+        `${expression} AS ${quoted}`,
+        `${label} AS ${this.quoteName(this.matchedLabelName(column.name))}`,
+      ];
+    }
+    const isField = this.fieldExpressions().has(name);
+    const isNested = column.type.startsWith("ARRAY<") || column.type.startsWith("STRUCT<");
+    const isArray = isNested && !isField && column.idOf === undefined;
+    return [`${isArray ? `toJSONString(${expression})` : expression} AS ${quoted}`];
+  }
+
+  private matchedLabelName(name: string): string {
+    return `${ASOF_LABEL}${name}`;
+  }
+
+  /** A matched device is its key's JSON text, since only text can be null where no row matched. */
+  private valueOf({ name, idOf }: StoreOutputColumn): string {
+    const expression = this.projectedExpression(name);
+    if (idOf !== "device") {
+      return expression;
+    }
+
+    const [base] = this.structPath(name);
+    const column = this.baseColumn(base);
+    const key = this.deviceKeyOf(this.devicePartsOf(column));
+    const matched = column.matchedDevice;
+    return matched === undefined ? key : `if(${matched.isMatched}, toJSONString(${key}), NULL)`;
+  }
+
+  /**
+   * The warehouse groups a device by its struct: a registered one by the registry's row, which its
+   * client id names, and any other by its label alone, however many clients share it.
+   */
+  private deviceKeyOf({ clientId, label }: DeviceParts): string {
+    const registered =
+      this.deviceSerials.length > 0
+        ? `if(${clientId} IN ${DEVICE_CLIENT_IDS}, ${clientId}, NULL)`
+        : "CAST(NULL AS Nullable(String))";
+    return `tuple(${registered}, ${label})`;
+  }
+
+  /** A device's client id and label: a matched table's from its own names, any other's from its
+   *  row's. */
+  private devicePartsOf(column: StoreColumn): DeviceParts {
+    return (
+      column.matchedDevice ?? {
+        clientId: column.expression,
+        label: this.deviceLabelOf(column.expression),
+      }
+    );
+  }
+
+  private rowIdOf(column: string): "contributor" | "device" | undefined {
+    const [name, path] = this.structPath(column);
+    const isOwnName = path !== undefined && this.rowNames.has(column);
+    return isOwnName ? undefined : this.rowIds.get(name);
+  }
+
+  /** Spark reads a date as midnight in its session's zone, UTC. */
+  private instantOf(sql: string): string {
+    return `toDateTime64(${sql}, 6, 'UTC')`;
+  }
+
+  private orderColumnOf(item: AggregateExpression): string {
+    if (!item.orderColumn?.trim()) {
+      throw new QueryBuilderInputError(ORDER_COLUMN_REQUIRED_MESSAGE);
+    }
+    return item.orderColumn;
+  }
+
   outputColumns(): StoreOutputColumn[] {
     if (this.selectColumns !== undefined) {
       return this.selectColumns.map((name) => this.outputColumn(name));
@@ -315,7 +1043,13 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     ]);
     const base = this.columns
       .filter(({ name }) => !hidden.has(name))
-      .map(({ name, type, idOf }) => ({ name, type, idOf }));
+      .map(({ name, type, idOf, isPairText }) => ({
+        name,
+        type,
+        idOf,
+        isPairText,
+        isArray: this.arrayColumns.has(name),
+      }));
     const flattened = [...this.flattenedFields().values()];
     const fields = this.variantColumns.flatMap((variant) =>
       VariantSchema.isObject(variant.schema)
@@ -351,7 +1085,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     const offsetClause = this.offsetValue === undefined ? "" : `OFFSET ${this.offsetValue}`;
 
     const sortColumns = this.ordering === undefined ? [] : [this.ordering.column];
-    const isMetadataFilteredOrSorted = this.readsMetadata([...this.filterColumns, ...sortColumns]);
+    const isMetadataFilteredOrSorted = this.readsMetadata([
+      ...this.filterColumns,
+      ...sortColumns,
+      ...this.asOfColumns,
+    ]);
     const isMetadataShown = this.readsMetadata(this.outputColumns().map(({ name }) => name));
     const isMetadataRead = isMetadataFilteredOrSorted || isMetadataShown;
 
@@ -366,29 +1104,35 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
       // on two pages or on none. The key, unique per row, fixes the order.
       const page = this.joinClauses([
         `SELECT ${key}`,
-        `FROM ${isMetadataFilteredOrSorted ? this.withMetadata("") : this.fromClause}`,
+        `FROM ${this.rowsFrom(isMetadataFilteredOrSorted)}`,
         where,
         `${order}, ${key}`,
         limitClause,
         offsetClause,
       ]);
-      const pageRows = `WHERE (${key}) IN (${page})`;
+      const isOnPage = `(${key}) IN (${page})`;
       return this.joinClauses(
         isMetadataRead
           ? [
               this.withClause(),
               `SELECT ${projection}`,
-              `FROM ${this.withMetadata(pageRows)}`,
+              `FROM ${this.rowsFrom(true, [isOnPage])}`,
               order,
             ]
-          : [this.withClause(), `SELECT ${projection}`, `FROM ${this.fromClause}`, pageRows, order],
+          : [
+              this.withClause(),
+              `SELECT ${projection}`,
+              `FROM ${this.rowsFrom(false)}`,
+              `WHERE ${[...this.scope, isOnPage].join(" AND ")}`,
+              order,
+            ],
       );
     }
 
     return this.joinClauses([
       this.withClause(),
       `${selectKeyword} ${projection}`,
-      `FROM ${isMetadataRead ? this.withMetadata("") : this.fromClause}`,
+      `FROM ${this.rowsFrom(isMetadataRead)}`,
       where,
       order,
       limitClause,
@@ -426,11 +1170,28 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /**
-   * The view's rows with the fields of the row each sheet matches, one LEFT JOIN per sheet. The
-   * joins see only the rows `rowFilter` keeps, written on the left side rather than left to the
-   * store to push down.
+   * What a statement reads its rows from: the table's own, with the sheets' fields where the
+   * statement reads custom metadata, and an as-of read's second table beside them. Without the
+   * sheets the statement applies `rowConditions` itself.
    */
-  private withMetadata(rowFilter: string): string {
+  private rowsFrom(isMetadataRead: boolean, rowConditions: string[] = []): string {
+    const rows = isMetadataRead ? this.withMetadata(rowConditions) : this.fromClause;
+    if (this.asOfJoin === undefined) {
+      return rows;
+    }
+    const primary =
+      isMetadataRead || this.finalTable === undefined
+        ? `${rows} AS ${ASOF_PRIMARY}`
+        : `${this.finalTable} AS ${ASOF_PRIMARY} FINAL`;
+    return `${primary} ${this.asOfJoin}`;
+  }
+
+  /**
+   * The table's rows with the fields of the row each sheet matches, one LEFT JOIN per sheet. The
+   * joins see only the rows of the table's scope that `rowConditions` keep, written on the left
+   * side rather than left to the store to push down.
+   */
+  private withMetadata(rowConditions: string[]): string {
     const sheets = this.matchedSheets();
     const joins = sheets.map(
       ({ id, match, alias }) =>
@@ -438,7 +1199,11 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     );
     const fields = sheets.map(({ alias }) => `${alias}.fields AS ${alias}_fields`);
 
-    const rows = this.joinClauses([`SELECT * FROM ${this.fromClause}`, rowFilter]);
+    const conditions = [...this.scope, ...rowConditions];
+    const rows = this.joinClauses([
+      `SELECT * FROM ${this.fromClause}`,
+      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
+    ]);
     const joined = this.joinClauses([
       `SELECT ${["base.*", ...fields].join(", ")}`,
       `FROM (${rows}) AS base`,
@@ -518,8 +1283,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     if (path !== undefined) {
       return { name, type: this.typeOf(name) };
     }
-    const { type, idOf } = this.baseColumn(base);
-    return { name, type, idOf };
+    const { type, idOf, isPairText } = this.baseColumn(base);
+    return { name, type, idOf, isPairText, isArray: this.arrayColumns.has(base) };
   }
 
   /**
@@ -527,13 +1292,14 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    * writes 1.5 at scale 2 as 1.50. A device comes back as its client id and the label its row's own
    * names give, which the backend finishes with the registry's serial number.
    */
-  private projectedValue({ name, type, idOf }: StoreOutputColumn): string {
+  private projectedValue({ name, type, idOf, isPairText }: StoreOutputColumn): string {
     const expression = this.projectedExpression(name);
-    if (idOf === "device") {
-      return `tuple(${expression}, ${this.deviceLabelOf(expression)})`;
+    const isClientId = idOf === "device" && !isPairText;
+    if (isClientId) {
+      const { clientId, label } = this.devicePartsOf(this.baseColumn(this.structPath(name)[0]));
+      return `tuple(${clientId}, ${label})`;
     }
-    const isInteger = type === "BIGINT" || type === "INT";
-    if (isInteger) {
+    if (this.isIntegerType(type)) {
       return `toString(${expression})`;
     }
     const decimal = VariantSchema.decimalOf(type);
@@ -552,41 +1318,47 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
   }
 
   /** Spark sorts nulls first going up and last going down; the store puts them last both ways. */
-  private sortClause(ordering: StoreOrdering): string {
-    const { column, direction = "ASC", mode, idOrder } = ordering;
+  private sortClause(ordering: QueryOrdering): string {
+    const { column, direction = "ASC", mode } = ordering;
+    const idOrder = this.orderIds;
     const nulls = direction === "ASC" ? "NULLS FIRST" : "NULLS LAST";
     const rowIdSql = this.rowIdFor(ordering);
     const tieBreak = rowIdSql ? `, ${rowIdSql} ASC` : "";
     if (idOrder !== undefined) {
       const [name] = this.structPath(column);
-      const { expression, idOf } = this.baseColumn(name);
-      const place = `arrayElement(${ORDER_RANKS}, indexOf(${ORDER_IDS}, ${expression})) ${direction} ${nulls}`;
+      const base = this.baseColumn(name);
+      if (base.idOf !== "device") {
+        return `${this.orderPlace(base.expression)} ${direction} ${nulls}${tieBreak}`;
+      }
       // A whole device sorts as Spark sorts its struct: by the registry's id, which only the ids
       // in the order carry, then by its label.
-      const isDevice = idOf === "device";
-      const sorted = isDevice
-        ? `${place}, ${this.deviceLabelOf(expression)} ${direction} ${nulls}`
-        : place;
-      return `${sorted}${tieBreak}`;
+      const { clientId, label } = this.devicePartsOf(base);
+      return `${this.orderPlace(clientId)} ${direction} ${nulls}, ${label} ${direction} ${nulls}${tieBreak}`;
     }
 
-    const target = this.columnExpression(column);
+    // A payload read whole sorts by its typed value, as the warehouse sorts its projected column.
+    const target = this.projectedExpression(column);
     if (mode?.kind === "numericString") {
       return numericStringOrdering(this.numericStringKeys(target, rowIdSql), direction);
     }
     if (mode?.kind === "number") {
-      const nan = this.nanKey(target, column, direction, "NULLS LAST");
-      return `${nan}${target} ${direction} NULLS LAST${tieBreak}`;
+      const sorted = this.nanApart(
+        target,
+        this.outputColumn(column).type,
+        `${direction} NULLS LAST`,
+      );
+      return `${sorted}${tieBreak}`;
     }
-    const sorted =
-      mode?.kind === "pseudonym" ? this.contributorPseudonym(target, mode.salt) : target;
-    return `${this.nanKey(sorted, column, direction, nulls)}${sorted} ${direction} ${nulls}${tieBreak}`;
+    if (mode?.kind === "pseudonym") {
+      return `${this.contributorPseudonym(target, mode.salt)} ${direction} ${nulls}${tieBreak}`;
+    }
+    const sorted = this.nanApart(target, this.outputColumn(column).type, `${direction} ${nulls}`);
+    return `${sorted}${tieBreak}`;
   }
 
-  /** Spark sorts NaN above every number, where the store sorts it beside null. */
-  private nanKey(sorted: string, column: string, direction: string, nulls: string): string {
-    const isDouble = this.typeOf(column) === "DOUBLE";
-    return isDouble ? `isNaN(${sorted}) ${direction} ${nulls}, ` : "";
+  /** The place of the group holding an id in the order, which ids that tie share. */
+  private orderPlace(idSql: string): string {
+    return `arrayElement(${ORDER_RANKS}, indexOf(${ORDER_IDS}, ${idSql}))`;
   }
 
   /** The warehouse's keys for text that holds a number, in the store's functions. */
@@ -614,9 +1386,9 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
     });
   }
 
-  /** A client id missing from the list reads 0 from indexOf, and the Nullable array's NULL there. */
+  /** A hash lookup per row, where a scan of the list per row costs as much as the rest of a read. */
   private serialNumberOf(clientIdSql: string): string {
-    return `arrayElement(${DEVICE_SERIALS}, indexOf(${DEVICE_CLIENT_IDS}, ${clientIdSql}))`;
+    return `transform(${clientIdSql}, ${DEVICE_CLIENT_IDS}, ${DEVICE_SERIALS}, CAST(NULL AS Nullable(String)))`;
   }
 
   /**
@@ -625,7 +1397,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   private withClause(): string {
     const quoted = (values: string[]) => values.map((value) => this.escapeValue(value)).join(", ");
-    const idOrder = this.ordering?.idOrder;
+    const idOrder = this.orderIds;
     const lists = [
       ...(idOrder === undefined
         ? []
@@ -637,7 +1409,7 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
         ? []
         : [
             `[${quoted(this.deviceSerials.map(([clientId]) => clientId))}] AS ${DEVICE_CLIENT_IDS}`,
-            `CAST([${quoted(this.deviceSerials.map(([, serial]) => serial))}] AS Array(Nullable(String))) AS ${DEVICE_SERIALS}`,
+            `CAST([${this.deviceSerials.map(([, serial]) => (serial === null ? "NULL" : this.escapeValue(serial))).join(", ")}] AS Array(Nullable(String))) AS ${DEVICE_SERIALS}`,
           ]),
       ...(this.flaggedRowIds === undefined
         ? []
@@ -727,7 +1499,8 @@ export class StoreQueryBuilder extends BaseQueryBuilder {
    */
   private textSource(column: string, key?: string): Pick<StoreOutputColumn, "text"> {
     const text = this.payloadTexts[column];
-    return text === undefined || this.isDistinct ? {} : { text: { column: text, key } };
+    const readsText = text !== undefined && !this.isDistinct && !this.plotsValues;
+    return readsText ? { text: { column: text, key } } : {};
   }
 
   /** The feed stores a payload that is no object as `{"_items": [...]}` or `{"_value": x}`. */

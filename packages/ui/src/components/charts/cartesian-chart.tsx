@@ -1,9 +1,21 @@
 "use client";
 
-import type { ColorBar, Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
+import type { ColorBar, Layout, PlotData, PlotRelayoutEvent, PlotRestyleEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
+import {
+  applyCartesianAxes,
+  prepareStackedAxesForExport,
+  cartesianYAxisId,
+  CARTESIAN_AXIS_IDS,
+  colorbarGutter,
+  styleCartesianAxes,
+  seriesIsVisible,
+  yRangesAfterRelayout,
+  type CartesianAxis,
+  type CartesianYRanges,
+} from "./cartesian-axes";
 import {
   chartTextWidth,
   HORIZONTAL_LEGEND_HEIGHT,
@@ -12,6 +24,7 @@ import {
   withBoundedRightLegend,
 } from "./outer-labels";
 import { PlotlyChart } from "./plotly-chart";
+import type { PreparePngLayout } from "./png-export";
 import type {
   BaseChartProps,
   BaseSeries,
@@ -21,7 +34,7 @@ import type {
   PlotlyChartConfig,
 } from "./types";
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
-import { facetTierStyles, useChartSizing } from "./use-is-compact";
+import { chartSizingTiers, facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
   applyAxisType,
   applyReferenceLines,
@@ -42,14 +55,14 @@ import {
 /**
  * One data series on a shared cartesian canvas. Visual encoding lives on
  * the series itself so a single chart can mix `line` + `bar` + `area`
- * traces. `axis: "secondary"` routes to a twin Y axis (`yaxis2`).
+ * traces. The axis assignment selects the corresponding numbered Y axis.
  */
 export interface CartesianSeries extends BaseSeries {
   traceType: "line" | "bar" | "scatter" | "area";
-  axis?: "primary" | "secondary";
+  axis?: CartesianAxis;
   /**
    * Direct subplot routing (Plotly axis IDs like `"x"`, `"x2"`, `"x3"`).
-   * When set, takes precedence over `axis: "primary" | "secondary"`.
+   * When set, takes precedence over the series axis assignment.
    * Faceted charts use these to pin each trace to its cell.
    */
   xaxisId?: string;
@@ -105,6 +118,11 @@ export interface CartesianSeries extends BaseSeries {
   error_x?: ErrorBarConfig;
   error_y?: ErrorBarConfig;
 }
+
+type LegendOverrides = Map<
+  number,
+  { incoming: CartesianSeries["visible"]; value: NonNullable<CartesianSeries["visible"]> }
+>;
 
 /**
  * One cell of a facet grid. The renderer builds N of these and stamps
@@ -169,6 +187,7 @@ const FACET_HEADING_OFFSET = 4;
 // The shared X title is drawn 50 px below the plot, plus a line of text and padding.
 const FACET_X_TITLE_BAND = 72;
 const DEFAULT_FACET_COLUMN_GAP = 0.2;
+const DEFAULT_CONFIG: PlotlyChartConfig = {};
 
 function estimateFacetedPlotWidth(
   width: number,
@@ -178,17 +197,7 @@ function estimateFacetedPlotWidth(
 ): number {
   const primaryGutter = sharedYTitle ? SHARED_FACET_Y_TITLE_GUTTER : 56;
   const secondaryGutter = secondaryTitle ? 64 : 48;
-  const title = colorbar?.title;
-  const rightTitleWidth = title?.text && title.side === "right" ? 24 : 0;
-  const horizontalTitleWidth =
-    title?.text && title.side !== "right"
-      ? chartTextWidth(title.text, title.font?.size ?? 14) + 24
-      : 0;
-  const colorbarGutter = Math.max(
-    (colorbar?.thickness ?? 30) + 56 + rightTitleWidth,
-    horizontalTitleWidth,
-  );
-  return width - primaryGutter - secondaryGutter - colorbarGutter;
+  return width - primaryGutter - secondaryGutter - colorbarGutter(colorbar);
 }
 
 function independentFacetGap(plotWidth: number, columns: number, tickSize: number): number {
@@ -214,24 +223,25 @@ export interface CartesianChartProps extends BaseChartProps {
   uirevision?: string;
   /** Called when the user zooms, pans or resets the view, with the layout keys that changed. */
   onRelayout?: (event: Readonly<Record<string, unknown>>) => void;
+  onRestyle?: (event: Readonly<PlotRestyleEvent>) => void;
 }
 
 /**
  * Mixed-trace cartesian renderer. Emits one Plotly trace per
  * `CartesianSeries`, with the trace `type` driven by the series' own
- * `traceType`. When any series targets the secondary axis a `yaxis2` is
- * composed alongside the primary.
+ * `traceType` and placed on its assigned Y axis.
  */
 export function CartesianChart({
   data,
   colorAxis,
-  config = {},
+  config = DEFAULT_CONFIG,
   className,
   loading,
   error,
   subplots,
   uirevision,
   onRelayout,
+  onRestyle,
   ...eventHandlers
 }: CartesianChartProps) {
   // Faceted charts pass their grid so the sizing tier compares against
@@ -245,6 +255,67 @@ export function CartesianChart({
       Boolean(config.y2AxisTitle),
     ...(subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {}),
   });
+  // A zoom can replace the points without changing which traces the legend controls.
+  const legendKey = useMemo(
+    () =>
+      JSON.stringify([
+        uirevision,
+        data.map(({ name, legendgroup, xaxisId, yaxisId, axis }) => [
+          name,
+          legendgroup,
+          xaxisId,
+          yaxisId,
+          axis,
+        ]),
+      ]),
+    [data, uirevision],
+  );
+  const [visibility, setVisibility] = React.useState<{
+    key: string;
+    overrides: LegendOverrides;
+  }>({ key: legendKey, overrides: new Map() });
+  const retainedOverrides = useMemo<LegendOverrides>(() => {
+    if (visibility.key !== legendKey) return new Map();
+    const retained = new Map(
+      [...visibility.overrides].filter(
+        ([index, choice]) => data[index]?.visible === choice.incoming,
+      ),
+    );
+    return retained.size === visibility.overrides.size ? visibility.overrides : retained;
+  }, [data, legendKey, visibility]);
+  if (retainedOverrides !== visibility.overrides) {
+    setVisibility({ key: legendKey, overrides: retainedOverrides });
+  }
+
+  const visibleData = useMemo(
+    () =>
+      data.map((series, index) => ({
+        ...series,
+        visible: retainedOverrides.get(index)?.value ?? series.visible,
+      })),
+    [data, retainedOverrides],
+  );
+  const handleRestyle = React.useCallback(
+    (event: Readonly<PlotRestyleEvent>) => {
+      onRestyle?.(event);
+      const [update, indices] = event;
+      if (!("visible" in update)) return;
+      const raw: unknown = update.visible;
+      const values = Array.isArray(raw) ? raw : [raw];
+      setVisibility((previous) => {
+        const next = new Map(previous.key === legendKey ? previous.overrides : undefined);
+        indices.forEach((index, offset) => {
+          const series = data[index];
+          const value: unknown = values[offset % values.length];
+          if (series && (value === true || value === false || value === "legendonly")) {
+            next.set(index, { incoming: series.visible, value });
+          }
+        });
+        return { key: legendKey, overrides: next };
+      });
+    },
+    [data, legendKey, onRestyle],
+  );
   const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
@@ -252,13 +323,6 @@ export function CartesianChart({
   const traceColorScale = data.length === 1 ? colorAxis : undefined;
   const sharedColorAxis = traceColorScale ? undefined : colorAxis;
   const hasSharedColorAxis = sharedColorAxis !== undefined;
-  const plotData: PlotData[] = useMemo(
-    () =>
-      data.map((series) =>
-        buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale),
-      ),
-    [data, scatterPlotType, hasSharedColorAxis, traceColorScale],
-  );
 
   // Keyed on the data alone: the layout below also rebuilds on a tier flip and
   // a theme change, neither of which can alter an axis kind. Horizontal bars
@@ -266,18 +330,62 @@ export function CartesianChart({
   const axisScan = useMemo(() => {
     const x = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
     const y = data
-      .filter((s) => s.axis !== "secondary")
+      .filter((s) => (subplots ? !s.axis || s.axis === "primary" : cartesianYAxisId(s) === "y"))
       .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
     return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
-  }, [data]);
+  }, [data, subplots]);
+  const plotData = useMemo(
+    () =>
+      buildCartesianTraces(
+        visibleData,
+        scatterPlotType,
+        hasSharedColorAxis,
+        traceColorScale,
+        config,
+        applyAxisType({ type: config.xAxisType }, axisScan.xType).type ?? "linear",
+        subplots,
+      ),
+    [
+      visibleData,
+      scatterPlotType,
+      hasSharedColorAxis,
+      traceColorScale,
+      config,
+      axisScan.xType,
+      subplots,
+    ],
+  );
 
-  const { layout, boundHorizontalLegend } = useMemo(() => {
-    const hasSecondary = data.some((series) => series.axis === "secondary");
+  const assignedAxes = useMemo(() => new Set(data.map(cartesianYAxisId)), [data]);
+  const hasExtraAxes = !subplots && CARTESIAN_AXIS_IDS.slice(2).some((id) => assignedAxes.has(id));
+  const trackYZoom = hasExtraAxes && !config.sparkline;
+  const chartRevision = uirevision ?? (trackYZoom ? legendKey : undefined);
+  const rangeKey = JSON.stringify([
+    chartRevision,
+    config.yAxisType,
+    config.y2AxisType,
+    config.y3AxisType,
+    config.y4AxisType,
+    config.y5AxisType,
+    config.y6AxisType,
+  ]);
+  const [zoom, setZoom] = React.useState<{ key: string; ranges: CartesianYRanges }>();
+  const yRanges = zoom?.key === rangeKey ? zoom.ranges : undefined;
+
+  const { layout, boundHorizontalLegend, preparePngLayout } = useMemo(() => {
+    const activeData = visibleData.filter(seriesIsVisible);
+    const hasFacetOverlays =
+      subplots?.cells.some((cell) => Boolean(cell.secondaryYaxisId)) ?? false;
+    const hasSecondarySeries = subplots
+      ? data.some((series) => series.axis === "secondary")
+      : assignedAxes.has("y2");
+    const hasSecondary = hasSecondarySeries || hasExtraAxes || hasFacetOverlays;
     const hasOuterColorbar = hasSecondary && sharedColorAxis?.showscale === true;
     const chartWidth = config.width || sizing.width || 720;
-    const legendTraces = hasOuterColorbar
-      ? data.filter((series) => series.visible !== false && series.showlegend !== false)
-      : [];
+    const legendTraces =
+      hasOuterColorbar || hasExtraAxes
+        ? data.filter((series) => series.visible !== false && series.showlegend !== false)
+        : [];
     const showLegend = config.showLegend !== false && legendTraces.length > 0;
     const requestedLegend = config.legendPosition ?? "right";
     const sharedYTitle = sizing.cellVeryCompact || subplots?.sharedYTitle === true;
@@ -322,9 +430,10 @@ export function CartesianChart({
       longestLegendName + LEGEND_PADDING > insidePlotWidth * 0.96;
     // Plotly's container margins can squeeze the colour bar when both side gutters are occupied.
     const legendConfig =
-      hasOuterColorbar &&
-      showLegend &&
-      (requestedLegend === "right" || wideLeftLegend || wideInsideLegend)
+      (hasExtraAxes && (requestedLegend === "left" || requestedLegend === "right")) ||
+      (hasOuterColorbar &&
+        showLegend &&
+        (requestedLegend === "right" || wideLeftLegend || wideInsideLegend))
         ? { ...config, legendPosition: "bottom" as const }
         : config;
     const tiers = {
@@ -385,6 +494,9 @@ export function CartesianChart({
       // regardless of the user's toggle.
       const forceSharedTitles = sizing.cellVeryCompact;
       const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+      if (next.yaxis && !activeData.some((series) => !series.axis || series.axis === "primary")) {
+        next.yaxis = { ...next.yaxis, title: undefined };
+      }
       const faceted = extendLayoutForFacets(next, subplots.cells, {
         rows: subplots.rows,
         columns: subplots.columns,
@@ -429,36 +541,38 @@ export function CartesianChart({
       }
     }
 
-    if (hasSecondary && subplots) {
+    let preparePngLayout: PreparePngLayout | undefined;
+    if (subplots && hasFacetOverlays) {
       // Faceted dual-Y: one overlay axis per cell, built after the grid so it
       // can borrow each cell's primary styling and overlay its y-domain.
       applyFacetSecondaryAxes(next, data, subplots, config, config.height || sizing.height);
-    } else if (hasSecondary) {
-      const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
-      // Mirror tick/line styling from primary so the two axes look like a
-      // matched pair rather than two unrelated widgets. The primary slice
-      // was built by `createBaseLayout` above.
-      const primary = (next.yaxis ?? {}) as Record<string, unknown>;
-      const titleFont = (primary.title as { font?: unknown } | undefined)?.font;
+    } else if (!subplots) {
+      const colorbar = hasOuterColorbar ? (sharedColorAxis.colorbar ?? {}) : undefined;
+      if (hasExtraAxes) {
+        const base = { xaxis: next.xaxis, yaxis: next.yaxis, margin: next.margin };
+        preparePngLayout = (current, width, height) =>
+          prepareStackedAxesForExport(
+            current,
+            base,
+            visibleData,
+            config,
+            width,
+            colorbar,
+            chartSizingTiers(width, height),
+            yRanges,
+          );
+      }
+      applyCartesianAxes(next, visibleData, config, chartWidth, colorbar, sizing, yRanges);
+    }
 
-      const baseY2: Record<string, unknown> = {
-        title: config.y2AxisTitle ? { text: config.y2AxisTitle, font: titleFont } : undefined,
-        overlaying: "y",
-        side: "right",
-        type: config.y2AxisType ?? "linear",
-        // Hide secondary grid; doubling makes the plot area look striped.
-        showgrid: false,
-        automargin: true,
-        tickfont: primary.tickfont,
-        color: primary.color,
-        linecolor: primary.linecolor,
-        tickcolor: primary.tickcolor,
-        showline: true,
-      };
-      // Auto-detect type only when the user didn't pin one. `Layout` has
-      // no `yaxis2` field; Plotly accepts arbitrary `yaxisN` keys.
-      const refined = config.y2AxisType ? baseY2 : refineAxisType(baseY2, secondaryYValues);
-      (next as unknown as Record<string, unknown>).yaxis2 = refined;
+    if (subplots) {
+      styleCartesianAxes(
+        next,
+        visibleData,
+        config,
+        subplots,
+        sharedYTitle && Boolean(config.yAxisTitle),
+      );
     }
 
     // Reference-line overlays sit on top of everything else in the layout;
@@ -466,21 +580,33 @@ export function CartesianChart({
     // `layout.shapes` / `layout.annotations` without conflict.
     applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
 
-    if (uirevision !== undefined) {
-      next.uirevision = uirevision;
+    if (chartRevision !== undefined) {
+      next.uirevision = chartRevision;
+      next.legend = { ...next.legend, uirevision: legendKey };
     }
 
-    return { layout: next, boundHorizontalLegend: topLegend || bottomLegend };
+    const movedInsideLegend =
+      requestedLegend.startsWith("inside-") && next.legend?.orientation === "h";
+    return {
+      layout: next,
+      boundHorizontalLegend: topLegend || bottomLegend || movedInsideLegend,
+      preparePngLayout,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
   }, [
     config,
     sizing,
     data,
+    visibleData,
+    legendKey,
     axisScan,
     colorAxis,
     sharedColorAxis,
     subplots,
-    uirevision,
+    assignedAxes,
+    hasExtraAxes,
+    chartRevision,
+    yRanges,
     themeVersion,
   ]);
 
@@ -493,8 +619,17 @@ export function CartesianChart({
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   const handleRelayout = React.useCallback(
-    (event: Readonly<PlotRelayoutEvent>) => onRelayout?.({ ...event }),
-    [onRelayout],
+    (event: Readonly<PlotRelayoutEvent>) => {
+      if (trackYZoom && Object.keys(event).some((key) => key.startsWith("yaxis"))) {
+        setZoom((previous) => {
+          const current = previous?.key === rangeKey ? previous.ranges : undefined;
+          const ranges = yRangesAfterRelayout(current, event);
+          return ranges && ranges !== current ? { key: rangeKey, ranges } : previous;
+        });
+      }
+      onRelayout?.({ ...event });
+    },
+    [onRelayout, trackYZoom, rangeKey],
   );
 
   return (
@@ -505,8 +640,10 @@ export function CartesianChart({
         config={plotConfig}
         loading={loading}
         error={error}
-        onRelayout={onRelayout ? handleRelayout : undefined}
+        onRelayout={onRelayout || trackYZoom ? handleRelayout : undefined}
         {...eventHandlers}
+        onRestyle={handleRestyle}
+        preparePngLayout={preparePngLayout}
       />
     </div>
   );
@@ -585,6 +722,174 @@ function applyFacetSecondaryAxes(
   });
 }
 
+export function buildCartesianTraces(
+  data: CartesianSeries[],
+  scatterPlotType: string,
+  hasSharedColorAxis: boolean,
+  traceColorScale: CartesianColorAxis | undefined,
+  config: Pick<PlotlyChartConfig, "barmode" | "bargap" | "bargroupgap">,
+  xAxisType: string,
+  subplots?: FacetGridConfig,
+): PlotData[] {
+  const groups =
+    (config.barmode ?? "group") === "group" ? groupedBars(data, config, xAxisType, subplots) : [];
+  return data.map((series, index) =>
+    buildTrace(series, scatterPlotType, hasSharedColorAxis, traceColorScale, groups[index]),
+  );
+}
+
+interface BarGrouping {
+  offsetgroup: string;
+  alignmentgroup: string;
+  width?: number;
+  offset?: number;
+}
+
+interface GroupedBar {
+  index: number;
+  series: CartesianSeries;
+  valueAxis: string;
+  grouping: BarGrouping;
+}
+
+function groupedBars(
+  data: CartesianSeries[],
+  { bargap = 0.2, bargroupgap = 0 }: Pick<PlotlyChartConfig, "bargap" | "bargroupgap">,
+  xAxisType: string,
+  subplots?: FacetGridConfig,
+): (BarGrouping | undefined)[] {
+  const groups = new Map<string, GroupedBar[]>();
+  data.forEach((series, index) => {
+    if (series.traceType !== "bar") return;
+
+    const x = series.xaxisId ?? "x";
+    const y = cartesianYAxisId(series);
+    const [positionAxis, valueAxis] = series.orientation === "h" ? [y, x] : [x, y];
+    const group = groups.get(positionAxis) ?? [];
+    group.push({
+      index,
+      series,
+      valueAxis,
+      grouping: { offsetgroup: String(group.length), alignmentgroup: "multi-axis-bars" },
+    });
+    groups.set(positionAxis, group);
+  });
+
+  const grouping: (BarGrouping | undefined)[] = [];
+  const matchedXAxes = new Set(
+    subplots?.sharedX === false ? [] : subplots?.cells.map(({ xaxisId }) => xaxisId),
+  );
+  const positionGroups = new Map<string, GroupedBar[][]>();
+  for (const [positionAxis, bars] of groups) {
+    if (new Set(bars.map(({ valueAxis }) => valueAxis)).size < 2) continue;
+    for (const bar of bars) grouping[bar.index] = bar.grouping;
+    if (xAxisType !== "linear" || !positionAxis.startsWith("x")) continue;
+
+    const positionGroup = matchedXAxes.has(positionAxis) ? "shared-x" : positionAxis;
+    const cells = positionGroups.get(positionGroup) ?? [];
+    cells.push(bars);
+    positionGroups.set(positionGroup, cells);
+  }
+
+  for (const [positionGroup, cells] of positionGroups) {
+    const matched = positionGroup === "shared-x";
+    const placements = cells.map((bars) => {
+      const populatedBars: (GroupedBar & { slot: number })[] = [];
+      for (const [index, bar] of bars.entries()) {
+        if (bar.series.x.length === 0 || bar.series.y.length === 0) continue;
+        populatedBars.push({ ...bar, slot: matched ? index : populatedBars.length });
+      }
+      const drawnBars = populatedBars.filter(({ series }) => seriesIsVisible(series));
+      const slotCount = matched ? bars.length : populatedBars.length;
+      return { populatedBars, drawnBars, slotCount, ...measureGroupedBars(drawnBars) };
+    });
+    // Only positions drawn in the same panel can constrain each other's widths.
+    const spacing = placements.reduce(
+      (closest, cell) => Math.min(closest, cell.spacing ?? Infinity),
+      Infinity,
+    );
+    if (!Number.isFinite(spacing)) continue;
+
+    const nativeSlots = new Map<string, number>();
+    if (
+      placements.length > 1 &&
+      placements.some(({ hasRepeatedPosition }) => hasRepeatedPosition)
+    ) {
+      // Plotly registers each offset group on its first non-empty trace, in input order.
+      const populatedBars = placements.flatMap((cell) => cell.populatedBars);
+      populatedBars.sort((a, b) => a.index - b.index);
+      for (const {
+        grouping: { offsetgroup },
+        series,
+      } of populatedBars) {
+        if (series.visible !== false && !nativeSlots.has(offsetgroup)) {
+          nativeSlots.set(offsetgroup, nativeSlots.size);
+        }
+      }
+    }
+
+    // Plotly computes widths per value axis. A shared slot width keeps bars on
+    // distinct X grids from overlapping when their value axes differ.
+    const slotCount = nativeSlots.size || Math.max(...placements.map((cell) => cell.slotCount));
+    const slotWidth = (spacing * (1 - bargap)) / slotCount;
+    const width = slotWidth * (1 - bargroupgap);
+    for (const { drawnBars, hasRepeatedPosition } of placements) {
+      if (hasRepeatedPosition) continue;
+      for (const { grouping, slot: explicitSlot } of drawnBars) {
+        const slot = nativeSlots.get(grouping.offsetgroup) ?? explicitSlot;
+        grouping.width = width;
+        grouping.offset = (slot - (slotCount - 1) / 2) * slotWidth - width / 2;
+      }
+    }
+  }
+  return grouping;
+}
+
+function measureGroupedBars(bars: GroupedBar[]) {
+  const positions: number[] = [];
+  let hasRepeatedPosition = false;
+  for (const {
+    series: { x, y },
+  } of bars) {
+    const seen = new Set<number>();
+    const length = Math.min(x.length, y.length);
+    for (let point = 0; point < length; point++) {
+      const value = x[point];
+      const position = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+      if (typeof position !== "number" || !Number.isFinite(position)) continue;
+      // Explicit offsets disable Plotly's stacking of identical X values within a trace.
+      if (seen.has(position)) hasRepeatedPosition = true;
+      seen.add(position);
+      positions.push(position);
+    }
+  }
+  const { count, spacing } = distinctBarSpacing(positions);
+  return {
+    spacing: count > 1 && Number.isFinite(spacing) ? spacing : undefined,
+    hasRepeatedPosition,
+  };
+}
+
+function distinctBarSpacing(positions: number[]) {
+  positions.sort((a, b) => a - b);
+  const first = positions[0];
+  if (first === undefined) return { count: 0, spacing: 1 };
+
+  let spacing = (positions.at(-1) ?? first) - first || 1;
+  // Match Plotly's distinctVals tolerance for deciding when positions differ by rounding.
+  const tolerance = spacing / Math.max(1, positions.length - 1) / 10_000;
+  let previous = first;
+  let count = 1;
+  for (const position of positions) {
+    const difference = position - previous;
+    if (difference <= tolerance) continue;
+    spacing = Math.min(spacing, difference);
+    previous = position;
+    count++;
+  }
+  return { count, spacing };
+}
+
 /**
  * Translate one typed series into a Plotly trace. Switching on `traceType`
  * here (rather than parameterising `LineChart`/`BarChart` etc.) lets a
@@ -595,17 +900,12 @@ function buildTrace(
   scatterPlotType: string,
   hasSharedColorAxis: boolean,
   traceColorScale?: CartesianColorAxis,
+  barGrouping?: BarGrouping,
 ): PlotData {
   // Axis routing precedence: explicit `xaxisId` / `yaxisId` (faceted
-  // charts pin each trace to its cell) wins over the legacy `axis:
-  // "secondary"` flag (single-canvas dual-Y). When both are unset the
-  // trace defaults to the implicit `x` / `y` pair Plotly assigns.
-  const yaxisRouting =
-    series.yaxisId !== undefined
-      ? { yaxis: series.yaxisId }
-      : series.axis === "secondary"
-        ? { yaxis: "y2" as const }
-        : {};
+  // charts pin each trace to its cell) wins over the single-chart assignment.
+  const yaxis = cartesianYAxisId(series);
+  const yaxisRouting = series.yaxisId !== undefined || yaxis !== "y" ? { yaxis } : {};
   const xaxisRouting = series.xaxisId !== undefined ? { xaxis: series.xaxisId } : {};
 
   const baseShared = {
@@ -632,6 +932,7 @@ function buildTrace(
     const horizontal = series.orientation === "h";
     return {
       ...baseShared,
+      ...barGrouping,
       x: horizontal ? series.y : series.x,
       y: horizontal ? series.x : series.y,
       type: "bar",

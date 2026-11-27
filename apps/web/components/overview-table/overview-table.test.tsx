@@ -136,6 +136,31 @@ describe("OverviewTable", () => {
     expect(router.push).toHaveBeenCalledWith("/platform/stubs/b");
   });
 
+  it("keeps header and cell nodes when the parent rebuilds its columns on a re-render", () => {
+    const freshTable = () => (
+      <OverviewTable
+        columns={[
+          {
+            header: <span>Name</span>,
+            cell: (item: StubItem, href) => <a href={href}>{item.name}</a>,
+          },
+        ]}
+        items={[{ id: "a", name: "First" }]}
+        getRowKey={(item) => item.id}
+        getRowHref={(item) => `/platform/stubs/${item.id}`}
+        emptyMessage="Nothing here"
+      />
+    );
+    const { rerender } = render(freshTable());
+    const header = screen.getByText("Name");
+    const link = screen.getByRole("link", { name: "First" });
+
+    rerender(freshTable());
+
+    expect(screen.getByText("Name")).toBe(header);
+    expect(screen.getByRole("link", { name: "First" })).toBe(link);
+  });
+
   it("uses a fixed, bordered layout and clips cell content before it can crowd later columns", () => {
     renderStubTable([{ id: "a", name: "A name that is deliberately much wider than its cell" }]);
 

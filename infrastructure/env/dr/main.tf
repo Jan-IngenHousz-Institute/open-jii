@@ -444,9 +444,9 @@ module "ses_secrets" {
   description = "SES SMTP credentials for transactional email sending"
 
   secret_string = jsonencode({
-    AUTH_EMAIL_SERVER    = var.enable_ses_cutover ? module.ses[0].auth_email_server : var.prod_ses_smtp_server
+    AUTH_EMAIL_SERVER    = var.enable_ses_cutover ? var.dr_ses_smtp_server : var.prod_ses_smtp_server
     AUTH_EMAIL_FROM      = "auth@mail.${var.domain_name}"
-    BACKEND_EMAIL_SERVER = var.enable_ses_cutover ? module.ses[0].auth_email_server : var.prod_ses_smtp_server
+    BACKEND_EMAIL_SERVER = var.enable_ses_cutover ? var.dr_ses_smtp_server : var.prod_ses_smtp_server
     BACKEND_EMAIL_FROM   = "notifications@mail.${var.domain_name}"
   })
 
@@ -729,6 +729,11 @@ module "backend_waf" {
   environment        = var.environment
   rate_limit         = 500
   log_retention_days = 365
+  # A live experiment page repeats its table listing, rows, columns and change stream reads.
+  read_rate_limit = {
+    limit      = 2500
+    path_regex = "^/api/v1/experiments/[0-9a-fA-F-]{36}/(?:tables(?:/changes)?|data(?:/columns|/distinct)?)$"
+  }
 
   large_body_bypass_routes = [
     {

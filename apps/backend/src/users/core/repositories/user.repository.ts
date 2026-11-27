@@ -62,6 +62,7 @@ import {
 } from "../../../sharing/core/resource-staffing";
 import type { BlockingResourceKey } from "../../../sharing/core/resource-staffing";
 import {
+  ApiKeyState,
   CreateUserDto,
   UpdateUserDto,
   UserDto,
@@ -141,6 +142,23 @@ export class UserRepository {
         .limit(1);
 
       return rows[0]?.id ?? null;
+    });
+  }
+
+  /** An API key's state, read from its row, which counts no request against the key's quota. */
+  async findApiKeyState(id: string): Promise<Result<ApiKeyState | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({
+          referenceId: apiKeys.referenceId,
+          enabled: apiKeys.enabled,
+          expiresAt: apiKeys.expiresAt,
+        })
+        .from(apiKeys)
+        .where(eq(apiKeys.id, id))
+        .limit(1);
+
+      return rows[0] ?? null;
     });
   }
 

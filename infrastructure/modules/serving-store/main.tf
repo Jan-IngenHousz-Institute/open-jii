@@ -24,9 +24,10 @@ locals {
   # The feed's lag per table, sent once a minute by a timer next to the agent, into the agent's
   # namespace, which the instance's role may already write to.
   feed_metrics_script = templatefile("${path.module}/templates/feed-metrics.sh.tftpl", {
-    environment = var.environment
-    region      = data.aws_region.current.region
-    namespace   = var.metrics_namespace
+    environment   = var.environment
+    region        = data.aws_region.current.region
+    namespace     = var.metrics_namespace
+    metrics_views = local.metrics_views
   })
 
   # The system logs that ship without a TTL. opentelemetry_span_log defines its own engine and stays
@@ -44,56 +45,96 @@ locals {
     system_log_retention_days = var.system_log_retention_days
   })
 
-  # The views that name an experiment (packages/database/clickhouse/migrations), the reader's only
-  # way to experiment data, and the tables a reload replaces rows of or removes ids from.
+  # The reader reads measurement data through the views, which name one experiment or devices per
+  # read (packages/database/clickhouse/migrations), and from the base tables below, under its row
+  # policy. A reload replaces rows of the reloaded tables or removes ids from them.
   reader_views = [
     "experiment_measurements", "experiment_macro_results", "experiment_uploads",
     "experiment_contributor_ids", "experiment_client_ids", "experiment_payload_schemas",
     "experiment_metadata_rows", "experiment_metadata_sheets",
+    "device_measurements", "device_experiment_ids", "device_newest_measurements", "device_lifecycle_events",
+    "device_last_activity", "device_events_reloaded",
   ]
-  reloaded_tables = ["measurements", "macro_results", "uploads", "payload_schemas", "contributor_ids", "client_ids"]
+  reloaded_tables = [
+    "measurements", "measurements_by_device", "macro_results", "uploads", "device_events", "payload_schemas",
+    "contributor_ids", "client_ids",
+  ]
 
-  # No grants means the admin, which manages access and applies the schema. The writer only inserts,
-  # and keeps out of the migration ledger, which records what the schema already holds. The reloader
-  # also deletes from the tables it reloads; a lightweight delete updates their rows' mask column,
-  # which a grant can name only table by table. ALTER DELETE also allows dropping a partition, and
-  # there is no narrower grant. The profiles are in templates/users.xml.tftpl.
+  # The tables under the experiment views, which a chart reads to name only the payload paths it
+  # plots; through a view the store reads every payload whole. The reader's row policy on each keeps
+  # a read to the experiment it sends as a setting, and fails a read that sends none. SQL_ is the
+  # prefix the packaged server config allows custom settings under. Users without a row policy
+  # still read every row, as the packaged config's users_without_row_policies_can_read_rows says.
+  reader_tables     = ["measurements", "macro_results", "uploads"]
+  reader_row_filter = "experiment_id = getSetting('SQL_experiment')"
+
+  # The platform metrics' hourly views (packages/database/clickhouse/migrations), in the order they
+  # refresh. The reader reads aggregates and id pairs from them, and only their refreshes write them.
+  metrics_views = [
+    "metrics_platform_totals", "metrics_daily_activity", "metrics_client_totals",
+    "metrics_hourly_activity", "metrics_activity_windows", "metrics_daily_activity_by_experiment",
+    "metrics_daily_activity_by_resource", "metrics_experiment_contributors_window",
+    "metrics_experiment_devices_window", "metrics_pool_facts", "metrics_parameter_stats",
+  ]
+
+  # No grants means the admin, which manages access and applies the schema. The writer and the
+  # reloader insert only into the tables the feed fills, by name: an insert grant on store.* would
+  # reach the migration ledger and the inner tables the metrics views keep their rows in, which a
+  # revoke on a view's name does not cover. The reloader also deletes from the tables it reloads; a
+  # lightweight delete updates their rows' mask column, which a grant can name only table by table.
+  # ALTER DELETE also allows dropping a partition, and there is no narrower grant. The profiles are
+  # in templates/users.xml.tftpl.
   users = {
-    admin = { name = "openjii_admin", profile = "default", grants = [] }
+    admin = { name = "openjii_admin", profile = "default", grants = [], row_filters = {} }
     writer = {
       name    = "openjii_writer"
       profile = "ingest"
-      grants = [
-        "GRANT SELECT, INSERT ON store.*",
-        "REVOKE INSERT ON store._migrations",
-      ]
+      grants = concat(
+        ["GRANT SELECT ON store.*"],
+        [for table in concat(local.reloaded_tables, ["metadata_rows", "metadata_sheets", "feed_rejects"]) : "GRANT INSERT ON store.${table}"],
+      )
+      row_filters = {}
     }
     reloader = {
       name    = "openjii_reloader"
       profile = "ingest"
       grants = concat(
-        ["GRANT SELECT, INSERT ON store.*"],
+        ["GRANT SELECT ON store.*"],
+        [for table in concat(local.reloaded_tables, ["feed_rejects", "completed_reloads"]) : "GRANT INSERT ON store.${table}"],
         [for table in local.reloaded_tables : "GRANT ALTER DELETE, ALTER UPDATE(_row_exists) ON store.${table}"],
-        ["REVOKE INSERT ON store._migrations"],
       )
+      row_filters = {}
     }
     reader = {
       name    = "openjii_reader"
       profile = "reader"
-      grants  = [for view in local.reader_views : "GRANT SELECT ON store.${view}"]
+      # Four metrics views are per experiment, so the reader can list experiment, contributor, client
+      # and resource ids without naming an experiment. That is accepted: the client sets the row
+      # policy's experiment, so the policy never bounded the credential, and the backend aggregates
+      # what it reads before anything leaves it.
+      grants = concat(
+        [for view in concat(local.reader_views, local.metrics_views) : "GRANT SELECT ON store.${view}"],
+        [for table in local.reader_tables : "GRANT SELECT ON store.${table}"],
+      )
+      row_filters = { for table in local.reader_tables : table => local.reader_row_filter }
     }
   }
 
-  # The hashes of 32 random characters, shown in plans so a replacement says what changed.
   users_xml = templatefile("${path.module}/templates/users.xml.tftpl", {
     users = [
       for role, user in local.users : {
-        name            = user.name
-        profile         = user.profile
-        grants          = user.grants
-        password_sha256 = nonsensitive(sha256(random_password.user[role].result))
+        name        = user.name
+        profile     = user.profile
+        grants      = user.grants
+        row_filters = user.row_filters
       }
     ]
+  })
+
+  passwords_script = templatefile("${path.module}/templates/passwords.sh.tftpl", {
+    region    = data.aws_region.current.region
+    http_port = var.http_port
+    users     = [for role, user in local.users : { name = user.name, secret_name = "${local.name}-${role}" }]
   })
 
   cloudwatch_agent_config_path = "/opt/aws/amazon-cloudwatch-agent/etc/openjii.json"
@@ -161,25 +202,16 @@ data "aws_subnet" "this" {
   id = var.subnet_id
 }
 
-resource "random_password" "user" {
-  for_each = local.users
+data "aws_caller_identity" "current" {}
 
-  length  = 32
-  special = false
-}
-
-# One secret per role, in the shape Aurora's secrets have, so each consumer reads only its own.
+# One secret per role, in the shape Aurora's secrets have, so each consumer reads only its own. Its
+# username and password are set with `pnpm secrets:set`; the instance reads them at boot.
 module "credentials" {
-  source   = "../secrets-manager"
+  source   = "../secrets-manager/container"
   for_each = local.users
 
   name        = "${local.name}-${each.key}"
   description = "Serving store ${each.key} user"
-
-  secret_string = jsonencode({
-    username = each.value.name
-    password = random_password.user[each.key].result
-  })
 
   tags = var.tags
 }
@@ -235,6 +267,23 @@ data "aws_iam_policy_document" "agent" {
       values   = [var.metrics_namespace]
     }
   }
+}
+
+# The users' passwords, which the instance hashes into ClickHouse's users at boot.
+data "aws_iam_policy_document" "passwords" {
+  statement {
+    actions = ["secretsmanager:GetSecretValue"]
+    resources = [
+      for role in keys(local.users) :
+      "arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${local.name}-${role}-??????"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "passwords" {
+  name   = "clickhouse-passwords"
+  role   = aws_iam_role.store.id
+  policy = data.aws_iam_policy_document.passwords.json
 }
 
 resource "aws_iam_role_policy" "agent" {
@@ -302,6 +351,7 @@ resource "aws_instance" "store" {
     data_device                  = local.data_device
     config_xml                   = local.config_xml
     users_xml                    = local.users_xml
+    passwords_script             = local.passwords_script
     prometheus_config_path       = local.prometheus_config_path
     prometheus_config            = local.prometheus_config
     cloudwatch_agent_config_path = local.cloudwatch_agent_config_path
@@ -312,7 +362,8 @@ resource "aws_instance" "store" {
 
   tags = merge(var.tags, { Name = local.name })
 
-  depends_on = [aws_ec2_subnet_cidr_reservation.store]
+  # The policy before the instance, so its first boot can already read the passwords.
+  depends_on = [aws_ec2_subnet_cidr_reservation.store, aws_iam_role_policy.passwords]
 
   # A new AMI arrives through a deliberate replacement, not on every apply.
   lifecycle {

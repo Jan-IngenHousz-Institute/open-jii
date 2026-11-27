@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import types
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+
+from tests.serving_store_module import ServingStoreModule
 
 
 @pytest.fixture(scope="session")
@@ -106,6 +109,27 @@ def fake_dp(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
 _STORE_MIGRATIONS = Path(__file__).parents[3] / "packages/database/clickhouse/migrations"
 
 
+def store_setting(name: str) -> str:
+    """A setting of the data tests' store, which only ``pnpm test`` gives them, as it starts the store."""
+    value = os.environ.get(name)
+    if value is None:
+        raise RuntimeError(
+            f'{name} is unset; run the data tests through pnpm test, or leave these out with -m "not clickhouse"'
+        )
+    return value
+
+
+@pytest.fixture(scope="session")
+def store_admin() -> tuple[str, str, str]:
+    """The address, admin and password of the data tests' own store, which ``pnpm test`` starts on
+    port 8125, apart from the backend's, by the variables packages/database/.env.test gives it."""
+    return (
+        f"http://127.0.0.1:{store_setting('CLICKHOUSE_TEST_PORT')}/",
+        store_setting("CLICKHOUSE_TEST_USER"),
+        store_setting("CLICKHOUSE_TEST_PASSWORD"),
+    )
+
+
 @pytest.fixture(scope="session")
 def store_migrations() -> list[str]:
     """The serving store's migrations as their runner applies them: file by file, one statement at a
@@ -121,3 +145,27 @@ def store_migrations() -> list[str]:
         if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
             statements.append("\n".join(lines))
     return statements
+
+
+@pytest.fixture(scope="session")
+def store_migration_files() -> dict[str, list[str]]:
+    """Each of the serving store's migrations, by file name in the order the runner applies them, as
+    the statements it runs one at a time, a statement ending at a line that ends with a semicolon."""
+    files = {}
+    for migration in sorted(_STORE_MIGRATIONS.glob("*.sql")):
+        statements = []
+        lines: list[str] = []
+        for line in migration.read_text().splitlines():
+            lines.append(line)
+            if line.rstrip().endswith(";"):
+                statements.append("\n".join(lines).rstrip().removesuffix(";"))
+                lines = []
+        if any(line.strip() and not line.lstrip().startswith("--") for line in lines):
+            statements.append("\n".join(lines))
+        files[migration.name] = statements
+    return files
+
+
+@pytest.fixture(scope="session")
+def store_module() -> ServingStoreModule:
+    return ServingStoreModule.read()

@@ -594,3 +594,57 @@ describe("YSeriesItem", () => {
     expect(form.getValues("dataConfig.dataSources.1.errorColumn")).toBeUndefined();
   });
 });
+
+describe("numbered axis picker", () => {
+  it.each([false, true])(
+    "lists the supported assignments with faceting set to %s",
+    async (faceted) => {
+      const user = userEvent.setup();
+      const values = defaults();
+      values.dataConfig.dataSources.push({
+        tableName: "readings",
+        columnName: "humidity",
+        role: "y",
+        axis: "y6",
+      });
+      if (faceted)
+        values.dataConfig.dataSources.push({
+          tableName: "readings",
+          columnName: "sensor",
+          role: "facet",
+        });
+      const { form } = renderWithForm<ChartFormValues>(
+        (form) => (
+          <YSeriesItem
+            {...baseProps}
+            form={form}
+            dsIndex={2}
+            seriesIndex={1}
+            faceted={faceted}
+            showCartesianControls
+            onColumnChange={vi.fn()}
+            onAggregateChange={vi.fn()}
+            onRemove={vi.fn()}
+          />
+        ),
+        { useFormProps: { defaultValues: values } },
+      );
+      const picker = screen.getByRole("combobox", { name: "workspace.shelves.axisAssignment" });
+      expect(picker).toHaveTextContent(
+        faceted ? "workspace.shelves.axis.secondary" : "workspace.shelves.axis.y6",
+      );
+      await user.click(picker);
+      const options = await screen.findAllByRole("option");
+      expect(options.map((option) => option.textContent)).toEqual(
+        (faceted ? ["primary", "secondary"] : ["primary", "secondary", "y3", "y4", "y5", "y6"]).map(
+          (axis) => `workspace.shelves.axis.${axis}`,
+        ),
+      );
+      expect(form.getValues("dataConfig.dataSources.2.axis")).toBe("y6");
+      if (!faceted) {
+        await user.click(screen.getByRole("option", { name: "workspace.shelves.axis.y4" }));
+        expect(form.getValues("dataConfig.dataSources.2.axis")).toBe("y4");
+      }
+    },
+  );
+});

@@ -5,16 +5,16 @@ import type { MetricsScope, ScopedMetricsResponse } from "@repo/api/domains/metr
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
+import type { MetricsDataSource } from "../../../core/models/metrics-data.model";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
-import { METRICS_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type {
   ActivityWindowsRow,
   ContributorPairRow,
-  DatabricksPort,
   DevicePairRow,
   ScopedDailyRow,
-} from "../../../core/ports/databricks.port";
+} from "../../../core/ports/metrics-reads.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
+import { MetricsDataSourceService } from "../../services/metrics-data-source.service";
 
 const WINDOW_DAYS = 30;
 
@@ -22,11 +22,11 @@ const WINDOW_DAYS = 30;
 const LOADED_DAYS = WINDOW_DAYS * 2;
 
 /**
- * One shared key: the warehouse inputs are scope-independent, so per-caller
+ * One shared key per source: the inputs are scope-independent, so per-caller
  * keys would multiply identical platform-wide reads and accumulate without
  * bound in the in-memory store.
  */
-export const SCOPED_INPUTS_CACHE_KEY = "scoped-inputs";
+export const scopedInputsCacheKey = (source: MetricsDataSource) => `scoped-inputs:${source}`;
 
 interface ScopedInputs {
   daily: ScopedDailyRow[];
@@ -37,7 +37,7 @@ interface ScopedInputs {
 }
 
 /**
- * Org- and user-scoped activity: per-experiment warehouse rows are joined
+ * Org- and user-scoped activity: per-experiment rows are joined
  * against Postgres ownership/grants here, aggregated to the requested scope,
  * and served with the platform baseline for comparison. The experiment- and
  * user-grain inputs never leave this use case unaggregated.
@@ -47,8 +47,7 @@ export class GetScopedMetricsUseCase {
   private readonly logger = new Logger(GetScopedMetricsUseCase.name);
 
   constructor(
-    @Inject(METRICS_DATABRICKS_PORT)
-    private readonly databricksPort: DatabricksPort,
+    private readonly dataSource: MetricsDataSourceService,
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
@@ -66,10 +65,13 @@ export class GetScopedMetricsUseCase {
       return failure(scopeIds.error);
     }
 
-    const inputs = await this.cachePort.tryCache(SCOPED_INPUTS_CACHE_KEY, () => this.loadInputs());
+    const source = await this.dataSource.sourceFor();
+    const inputs = await this.cachePort.tryCache(scopedInputsCacheKey(source), () =>
+      this.loadInputs(source),
+    );
 
     if (inputs === null) {
-      // A lagging or absent warehouse degrades to empty slots. Nothing is
+      // A lagging or absent source degrades to empty slots. Nothing is
       // cached, so the next request retries instead of pinning the outage.
       return success({ scope, scoped: null, baseline: null, computedAt: null });
     }
@@ -124,12 +126,13 @@ export class GetScopedMetricsUseCase {
     return this.metricsRepository.getUserExperimentIds(userId);
   }
 
-  private async loadInputs(): Promise<ScopedInputs | null> {
+  private async loadInputs(source: MetricsDataSource): Promise<ScopedInputs | null> {
+    const reads = this.dataSource.readsFor(source);
     const [scopedDaily, contributorPairs, devicePairs, windows] = await Promise.all([
-      this.databricksPort.getScopedDailyActivity(LOADED_DAYS),
-      this.databricksPort.getContributorPairs(),
-      this.databricksPort.getDevicePairs(),
-      this.databricksPort.getActivityWindows(),
+      reads.getScopedDailyActivity(LOADED_DAYS),
+      reads.getContributorPairs(),
+      reads.getDevicePairs(),
+      reads.getActivityWindows(),
     ]);
 
     if (
@@ -139,8 +142,9 @@ export class GetScopedMetricsUseCase {
       windows.value === null
     ) {
       this.logger.warn({
-        msg: "Warehouse unavailable for scoped metrics",
+        msg: "Metrics source unavailable for scoped metrics",
         operation: "loadInputs",
+        source,
       });
       return null;
     }
@@ -149,6 +153,7 @@ export class GetScopedMetricsUseCase {
       this.logger.warn({
         msg: "Device table unavailable; scoped metrics omit the device count",
         operation: "loadInputs",
+        source,
       });
     }
 

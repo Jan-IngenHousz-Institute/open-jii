@@ -3,7 +3,9 @@ import { Injectable, Logger } from "@nestjs/common";
 import type { DeviceMonitoring, MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
 
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import type { DeviceDataSource } from "../../../core/models/device-data.model";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
+import { ReadableDeviceExperimentsService } from "../../services/readable-device-experiments.service";
 import { GetDeviceBatteryUseCase } from "../get-device-battery/get-device-battery";
 import { GetDeviceFirmwareHistoryUseCase } from "../get-device-firmware-history/get-device-firmware-history";
 import { GetDeviceMeasurementsUseCase } from "../get-device-measurements/get-device-measurements";
@@ -12,8 +14,9 @@ import { GetDeviceSessionsUseCase } from "../get-device-sessions/get-device-sess
 import { GetDeviceThroughputUseCase } from "../get-device-throughput/get-device-throughput";
 
 /**
- * Orchestrates the monitoring dashboard response: resolves the device once,
- * then runs the single-responsibility queries in parallel.
+ * Orchestrates the monitoring dashboard response: resolves the device and the
+ * experiments the caller can read once, then runs the single-responsibility
+ * queries in parallel.
  */
 @Injectable()
 export class GetDeviceMonitoringUseCase {
@@ -21,6 +24,7 @@ export class GetDeviceMonitoringUseCase {
 
   constructor(
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly readableExperiments: ReadableDeviceExperimentsService,
     private readonly getDeviceSessions: GetDeviceSessionsUseCase,
     private readonly getDeviceThroughput: GetDeviceThroughputUseCase,
     private readonly getDeviceBattery: GetDeviceBatteryUseCase,
@@ -35,6 +39,7 @@ export class GetDeviceMonitoringUseCase {
     to: string,
     bucket: MonitoringBucket,
     userId: string,
+    source: DeviceDataSource,
   ): Promise<Result<DeviceMonitoring>> {
     this.logger.log({
       msg: "Getting device monitoring data",
@@ -42,6 +47,7 @@ export class GetDeviceMonitoringUseCase {
       deviceId,
       userId,
       bucket,
+      source,
     });
 
     const deviceResult = await this.deviceRepository.findById(deviceId);
@@ -53,6 +59,15 @@ export class GetDeviceMonitoringUseCase {
     }
     const thingName = deviceResult.value.thingName;
 
+    const experimentsResult = await this.readableExperiments.list(thingName, userId, source, {
+      from,
+      to,
+    });
+    if (experimentsResult.isFailure()) {
+      return failure(experimentsResult.error);
+    }
+    const experimentIds = experimentsResult.value;
+
     const [
       sessionsResult,
       throughputResult,
@@ -61,12 +76,12 @@ export class GetDeviceMonitoringUseCase {
       measurementsResult,
       firmwareResult,
     ] = await Promise.all([
-      this.getDeviceSessions.execute(thingName, from, to),
-      this.getDeviceThroughput.execute(thingName, from, to, bucket),
-      this.getDeviceBattery.execute(thingName, from, to, bucket),
-      this.getDevicePayloadStats.execute(thingName, from, to),
-      this.getDeviceMeasurements.execute(thingName, from, to),
-      this.getDeviceFirmwareHistory.execute(thingName, from, to, bucket),
+      this.getDeviceSessions.execute(thingName, from, to, source),
+      this.getDeviceThroughput.execute(thingName, experimentIds, from, to, bucket, source),
+      this.getDeviceBattery.execute(thingName, experimentIds, from, to, bucket, source),
+      this.getDevicePayloadStats.execute(thingName, experimentIds, from, to, source),
+      this.getDeviceMeasurements.execute(thingName, experimentIds, from, to, source),
+      this.getDeviceFirmwareHistory.execute(thingName, experimentIds, from, to, bucket, source),
     ]);
     if (sessionsResult.isFailure()) {
       return failure(sessionsResult.error);

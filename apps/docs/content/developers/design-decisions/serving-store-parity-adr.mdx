@@ -1,0 +1,68 @@
+---
+title: "ADR: What the serving store answers as Spark does"
+description: "Which differences between the serving store and the SQL warehouse are bugs, and which are accepted, for charts and the platform metrics."
+---
+
+{/* verified: code@3085d27cffea 2026-11-24 */}
+
+# ADR: What the serving store answers as Spark does
+
+**Date:** 2026-11-24  
+**Status:** Proposed
+
+## Context
+
+Charts and the platform metrics move from the SQL warehouse to the serving store behind `store-experiment-reads`. The warehouse runs Spark 4 with ANSI mode on Databricks, the store runs ClickHouse 25.8, and the two disagree on numbers at the edges: decimal types, overflow, NaN, signed zero, text that holds a number, time zones. Every review of the move found more of these, and without a written rule each one had to be argued from scratch.
+
+## Decision
+
+A difference listed under "Must match" is a bug: the store answers as Spark does, and a test fails when it does not. A difference listed under "Accepted" is how the store answers, stated beside the test that pins it. A difference listed in neither is a bug until a change to this record accepts it.
+
+### Must match
+
+| Case                        | What the store does                                                                                                         | Pinned by                                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sum and mean of a decimal   | Spark's result type and scale, exact arithmetic, written as text at that scale                                              | `sums and averages them exactly, in Spark's decimal types`; `types a decimal's sum and mean as Spark does, and writes them as text at that scale` |
+| Change between two decimals | A digit wider, as Spark subtracts                                                                                           | `types a decimal's change from the previous row with a digit more, as Spark subtracts`                                                            |
+| A sum past its type         | Fails with `ARITHMETIC_OVERFLOW`, as ANSI mode does, where ClickHouse would wrap                                            | `fails a sum that passes a BIGINT, as Spark's ANSI mode does, where the store would wrap`                                                         |
+| A mean past its type        | Fails with `NUMERIC_VALUE_OUT_OF_RANGE`, as ANSI mode does, where the store would return it                                 | `fails a mean its own type cannot hold, as Spark's ANSI mode does`                                                                                |
+| Width buckets over decimals | Exact decimal division at Spark's scales, floor as `DECIMAL(p,0)`                                                           | `spark-width-bucket.spec.ts`; `buckets them by a whole width as Spark divides decimals`                                                           |
+| NaN and signed zero         | Every NaN groups and counts as one value, -0.0 with 0.0, NaN ranks above every number, a pair holding NaN correlates to NaN | `groups and counts NaNs as one and -0.0 with 0.0, and correlates a pair holding NaN to NaN, as Spark does`                                        |
+| Text that holds a number    | Summed and averaged as the double Spark casts it to; text that holds none fails with `CAST_INVALID_INPUT`                   | `adds up text that holds numbers as Spark casts it, and fails on text that holds none`                                                            |
+| Parsing a number from text  | Correctly rounded, as Spark's cast is                                                                                       | `test_parameter_stats` (`tilt_angle_deg`)                                                                                                         |
+| Sort order                  | Nulls first going up                                                                                                        | `sorts going up with nulls first, as Spark does`                                                                                                  |
+| Integers past 2^53          | Leave the store as text, never through a double                                                                             | the chart parity fixture's integer types                                                                                                          |
+
+### Accepted
+
+| Case                                                    | Store                                      | Warehouse                                   | Why accepted                                                                                                                                                          | Pinned by                                                                                                                                                  |
+| ------------------------------------------------------- | ------------------------------------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Java number literals in text: `0x1.8p1`, `0.4D`, `1.5f` | No value                                   | A number                                    | ClickHouse has no parser for Java's literal syntax, and JSON has no such number form, so only a macro that writes the text itself produces one                        | `test_parameter_stats` (`qL`)                                                                                                                              |
+| An integer past 2^53 as a JSON number in a macro value  | No value                                   | Its nearest double                          | The store will not round an integer silently                                                                                                                          | `test_parameter_stats` (`qL`)                                                                                                                              |
+| A sample that repeats a JSON key                        | No payload, no readings and no volume      | Readings and volume from the raw text       | Gold's strict parse rejects the sample before the store sees it                                                                                                       | `test_a_sample_that_repeats_a_key_counts_in_the_pipeline_alone`                                                                                            |
+| Correlation over a constant series                      | Null                                       | Fails the read                              | An answer beats an error                                                                                                                                              | `gives null for a constant series, where the warehouse fails the read`                                                                                     |
+| A capture silver holds twice                            | Counted once                               | Counted twice                               | The store keeps one row per key                                                                                                                                       | `test_serving_store_metrics.py` docstring                                                                                                                  |
+| A time zone Spark rejects                               | Counts no zone and no local hour           | Counts the zone                             | Nothing can convert a time with it, and gold drops it                                                                                                                 | `test_a_row_gold_kept_with_a_zone_spark_rejects_loses_only_its_local_hour`, `test_a_zone_spark_rejects_counts_in_no_zone_figure_though_older_gold_kept_it` |
+| Medians past 5,000 readings                             | Greenwald-Khanna sketch at accuracy 10,000 | `percentile_approx` at its default accuracy | Both are approximations; each is within n/10,000 ranks                                                                                                                | `test_parameter_stats`                                                                                                                                     |
+| Data volume                                             | Bytes of each payload as gold holds it     | `octet_length` of silver's sample           | Measured on dev: equal byte for byte over a day of Ambyte rows, 0.02% per row over a week of other devices; 599 of 38.3M gold rows hold no parsed payload and count 0 | `test_serving_store_metrics.py` docstring                                                                                                                  |
+
+## Consequences
+
+**Benefits:**
+
+- A reviewer checks a difference against these tables instead of rediscovering it, and an accepted one is not raised again.
+- The chart parity fixture (`apps/data/tests/fixtures/chart-parity.json`, with Spark's answers in `chart-results.json`, types kept as strings) and the metrics parity tests are the evidence for each row.
+
+**Trade-offs / Risks:**
+
+- A row in "Accepted" is a promise to researchers that the difference does not matter for their data. A case that turns up in real data moves to "Must match".
+- The tables cover the reads that compute numbers: charts and the platform metrics. A new read that computes adds its cases here.
+
+## Alternatives Considered
+
+- **Match Spark on everything.** Rejected: some cases need parsers ClickHouse does not have, for inputs nothing writes.
+- **Decide case by case in review.** Rejected: it is what happened before this record, and the same cases came back across pull requests.
+
+## Conclusion
+
+The store answers as Spark does wherever a researcher could see a different number, and the few exceptions are named here with their tests. Reviews of store reads check against this record.
