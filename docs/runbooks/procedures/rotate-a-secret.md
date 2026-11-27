@@ -183,3 +183,7 @@ refresh reads them back into the state even when the configuration leaves them o
   PostHog, set the GitHub secret, release, then revoke the old key.
 - **The credentials OpenTofu signs in with,** such as the per-run Grafana token and
   `POSTHOG_TOFU_API_KEY`. They never reach the state, but they reach the plan saved for an apply.
+
+Pull request plans read the webhooks and `POSTHOG_GRAFANA_API_KEY` from `dev-plan` and `prod-plan`,
+so set a new value in the matching plan environment too. A plan environment that still holds the
+old value doesn't fail: its plans show the resource that holds it as changed.
