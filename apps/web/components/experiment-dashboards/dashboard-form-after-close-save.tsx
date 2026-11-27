@@ -98,7 +98,9 @@ export function DashboardFormAfterCloseSave({
                 <Link
                   href={href}
                   aria-label={
-                    links.length > 1 ? `${t("editor.inspector.openChartCopy")} ${name}` : undefined
+                    links.length > 1
+                      ? t("editor.inspector.openChartCopyNamed", { name })
+                      : undefined
                   }
                   className="text-primary underline underline-offset-4"
                 >
