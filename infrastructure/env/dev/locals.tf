@@ -42,7 +42,7 @@ locals {
     # The sheets' copy needs no history: the first load owes every sheet to it once
     # (docs/runbooks/procedures/serving-store-reload.md).
     metadata_rows = "latest"
-    device_events = ""
+    device_events = "2193"
   }
   serving_store_feed_settings = {
     for table, version in local.serving_store_feed_start_versions :
